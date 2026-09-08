@@ -1,0 +1,47 @@
+import { recommend, validateInput } from '@/lib/recommend';
+import { candidates, rateLimit, runtime, vectorsFor } from '@/lib/store';
+import { configFrom, embeddingConfigFrom } from '@/lib/ai';
+export async function POST(request: Request) {
+  let input;
+  try {
+    if (Number(request.headers.get('content-length') || 0) > 24000)
+      return Response.json({ error: 'Mesaj çok uzun.' }, { status: 413 });
+    const raw = await request.text();
+    if (raw.length > 24000)
+      return Response.json({ error: 'Mesaj çok uzun.' }, { status: 413 });
+    input = validateInput(JSON.parse(raw));
+  } catch {
+    return Response.json(
+      {
+        error:
+          'Mesaj veya filtreler geçersiz. Tarihleri ve bütçeyi kontrol et.',
+      },
+      { status: 400 },
+    );
+  }
+  try {
+    const config = configFrom(runtime());
+    if (!(await rateLimit(request, Boolean(config))))
+      return Response.json(
+        {
+          error:
+            'Arama sınırına ulaşıldı. Bir süre sonra yeniden deneyebilirsin.',
+        },
+        { status: 429, headers: { 'Retry-After': '3600' } },
+      );
+    return Response.json(
+      await recommend(input, {
+        candidates,
+        vectors: vectorsFor,
+        config,
+        embeddings: () => embeddingConfigFrom(runtime()),
+      }),
+      { headers: { 'Cache-Control': 'no-store' } },
+    );
+  } catch {
+    return Response.json(
+      { error: 'Arama tamamlanamadı. Lütfen yeniden dene.' },
+      { status: 503 },
+    );
+  }
+}

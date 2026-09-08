@@ -1,209 +1,77 @@
-# EventGraph 🎭
+# Bi’ Plan
 
-**Istanbul Event Discovery Engine** — A full-stack data pipeline that scrapes, cleans, analyzes, and visualizes event data from real-world Turkish websites.
+[Özel önizlemeyi aç](https://biplan-istanbul.efebalikofc.chatgpt.site) — yalnızca site sahibine açık, anahtarsız sürüm.
 
-![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)
-![FalkorDB](https://img.shields.io/badge/FalkorDB-Graph_DB-E10098?style=flat-square)
-![Scrapy](https://img.shields.io/badge/Scrapy-Playwright-60A839?style=flat-square)
+İstanbul’da konuşarak etkinlik bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
 
----
+## Çalıştırma
 
-## Overview
+Node **22.13+** gerekir (Node 20 desteklenmez).
 
-This project demonstrates a complete data engineering workflow:
-
-1. **Web Scraping** — Extract event data from dynamic JavaScript-rendered pages using Scrapy + Playwright
-2. **Data Cleaning** — Handle messy real-world data: Turkish dates, HTML entities, price formats, duplicates
-3. **Statistical Analysis** — Apply scipy-based analysis: quartiles, normality tests, anomaly detection
-4. **Visualization** — Present insights through an interactive React dashboard with real-time updates
-
----
-
-## Prerequisites
-
-Before running the project, ensure you have:
-
-| Requirement | Version | Installation |
-|-------------|---------|--------------|
-| **Python** | 3.11+ | [python.org](https://python.org) |
-| **Node.js** | 18+ | [nodejs.org](https://nodejs.org) |
-| **Docker** | Latest | [docker.com](https://docker.com) |
-| **Ollama** (optional) | Latest | [ollama.ai](https://ollama.ai) |
-
-> **Note**: Ollama is only needed for AI enrichment (`make ai-enrich`). The dashboard works without it.
-
----
-
-## Quick Start
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/Efeblk/2509011061_P2P3.git
-cd 2509011061_P2P3
-
-# 2. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # Linux/Mac
-# venv\Scripts\activate   # Windows
-
-# 3. Copy environment file
+```sh
+cd web
+npm ci
 cp .env.example .env
-
-# 4. Install dependencies and start database
-make setup
-
-# 5. Scrape events (takes ~5-10 minutes)
-make scrape
-
-# 6. Launch dashboard
-make web
-# → Dashboard: http://localhost:5173
-# → API: http://localhost:8000
+npm run dev
 ```
 
-### Optional: AI Enrichment
-```bash
-# Install Ollama models first
-ollama pull llama3.2
-ollama pull mxbai-embed-large
+Terminalin gösterdiği yerel adresi aç. `.env` dosyasında API anahtarı boş bırakıldığında uygulama **Filtreli önizleme · AI henüz bağlı değil** modunda çalışır. Anahtar tarayıcıya gönderilmez. Geliştirme veritabanı `.wrangler/` altında yerel SQLite/D1 olarak tutulur.
 
-# Run enrichment
-make ai-enrich
+## Şu an ne çalışıyor?
+
+- Biletinial’dan doğrulanmış İstanbul konser, tiyatro ve stand-up seansları; afiş, mekân, başlangıç fiyatı, açıklama ve kaynak bağlantısı.
+- Türkçe tarih, kişi başı bütçe ve kategori filtreleri; aramaya devam ederken önceki filtreleri koruma.
+- Aynı prodüksiyonun farklı seanslarını tek öneride toplama; başka seçenekleri isteme.
+- Geçmiş, iptal edilmiş, tükenmiş ve **72 saatten eski kontrol tarihli** kayıtları eleme. Bütçe varken fiyatı bilinmeyen kayıtları eleme. Kaynak fiyatları bilet garantisi değildir.
+- İsteğe bağlı OpenAI Responses veya OpenAI uyumlu Chat Completions API ile niyet/filtre çıkarımı, gerektiğinde netleştirme sorusu, adaylar arasından gerekçeli seçim.
+- Sohbetten bağımsız, isteğe bağlı embedding sağlayıcısıyla anlamsal sıralama; metin hash’i, API adresi, model ve boyuta göre kalıcı embedding önbelleği. Graph veritabanı gerektirmez.
+- AI kapalıysa veya sağlayıcı başarısızsa açıkça belirtilen kelime/filtre araması. Anahtarsız mod ruh hâlini yorumladığını iddia etmez.
+- Mobil uyumlu arayüz, yüklenme/hata/boş sonuç durumları, klavye ile gönderme (Enter; yeni satır Shift+Enter).
+
+## Veriyi yenileme
+
+```sh
+cd web
+npm run data:refresh
 ```
 
----
+Bu komut üç kategori listesinden sınırlı sayıda etkinlik sayfasını okur, JSON-LD seanslarını doğrular ve `data/events.json` dosyasını günceller. Tarih tahmini, yapay fiyat veya demo etkinliği üretmez. Liste eksik/başarısızsa mevcut dosyayı korur. İlk seçki tüm İstanbul’u kapsamaz.
 
-## Features
+Canlı veritabanını güncellemek için sunucuda güçlü bir `SYNC_TOKEN` tanımla. Dış zamanlayıcıdan (örneğin günde iki defa) `web/scripts/sync.mjs` çalıştır; zamanlayıcının ortamında `BIPLAN_URL` ve `SYNC_TOKEN` bulunmalı. Bu ilk önizleme otomatik zamanlayıcı **kurmaz**. Başarılı kaynak sayfaları seans bazında yenilenir, başarısız sayfalardaki kayıtlar 72 saatlik tazelik sınırına kadar korunur.
 
-### 🌐 Web Scraping Pipeline
-- **Source**: [Biletinial](https://www.biletinial.com) — Turkey's event ticketing platform
-- **Technology**: Scrapy framework with Playwright for JavaScript rendering
-- **Output**: ~11,000+ events with title, date, venue, price, category, and description
+## AI’ı açma
 
-### 🧹 Data Cleaning
-Real-world web data is messy. This project handles:
+`web/.env.example` anahtarsız önizleme için hazırdır. Sağlayıcı seçilene kadar anahtarları boş bırak; hiçbir AI çağrısı yapılmaz. Üçüncü taraf bağlantısında `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` ayarlanır. Yerelde `.env` değişikliğinden sonra geliştirme sunucusunu yeniden başlat; yayında anahtarlar sunucu sırları olarak tanımlanır.
 
-| Challenge | Solution |
-|-----------|----------|
-| Turkish dates (`"20 Ocak 2025"`) | Custom parser → ISO 8601 format |
-| HTML entities (`&nbsp;`, `&#39;`) | `html.unescape()` + whitespace normalization |
-| Price formats (`"1.500,00 TL"`) | Regex extraction → float conversion |
-| Duplicates | Fingerprint-based deduplication |
-| Missing fields | Graceful handling with defaults |
+[Sağlayıcı kurulumu ve örnekler](web/docs/providers.md): OpenRouter, Gemini'nin OpenAI uyumlu arayüzü ve genel uyumlu servisler için ayarlar; bağımsız embedding ve hata davranışları. Sağlayıcı/model uyumluluğu gerçek anahtarla henüz test edilmedi.
 
-### 📊 Statistical Analysis
-Powered by **scipy**, **numpy**, and **pandas**:
+Eski doğrudan OpenAI ayarları da çalışır: yalnızca `OPENAI_API_KEY` ile sohbet modeli `OPENAI_MODEL` (varsayılan `gpt-4.1-mini`), embedding modeli `text-embedding-3-small` (512 boyut). Embedding'i kapatmak için `EMBEDDING_ENABLED=false`.
 
-- **Descriptive Statistics**: Mean, median, standard deviation, range
-- **Distribution Analysis**: Skewness, kurtosis, quartiles (Q1, Q2, Q3), IQR
-- **Normality Testing**: Kolmogorov-Smirnov test
-- **Anomaly Detection**: IQR method + Z-score method for outlier identification
-- **Time Series**: Weekly event trends, day-of-week patterns
-- **Segmentation**: Price clustering (Budget/Mid-Range/Premium/Luxury)
+Anlamsal arama için anahtar tanımlandıktan sonra korumalı `/api/admin/sync` işlemini çalıştır: etkinlikleri ve embedding önbelleğini oluşturur. Embedding bulunmuyorsa kelime tabanlı aday sıralaması + AI değerlendirmesi kullanılır. Embedding adresi/modeli/boyutu değişirse eski indeks kullanılmaz; sync ile yeniden oluşturulur. Yeni `embedding-v2` önbellek kimliğine geçişte de bir sync gerekir.
 
-### 📈 React Dashboard
-Modern, responsive visualization built with:
+Akış: **isteği anla → kesin filtreler → embedding/kelime sıralaması → en fazla 16 farklı aday → 3–5 gerekçeli öneri**. AI yalnızca aday ID’lerini seçebilir; gösterilen etkinlik bilgileri veritabanından gelir. Öneri gerekçelerinin kalitesi gerçek sağlayıcıyla ayrıca değerlendirilmelidir.
 
-- **React 18** + **Vite** for fast development
-- **Recharts** for data visualization (area charts, bar charts, pie charts)
-- **Framer Motion** for smooth animations
-- **Tailwind CSS** for styling
-- **Real-time updates** via FastAPI backend
+Ücretli aramalar IP başına saatte 20, tüm uygulama için varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bu bir dolar harcama limiti değildir; sağlayıcı hesabında ayrıca bütçe limiti tanımlanabilir. Veri yenilemenin embedding çağrıları bu sohbet sayacından ayrıdır ve yönetici sırrı gerektirir. Kullanıcı mesajı, kısa sohbet geçmişi ve aday açıklamaları AI sağlayıcısına gönderilir; Responses isteklerinde `store:false` kullanılır. Bu ayar üçüncü tarafların saklama politikasını garanti etmez. İstekler 25 saniyede zaman aşımına uğrar; otomatik ücretli tekrar denenmez. Sohbet geçmişi bu sürümde yalnızca açık sekmenin belleğinde tutulur.
 
-**Dashboard Features**:
-- Category-wise price analysis with bar charts
-- Event distribution pie chart
-- Data quality gauge
-- Live statistical report (μ, σ, skewness, kurtosis)
-- Anomaly detection summary
-- Time series trends
-- Live scraping progress monitor
+## Kontroller
 
----
-
-## Project Structure
-
-```
-├── frontend/                 # React dashboard
-│   └── src/
-│       ├── App.jsx          # Main dashboard
-│       └── ProgressPage.jsx # Live progress
-├── src/
-│   ├── scrapers/            # Scrapy spiders
-│   │   ├── spiders/         # biletinial_spider.py
-│   │   └── pipelines.py     # Data cleaning
-│   ├── analysis/            # Statistical analysis
-│   │   ├── statistics.py    # scipy-based analysis
-│   │   └── anomaly_detector.py
-│   ├── api/                 # FastAPI backend
-│   └── ai/                  # AI enrichment (Ollama)
-├── tests/                   # Unit tests
-├── Makefile                 # All commands
-└── README.md
+```sh
+cd web
+npm test
+npm run typecheck
+npm run lint
+npm run build
+npm run test:smoke
 ```
 
----
+Testler tarih/saat dilimi sınırlarını, fiyatı bilinmeyen ve eski kayıtları, kaynak ayrıştırmayı, yinelenen seansları, alternatif önerileri, AI kesintisini ve uydurma ID’lerin elenmesini kapsar. AI testlerinde sağlayıcı yerine kontrollü test yanıtları kullanılır; gerçek anahtarla model kalitesi/latans testi henüz yapılmamıştır.
 
-## Commands
+GitHub Actions, `master` için her PR'da ve `master` push'larında bu kontrolleri çalıştırır. Smoke kontrolü derlenen Worker'ı geçici bir D1 veritabanıyla açar; sayfa, anahtarsız API, geçersiz istek ve yönetici erişim korumasını doğrular. Yerel sırları ve mevcut veritabanını kullanmaz. Eski Python testleri ayrı CI iş akışında korunur.
 
-| Command | Description |
-|---------|-------------|
-| `make setup` | Install dependencies + start database |
-| `make scrape` | Scrape events from Biletinial |
-| `make web` | Launch React dashboard |
-| `make analyze` | Run statistical analysis (terminal) |
-| `make ai-enrich` | Generate AI summaries with Ollama |
-| `make test` | Run unit tests |
-| `make fclean` | Full reset |
+## Yayın
 
----
+Yeni uygulama React + TypeScript + Vinext üzerinde tek Cloudflare Worker ve D1 veritabanı olarak paketlenir; GPU, FalkorDB veya Python servisi gerektirmez. `.openai/hosting.json` Sites yayın bağlantısını tutar. Sunucu sırları bu dosyaya veya Git’e yazılmaz. `SITE_URL` güvenilir yayın kökü olmalı (sosyal önizleme bağlantıları için).
 
-## Technology Stack
+`db/schema.ts` şema kaynağıdır; değişiklik sonrası `npm run db:generate` ile SQL üret. Migration’lar `drizzle/` altında sürümlenir. Çalışma sırasında ilk açılışta doğrulanmış başlangıç seçkisi veritabanına aktarılır.
 
-| Layer | Technology |
-|-------|------------|
-| **Scraping** | Scrapy + Playwright |
-| **Database** | FalkorDB (Redis-based graph database) |
-| **Backend** | FastAPI + Uvicorn |
-| **Frontend** | React 18 + Vite + Recharts + Framer Motion |
-| **Analysis** | scipy, numpy, pandas |
-| **AI** | Ollama (Llama 3.2, mxbai-embed-large) |
-
----
-
-## Sample Analysis Output
-
-```
-Statistical Analysis Report
-═══════════════════════════════════════════════════════════
-
-Sample Size (n)     : 11,002
-Mean (μ)            : 700.45 TL
-Median (M)          : 549.00 TL
-Std Deviation (σ)   : 652.31 TL
-Skewness (γ₁)       : 19.11 (right-skewed)
-Kurtosis (γ₂)       : 563.04 (leptokurtic)
-
-Quartile Analysis
-─────────────────
-Q1 (25th percentile): 300.00 TL
-Q2 (50th percentile): 549.00 TL
-Q3 (75th percentile): 1,000.00 TL
-IQR                 : 700.00 TL
-
-Normality Test (Kolmogorov-Smirnov)
-───────────────────────────────────
-Result: Non-normal distribution (p < 0.001)
-
-Anomaly Detection
-─────────────────
-Total Anomalies: 847 (7.7%)
-Method: IQR + Z-score
-```
-
----
-
-**Student ID**: 2509011061  
-**Course**: Web Data Mining (P2 + P3)  
-**Term**: Fall 2024
+Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve çok kaynaklı kapsam. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.
