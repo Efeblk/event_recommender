@@ -1,23 +1,21 @@
-// Exercise the built Worker against a disposable local D1 database, without secrets.
+// Exercise the production Worker and disposable D1 through Cloudflare's test harness.
 import assert from 'node:assert/strict';
-import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const build = join(root, 'dist/server');
 const config = JSON.parse(await readFile(join(build, 'wrangler.json'), 'utf8'));
 const temp = await mkdtemp(join(tmpdir(), 'biplan-smoke-'));
-let worker;
-let stopped;
-let logs = '';
+// No developer secrets or platform credentials are used by this local harness.
+process.env.WRANGLER_SEND_METRICS = 'false';
+process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = 'false';
+process.env.WRANGLER_LOG_PATH = join(temp, 'logs');
+const { createTestHarness } = await import('wrangler');
+let server;
 try {
-  // A config outside the checkout prevents loading .dev.vars or local D1 state.
   config.main = resolve(build, config.main);
   config.assets.directory = resolve(build, config.assets.directory);
   config.vars = {
@@ -27,82 +25,24 @@ try {
     EMBEDDING_ENABLED: 'false',
     SYNC_TOKEN: 'local-smoke-only',
   };
+  // Load the built config outside the checkout to avoid .dev.vars and local D1.
   await writeFile(join(temp, 'wrangler.json'), JSON.stringify(config));
   await writeFile(join(temp, '.env'), '');
-  const socket = createServer();
-  socket.listen(0, '127.0.0.1');
-  await once(socket, 'listening');
-  const port = socket.address().port;
-  await new Promise((resolveClose, reject) =>
-    socket.close((err) => (err ? reject(err) : resolveClose())),
-  );
-  const origin = `http://127.0.0.1:${port}`;
-  worker = spawn(
-    process.execPath,
-    [
-      join(root, 'node_modules/wrangler/bin/wrangler.js'),
-      'dev',
-      '--config',
-      join(temp, 'wrangler.json'),
-      '--env-file',
-      join(temp, '.env'),
-      '--local',
-      '--ip',
-      '127.0.0.1',
-      '--port',
-      String(port),
-      '--inspector-port',
-      '0',
-      '--persist-to',
-      join(temp, 'state'),
-      '--show-interactive-dev-session=false',
-    ],
-    {
-      cwd: temp,
-      env: {
-        PATH: process.env.PATH,
-        HOME: process.env.HOME,
-        XDG_CONFIG_HOME: join(temp, 'config'),
-        CI: 'true',
-        WRANGLER_SEND_METRICS: 'false',
-        WRANGLER_LOG_PATH: join(temp, 'logs'),
-        CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false',
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    },
-  );
-  stopped = once(worker, 'close');
-  worker.stdout.on('data', (chunk) => {
-    logs = (logs + chunk.toString()).slice(-12000);
+  server = createTestHarness({
+    root: temp,
+    workers: [{ configPath: join(temp, 'wrangler.json'), secrets: config.vars }],
   });
-  worker.stderr.on('data', (chunk) => {
-    logs = (logs + chunk.toString()).slice(-12000);
-  });
-  await once(worker, 'spawn');
-  let ready = false;
-  for (let i = 0; i < 60; i++) {
-    if (worker.exitCode !== null)
-      throw new Error('Worker exited before becoming ready');
-    try {
-      const response = await fetch(`${origin}/api/health`, {
-        signal: AbortSignal.timeout(1000),
-      });
-      if (response.ok) {
-        const health = await response.json();
-        assert.equal(health.status, 'ok');
-        assert.equal(health.aiEnabled, false);
-        ready = true;
-        break;
-      }
-      await response.arrayBuffer();
-    } catch {
-      /* The local Worker can take a few seconds to initialize. */
-    }
-    await delay(500);
-  }
-  assert.ok(ready, 'Worker must start with a healthy local database');
-  async function request(path, body, authenticated = false) {
-    return fetch(`${origin}${path}`, {
+  await server.listen();
+  const healthResponse = await server.fetch('/api/health');
+  assert.equal(healthResponse.status, 200);
+  const health = await healthResponse.json();
+  assert.equal(health.status, 'ok');
+  assert.equal(health.aiEnabled, false);
+  // Dispatch directly to workerd. The dev HTTP proxy can lose its connection
+  // after an early 401 leaves a request body unread (workerd issue #1730).
+  const worker = server.getWorker();
+  function request(path, body, authenticated = false) {
+    return worker.fetch(path, {
       ...(body === undefined
         ? {}
         : {
@@ -120,7 +60,6 @@ try {
   }
   const page = await request('/');
   assert.equal(page.status, 200);
-  // Consume responses: aborting their streams can tear down Wrangler's dev proxy.
   await page.arrayBuffer();
   const events = await request('/api/events');
   assert.equal(events.status, 200);
@@ -151,8 +90,8 @@ try {
   assert.equal(sync.status, 401);
   await sync.arrayBuffer();
   const unauthorizedImport = await request('/api/admin/import', {});
-  assert.equal(unauthorizedImport.status, 401);
-  await unauthorizedImport.arrayBuffer();
+  const unauthorizedDetail = await unauthorizedImport.text();
+  assert.equal(unauthorizedImport.status, 401, unauthorizedDetail);
   const checkedAt = new Date().toISOString();
   const importedEvent = {
     id: 'smoke-import',
@@ -183,7 +122,6 @@ try {
   );
   if (imported.status !== 200) {
     const detail = await imported.text();
-    await delay(250); // Allow the worker process to flush its diagnostic output.
     assert.fail(`Import returned ${imported.status}: ${detail.slice(0, 2000)}`);
   }
   assert.equal((await imported.json()).imported, 1);
@@ -217,14 +155,12 @@ try {
     'Built Worker smoke check passed: page, D1, keyless search, validation, protected sync, import and stale-update protection.',
   );
 } catch (error) {
-  console.error(logs);
+  server?.debug();
   throw error;
 } finally {
-  if (worker && stopped) {
-    worker.kill('SIGTERM');
-    const force = setTimeout(() => worker.kill('SIGKILL'), 5000);
-    await stopped;
-    clearTimeout(force);
+  try {
+    await server?.close();
+  } finally {
+    await rm(temp, { recursive: true, force: true, maxRetries: 3 });
   }
-  await rm(temp, { recursive: true, force: true });
 }
