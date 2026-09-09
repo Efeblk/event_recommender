@@ -180,7 +180,11 @@ try {
     envelope(importedEvent),
     true,
   );
-  assert.equal(imported.status, 200);
+  if (imported.status !== 200) {
+    const detail = await imported.text();
+    await delay(250); // Allow the worker process to flush its diagnostic output.
+    assert.fail(`Import returned ${imported.status}: ${detail.slice(0, 2000)}`);
+  }
   assert.equal((await imported.json()).imported, 1);
   const staleImport = await request(
     '/api/admin/import',
