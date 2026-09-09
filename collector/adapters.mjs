@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { flightObjects } from "./flight.mjs";
 import { jsonLd, parseEvents } from "../web/lib/source.ts";
 
 export const sources = {
@@ -22,10 +23,7 @@ export const sources = {
   },
   biletix: {
     origin: "https://www.biletix.com",
-    paths: [
-      ["/category/MUSIC/ISTANBUL/tr", "Konser"],
-      ["/anasayfa/ISTANBUL/tr", null],
-    ],
+    paths: [["/search/ISTANBUL/tr", null]],
     detail: /^\/etkinlik\/([A-Z0-9]+)\/ISTANBUL\/tr(?:\/[^/]+)?$/,
   },
 };
@@ -91,11 +89,12 @@ export async function extract($, source, url, fallbackCategory, now = new Date()
     category = crumbs.map((c) => categoryOf(clean(c.name))).find(Boolean) ?? fallbackCategory;
   }
   if (!category) throw new Error("unsupported_category");
+  if (source === "bubilet") return extractBubilet($, url, category, nodes, now);
   const events = await parseEvents(html, url, category, now);
   // An Event schema alone is insufficient evidence that a page is now empty.
   // Preserve old rows when a redesign drops essential fields or all rows are rejected.
   if (!events.length) throw new Error("no_verified_sessions");
-  return events.map((event) => ({ ...event, source, sourceVersion: "2", extraction: "json-ld" }));
+  return events.map((event) => ({ ...event, source, sourceVersion: "3", extraction: "json-ld" }));
 }
 function extractBiletix($, url, now) {
   let state;
@@ -165,9 +164,113 @@ function extractBiletix($, url, now) {
       availability: onSale.length ? "available" : "unknown",
       checkedAt: now.toISOString(),
       source: "biletix",
-      sourceVersion: "2",
+      sourceVersion: "3",
       extraction: "embedded-state",
     });
+  }
+  if (!events.length) throw new Error("no_verified_sessions");
+  return events;
+}
+
+function extractBubilet($, url, category, nodes, now) {
+  const slug = new URL(url).pathname.split("/").at(-1);
+  const props = flightObjects($).find(
+    (x) => x.eventSlug === slug && x.cityId === 34 && Array.isArray(x.eventSessions),
+  );
+  if (!props) throw new Error("session_schema_missing");
+  // Calendar inventory needs a separate verified date expansion; never treat the
+  // currently displayed month as the whole production and replace stored sessions.
+  if (props.calendarBased !== false) throw new Error("calendar_requires_expansion");
+  const base = nodes.find((n) => n["@type"] === "Event" && typeof n.name === "string");
+  if (!base) throw new Error("schema_missing");
+  const groups = new Map();
+  for (const row of props.eventSessions) {
+    if (row.cityId !== 34 || row.hideSession === true) continue;
+    if (
+      typeof row.date !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(row.date) ||
+      !Number.isFinite(Date.parse(row.date)) ||
+      !clean(row.venueName) ||
+      !Number.isInteger(row.sessionId)
+    )
+      throw new Error("session_schema_changed");
+    if (Date.parse(row.date) < now.getTime()) continue;
+    const key = new Date(row.date).toISOString() + "|" + clean(row.venueName);
+    const group = groups.get(key) ?? [];
+    group.push(row);
+    groups.set(key, group);
+  }
+  const events = [];
+  for (const [key, rows] of groups) {
+    const row = rows[0],
+      startsAt = new Date(row.date).toISOString();
+    const offered = rows.filter(
+      (s) =>
+        s.promoteOnly === false &&
+        s.isSelectable === true &&
+        s.isMarkedSoldOut === false &&
+        s.isCombinedTicket !== true &&
+        s.isSeasonTicketRenewalOpen !== true,
+    );
+    const prices = offered
+      .map((s) => s.price)
+      .filter((p) => typeof p === "number" && Number.isFinite(p) && p >= 0);
+    const schema = nodes.find(
+      (n) =>
+        n.startDate &&
+        Date.parse(n.startDate) === Date.parse(row.date) &&
+        clean(n.location?.name) === clean(row.venueName),
+    );
+    const cancelled = /Cancelled|Postponed|Rescheduled/.test(clean(schema?.eventStatus));
+    const soldOut = rows.every((s) => s.isMarkedSoldOut === true);
+    const image = Array.isArray(base.image) ? base.image[0] : base.image;
+    events.push({
+      id: createHash("sha256")
+        .update(url + "|" + key)
+        .digest("hex")
+        .slice(0, 24),
+      title: clean(base.name),
+      description: clean(base.description).slice(0, 5000),
+      startsAt,
+      venue: clean(row.venueName),
+      city: "İstanbul",
+      district: "",
+      address: clean(schema?.location?.address?.streetAddress),
+      price: !cancelled && prices.length ? Math.min(...prices) : null,
+      currency: "TRY",
+      url,
+      imageUrl: typeof image === "string" && image.startsWith("https://") ? image : "",
+      category,
+      availability: cancelled
+        ? "cancelled"
+        : soldOut
+          ? "sold_out"
+          : offered.length
+            ? "available"
+            : "unknown",
+      checkedAt: now.toISOString(),
+      source: "bubilet",
+      sourceVersion: "3",
+      extraction: "embedded-session-state",
+    });
+  }
+  // Independently advertised future session dates must exist in the detailed state.
+  // A truncated payload is an error, not evidence that those sessions disappeared.
+  const observedDates = new Set(events.map((e) => e.startsAt));
+  for (const node of nodes) {
+    if (Array.isArray(node.subEvent) && node.subEvent.length) continue;
+    if (
+      !String(node["@type"]).endsWith("Event") ||
+      !node.startDate ||
+      Date.parse(node.startDate) < now.getTime()
+    )
+      continue;
+    if (!/istanbul|İstanbul/i.test(clean(node.location?.address?.addressLocality))) continue;
+    if (!Number.isFinite(Date.parse(node.startDate))) throw new Error("session_schema_changed");
+    // Bubilet JSON-LD can copy the first venue into all subEvents (observed on
+    // Usta Komedyen); use the actual session's venue, and corroborate dates only.
+    if (!observedDates.has(new Date(node.startDate).toISOString()))
+      throw new Error("session_coverage_mismatch");
   }
   if (!events.length) throw new Error("no_verified_sessions");
   return events;

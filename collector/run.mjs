@@ -6,7 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
-import { sources, discover, extract, detailUrl } from "./adapters.mjs";
+import { sources, extract, detailUrl } from "./adapters.mjs";
 import {
   sha,
   validateEvent,
@@ -16,11 +16,16 @@ import {
   atomicJson,
 } from "./pipeline.mjs";
 
+import { expandListing } from "./discovery.mjs";
+
 const root = dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
   options: {
     sources: { type: "string", default: "biletinial,bubilet,biletix" },
-    limit: { type: "string", default: "20" },
+    url: { type: "string", multiple: true },
+    limit: { type: "string", default: "100" },
+    "discovery-pages": { type: "string", default: "20" },
+    "discover-only": { type: "boolean", default: false },
     output: { type: "string", default: join(root, "output") },
     snapshot: { type: "string", default: join(root, "../web/data/events.json") },
     "save-html": { type: "boolean", default: false },
@@ -31,6 +36,9 @@ if (selected.some((name) => !sources[name])) throw new Error("Unknown source");
 const limit = Number(values.limit);
 if (!Number.isInteger(limit) || limit < 1 || limit > 100)
   throw new Error("Limit must be 1–100 per listing");
+const maxPages = Number(values["discovery-pages"]);
+if (!Number.isInteger(maxPages) || maxPages < 1 || maxPages > 50)
+  throw new Error("Discovery pages must be 1–50");
 const output = resolve(values.output),
   snapshot = resolve(values.snapshot);
 await mkdir(output, { recursive: true });
@@ -48,14 +56,30 @@ const report = {
   summary: {},
 };
 const previous = await readSnapshot(snapshot);
+const targets = values.url ?? [];
+if (targets.length && values["discover-only"])
+  throw new Error("Use --url for detail refresh, not discovery");
+for (const url of targets)
+  if (!selected.some((source) => detailUrl(url, source))) throw new Error("Unsupported target URL");
 const userAgent = "BiPlan/0.2 (+https://github.com/Efeblk/event_recommender)";
 const robots = new Map();
-const nextDomainSlot = new Map();
+let nextNetworkSlot = 0;
 const enqueued = new Set();
 const headers = { "User-Agent": userAgent, "Accept-Language": "tr-TR,tr;q=0.9" };
-async function get(url, isRobots = false) {
+async function get(url, options = {}, isRobots = false) {
+  const origin = new URL(url).origin;
+  if (!allowedOrigins.has(origin)) throw new NonRetryableError("origin_not_allowed");
+  if (!isRobots) {
+    if (!robots.has(origin)) await loadRobots(origin);
+    if (!robots.get(origin)?.isAllowed(url, "BiPlan"))
+      throw new NonRetryableError("robots_disallowed");
+  }
+  const slot = Math.max(Date.now(), nextNetworkSlot);
+  nextNetworkSlot = slot + 1000;
+  await delay(Math.max(0, slot - Date.now()));
   const response = await fetch(url, {
-    headers,
+    ...options,
+    headers: { ...headers, ...options.headers },
     redirect: "manual",
     signal: AbortSignal.timeout(20000),
   });
@@ -90,21 +114,38 @@ async function get(url, isRobots = false) {
   }
   return Buffer.concat(parts).toString("utf8");
 }
+const allowedOrigins = new Set([
+  ...Object.values(sources).map((s) => s.origin),
+  "https://platform.api.bubilet.com.tr",
+]);
+async function loadRobots(origin) {
+  const url = `${origin}/robots.txt`;
+  robots.set(origin, robotsParser(url, await get(url, {}, true)));
+}
 // Fetch policies using our own user agent; fail closed on inaccessible robots files.
 const seeds = [];
 for (const name of selected) {
   const source = sources[name],
     url = `${source.origin}/robots.txt`;
   try {
-    const rules = robotsParser(url, await get(url, true));
-    robots.set(name, rules);
-    for (const [path, category] of source.paths)
+    await loadRobots(source.origin);
+    for (const [path, category] of targets.length ? [] : source.paths)
       seeds.push({
         url: source.origin + path,
         userData: { source: name, category, kind: "listing" },
       });
     // Previously known productions are revisited even if no longer promoted on listings.
-    for (const event of previous) {
+    const known = targets.length
+      ? targets.map((url) => ({
+          url,
+          category:
+            previous.find((e) => e.url === url)?.category ??
+            (/\/muzik\//.test(url) ? "Konser" : /\/tiyatro\//.test(url) ? "Tiyatro" : null),
+        }))
+      : values["discover-only"]
+        ? []
+        : previous;
+    for (const event of known) {
       const detail = detailUrl(event.url, name);
       if (detail && !enqueued.has(detail) && enqueued.size < 1000) {
         enqueued.add(detail);
@@ -128,34 +169,35 @@ const crawler = new BasicCrawler(
     maxConcurrency: 2,
     maxRequestsPerMinute: 60,
     maxRequestRetries: 2,
-    requestHandlerTimeoutSecs: 75,
+    requestHandlerTimeoutSecs: 1200,
     maxRequestsPerCrawl: 2000,
     useSessionPool: false,
     async requestHandler({ request, crawler: active }) {
       const { source, category, kind } = request.userData;
-      if (!robots.get(source)?.isAllowed(request.url, "BiPlan"))
-        throw new NonRetryableError("robots_disallowed");
-      // Reserve a per-origin slot inside the task: delayed queue reclaims must not
-      // consume Crawlee's requests-per-minute allowance without making requests.
-      const slot = Math.max(Date.now(), nextDomainSlot.get(source) ?? 0);
-      nextDomainSlot.set(source, slot + 1000);
-      await delay(Math.max(0, slot - Date.now()));
       const html = await get(request.url),
         $ = load(html);
       if (values["save-html"])
         await writeFile(join(output, "html", `${sha(request.url)}.html`), html);
       if (kind === "listing") {
-        const discovered = discover($, source);
+        const discovery = await expandListing($, source, request.url, get, { maxPages });
+        const discovered = discovery.urls;
         if (!discovered.length) throw new NonRetryableError("listing_empty");
-        const candidates = discovered.filter((url) => !enqueued.has(url)).slice(0, limit);
+        const remaining = discovered.filter((url) => !enqueued.has(url));
+        const candidates = remaining.slice(0, limit);
         for (const url of candidates) enqueued.add(url);
         report.listings.push({
           source,
           url: request.url,
+          initial: discovery.initial,
           discovered: discovered.length,
-          selected: candidates.length,
-          truncated: discovered.length > limit,
+          selected: values["discover-only"] ? 0 : candidates.length,
+          truncated: remaining.length > limit || discovery.completion !== "exhausted",
+          completion: discovery.completion,
+          total: discovery.total,
+          requests: discovery.requests,
+          ...(values["discover-only"] ? { discoveredUrls: discovered } : {}),
         });
+        if (values["discover-only"]) return;
         await active.addRequests(
           candidates.map((url) => ({ url, userData: { source, category, kind: "event" } })),
         );
@@ -180,7 +222,7 @@ const crawler = new BasicCrawler(
         url: request.url,
         checkedAt: new Date().toISOString(),
         contentHash: sha(html),
-        parserVersion: "2",
+        parserVersion: "3",
         events: accepted,
       });
       if (report.pages.length % 10 === 0)
@@ -204,27 +246,49 @@ try {
   crawlError = error;
   report.failures.push({ reason: error.message });
 }
-const { events, carried } = reconcile(previous, report.pages);
-const blocked = crawlError ? "crawl_failed" : publicationGate(previous, events, report);
-report.finishedAt = new Date().toISOString();
-report.summary = {
-  blocked,
-  events: events.length,
-  available: events.filter((e) => e.availability === "available").length,
-  carried,
-  refreshedPages: report.pages.length,
-  failedPages: report.failures.length,
-  quarantined: report.quarantined.length,
-  sources: Object.fromEntries(
-    selected.map((name) => [name, events.filter((e) => e.source === name).length]),
-  ),
-  coverage: "bounded listings plus previously known productions; not an exhaustive city catalog",
-};
-await atomicJson(join(output, "report.json"), report);
-await atomicJson(join(output, "events.json"), events);
-if (blocked)
-  throw new Error(
-    `Publication blocked: ${blocked}; previous snapshot preserved. See ${join(output, "report.json")}`,
-  );
-await atomicJson(snapshot, events);
-console.log(JSON.stringify(report.summary, null, 2));
+if (values["discover-only"]) {
+  report.finishedAt = new Date().toISOString();
+  report.summary = {
+    mode: "discovery_only",
+    blocked: "discovery_only",
+    discovered: new Set(report.listings.flatMap((l) => l.discoveredUrls)).size,
+    completedListings: report.listings.filter((l) => l.completion === "exhausted").length,
+    incompleteListings: report.listings.filter((l) => l.completion !== "exhausted").length,
+    failedListings: report.failures.length,
+  };
+  await atomicJson(join(output, "discovery.json"), report);
+  console.log(JSON.stringify(report.summary, null, 2));
+  if (crawlError || report.failures.length || report.summary.incompleteListings)
+    process.exitCode = 1;
+} else {
+  const { events, carried } = reconcile(previous, report.pages);
+  const blocked = crawlError ? "crawl_failed" : publicationGate(previous, events, report);
+  report.finishedAt = new Date().toISOString();
+  report.summary = {
+    blocked,
+    events: events.length,
+    available: events.filter((e) => e.availability === "available").length,
+    carried,
+    refreshedPages: report.pages.length,
+    failedPages: report.failures.length,
+    quarantined: report.quarantined.length,
+    discovery: {
+      completedListings: report.listings.filter((l) => l.completion === "exhausted").length,
+      incompleteListings: report.listings.filter((l) => l.completion !== "exhausted").length,
+      limitedListings: report.listings.filter((l) => l.truncated).length,
+    },
+    sources: Object.fromEntries(
+      selected.map((name) => [name, events.filter((e) => e.source === name).length]),
+    ),
+    coverage:
+      "paginated discovery with explicit completion status; bounded detail refresh plus previously known productions",
+  };
+  await atomicJson(join(output, "report.json"), report);
+  await atomicJson(join(output, "events.json"), events);
+  if (blocked)
+    throw new Error(
+      `Publication blocked: ${blocked}; previous snapshot preserved. See ${join(output, "report.json")}`,
+    );
+  await atomicJson(snapshot, events);
+  console.log(JSON.stringify(report.summary, null, 2));
+}

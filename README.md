@@ -33,10 +33,12 @@ Terminalin gösterdiği yerel adresi aç. `.env` dosyasında API anahtarı boş 
 ```sh
 cd collector
 npm ci
-npm run collect -- --limit 20
+npm run collect -- --limit 100
+# Yalnızca tüm liste sayfalarını keşfet; seans/veritabanı güncelleme:
+npm run collect -- --discover-only
 ```
 
-Yeni Crawlee toplayıcısı eski Python scraper'lardan bağımsızdır. Üç kaynağın açık sayfalarını okur, seansları doğrular, kaynaklar arası kesin eşleşmeleri işaretler ve `web/data/events.json` dosyasını atomik yeniler. Başarısız sayfaların eski kayıtları kendi kontrol zamanı korunarak 72 saate kadar tutulur. Fiyatı/satış durumu belirsiz kayıtlar doğrulanmış bilet gibi gösterilmez.
+Yeni Crawlee toplayıcısı eski Python scraper'lardan bağımsızdır. Üç kaynağın kaydırmayla yüklenen açık liste isteklerini takip eder, ardından seçilen etkinliklerin seanslarını doğrular, kaynaklar arası kesin eşleşmeleri işaretler ve `web/data/events.json` dosyasını atomik yeniler. Başarısız sayfaların eski kayıtları kendi kontrol zamanı korunarak 72 saate kadar tutulur. Fiyatı/satış durumu belirsiz kayıtlar doğrulanmış bilet gibi gösterilmez.
 
 [Araç karşılaştırması, kapsam, kalite kuralları ve zamanlama](collector/README.md). Koleksiyon raporu `collector/output/report.json` altında. Günde iki toplama için GitHub iş akışı eklendi; master'a alındığında çalışır. Canlı aktarım hedefi ve sunucu sırrı tanımlanmadığında yalnızca artifact üretir. Canlıya aktarım için korumalı `/api/admin/import` ve `collector/publish.mjs` kullanılır; AI anahtarı gerekmez.
 
@@ -75,4 +77,4 @@ Yeni uygulama React + TypeScript + Vinext üzerinde tek Cloudflare Worker ve D1 
 
 `db/schema.ts` şema kaynağıdır; değişiklik sonrası `npm run db:generate` ile SQL üret. Migration’lar `drizzle/` altında sürümlenir. Çalışma sırasında ilk açılışta doğrulanmış başlangıç seçkisi veritabanına aktarılır.
 
-Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve çok kaynaklı kapsam. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.
+Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve eksiksiz şehir kapsamı. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.

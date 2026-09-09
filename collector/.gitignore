@@ -3,3 +3,5 @@ storage/
 output/
 .env*
 !.env.example
+
+state/

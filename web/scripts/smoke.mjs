@@ -30,7 +30,9 @@ try {
   await writeFile(join(temp, '.env'), '');
   server = createTestHarness({
     root: temp,
-    workers: [{ configPath: join(temp, 'wrangler.json'), secrets: config.vars }],
+    workers: [
+      { configPath: join(temp, 'wrangler.json'), secrets: config.vars },
+    ],
   });
   await server.listen();
   const healthResponse = await server.fetch('/api/health');
@@ -41,6 +43,19 @@ try {
   // Dispatch directly to workerd. The dev HTTP proxy can lose its connection
   // after an early 401 leaves a request body unread (workerd issue #1730).
   const worker = server.getWorker();
+  const env = await worker.getEnv();
+  const snapshot = JSON.parse(
+    await readFile(join(root, 'data/events.json'), 'utf8'),
+  );
+  const stored = await env.DB.prepare('SELECT payload FROM events').all();
+  assert.equal(stored.results.length, snapshot.length);
+  const indexed = new Map(
+    stored.results.map((row) => {
+      const e = JSON.parse(row.payload);
+      return [e.id, e];
+    }),
+  );
+  for (const event of snapshot) assert.deepEqual(indexed.get(event.id), event);
   function request(path, body, authenticated = false) {
     return worker.fetch(path, {
       ...(body === undefined
@@ -144,6 +159,38 @@ try {
   );
   assert.equal(importedRecommendation.event.price, 500);
   assert.ok(importedRecommendation.event.productionKey);
+  const bulk = Array.from({ length: 101 }, (_, i) => ({
+    ...importedEvent,
+    id: `smoke-bulk-${i}`,
+    title: `Türkçe ŞĞİÜÖÇ ${i}`,
+    description: 'ŞĞ'.repeat(2000),
+    startsAt: new Date(Date.now() + (i + 3) * 86400000).toISOString(),
+    price: i % 2 ? null : 500,
+    url: 'https://biletinial.com/tr-tr/muzik/smoke-bulk',
+  }));
+  const bulkResponse = await request(
+    '/api/admin/import',
+    {
+      schemaVersion: 1,
+      pages: [{ url: bulk[0].url, events: bulk }],
+    },
+    true,
+  );
+  assert.equal(bulkResponse.status, 200);
+  assert.equal((await bulkResponse.json()).imported, 101);
+  const bulkRows = await env.DB.prepare(
+    'SELECT payload FROM events WHERE source_url=?',
+  )
+    .bind(bulk[0].url)
+    .all();
+  assert.equal(bulkRows.results.length, 101);
+  assert.equal(
+    JSON.parse(
+      bulkRows.results.find((r) => JSON.parse(r.payload).id === 'smoke-bulk-1')
+        .payload,
+    ).price,
+    null,
+  );
   const badImport = await request(
     '/api/admin/import',
     envelope({ ...importedEvent, url: 'https://evil.example/event' }),

@@ -11,8 +11,14 @@ const bubilet = JSON.parse(
 const biletix = JSON.parse(
   await readFile(new URL("./fixtures/biletix.json", import.meta.url), "utf8"),
 );
-const wrap = (value) =>
-  load(`<script type="application/ld+json">${JSON.stringify(value)}</script>`);
+const sessions = JSON.parse(
+  await readFile(new URL("./fixtures/bubilet-sessions.json", import.meta.url), "utf8"),
+);
+const wrap = (value, state = sessions) =>
+  load(
+    `<script type="application/ld+json">${JSON.stringify(value)}</script>` +
+      `<script>self.__next_f.push([1,${JSON.stringify("1:" + JSON.stringify(state) + "\n")}])</script>`,
+  );
 const url = "https://www.bubilet.com.tr/istanbul/etkinlik/sebnem-ferah";
 
 await test("real Bubilet schema yields all three individual sessions, not aggregate price/date", async () => {
@@ -23,7 +29,9 @@ await test("real Bubilet schema yields all three individual sessions, not aggreg
   assert.equal(events[1].startsAt, "2026-10-17T18:30:00.000Z");
   assert.equal(events[2].venue, "Harbiye Cemil Topuzlu Açıkhava Tiyatrosu");
   assert.deepEqual(validateEvent(events[0], now), []);
-  assert.ok(validateEvent(events[1], now).includes("price_outlier"));
+  assert.equal(events[1].availability, "unknown");
+  assert.equal(events[1].price, null);
+  assert.deepEqual(validateEvent(events[1], now), []);
 });
 await test("Biletix embedded state groups ticket types and converts kurus to TRY", async () => {
   const $ = load(
@@ -76,7 +84,10 @@ await test("missing event schema and unverified empty output cannot erase a prod
     /schema_missing/,
   );
   const bad = { "@type": "Event", name: "unparseable redesign", startDate: "tomorrow" };
-  await assert.rejects(extract(wrap(bad), "bubilet", url, "Konser", now), /no_verified_sessions/);
+  await assert.rejects(
+    extract(wrap(bad, {}), "bubilet", url, "Konser", now),
+    /session_schema_missing/,
+  );
 });
 const [event] = await extract(wrap(bubilet), "bubilet", url, "Konser", now);
 await test("partial failure preserves original checkedAt; successful page replaces its old sessions", () => {
@@ -108,4 +119,46 @@ await test("production identity deduplicates exact source matches without mergin
     }),
   );
   assert.notEqual(productionKey(event), productionKey({ ...event, venue: "Başka sahne" }));
+});
+
+await test("Bubilet truncated session state cannot replace the complete page", async () => {
+  const state = structuredClone(sessions);
+  state.eventSessions.pop();
+  await assert.rejects(
+    extract(wrap(bubilet, state), "bubilet", url, "Konser", now),
+    /session_coverage_mismatch/,
+  );
+});
+await test("Bubilet unknown, calendar and conditional offers are not normal tickets", async () => {
+  const state = structuredClone(sessions);
+  state.eventSessions[0].isCombinedTicket = true;
+  const events = await extract(wrap(bubilet, state), "bubilet", url, "Konser", now);
+  assert.equal(events[0].availability, "unknown");
+  assert.equal(events[0].price, null);
+  state.calendarBased = true;
+  await assert.rejects(
+    extract(wrap(bubilet, state), "bubilet", url, "Konser", now),
+    /calendar_requires_expansion/,
+  );
+});
+await test("Bubilet additional date at another venue is read from session state", async () => {
+  const state = structuredClone(sessions);
+  state.eventSessions.push({
+    ...state.eventSessions[0],
+    sessionId: 999,
+    venueName: "İkinci sahne",
+    date: "2026-12-01T18:00:00+00:00",
+    price: 750,
+  });
+  const events = await extract(wrap(bubilet, state), "bubilet", url, "Konser", now);
+  assert.equal(events.length, 4);
+  assert.equal(events.at(-1).venue, "İkinci sahne");
+  assert.equal(events.at(-1).price, 750);
+});
+
+await test("Bubilet uses each session venue even when JSON-LD repeats the first venue", async () => {
+  const schema = structuredClone(bubilet);
+  schema.subEvent[2].location = structuredClone(schema.subEvent[0].location);
+  const events = await extract(wrap(schema), "bubilet", url, "Konser", now);
+  assert.equal(events[2].venue, sessions.eventSessions[2].venueName);
 });
