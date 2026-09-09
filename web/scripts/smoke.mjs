@@ -94,7 +94,7 @@ try {
         ready = true;
         break;
       }
-      await response.body?.cancel();
+      await response.arrayBuffer();
     } catch {
       /* The local Worker can take a few seconds to initialize. */
     }
@@ -120,7 +120,8 @@ try {
   }
   const page = await request('/');
   assert.equal(page.status, 200);
-  await page.body?.cancel();
+  // Consume responses: aborting their streams can tear down Wrangler's dev proxy.
+  await page.arrayBuffer();
   const events = await request('/api/events');
   assert.equal(events.status, 200);
   const listing = await events.json();
@@ -145,13 +146,13 @@ try {
   );
   const invalid = await request('/api/recommend', { message: '' });
   assert.equal(invalid.status, 400);
-  await invalid.body?.cancel();
+  await invalid.arrayBuffer();
   const sync = await request('/api/admin/sync', {});
   assert.equal(sync.status, 401);
-  await sync.body?.cancel();
+  await sync.arrayBuffer();
   const unauthorizedImport = await request('/api/admin/import', {});
   assert.equal(unauthorizedImport.status, 401);
-  await unauthorizedImport.body?.cancel();
+  await unauthorizedImport.arrayBuffer();
   const checkedAt = new Date().toISOString();
   const importedEvent = {
     id: 'smoke-import',
@@ -211,7 +212,7 @@ try {
     true,
   );
   assert.equal(badImport.status, 400);
-  await badImport.body?.cancel();
+  await badImport.arrayBuffer();
   console.log(
     'Built Worker smoke check passed: page, D1, keyless search, validation, protected sync, import and stale-update protection.',
   );
