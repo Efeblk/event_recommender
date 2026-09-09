@@ -1,0 +1,5 @@
+node_modules/
+storage/
+output/
+.env*
+!.env.example

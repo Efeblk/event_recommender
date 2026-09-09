@@ -13,7 +13,11 @@ export interface EventRecord {
   url: string;
   imageUrl: string;
   category: string;
-  availability: 'available' | 'sold_out' | 'cancelled';
+  availability: 'available' | 'sold_out' | 'cancelled' | 'unknown';
+  source?: 'biletinial' | 'bubilet' | 'biletix';
+  sourceVersion?: string;
+  extraction?: string;
+  productionKey?: string;
   checkedAt: string;
 }
 export interface Filters {

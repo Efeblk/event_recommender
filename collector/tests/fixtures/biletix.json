@@ -1,0 +1,111 @@
+{
+  "2245883713": {
+    "b": {
+      "status": "SUCCESS",
+      "data": [
+        {
+          "eventCode": "5JBD4",
+          "performanceCode": "002",
+          "dateInfo": null,
+          "eventName": "Bülent Ersoy",
+          "venueName": "Ataköy Marina Açık Hava Sahnesi ",
+          "venueCity": "İstanbul",
+          "performanceDate": 1789754400000,
+          "status": "s00_closed",
+          "perfType": null,
+          "doorOpeningTime": null,
+          "eventImage": null,
+          "eventWideImage": null,
+          "campaignTitle": null,
+          "priceInfo": null,
+          "insured": false,
+          "keyUrlText": "bulent-ersoy-18-09-2026-istanbul",
+          "longName": "Loca & Bistro",
+          "shortName": "Loca & Bistro",
+          "description": "Loca & Bistro",
+          "info": "Loca & Bistro",
+          "eventTitleInfo": null,
+          "minPrice": null,
+          "active": false
+        },
+        {
+          "eventCode": "5JBD4",
+          "performanceCode": "001",
+          "dateInfo": null,
+          "eventName": "Bülent Ersoy",
+          "venueName": "Ataköy Marina Açık Hava Sahnesi ",
+          "venueCity": "İstanbul",
+          "performanceDate": 1789754400000,
+          "status": "s00_closed",
+          "perfType": null,
+          "doorOpeningTime": null,
+          "eventImage": null,
+          "eventWideImage": null,
+          "campaignTitle": null,
+          "priceInfo": null,
+          "insured": false,
+          "keyUrlText": "bulent-ersoy-18-09-2026-istanbul",
+          "longName": "Sahne Önü & Tribün",
+          "shortName": "Sahne Önü & Tribün",
+          "description": "Sahne Önü & Tribün",
+          "info": "Sahne Önü & Tribün",
+          "eventTitleInfo": null,
+          "minPrice": null,
+          "active": false
+        },
+        {
+          "eventCode": "5JBD4",
+          "performanceCode": "003",
+          "dateInfo": null,
+          "eventName": "Bülent Ersoy",
+          "venueName": "Ataköy Marina Açık Hava Sahnesi ",
+          "venueCity": "İstanbul",
+          "performanceDate": 1789754400000,
+          "status": "s01_onsale",
+          "perfType": null,
+          "doorOpeningTime": null,
+          "eventImage": null,
+          "eventWideImage": null,
+          "campaignTitle": null,
+          "priceInfo": null,
+          "insured": false,
+          "keyUrlText": "bulent-ersoy-18-09-2026-istanbul",
+          "longName": "",
+          "shortName": "",
+          "description": "",
+          "info": "",
+          "eventTitleInfo": null,
+          "minPrice": 52000,
+          "active": true
+        }
+      ],
+      "errors": null,
+      "warnings": null
+    },
+    "h": {},
+    "s": 200,
+    "st": "OK",
+    "u": "https://www.biletix.com/wbtxapi/api/v1/bxcached/event/getPerformanceList/5JBD4/INTERNET/tr",
+    "rt": "json"
+  },
+  "3550710110": {
+    "b": {
+      "status": "SUCCESS",
+      "data": {
+        "eventCode": "5JBD4",
+        "eventName": "Bülent Ersoy",
+        "eventDescription": "Bülent Ersoy, Bayhan Müzik organizasyonuyla 18 Eylül akşamı Ataköy Marina Açık Hava'da sevenleriyle buluşuyor.",
+        "venueTown": "BAKIRKÖY",
+        "eventCategoryCode": "MUSIC",
+        "subCategory": "Türk Sanat - Halk Müziği"
+      },
+      "errors": null,
+      "warnings": null
+    },
+    "h": {},
+    "s": 200,
+    "st": "OK",
+    "u": "https://www.biletix.com/wbtxapi/api/v1/bxcached/event/getEventDetail/5JBD4/INTERNET/tr",
+    "rt": "json"
+  }
+}

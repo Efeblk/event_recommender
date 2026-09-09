@@ -25,7 +25,7 @@ try {
     OPENAI_API_KEY: '',
     EMBEDDING_API_KEY: '',
     EMBEDDING_ENABLED: 'false',
-    SYNC_TOKEN: '',
+    SYNC_TOKEN: 'local-smoke-only',
   };
   await writeFile(join(temp, 'wrangler.json'), JSON.stringify(config));
   await writeFile(join(temp, '.env'), '');
@@ -101,13 +101,18 @@ try {
     await delay(500);
   }
   assert.ok(ready, 'Worker must start with a healthy local database');
-  async function request(path, body) {
+  async function request(path, body, authenticated = false) {
     return fetch(`${origin}${path}`, {
       ...(body === undefined
         ? {}
         : {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(authenticated
+                ? { Authorization: 'Bearer local-smoke-only' }
+                : {}),
+            },
             body: JSON.stringify(body),
           }),
       signal: AbortSignal.timeout(10000),
@@ -144,8 +149,67 @@ try {
   const sync = await request('/api/admin/sync', {});
   assert.equal(sync.status, 401);
   await sync.body?.cancel();
+  const unauthorizedImport = await request('/api/admin/import', {});
+  assert.equal(unauthorizedImport.status, 401);
+  await unauthorizedImport.body?.cancel();
+  const checkedAt = new Date().toISOString();
+  const importedEvent = {
+    id: 'smoke-import',
+    title: 'Zümrütkristal Doğrulama Konseri',
+    description: 'Yalnızca izole test veritabanında kullanılan kayıt.',
+    startsAt: new Date(Date.now() + 2 * 86400000).toISOString(),
+    checkedAt,
+    venue: 'Zümrütkristal test sahnesi',
+    district: '',
+    address: '',
+    city: 'İstanbul',
+    price: 500,
+    currency: 'TRY',
+    category: 'Konser',
+    availability: 'available',
+    imageUrl: '',
+    url: 'https://biletinial.com/tr-tr/muzik/smoke-import',
+    source: 'biletinial',
+  };
+  const envelope = (event) => ({
+    schemaVersion: 1,
+    pages: [{ url: event.url, events: [event] }],
+  });
+  const imported = await request(
+    '/api/admin/import',
+    envelope(importedEvent),
+    true,
+  );
+  assert.equal(imported.status, 200);
+  assert.equal((await imported.json()).imported, 1);
+  const staleImport = await request(
+    '/api/admin/import',
+    envelope({
+      ...importedEvent,
+      price: 800,
+      checkedAt: new Date(Date.now() - 60000).toISOString(),
+    }),
+    true,
+  );
+  assert.equal(staleImport.status, 200);
+  assert.equal((await staleImport.json()).skipped, 1);
+  const readBack = await request('/api/recommend', {
+    message: 'Zümrütkristal konser',
+  });
+  const importedRecommendation = (await readBack.json()).recommendations.find(
+    ({ event }) => event.id === 'smoke-import',
+  );
+  assert.equal(importedRecommendation.event.price, 500);
+  assert.ok(importedRecommendation.event.productionKey);
+  const badImport = await request(
+    '/api/admin/import',
+    envelope({ ...importedEvent, url: 'https://evil.example/event' }),
+    true,
+  );
+  assert.equal(badImport.status, 400);
+  await badImport.body?.cancel();
   console.log(
-    'Built Worker smoke check passed: page, D1, keyless search, validation, protected sync.',
+    'Built Worker smoke check passed: page, D1, keyless search, validation, protected sync, import and stale-update protection.',
   );
 } catch (error) {
   console.error(logs);

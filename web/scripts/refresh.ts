@@ -1,21 +1,18 @@
-import { writeFile } from 'node:fs/promises';
-import { collect } from '../lib/source.ts';
-const report = await collect(10);
-if (!report.pages || !report.events)
-  throw new Error('No verified events; existing snapshot was preserved.');
-if (report.failures.length)
-  throw new Error(
-    `Partial source failure (${report.failures.length}); existing snapshot preserved. Retry later.`,
-  );
-const events = [
-  ...new Map(
-    report.sources.flatMap((s) => s.events).map((e) => [e.id, e]),
-  ).values(),
-].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-await writeFile(
-  new URL('../data/events.json', import.meta.url),
-  JSON.stringify(events, null, 2) + '\n',
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+// The crawler runs in Node, separately from the application Worker.
+const child = spawn(
+  process.execPath,
+  ['--experimental-strip-types', 'run.mjs', ...process.argv.slice(2)],
+  {
+    cwd: fileURLToPath(new URL('../../collector/', import.meta.url)),
+    stdio: 'inherit',
+  },
 );
-console.log(
-  `Saved ${events.length} verified future sessions from ${report.pages} pages.`,
-);
+child.on('error', (error) => {
+  console.error(error.message);
+  process.exitCode = 1;
+});
+child.on('exit', (code) => {
+  process.exitCode = code ?? 1;
+});

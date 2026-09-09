@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-09T11:46:21.175Z",
+  "finishedAt": "2026-09-09T11:49:28.167Z",
+  "summary": {
+    "blocked": null,
+    "events": 429,
+    "available": 421,
+    "carried": 0,
+    "refreshedPages": 174,
+    "failedPages": 4,
+    "quarantined": 4,
+    "sources": {
+      "biletinial": 195,
+      "bubilet": 187,
+      "biletix": 47
+    },
+    "coverage": "bounded listings plus previously known productions; not an exhaustive city catalog"
+  },
+  "listings": [
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/istanbul",
+      "discovered": 50,
+      "selected": 20,
+      "truncated": true
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/istanbul",
+      "discovered": 48,
+      "selected": 20,
+      "truncated": true
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/etkinlikleri/stand-up",
+      "discovered": 6,
+      "selected": 1,
+      "truncated": false
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/konser",
+      "discovered": 26,
+      "selected": 17,
+      "truncated": true
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/tiyatro",
+      "discovered": 24,
+      "selected": 14,
+      "truncated": true
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/stand-up",
+      "discovered": 24,
+      "selected": 14,
+      "truncated": true
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/category/MUSIC/ISTANBUL/tr",
+      "discovered": 2,
+      "selected": 0,
+      "truncated": false
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/anasayfa/ISTANBUL/tr",
+      "discovered": 23,
+      "selected": 20,
+      "truncated": true
+    }
+  ],
+  "failures": [
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/dogu-demirkol-stand-up-gosterisi",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/duman--",
+      "reason": "all_sessions_quarantined",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/motive---konseri",
+      "reason": "all_sessions_quarantined",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5LWB9/ISTANBUL/tr",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    }
+  ],
+  "quarantined": [
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sebnem-ferah",
+      "id": "46c1651f43286e7f85c185b2",
+      "errors": [
+        "price_outlier"
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sebnem-ferah",
+      "id": "b2e8838754fec61962cbe593",
+      "errors": [
+        "price_outlier"
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/duman--",
+      "id": "2607105ec076befbf573d7bb",
+      "errors": [
+        "price_outlier"
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/motive---konseri",
+      "id": "bc5b742466426deb63fc2dd5",
+      "errors": [
+        "price_outlier"
+      ]
+    }
+  ],
+  "quality": {
+    "pricedRecords": 420,
+    "productionGroups": 290,
+    "crossSourceDuplicateSessions": 13
+  }
+}
