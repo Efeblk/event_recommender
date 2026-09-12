@@ -63,12 +63,15 @@ async function initialize(db: D1Database) {
           ? e.checkedAt
           : sources.get(e.url)!,
       );
-    const rows = [...sources].map(([url, checked]) =>
+    // One indexed delete and bounded JSON inserts avoid one D1 query per row.
+    const rows = [
       db
-        .prepare('DELETE FROM events WHERE source_url=? AND checked_at<=?')
-        .bind(url, checked),
-    );
-    rows.push(...(seed as EventRecord[]).map((e) => upsertStatement(db, e)));
+        .prepare(
+          "DELETE FROM events WHERE id IN (SELECT events.id FROM json_each(?) AS incoming JOIN events ON events.source_url=json_extract(incoming.value,'$[0]') WHERE events.checked_at<=json_extract(incoming.value,'$[1]'))",
+        )
+        .bind(JSON.stringify([...sources])),
+    ];
+    rows.push(...upsertStatements(db, seed as EventRecord[]));
     rows.push(
       db
         .prepare(
@@ -79,20 +82,44 @@ async function initialize(db: D1Database) {
     await db.batch(rows);
   }
 }
-function upsertStatement(db: D1Database, e: EventRecord) {
-  return db
-    .prepare(
-      'INSERT INTO events(id,starts_at,checked_at,category,price,source_url,payload) VALUES(?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET starts_at=excluded.starts_at,checked_at=excluded.checked_at,category=excluded.category,price=excluded.price,source_url=excluded.source_url,payload=excluded.payload WHERE excluded.checked_at>=events.checked_at',
-    )
-    .bind(
-      e.id,
-      e.startsAt,
-      e.checkedAt,
-      e.category,
-      e.price,
-      e.url,
-      JSON.stringify(e),
+function upsertStatements(db: D1Database, items: EventRecord[]) {
+  const statements: D1PreparedStatement[] = [];
+  // Bound UTF-8 bytes as well as row count; multi-byte descriptions must still
+  // fit D1's parameter value limit. The SQL itself uses one bind parameter.
+  const batches: string[] = [];
+  let parts: string[] = [],
+    bytes = 2;
+  const encoder = new TextEncoder();
+  for (const item of items) {
+    const part = JSON.stringify(item),
+      size = encoder.encode(part).length + 1;
+    if (parts.length && (parts.length === 100 || bytes + size > 500000)) {
+      batches.push('[' + parts.join(',') + ']');
+      parts = [];
+      bytes = 2;
+    }
+    parts.push(part);
+    bytes += size;
+  }
+  if (parts.length) batches.push('[' + parts.join(',') + ']');
+  for (const payload of batches) {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO events(id,starts_at,checked_at,category,price,source_url,payload)
+       SELECT json_extract(value,'$.id'),json_extract(value,'$.startsAt'),
+              json_extract(value,'$.checkedAt'),json_extract(value,'$.category'),
+              json_extract(value,'$.price'),json_extract(value,'$.url'),value
+       FROM json_each(?) WHERE 1
+       ON CONFLICT(id) DO UPDATE SET starts_at=excluded.starts_at,
+         checked_at=excluded.checked_at,category=excluded.category,price=excluded.price,
+         source_url=excluded.source_url,payload=excluded.payload
+       WHERE excluded.checked_at>=events.checked_at`,
+        )
+        .bind(payload),
     );
+  }
+  return statements;
 }
 export async function candidates(f: Filters, now = new Date()) {
   const db = await database();
@@ -140,7 +167,7 @@ export async function replaceSource(url: string, items: EventRecord[]) {
       )
       .bind(url, JSON.stringify(items.map((e) => e.id))),
     db.prepare('DELETE FROM events WHERE source_url=?').bind(url),
-    ...items.map((e) => upsertStatement(db, e)),
+    ...upsertStatements(db, items),
   ]);
 }
 export async function consumeLimit(

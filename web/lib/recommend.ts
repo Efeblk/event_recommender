@@ -7,6 +7,7 @@ import {
 } from './types.ts';
 import {
   normalize,
+  productionIdentity,
   isEligible,
   parseFilters,
   rankEvents,
@@ -130,10 +131,14 @@ export async function recommend(
     isEligible(e, filters, now),
   );
   const excludedUrls = new Set(
-    events.filter((e) => input.excludeIds.includes(e.id)).map((e) => e.url),
+    events
+      .filter((e) => input.excludeIds.includes(e.id))
+      .map(productionIdentity),
   );
   events = events.filter(
-    (e) => !input.excludeIds.includes(e.id) && !excludedUrls.has(e.url),
+    (e) =>
+      !input.excludeIds.includes(e.id) &&
+      !excludedUrls.has(productionIdentity(e)),
   );
   const totalCandidates = events.length;
   if (!events.length)

@@ -1,0 +1,400 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-09T12:29:40.490Z",
+  "finishedAt": "2026-09-09T12:36:36.934Z",
+  "summary": {
+    "events": 743,
+    "available": 722,
+    "carried": 0,
+    "refreshedPages": 272,
+    "failedPages": 7,
+    "sources": {
+      "biletinial": 301,
+      "bubilet": 333,
+      "biletix": 109
+    },
+    "discoveredSourceUrls": 2863,
+    "completedListings": 7,
+    "incompleteListings": 0
+  },
+  "listings": [
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/istanbul",
+      "initial": 47,
+      "discovered": 364,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": null,
+      "requests": [
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=1",
+          "method": "GET",
+          "contentHash": "bc72765155a10c4046a02ac591bb845e8b859f45215526e7fac18d204a38f5d2",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=2",
+          "method": "GET",
+          "contentHash": "8dee87a293e8531e8447db9dd7d2c36492d8109a4206b9257a032894906c9fc0",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=3",
+          "method": "GET",
+          "contentHash": "5b304e6944ccf3012954ddd2c065ac954cd63a408d7186434ab9493faf58f3f8",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=4",
+          "method": "GET",
+          "contentHash": "f96d195f8538bda125e5791576c4c1241a9c3009d75fc6de590e91d5967c4aee",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=5",
+          "method": "GET",
+          "contentHash": "c7928b7f57b5878385fe0569830940133dac2aebda9305c2fd5d8123319a6132",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=6",
+          "method": "GET",
+          "contentHash": "bb961ba92784e799365c396d7086d8a60a73aa284933642fdbf8fb04ec5b951e",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=7",
+          "method": "GET",
+          "contentHash": "2c1126d5480795d258aeccef0678d9ec67cd79a0d17767284adf56cdedd4762e",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=8",
+          "method": "GET",
+          "contentHash": "a7acefd7b635043466cc30100fa3b2dddab3f9bdc2c724a2af997bb8f0d13a17",
+          "items": 10
+        }
+      ]
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/etkinlikleri/stand-up",
+      "initial": 6,
+      "discovered": 65,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 82,
+      "requests": [
+        {
+          "url": "https://biletinial.com/tr-tr/EventGroup/GetData?eventGroupId=311&type=events&cityId=147&filmTypesId=0&page=1&pageSize=30",
+          "method": "GET",
+          "contentHash": "6dc5876bd54d625c5125582f1d300ecf001bc6685c0e91c3847446979cccde0b",
+          "items": 30
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/EventGroup/GetData?eventGroupId=311&type=events&cityId=147&filmTypesId=0&page=2&pageSize=30",
+          "method": "GET",
+          "contentHash": "3b43b295b0d5a7861b8edad0faf703fbfc0af57ff2b9fad6575fa525fb07c3fc",
+          "items": 30
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/EventGroup/GetData?eventGroupId=311&type=events&cityId=147&filmTypesId=0&page=3&pageSize=30",
+          "method": "GET",
+          "contentHash": "c1a47b91b4496b616aa0febf3c345028df65f9f05ddea623ad4d8fd8b4dd3d83",
+          "items": 22
+        }
+      ]
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/istanbul",
+      "initial": 45,
+      "discovered": 540,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": null,
+      "requests": [
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=1",
+          "method": "GET",
+          "contentHash": "c1676e56a069251e96e8c2af44d998dfa8668bf55e5110a1400991ccf4119266",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=2",
+          "method": "GET",
+          "contentHash": "28e267012c97a751eb39afb81bddf1aff3839068e39d8ee43898da86eae8cbcf",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=3",
+          "method": "GET",
+          "contentHash": "e095495b96aec7eb79e1e1cb42e31530664e58b4741da9384eb2d64e602647ef",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=4",
+          "method": "GET",
+          "contentHash": "f1a67c64a4516fe5ed088b8b7d499557351904438a9bdeb8c1ecd37a7e35e507",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=5",
+          "method": "GET",
+          "contentHash": "e9d7eb55b4acfffd8411fc0d3801357742e82a5eae0201b2922545edccdccebd",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=6",
+          "method": "GET",
+          "contentHash": "3d8ef588643fe451082f310a8580b18301d4a79541d434c90e0a82337b65bb1c",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=7",
+          "method": "GET",
+          "contentHash": "98ff77df31c053612ec29db135296f42763b3b6b691d0daf5e9ace57fbaf0e90",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=8",
+          "method": "GET",
+          "contentHash": "09be9731858aa268c7b1c9edbfdbb27941d28c3f0768c952d8baceb02f6ec485",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=9",
+          "method": "GET",
+          "contentHash": "aa4e94e3afa8f7dcd05316536f113b957fff42e7fb1faa5ff147da47ff10b189",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=10",
+          "method": "GET",
+          "contentHash": "1da1e8a76f27a3113903b726087452ce7f57d9b0cef0a057edca3baf092548cf",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=11",
+          "method": "GET",
+          "contentHash": "a91bdc557a1f00bea02c2da28c061d200873c7c4edac275ab5d483b5e3c30597",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=12",
+          "method": "GET",
+          "contentHash": "644fcb3e69a5429fc70008ff3f3eb10b0b7441c15725eba9c2ae177747ec508e",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=13",
+          "method": "GET",
+          "contentHash": "8f652dea3b09d287d7942a298efe5abee48ca29375f199ed23f6252e45f4f3dd",
+          "items": 6
+        }
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/tiyatro",
+      "initial": 24,
+      "discovered": 227,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 227,
+      "requests": [
+        {
+          "url": "https://platform.api.bubilet.com.tr/v3/event/city/34/tag/1",
+          "method": "GET",
+          "contentHash": "37e769491ce41b1b72395b77e1cc66c1121e2d62b98f384b2069fe116d5ab759",
+          "items": 227
+        }
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/konser",
+      "initial": 25,
+      "discovered": 507,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 507,
+      "requests": [
+        {
+          "url": "https://platform.api.bubilet.com.tr/v3/event/city/34/tag/2",
+          "method": "GET",
+          "contentHash": "cdc6d1a0fae560ecdb6d739aba385387ce941b3a6f2e785ceb27b68f4d1954aa",
+          "items": 507
+        }
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/stand-up",
+      "initial": 24,
+      "discovered": 145,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 145,
+      "requests": [
+        {
+          "url": "https://platform.api.bubilet.com.tr/v3/event/city/34/tag/40",
+          "method": "GET",
+          "contentHash": "11ab97b66261c29fdf349231b263690ddf8c666dfe8766c9c6fdc2b167d9bdaa",
+          "items": 145
+        }
+      ]
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/search/ISTANBUL/tr",
+      "initial": 0,
+      "discovered": 1081,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 1081,
+      "requests": [
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "ad6f4cea5f6fdd526eea4d89a41c216316003245b12c4b0f12e8d65bcdda9c97",
+          "items": 100,
+          "offset": 0
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "f5f571629233088f7653718f8fb861b0c38ddc24740a60f1fba7fa35f4c26e68",
+          "items": 100,
+          "offset": 100
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "1f242cee1676e10596804998d9bd34f0dcd1b2b42903f63094b5036411e1542d",
+          "items": 100,
+          "offset": 200
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "4d798e6d3e24d23d6ec63bcbc8f1418c42d7d6ecc4c50b1f1f6fbdb9e031d4ad",
+          "items": 100,
+          "offset": 300
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "0f71c68b31404b9d947485a370ab95e9af3803783f01d35a8d6a6902c47ef02e",
+          "items": 100,
+          "offset": 400
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "8f3ad1d81774d21d522f3c45212f54844e947c3c18bb98e82f32bb130392f252",
+          "items": 100,
+          "offset": 500
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "f55c48d95bcb2e4d55c02952d639c2d7993217cecc54e4a6c5629fb1e06b2bcd",
+          "items": 100,
+          "offset": 600
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "1644b543ffd0e96ff931c3143b43b21abde8c1af85ecb83e65866c9f864ecd43",
+          "items": 100,
+          "offset": 700
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "f17ba5fe11c019baf9b3e7da3c8d5b07d1b768b6a4e1b71a20f6523d850b147b",
+          "items": 100,
+          "offset": 800
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "930ab620bca68b0831bc0def8ad5e660e820a3a9bb520196fcbcc6a5b7fe1b72",
+          "items": 100,
+          "offset": 900
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "contentHash": "c939d726e669613dbab43d95f9b926db9361cd884e198a208368f9a71c53cfce",
+          "items": 81,
+          "offset": 1000
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/cem-adrian-konseri",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/dogu-demirkol-stand-up-gosterisi",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/cem-isciler-stand-up",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/soytarilar-tiyatro-oyunu",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/katarsis-gel-yeniden-baslayalim",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/57W90/ISTANBUL/tr",
+      "reason": "unsupported_category",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5APAH/ISTANBUL/tr",
+      "reason": "unsupported_category",
+      "attempts": 1
+    }
+  ],
+  "quarantined": [],
+  "corrections": [
+    "Read per-session sale flags instead of advertised placeholder prices.",
+    "Use per-session venues when JSON-LD repeats the first venue.",
+    "Decode UTF-8 length-framed Flight text before reading subsequent session data."
+  ],
+  "limits": {
+    "newProductionsPerListing": 15,
+    "discoveryPages": 20,
+    "calendarInventory": "explicitly unsupported and rejected; no observed calendar failures in this sample"
+  }
+}

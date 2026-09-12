@@ -114,7 +114,13 @@ function EventCard({
             <p>{event.description || 'Kaynakta açıklama bulunmuyor.'}</p>
             {event.address && <p>{event.address}</p>}
             <span>
-              Kaynak: Biletinial · Kontrol: {dateLabel(event.checkedAt)}
+              Kaynak:{' '}
+              {event.source === 'bubilet'
+                ? 'Bubilet'
+                : event.source === 'biletix'
+                  ? 'Biletix'
+                  : 'Biletinial'}{' '}
+              · Kontrol: {dateLabel(event.checkedAt)}
             </span>
           </details>
         )}
@@ -666,7 +672,7 @@ export default function Home() {
               <span>
                 {initialLoading
                   ? 'Etkinlikler yükleniyor…'
-                  : `${total} gelecek seans · Biletinial`}
+                  : `${total} güncel kaynak kaydı`}
               </span>
             </div>
             {initialLoading ? (

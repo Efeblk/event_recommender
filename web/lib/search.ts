@@ -227,11 +227,13 @@ export function rankEvents(
     )
     .map((x) => x.event);
 }
+export const productionIdentity = (event: EventRecord) =>
+  event.productionKey || event.url;
 export function uniqueEvents(events: EventRecord[], limit = 5) {
   const seen = new Set<string>();
   return events
     .filter((e) => {
-      const key = e.url;
+      const key = productionIdentity(e);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

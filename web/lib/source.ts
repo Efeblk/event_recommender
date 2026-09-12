@@ -14,6 +14,7 @@ export function jsonLd(html: string): Record<string, unknown>[] {
       const o = x as Record<string, unknown>;
       result.push(o);
       if (o['@graph']) visit(o['@graph']);
+      if (o.subEvent) visit(o.subEvent);
     }
   }
   for (const m of html.matchAll(
@@ -31,8 +32,14 @@ export function safeSourceUrl(raw: string): string | null {
   try {
     const u = new URL(raw, SOURCE);
     return u.protocol === 'https:' &&
-      u.hostname === 'biletinial.com' &&
-      /^\/tr-tr\/(muzik|tiyatro|gosteri|etkinlik)\/[^/]+$/.test(u.pathname)
+      !u.username &&
+      !u.password &&
+      ((u.hostname === 'biletinial.com' &&
+        /^\/tr-tr\/(muzik|tiyatro|gosteri|etkinlik)\/[^/]+$/.test(
+          u.pathname,
+        )) ||
+        (u.hostname === 'www.bubilet.com.tr' &&
+          /^\/istanbul\/etkinlik\/[^/]+$/.test(u.pathname)))
       ? u.origin + u.pathname
       : null;
   } catch {
@@ -88,6 +95,8 @@ export async function parseEvents(
   if (!safeSourceUrl(url)) throw new Error('Unsupported source URL');
   const result: EventRecord[] = [];
   for (const e of jsonLd(html)) {
+    // Aggregate parent dates/prices do not describe every individual session.
+    if (Array.isArray(e.subEvent) && e.subEvent.length) continue;
     const type = e['@type'];
     if (
       !(typeof type === 'string' && type.endsWith('Event')) &&
@@ -118,10 +127,13 @@ export async function parseEvents(
       : [obj(e.offers)];
     const status = clean(e.eventStatus);
     const cancelled = /Cancelled|Postponed|Rescheduled/.test(status);
-    const available = offers.filter(
-      (o) => !/SoldOut|OutOfStock|Discontinued/.test(clean(o.availability)),
+    const available = offers.filter((o) =>
+      /(?:^|\/)(InStock|LimitedAvailability)$/.test(clean(o.availability)),
     );
-    const soldOut = offers.length > 0 && available.length === 0;
+    const unavailable = offers.filter((o) =>
+      /SoldOut|OutOfStock|Discontinued/.test(clean(o.availability)),
+    );
+    const soldOut = offers.length > 0 && unavailable.length === offers.length;
     const prices = available
       .filter(
         (o) =>
@@ -158,7 +170,9 @@ export async function parseEvents(
         ? 'cancelled'
         : soldOut
           ? 'sold_out'
-          : 'available',
+          : available.length
+            ? 'available'
+            : 'unknown',
       checkedAt: now.toISOString(),
     });
   }

@@ -19,7 +19,7 @@ Terminalin gösterdiği yerel adresi aç. `.env` dosyasında API anahtarı boş 
 
 ## Şu an ne çalışıyor?
 
-- Biletinial’dan doğrulanmış İstanbul konser, tiyatro ve stand-up seansları; afiş, mekân, başlangıç fiyatı, açıklama ve kaynak bağlantısı.
+- Biletinial, Bubilet ve Biletix’ten doğrulanmış İstanbul konser, tiyatro ve stand-up seansları; afiş, mekân, başlangıç fiyatı, açıklama ve kaynak bağlantısı.
 - Türkçe tarih, kişi başı bütçe ve kategori filtreleri; aramaya devam ederken önceki filtreleri koruma.
 - Aynı prodüksiyonun farklı seanslarını tek öneride toplama; başka seçenekleri isteme.
 - Geçmiş, iptal edilmiş, tükenmiş ve **72 saatten eski kontrol tarihli** kayıtları eleme. Bütçe varken fiyatı bilinmeyen kayıtları eleme. Kaynak fiyatları bilet garantisi değildir.
@@ -31,13 +31,16 @@ Terminalin gösterdiği yerel adresi aç. `.env` dosyasında API anahtarı boş 
 ## Veriyi yenileme
 
 ```sh
-cd web
-npm run data:refresh
+cd collector
+npm ci
+npm run collect -- --limit 100
+# Yalnızca tüm liste sayfalarını keşfet; seans/veritabanı güncelleme:
+npm run collect -- --discover-only
 ```
 
-Bu komut üç kategori listesinden sınırlı sayıda etkinlik sayfasını okur, JSON-LD seanslarını doğrular ve `data/events.json` dosyasını günceller. Tarih tahmini, yapay fiyat veya demo etkinliği üretmez. Liste eksik/başarısızsa mevcut dosyayı korur. İlk seçki tüm İstanbul’u kapsamaz.
+Yeni Crawlee toplayıcısı eski Python scraper'lardan bağımsızdır. Üç kaynağın kaydırmayla yüklenen açık liste isteklerini takip eder, ardından seçilen etkinliklerin seanslarını doğrular, kaynaklar arası kesin eşleşmeleri işaretler ve `web/data/events.json` dosyasını atomik yeniler. Başarısız sayfaların eski kayıtları kendi kontrol zamanı korunarak 72 saate kadar tutulur. Fiyatı/satış durumu belirsiz kayıtlar doğrulanmış bilet gibi gösterilmez.
 
-Canlı veritabanını güncellemek için sunucuda güçlü bir `SYNC_TOKEN` tanımla. Dış zamanlayıcıdan (örneğin günde iki defa) `web/scripts/sync.mjs` çalıştır; zamanlayıcının ortamında `BIPLAN_URL` ve `SYNC_TOKEN` bulunmalı. Bu ilk önizleme otomatik zamanlayıcı **kurmaz**. Başarılı kaynak sayfaları seans bazında yenilenir, başarısız sayfalardaki kayıtlar 72 saatlik tazelik sınırına kadar korunur.
+[Araç karşılaştırması, kapsam, kalite kuralları ve zamanlama](collector/README.md). Koleksiyon raporu `collector/output/report.json` altında. Günde iki toplama için GitHub iş akışı eklendi; master'a alındığında çalışır. Canlı aktarım hedefi ve sunucu sırrı tanımlanmadığında yalnızca artifact üretir. Canlıya aktarım için korumalı `/api/admin/import` ve `collector/publish.mjs` kullanılır; AI anahtarı gerekmez.
 
 ## AI’ı açma
 
@@ -74,4 +77,4 @@ Yeni uygulama React + TypeScript + Vinext üzerinde tek Cloudflare Worker ve D1 
 
 `db/schema.ts` şema kaynağıdır; değişiklik sonrası `npm run db:generate` ile SQL üret. Migration’lar `drizzle/` altında sürümlenir. Çalışma sırasında ilk açılışta doğrulanmış başlangıç seçkisi veritabanına aktarılır.
 
-Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve çok kaynaklı kapsam. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.
+Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve eksiksiz şehir kapsamı. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.
