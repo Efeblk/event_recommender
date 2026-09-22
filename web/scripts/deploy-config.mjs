@@ -46,12 +46,25 @@ export function validateDeploymentConfig({
     ...required,
     ...(requireSecrets ? ['CLOUDFLARE_API_TOKEN', 'SYNC_TOKEN'] : []),
     ...(process.env.DEPLOYMENT_SHA ? ['DEPLOYMENT_SHA'] : []),
+    ...(process.env.TYPESAFE_API_KEY ? ['TYPESAFE_API_KEY'] : []),
+    ...(process.env.TYPESAFE_MODEL ? ['TYPESAFE_MODEL'] : []),
+    ...(process.env.AI_DAILY_LIMIT ? ['AI_DAILY_LIMIT'] : []),
   ];
   const multiline = checked.filter((name) => /[\r\n]/.test(process.env[name]));
   if (multiline.length)
     throw new Error(
       `Deployment values must be single-line: ${multiline.join(', ')}`,
     );
+  const dailyLimit = process.env.AI_DAILY_LIMIT || '100';
+  if (
+    !/^\d+$/.test(dailyLimit) ||
+    Number(dailyLimit) < 1 ||
+    Number(dailyLimit) > 10000
+  )
+    throw new Error('AI_DAILY_LIMIT must be an integer from 1 to 10000.');
+  const model = process.env.TYPESAFE_MODEL || 'jev-1.13.0';
+  if (!/^jev-[a-z0-9.-]+$/.test(model))
+    throw new Error('TYPESAFE_MODEL must be a valid Jev model name.');
   if (!/^[0-9a-f]{32}$/i.test(process.env.CLOUDFLARE_ACCOUNT_ID))
     throw new Error(
       'CLOUDFLARE_ACCOUNT_ID must be a 32-character hexadecimal ID.',
@@ -97,6 +110,27 @@ export function validateDeploymentConfig({
     );
 }
 
+export function publicDeploymentVariables(environment) {
+  return {
+    DEPLOYMENT_ENV: environment,
+    ...(process.env.DEPLOYMENT_SHA
+      ? { DEPLOYMENT_SHA: process.env.DEPLOYMENT_SHA }
+      : {}),
+    SITE_URL: new URL(process.env.CF_PUBLIC_URL).origin,
+    TYPESAFE_MODEL: process.env.TYPESAFE_MODEL || 'jev-1.13.0',
+    AI_DAILY_LIMIT: process.env.AI_DAILY_LIMIT || '100',
+  };
+}
+
+export function deploymentSecrets() {
+  return {
+    SYNC_TOKEN: process.env.SYNC_TOKEN,
+    ...(process.env.TYPESAFE_API_KEY?.trim()
+      ? { TYPESAFE_API_KEY: process.env.TYPESAFE_API_KEY }
+      : {}),
+  };
+}
+
 export function deploymentMatches(body, environment, revision) {
   return (
     body?.status === 'ok' &&
@@ -132,13 +166,7 @@ export async function generateDeploymentConfig(environment) {
     },
   ];
   // Only public, explicitly selected variables belong in deploy artifacts.
-  config.vars = {
-    DEPLOYMENT_ENV: environment,
-    ...(process.env.DEPLOYMENT_SHA
-      ? { DEPLOYMENT_SHA: process.env.DEPLOYMENT_SHA }
-      : {}),
-    SITE_URL: new URL(process.env.CF_PUBLIC_URL).origin,
-  };
+  config.vars = publicDeploymentVariables(environment);
   config.limits = { cpu_ms: 30_000 };
   config.observability = {
     enabled: true,

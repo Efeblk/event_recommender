@@ -81,7 +81,10 @@ export const evaluationEvents: EventRecord[] = [
     title: 'Sürpriz Sahne',
     description: 'Program ayrıntıları henüz açıklanmadı.',
   },
-];
+].map((event) => ({
+  ...event,
+  url: `https://example.com/evaluation-only/${event.id}`,
+}));
 export const evaluationCases: {
   id: string;
   message: string;

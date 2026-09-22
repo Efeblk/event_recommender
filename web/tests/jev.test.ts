@@ -1,9 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildJevRequest, parseJevRanking, rankWithJev } from '../lib/jev.ts';
+import {
+  buildJevRequest,
+  jevConfigFrom,
+  parseJevRanking,
+  rankWithJev,
+} from '../lib/jev.ts';
 import { evaluationCases, evaluationEvents } from '../evals/jev-cases.ts';
 const candidates = evaluationEvents.slice(0, 2);
 const input = evaluationCases[0];
+await test('only a TypeSafe key enables the model; legacy provider keys are not reused', () => {
+  assert.equal(jevConfigFrom({}), null);
+  const legacy = {
+    TYPESAFE_API_KEY: '',
+    OPENAI_API_KEY: 'old-key',
+    AI_API_KEY: 'old-key',
+  };
+  assert.equal(jevConfigFrom(legacy), null);
+  assert.deepEqual(jevConfigFrom({ TYPESAFE_API_KEY: ' test-only ' }), {
+    apiKey: 'test-only',
+    model: 'jev-1.13.0',
+  });
+  assert.throws(() =>
+    jevConfigFrom({ TYPESAFE_API_KEY: 'test', TYPESAFE_MODEL: 'wrong' }),
+  );
+});
 const response = () => ({
   model: 'jev-1.13.0',
   usage: { input_tokens: 1500, output_tokens: 30 },
@@ -62,6 +83,9 @@ await test('Jev rejects missing answers and malformed probability/score outputs'
   const invalidProbability = response();
   invalidProbability.answers.candidate_0.probabilities['0'] = 0.5;
   assert.throws(() => parseJevRanking(invalidProbability, candidates));
+  const inconsistent = response();
+  inconsistent.answers.candidate_0.score = 3;
+  assert.throws(() => parseJevRanking(inconsistent, candidates), /contradicts/);
   assert.throws(() =>
     parseJevRanking(
       { ...response(), usage: { input_tokens: 1.5, output_tokens: 0 } },

@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import {
   deploymentEnvironment,
   deploymentMatches,
+  deploymentSecrets,
   generateDeploymentConfig,
   validateDeploymentConfig,
 } from './deploy-config.mjs';
@@ -31,7 +32,7 @@ const secretFile = join(secretDir, 'secrets.env');
 try {
   await writeFile(
     secretFile,
-    JSON.stringify({ SYNC_TOKEN: process.env.SYNC_TOKEN }),
+    JSON.stringify(deploymentSecrets()),
     {
       mode: 0o600,
     },

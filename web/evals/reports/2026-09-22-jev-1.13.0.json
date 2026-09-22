@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "evaluatedAt": "2026-09-22T09:02:46.364Z",
+  "status": "completed",
+  "model": "jev-1.13.0",
+  "fixtureData": "fictional",
+  "calls": 12,
+  "plannedCalls": 12,
+  "minJevScore": 2,
+  "labelCandidateRecall": 1,
+  "labeledCases": 10,
+  "top1Hits": 10,
+  "top1Accuracy": 1,
+  "unsupportedCases": 2,
+  "unsupportedEmpty": 2,
+  "unsupportedFalsePositives": 0,
+  "inputTokens": 24699,
+  "outputTokens": 888,
+  "latencyMs": {
+    "method": "arithmetic median; nearest-rank p95",
+    "median": 286,
+    "p95": 3876
+  },
+  "publishedRateCostEstimateUsd": 0.001037358,
+  "costNote": "Estimate from published token rates, not an invoice.",
+  "caseOutcomes": [
+    {
+      "id": "acoustic",
+      "topRecommendation": "acoustic",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "dance",
+      "topRecommendation": "electronic",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "family",
+      "topRecommendation": "children",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "comedy",
+      "topRecommendation": "comedy",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "drama",
+      "topRecommendation": "drama",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "rock",
+      "topRecommendation": "rock",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "seated",
+      "topRecommendation": "acoustic",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "negation",
+      "topRecommendation": "drama",
+      "top1Hit": true,
+      "acceptedCount": 4,
+      "accepted": [
+        {
+          "id": "drama",
+          "score": 2.97
+        },
+        {
+          "id": "rock",
+          "score": 2.55
+        },
+        {
+          "id": "comedy",
+          "score": 2.52
+        },
+        {
+          "id": "electronic",
+          "score": 2.32
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "topRecommendation": "acoustic",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "followup",
+      "topRecommendation": "acoustic",
+      "top1Hit": true,
+      "acceptedCount": 1
+    },
+    {
+      "id": "unsupported-romance",
+      "topRecommendation": null,
+      "top1Hit": null,
+      "acceptedCount": 0,
+      "highestScore": 1.82
+    },
+    {
+      "id": "unsupported-access",
+      "topRecommendation": null,
+      "top1Hit": null,
+      "acceptedCount": 0,
+      "highestScore": 0.49
+    }
+  ],
+  "observations": [
+    "All 10 labeled fixtures had the expected first accepted recommendation.",
+    "Both unsupported-preference fixtures produced no accepted recommendation.",
+    "The serious-adult-play negation fixture also accepted rock, comedy, and electronic candidates at the provisional threshold, despite ranking drama first.",
+    "This small fictional fixture run does not establish public quality or calibrate the score threshold."
+  ],
+  "sourceSha256": {
+    "web/lib/jev.ts": "8de29607d7a93bad99d7cd11c9c195a8aefa988464d3ab5ea363e957cd21cba0",
+    "web/lib/recommend.ts": "9085bdabebe98a8efefab8d7d2b5feef707235b3d6296e18bf5f33eb382dcfb2",
+    "web/lib/retrieval.ts": "3952b11a40c06138ebab02cd642e13296dcbbb0718e4f1f049e9b803023792fb",
+    "web/lib/search.ts": "f9a8f407db3893ebda2ec73c05ac171f529e5d59b0bda2f66ddd478280fa48b1",
+    "web/evals/jev-cases.ts": "cb25bd008f7bac8ba5c0a5ce96f90b194560fe362472f8d94c6641ef042a971f",
+    "web/scripts/evaluate-jev.ts": "141e9b1afed4e61ed67a54856ac8fdccb277b946da128ad18b769d80148e0209"
+  }
+}

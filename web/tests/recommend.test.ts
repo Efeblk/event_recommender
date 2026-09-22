@@ -1,4 +1,3 @@
-import { configFrom, embeddingConfigFrom } from '../lib/providers.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -6,6 +5,7 @@ import {
   validateInput,
   type Dependencies,
 } from '../lib/recommend.ts';
+import { buildJevRequest, jevConfigFrom, rankWithJev } from '../lib/jev.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
 const now = new Date('2026-09-07T09:00:00Z');
 const event: EventRecord = {
@@ -29,55 +29,247 @@ const deps: Dependencies = {
   config: null,
   now,
   candidates: async () => [event],
-  vectors: async () => new Map(),
 };
 const request = validateInput({ message: 'Cumartesi 800 TL altında konser' });
-await test('keyless mode never pretends to be AI and returns only eligible sources', async () => {
-  const r = await recommend(request, {
+const config = jevConfigFrom({ TYPESAFE_API_KEY: 'test-only' })!;
+
+function mockRank(
+  scores: number[],
+  seen?: (body: ReturnType<typeof buildJevRequest>) => void,
+): typeof rankWithJev {
+  return (config, input, events) =>
+    rankWithJev(config, input, events, (async (url, init) => {
+      assert.equal(url, 'https://api.typesafe.ai/v1/systemone');
+      assert.equal(typeof init?.body, 'string');
+      const body = JSON.parse(init!.body as string) as ReturnType<
+        typeof buildJevRequest
+      >;
+      seen?.(body);
+      return Response.json({
+        model: 'jev-1.13.0',
+        usage: { input_tokens: 2000, output_tokens: 50 },
+        answers: Object.fromEntries(
+          events.map((_, i) => [
+            `candidate_${i}`,
+            {
+              type: 'score',
+              score: scores[i] ?? 3,
+              confidence: 0.9,
+              probabilities: Object.fromEntries(
+                [0, 1, 2, 3].map((level) => [
+                  String(level),
+                  level === (scores[i] ?? 3) ? 1 : 0,
+                ]),
+              ),
+            },
+          ]),
+        ),
+      });
+    }) as typeof fetch);
+}
+await test('keyless results contain only eligible event records, without generated prose', async () => {
+  const result = await recommend(request, {
     ...deps,
     candidates: async () => [
       event,
       { ...event, id: 'expensive', price: 900 },
-      { ...event, id: 'expired', startsAt: '2025-01-01' },
+      { ...event, id: 'stale', checkedAt: '2025-01-01' },
     ],
+    rank: async () => {
+      throw new Error('No paid call without configuration');
+    },
   });
-  assert.equal(r.mode, 'filters');
-  assert.match(r.notice!, /Anahtarsız/);
-  assert.deepEqual(
-    r.recommendations.map((r) => r.event.id),
-    ['a'],
-  );
+  assert.equal(result.mode, 'filters');
+  assert.equal(result.status, 'results');
+  assert.match(result.notice!, /kelime eşleşmesi/);
+  assert.deepEqual(result.recommendations, [{ event }]);
+  assert.equal('message' in result, false);
+  assert.equal('reason' in result.recommendations[0], false);
 });
-await test('no match does not relax hard filters', async () => {
-  const r = await recommend(
+await test('no match never relaxes a hard budget or spends a Jev call', async () => {
+  const result = await recommend(
     validateInput({ message: '100 TL altında konser' }),
-    deps,
+    {
+      ...deps,
+      config,
+      rank: async () => {
+        throw new Error('No candidates');
+      },
+    },
   );
-  assert.equal(r.recommendations.length, 0);
-  assert.equal(r.filters.maxPrice, 100);
+  assert.equal(result.status, 'empty');
+  assert.equal(result.filters.maxPrice, 100);
+  assert.deepEqual(result.recommendations, []);
 });
-await test('alternatives exclude every session of the previously shown production', async () => {
-  const r = await recommend(
+await test('alternatives exclude all sessions of the shown production', async () => {
+  const result = await recommend(
     { ...request, excludeIds: ['a'] },
     {
       ...deps,
-      candidates: async () => [
-        event,
-        { ...event, id: 'b', startsAt: '2026-09-12T19:00:00Z' },
-      ],
+      candidates: async () => [event, { ...event, id: 'b' }],
     },
   );
-  assert.equal(r.recommendations.length, 0);
+  assert.deepEqual(result.recommendations, []);
 });
-await test('unsupported city receives explicit clarification in keyless preview', async () => {
-  const r = await recommend(
-    validateInput({ message: 'Ankara konserleri' }),
-    deps,
+await test('ambiguous constraints and unsupported cities never reach retrieval or AI', async () => {
+  for (const [message, status] of [
+    ['Toplam bütçem 800 TL', 'needs_input'],
+    ['Ankara konserleri', 'unsupported_location'],
+    ['Ayın ortasında konser', 'needs_input'],
+  ]) {
+    let calls = 0;
+    const result = await recommend(validateInput({ message }), {
+      ...deps,
+      config,
+      candidates: async () => {
+        calls++;
+        return [event];
+      },
+      rank: async () => {
+        calls++;
+        throw new Error('Must not call');
+      },
+    });
+    assert.equal(result.status, status);
+    assert.equal(calls, 0);
+    assert.deepEqual(result.recommendations, []);
+  }
+});
+await test('group total and category exclusion are enforced before Jev', async () => {
+  const theatre = {
+    ...event,
+    id: 'theatre',
+    title: 'Gerçek Tiyatro',
+    description: 'Yetişkinlere yönelik sahne oyunu.',
+    category: 'Tiyatro',
+    price: 400,
+    url: 'https://example.test/theatre',
+  };
+  let calls = 0;
+  const result = await recommend(
+    validateInput({ message: 'İki kişi toplam 800 TL, konser hariç' }),
+    {
+      ...deps,
+      config,
+      candidates: async () => [event, theatre],
+      rank: mockRank([3], (body) => {
+        calls++;
+        assert.equal(body.state.verifiedFilters.maxPrice, 400);
+        assert.deepEqual(
+          body.state.candidates.map((e) => e.id),
+          ['theatre'],
+        );
+      }),
+    },
   );
-  assert.equal(r.recommendations.length, 0);
-  assert.match(r.message, /yalnızca İstanbul/);
+  assert.equal(calls, 1);
+  assert.equal(result.mode, 'jev');
+  assert.deepEqual(result.recommendations, [{ event: theatre }]);
 });
-await test('validation rejects system messages and excessively large histories', () => {
+await test('one bounded Jev request ranks text candidates and preserves their facts', async () => {
+  const events = Array.from({ length: 30 }, (_, i) => ({
+    ...event,
+    id: String(i),
+    url: `https://example.test/${i}`,
+  }));
+  let calls = 0;
+  const result = await recommend(request, {
+    ...deps,
+    config,
+    candidates: async () => events,
+    rank: mockRank([2, 3], (body) => {
+      calls++;
+      assert.equal(body.state.candidates.length, 16);
+      assert.equal(Object.keys(body.questions).length, 16);
+      assert.equal(body.state.candidates[0].description, event.description);
+      assert.equal('embeddings' in body.state, false);
+      assert.equal('vector' in body.state.candidates[0], false);
+    }),
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.recommendations.length, 5);
+  assert.equal(result.recommendations[0].event.id, '1');
+  assert.strictEqual(result.recommendations[0].event, events[1]);
+});
+await test('valid low Jev scores produce no results, not unrelated fallback cards', async () => {
+  const result = await recommend(request, {
+    ...deps,
+    config,
+    rank: mockRank([1]),
+  });
+  assert.equal(result.mode, 'jev');
+  assert.equal(result.status, 'empty');
+  assert.deepEqual(result.recommendations, []);
+});
+await test('failed or malformed Jev responses fall back visibly and preserve hard constraints', async () => {
+  for (const response of [
+    new Response('private error', { status: 429 }),
+    Response.json({ answers: {} }),
+  ]) {
+    let calls = 0;
+    const result = await recommend(request, {
+      ...deps,
+      config,
+      rank: (c, input, events) =>
+        rankWithJev(c, input, events, (async () => {
+          calls++;
+          return response;
+        }) as typeof fetch),
+    });
+    assert.equal(calls, 1);
+    assert.equal(result.mode, 'filters');
+    assert.match(result.notice!, /ulaşılamıyor/);
+    assert.deepEqual(result.recommendations, [{ event }]);
+    assert.equal(JSON.stringify(result).includes('private error'), false);
+  }
+});
+await test('ranking cannot substitute invented IDs, URLs or prices', async () => {
+  const result = await recommend(request, {
+    ...deps,
+    config,
+    rank: async () => ({
+      model: 'jev-1.13.0',
+      usage: { inputTokens: 0, outputTokens: 0 },
+      ranked: [
+        { event: { ...event, id: 'invented' }, score: 3, confidence: 1 },
+        {
+          event: { ...event, price: 1, url: 'https://evil.test' },
+          score: 3,
+          confidence: 1,
+        },
+        { event, score: 3, confidence: 1 },
+      ],
+    }),
+  });
+  assert.deepEqual(result.recommendations, [{ event }]);
+});
+await test('follow-ups preserve validated filters and user context without assistant prose', async () => {
+  const input = validateInput({
+    message: 'Daha sakin olsun',
+    filters: request.filters,
+    history: [
+      { role: 'user', content: request.message },
+      { role: 'assistant', content: 'Old generated reply' },
+    ],
+  });
+  assert.equal(input.history.length, 1);
+  await recommend(
+    {
+      ...input,
+      filters: { ...emptyFilters, maxPrice: 800, category: 'Konser' },
+    },
+    {
+      ...deps,
+      config,
+      rank: mockRank([3], (body) => {
+        assert.equal(body.state.verifiedFilters.maxPrice, 800);
+        assert.equal(body.state.history[0].role, 'user');
+        assert.equal(body.state.request, 'Daha sakin olsun');
+      }),
+    },
+  );
+});
+await test('input validation rejects invalid roles, oversized histories and bad filters', () => {
   assert.throws(() =>
     validateInput({
       message: 'hi',
@@ -91,128 +283,10 @@ await test('validation rejects system messages and excessively large histories',
       filters: { ...emptyFilters, maxPrice: Infinity },
     }),
   );
-});
-const config = configFrom({ OPENAI_API_KEY: 'test-only' })!;
-const embedding = embeddingConfigFrom({
-  OPENAI_API_KEY: 'test-only',
-  EMBEDDING_DIMENSIONS: '2',
-})!;
-const fakeAi: NonNullable<Dependencies['ai']> = {
-  understand: async () => ({
-    ...emptyFilters,
-    maxPrice: 800,
-    query: 'konser',
-    clarification: null,
-  }),
-  embed: async () => [[1, 0]],
-  choose: async () => ({
-    message: 'Sana uygun bir seçenek.',
-    selections: [
-      { id: 'invented', reason: 'Uydurma' },
-      { id: 'a', reason: 'Akustik gitar konseri.' },
-      { id: 'a', reason: 'Tekrar' },
-    ],
-  }),
-};
-await test('AI selections are grounded in candidate IDs and deduplicated', async () => {
-  const r = await recommend(request, { ...deps, config, ai: fakeAi });
-  assert.equal(r.mode, 'ai');
-  assert.deepEqual(
-    r.recommendations.map((r) => r.event.id),
-    ['a'],
+  assert.throws(() =>
+    validateInput({
+      message: 'hi',
+      history: Array(13).fill({ role: 'user', content: 'hi' }),
+    }),
   );
-  assert.equal(r.recommendations[0].event.url, event.url);
-});
-await test('AI failure falls back visibly without violating filters', async () => {
-  const r = await recommend(request, {
-    ...deps,
-    config,
-    ai: {
-      ...fakeAi,
-      understand: async () => {
-        throw new Error('offline');
-      },
-    },
-  });
-  assert.equal(r.mode, 'filters');
-  assert.match(r.notice!, /ulaşılamıyor/);
-  assert.equal(r.recommendations.length, 1);
-});
-await test('semantic path actually uses cached vectors and embedding request', async () => {
-  let calls = 0;
-  const r = await recommend(request, {
-    ...deps,
-    config,
-    ai: {
-      ...fakeAi,
-      embed: async () => {
-        calls++;
-        return [[1, 0]];
-      },
-    },
-    embeddings: () => embedding,
-    vectors: async () => new Map([['a', [1, 0]]]),
-  });
-  assert.equal(calls, 1);
-  assert.equal(r.mode, 'semantic');
-});
-await test('clarification does not spend a candidate search or invent recommendations', async () => {
-  const r = await recommend(request, {
-    ...deps,
-    config,
-    candidates: async () => {
-      throw new Error('must not search');
-    },
-    ai: {
-      ...fakeAi,
-      understand: async () => ({
-        ...emptyFilters,
-        query: 'iki kişi',
-        clarification: 'Bütçen kişi başı mı, toplam mı?',
-      }),
-    },
-  });
-  assert.equal(r.recommendations.length, 0);
-  assert.match(r.message, /kişi başı/);
-});
-await test('chat works without an embedding provider and does not query its cache', async () => {
-  const r = await recommend(request, {
-    ...deps,
-    config,
-    ai: fakeAi,
-    embeddings: () => null,
-    vectors: async () => {
-      throw new Error('Cache must not be queried');
-    },
-  });
-  assert.equal(r.mode, 'ai');
-  assert.equal(r.notice, null);
-  assert.equal(r.recommendations.length, 1);
-});
-await test('invalid embedding settings leave chat recommendations available', async () => {
-  const r = await recommend(request, {
-    ...deps,
-    config,
-    ai: fakeAi,
-    embeddings: () => {
-      throw new Error('Bad embedding config');
-    },
-  });
-  assert.equal(r.mode, 'ai');
-  assert.match(r.notice!, /Anlamsal arama/);
-  assert.equal(r.recommendations.length, 1);
-});
-await test('AI outage preserves the unsupported-city guard', async () => {
-  const r = await recommend(validateInput({ message: 'Ankara konserleri' }), {
-    ...deps,
-    config,
-    ai: {
-      ...fakeAi,
-      understand: async () => {
-        throw new Error('offline');
-      },
-    },
-  });
-  assert.equal(r.recommendations.length, 0);
-  assert.match(r.message, /yalnızca İstanbul/);
 });

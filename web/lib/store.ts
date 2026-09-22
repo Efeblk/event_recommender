@@ -17,6 +17,8 @@ export interface RuntimeEnv extends ProviderEnv {
   DONATION_URL?: string;
   DEPLOYMENT_ENV?: string;
   DEPLOYMENT_SHA?: string;
+  TYPESAFE_API_KEY?: string;
+  TYPESAFE_MODEL?: string;
 }
 export function runtime() {
   return env as unknown as RuntimeEnv;
@@ -155,6 +157,10 @@ export async function candidates(f: Filters, now = new Date()) {
   if (f.category) {
     sql.push('category=?');
     args.push(f.category);
+  }
+  if (f.excludedCategories?.length) {
+    sql.push('category NOT IN (SELECT value FROM json_each(?))');
+    args.push(JSON.stringify(f.excludedCategories));
   }
   if (f.maxPrice !== null) {
     sql.push('price IS NOT NULL AND price<=?');

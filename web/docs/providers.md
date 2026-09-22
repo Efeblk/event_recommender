@@ -1,3 +1,5 @@
+> Legacy reference: the active recommendation route now uses TypeSafe Jev only. These chat/embedding adapters remain for migration reference and optional admin tooling; setting their keys does not enable recommendations. See [Jev setup](jev-evaluation.md).
+
 # AI sağlayıcı bağlantısı
 
 Bu altyapı sağlayıcı hesabı açmaz, anahtar üretmez ve anahtarsız modda AI çağrısı yapmaz. Ayarlar yalnızca sunucuda okunur. İstemci API adresi, anahtarı veya model seçemez. Sağlayıcı ve model seçildiğinde aşağıdaki ayarlar yeterlidir; gerçek modelin Türkçe öneri kalitesi ayrıca ölçülmelidir.

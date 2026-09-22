@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import {
   deploymentEnvironment,
+  deploymentSecrets,
+  publicDeploymentVariables,
   validateDeploymentConfig,
   deploymentMatches,
 } from '../scripts/deploy-config.mjs';
@@ -17,6 +19,9 @@ const names = [
   'CF_PUBLIC_URL',
   'CLOUDFLARE_API_TOKEN',
   'SYNC_TOKEN',
+  'TYPESAFE_API_KEY',
+  'TYPESAFE_MODEL',
+  'AI_DAILY_LIMIT',
 ];
 let saved;
 
@@ -133,5 +138,43 @@ await test('rejects multiline secrets before creating a secrets file', () => {
         environment: 'staging',
       }),
     /single-line/,
+  );
+});
+
+await test('uses safe Jev deployment defaults without requiring a key', () => {
+  delete process.env.TYPESAFE_API_KEY;
+  delete process.env.TYPESAFE_MODEL;
+  delete process.env.AI_DAILY_LIMIT;
+  const variables = publicDeploymentVariables('staging');
+  assert.equal(variables.TYPESAFE_MODEL, 'jev-1.13.0');
+  assert.equal(variables.AI_DAILY_LIMIT, '100');
+  assert.deepEqual(deploymentSecrets(), { SYNC_TOKEN: 'sync-token' });
+});
+
+await test('keeps Jev secrets out of public deployment variables', () => {
+  process.env.TYPESAFE_API_KEY = 'private-jev-key';
+  process.env.TYPESAFE_MODEL = 'jev-1.13.0';
+  process.env.AI_DAILY_LIMIT = '250';
+  const variables = publicDeploymentVariables('staging');
+  assert.equal(JSON.stringify(variables).includes('private-jev-key'), false);
+  assert.equal(variables.TYPESAFE_MODEL, 'jev-1.13.0');
+  assert.equal(variables.AI_DAILY_LIMIT, '250');
+  assert.deepEqual(deploymentSecrets(), {
+    SYNC_TOKEN: 'sync-token',
+    TYPESAFE_API_KEY: 'private-jev-key',
+  });
+});
+
+await test('rejects invalid Jev public deployment settings', () => {
+  process.env.AI_DAILY_LIMIT = '10001';
+  assert.throws(
+    () => validateDeploymentConfig({ environment: 'staging' }),
+    /AI_DAILY_LIMIT/,
+  );
+  process.env.AI_DAILY_LIMIT = '100';
+  process.env.TYPESAFE_MODEL = 'other-model';
+  assert.throws(
+    () => validateDeploymentConfig({ environment: 'staging' }),
+    /TYPESAFE_MODEL/,
   );
 });

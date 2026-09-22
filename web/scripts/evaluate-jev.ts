@@ -1,7 +1,13 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs, parseEnv } from 'node:util';
 import { rankWithJev, buildJevRequest } from '../lib/jev.ts';
-import { isEligible, rankEvents, uniqueEvents } from '../lib/search.ts';
+import {
+  interpretConstraints,
+  isEligible,
+  uniqueEvents,
+} from '../lib/search.ts';
+import { MIN_JEV_SCORE } from '../lib/recommend.ts';
+import { searchContext, shortlistEvents } from '../lib/retrieval.ts';
 import {
   evaluationCases,
   evaluationEvents,
@@ -15,19 +21,51 @@ const { values } = parseArgs({
   },
 });
 const model = process.env.TYPESAFE_MODEL || 'jev-1.13.0';
-const cases = evaluationCases.map((item) => ({
-  ...item,
-  candidates: uniqueEvents(
-    rankEvents(
-      evaluationEvents.filter((event) =>
-        isEligible(event, item.filters, evaluationTime),
-      ),
-      item.message,
+const cases = evaluationCases.map((item) => {
+  const interpreted = interpretConstraints(
+    item.message,
+    item.filters,
+    evaluationTime,
+  );
+  if (interpreted.issue)
+    throw new Error(
+      `Evaluation case ${item.id} cannot reach Jev: ${interpreted.issue}.`,
+    );
+  const context = searchContext(item.message, item.history);
+  const candidates = shortlistEvents(
+    evaluationEvents.filter((event) =>
+      isEligible(event, interpreted.filters, evaluationTime),
     ),
+    item.message,
+    item.history,
     16,
+  );
+  if (!candidates.length)
+    throw new Error(`Evaluation case ${item.id} has no eligible candidates.`);
+  const prepared = {
+    ...item,
+    filters: interpreted.filters,
+    history: context.history,
+    candidates,
+  };
+  buildJevRequest(model, prepared, candidates);
+  return prepared;
+});
+const plan = cases.map((item) => ({
+  id: item.id,
+  shortlistCount: item.candidates.length,
+  acceptableCandidateIds: item.acceptableTop.filter((id) =>
+    item.candidates.some((candidate) => candidate.id === id),
   ),
+  labelReachable:
+    item.acceptableTop.length === 0 ||
+    item.acceptableTop.some((id) =>
+      item.candidates.some((candidate) => candidate.id === id),
+    ),
 }));
-for (const item of cases) buildJevRequest(model, item, item.candidates);
+const labeledPlan = plan.filter(
+  (_, index) => cases[index].acceptableTop.length > 0,
+);
 if (!values.live) {
   console.log(
     JSON.stringify(
@@ -36,7 +74,13 @@ if (!values.live) {
         model,
         cases: cases.length,
         networkCalls: 0,
-        note: 'Fixture/request validation only. Use --live with TYPESAFE_API_KEY to measure model quality; this spends API credit.',
+        minJevScore: MIN_JEV_SCORE,
+        labelCandidateRecall: labeledPlan.length
+          ? labeledPlan.filter((item) => item.labelReachable).length /
+            labeledPlan.length
+          : null,
+        plan,
+        note: 'Production-equivalent constraint and shortlist validation only. Use --live with TYPESAFE_API_KEY to measure model quality; this spends API credit.',
       },
       null,
       2,
@@ -70,6 +114,23 @@ if (!values.live) {
     const start = performance.now();
     try {
       const result = await rankWithJev(config, item, item.candidates);
+      const byId = new Map(
+        item.candidates.map((candidate) => [candidate.id, candidate]),
+      );
+      const accepted = uniqueEvents(
+        result.ranked
+          .filter(
+            ({ event, score }) =>
+              byId.has(event.id) &&
+              Number.isFinite(score) &&
+              score >= MIN_JEV_SCORE &&
+              score <= 3,
+          )
+          .sort((a, b) => b.score - a.score)
+          .map(({ event }) => byId.get(event.id)!),
+        5,
+      );
+      const topRecommendation = accepted[0]?.id ?? null;
       results.push({
         id: item.id,
         latencyMs: Math.round(performance.now() - start),
@@ -77,13 +138,18 @@ if (!values.live) {
         usage: result.usage,
         baselineTop: item.candidates[0]?.id,
         acceptableTop: item.acceptableTop,
+        shortlistCount: item.candidates.length,
+        acceptedCount: accepted.length,
+        topRecommendation,
+        falsePositive:
+          item.acceptableTop.length === 0 && topRecommendation !== null,
         ranking: result.ranked.map(({ event, score, confidence }) => ({
           id: event.id,
           score,
           confidence,
         })),
         top1Hit: item.acceptableTop.length
-          ? item.acceptableTop.includes(result.ranked[0]?.event.id)
+          ? item.acceptableTop.includes(topRecommendation ?? '')
           : null,
       });
     } catch (error) {
@@ -106,9 +172,25 @@ if (!values.live) {
     model: config.model,
     calls: results.length,
     plannedCalls: cases.length,
+    minJevScore: MIN_JEV_SCORE,
+    labelCandidateRecall: labeledPlan.length
+      ? labeledPlan.filter((item) => item.labelReachable).length /
+        labeledPlan.length
+      : null,
     top1Accuracy: labeled.length
       ? labeled.filter((result) => result.top1Hit).length / labeled.length
       : null,
+    noMatchCases: results.filter(
+      (result) =>
+        result.acceptableTop?.length === 0 && result.error === undefined,
+    ).length,
+    noMatchFalsePositives: results.filter(
+      (result) => result.falsePositive === true,
+    ).length,
+    unsupportedFalsePositives: results.filter(
+      (result) =>
+        result.id?.startsWith('unsupported-') && result.falsePositive === true,
+    ).length,
     inputTokens: results.reduce(
       (sum, result) => sum + (result.usage?.inputTokens || 0),
       0,

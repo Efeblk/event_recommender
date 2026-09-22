@@ -22,8 +22,10 @@ try {
     { binding: 'COLLECTION_STATE', bucket_name: 'biplan-isolated-smoke-state' },
   ];
   config.vars = {
-    AI_API_KEY: '',
-    OPENAI_API_KEY: '',
+    // Old keys must not silently enable another model on the Jev-only path.
+    AI_API_KEY: 'unused-legacy-smoke-key',
+    OPENAI_API_KEY: 'unused-legacy-smoke-key',
+    TYPESAFE_API_KEY: '',
     EMBEDDING_API_KEY: '',
     EMBEDDING_ENABLED: 'false',
     SYNC_TOKEN: 'local-smoke-only',
@@ -121,7 +123,9 @@ try {
   const result = await search.json();
   assert.equal(result.mode, 'filters');
   assert.equal(result.filters.maxPrice, 1000);
-  assert.match(result.notice, /Anahtarsız/);
+  assert.ok(['empty', 'results'].includes(result.status));
+  assert.equal('message' in result, false);
+  assert.ok(result.recommendations.every((item) => !('reason' in item)));
   // A source snapshot can expire: an empty result is valid, fabricated events aren't.
   assert.ok(
     result.recommendations.every(
@@ -134,6 +138,25 @@ try {
   const invalid = await request('/api/recommend', { message: '' });
   assert.equal(invalid.status, 400);
   await invalid.arrayBuffer();
+  const unclear = await request('/api/recommend', {
+    message: 'Toplam bütçem 800 TL',
+  });
+  assert.equal(unclear.status, 200);
+  const unclearBody = await unclear.json();
+  assert.equal(unclearBody.status, 'needs_input');
+  assert.equal(unclearBody.filters.maxPrice, null);
+  assert.deepEqual(unclearBody.recommendations, []);
+  const excluded = await request('/api/recommend', {
+    message: 'Konser istemiyorum',
+  });
+  assert.equal(excluded.status, 200);
+  const excludedBody = await excluded.json();
+  assert.deepEqual(excludedBody.filters.excludedCategories, ['Konser']);
+  assert.ok(
+    excludedBody.recommendations.every(
+      ({ event }) => event.category !== 'Konser',
+    ),
+  );
   const sync = await request('/api/admin/sync', {});
   assert.equal(sync.status, 401);
   await sync.arrayBuffer();

@@ -32,14 +32,14 @@ jobs:
         working-directory: web
     env:
       DEPLOY_TARGET: ${{ inputs.environment }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CF_WORKER_NAME: ${{ vars.CF_WORKER_NAME }}
       CF_D1_DATABASE_NAME: ${{ vars.CF_D1_DATABASE_NAME }}
       CF_D1_DATABASE_ID: ${{ vars.CF_D1_DATABASE_ID }}
       CF_R2_BUCKET_NAME: ${{ vars.CF_R2_BUCKET_NAME }}
       CF_PUBLIC_URL: ${{ vars.CF_PUBLIC_URL }}
-      SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+      TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL }}
+      AI_DAILY_LIMIT: ${{ vars.AI_DAILY_LIMIT }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,6 +63,9 @@ jobs:
           npm ci
           npm ci --prefix ../collector
       - name: Validate exact-SHA source and configuration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
         run: |
           npm run deploy:config -- --env "$DEPLOY_TARGET" --validate-only --require-secrets
           npm run test:deploy-config
@@ -92,4 +95,8 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Apply migrations, deploy, check liveness, and report readiness
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
         run: npm run deploy:run -- --env "$DEPLOY_TARGET"

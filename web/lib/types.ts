@@ -25,6 +25,7 @@ export interface Filters {
   dateTo: string | null;
   maxPrice: number | null;
   category: Category | null;
+  excludedCategories?: Category[];
 }
 export interface Message {
   role: 'user' | 'assistant';
@@ -32,13 +33,12 @@ export interface Message {
 }
 export interface Recommendation {
   event: EventRecord;
-  reason: string;
 }
 export interface SearchResult {
-  message: string;
   recommendations: Recommendation[];
   filters: Filters;
-  mode: 'filters' | 'ai' | 'semantic';
+  mode: 'filters' | 'jev';
+  status: 'results' | 'empty' | 'needs_input' | 'unsupported_location';
   notice: string | null;
   totalCandidates: number;
 }

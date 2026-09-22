@@ -1,4 +1,4 @@
-import { configFrom } from '@/lib/ai';
+import { jevConfigFrom } from '@/lib/jev';
 import { candidates, catalogStatus, runtime } from '@/lib/store';
 import { emptyFilters } from '@/lib/types';
 import { uniqueEvents } from '@/lib/search';
@@ -12,7 +12,7 @@ export async function GET() {
       {
         events: uniqueEvents(events, 12),
         total: events.length,
-        aiEnabled: Boolean(configFrom(runtime())),
+        aiEnabled: Boolean(jevConfigFrom(runtime())),
         catalog,
         checkedAt:
           events.reduce(

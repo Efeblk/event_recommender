@@ -18,8 +18,12 @@ GitHub environment (`staging` or `production`), define these variables:
 | `CF_D1_DATABASE_ID`     | D1 database UUID                                   |
 | `CF_R2_BUCKET_NAME`     | R2 name containing `staging` or `production`       |
 | `CF_PUBLIC_URL`         | HTTPS Worker or custom-domain origin, with no path |
+| `TYPESAFE_MODEL`        | Optional Jev model; defaults to `jev-1.13.0`       |
+| `AI_DAILY_LIMIT`        | Optional paid-call cap (1–10000); defaults to 100  |
 
-Add `CLOUDFLARE_API_TOKEN` and `SYNC_TOKEN` as environment secrets. The API
+Add `CLOUDFLARE_API_TOKEN` and `SYNC_TOKEN` as environment secrets. Add
+`TYPESAFE_API_KEY` as an optional environment secret to enable Jev ranking;
+without it the Worker uses the deterministic recommendation fallback. The API
 token needs the least privileges sufficient to deploy Workers, apply D1
 migrations, and bind/read/write the selected R2 bucket. Protect production with
 required reviewers. Keep credentials in environment secrets. Resource IDs are
@@ -40,8 +44,9 @@ npm run deploy:dry-run -- --env staging
 
 These commands create `dist/server/wrangler.staging.json` beside the built
 artifact so Wrangler's relative entry-point and asset paths remain valid. The
-generated file is ignored local state and contains non-secret account resource IDs;
-it is included in the deployment artifact, never with API keys or the sync secret.
+generated file is ignored local state and contains non-secret account resource IDs,
+the Jev model, and the daily limit. It is included in the deployment artifact,
+never with API keys or the sync secret.
 Dry-run compiles and validates without contacting the
 deployment API. `npm run local:start` remains the persistent local D1 path, and
 ordinary Vite development retains the optional Sites preview integration.
@@ -54,7 +59,15 @@ that exact SHA, validates deployment guards, and runs the web tests, typecheck,
 lint, collector tests, production build, built-Worker smoke test, and Wrangler
 dry-run. It uploads the built Worker plus a SHA-256 manifest and provenance JSON
 for review before the first remote mutation. It then applies pending forward-only
-D1 migrations and deploys the Worker and secret.
+D1 migrations and deploys the Worker with the strict `SYNC_TOKEN` secret and the
+optional Jev key. Deployment secrets are supplied only to validation and the
+actual deployment step, never to build or artifact-upload steps.
+
+The active recommendation route prefilters verified catalog facts in D1, then
+uses Jev to score a bounded shortlist when `TYPESAFE_API_KEY` is configured.
+It does not call a chat provider or an embedding provider. Legacy `AI_*`,
+`OPENAI_*`, and embedding settings remain available only to opt-in admin or
+backward-compatibility tooling and do not enable recommendations.
 
 After propagation, `/api/health` must pass the two-minute liveness retry window.
 Its deployment environment and exact 40-character commit revision must match the

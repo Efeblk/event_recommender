@@ -232,37 +232,14 @@ a {
   padding: 8px 12px;
   font-size: 12px;
 }
+.prompt-chips button,
+.active-filters button {
+  min-height: 44px;
+}
 .active-filters button {
   display: flex;
   align-items: center;
   gap: 4px;
-}
-.messages {
-  max-width: 700px;
-  max-height: 190px;
-  overflow: auto;
-  margin: 24px auto 0;
-  padding-right: 5px;
-  text-align: left;
-}
-.message {
-  margin-bottom: 12px;
-}
-.message span {
-  letter-spacing: 0.14em;
-  font-size: 10px;
-  color: #7d8a82;
-}
-.message p {
-  font-size: 13px;
-  line-height: 1.65;
-  margin: 4px 0;
-}
-.message.user {
-  background: #eef0e8;
-  border-radius: 9px 9px 2px 9px;
-  padding: 10px 12px;
-  margin-left: 25%;
 }
 .error-banner,
 .catalog-warning {
@@ -313,6 +290,29 @@ a {
 .section-heading > span {
   color: #7c8981;
   font-size: 12px;
+}
+.section-heading h2 {
+  overflow-wrap: anywhere;
+}
+.result-meta {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 8px;
+  color: #7c8981;
+  font-size: 12px;
+  flex: none;
+}
+.mode-badge {
+  border: 1px solid #c9d1c5;
+  border-radius: 99px;
+  background: #eef1e8;
+  color: #4d6657;
+  padding: 6px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .events-grid {
   display: grid;
@@ -390,15 +390,6 @@ a {
 .venue {
   margin: 0;
 }
-.event-reason {
-  font-size: 12px;
-  line-height: 1.6;
-  color: #546b5e;
-  background: #eef1e8;
-  border-radius: 7px;
-  padding: 9px;
-  margin: 12px 0 0;
-}
 .event-actions {
   display: flex;
   align-items: end;
@@ -427,25 +418,34 @@ a {
   gap: 4px;
   border-bottom: 1px solid #bdcbbf;
 }
-.conversation-note {
+.result-notice {
   background: #e9eddf;
   padding: 16px 18px;
   border-radius: 10px;
   margin-bottom: 20px;
   color: #4f6557;
-}
-.conversation-note > div {
   display: flex;
+  align-items: flex-start;
   gap: 10px;
 }
-.conversation-note p {
+.result-notice svg {
+  flex: none;
+  margin-top: 3px;
+}
+.result-notice p {
   font-size: 14px;
   line-height: 1.7;
   margin: 0;
 }
-.conversation-note small {
-  display: block;
-  margin: 8px 0 0 26px;
+.searching-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  margin: -4px 0 16px;
+  color: #52675b;
+  font-size: 13px;
 }
 .result-tools {
   display: flex;
@@ -650,6 +650,9 @@ footer small {
     align-items: flex-start;
     gap: 15px;
     flex-direction: column;
+  }
+  .result-meta {
+    align-items: flex-start;
   }
   .events-grid {
     grid-template-columns: 1fr;

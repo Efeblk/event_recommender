@@ -11,8 +11,8 @@ import {
   ExternalLink,
   LoaderCircle,
   MapPin,
-  MessageCircle,
   RotateCcw,
+  Search,
   Sparkles,
   Ticket,
   X,
@@ -82,7 +82,7 @@ const sourceName = (source: EventRecord['source']) =>
       ? 'Biletix'
       : 'Biletinial';
 
-function EventCard({ event, reason }: { event: EventRecord; reason?: string }) {
+function EventCard({ event }: { event: EventRecord }) {
   const [imageFailed, setImageFailed] = useState(false);
   return (
     <article className="event-card">
@@ -116,7 +116,6 @@ function EventCard({ event, reason }: { event: EventRecord; reason?: string }) {
             {event.district ? ` · ${event.district}` : ''}
           </span>
         </p>
-        {reason && <p className="event-reason">{reason}</p>}
         <div className="event-actions">
           <div className="event-price">
             <span>
@@ -162,6 +161,7 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
   const [history, setHistory] = useState<Message[]>([]);
+  const [lastRequest, setLastRequest] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [events, setEvents] = useState<EventRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -177,10 +177,15 @@ export default function Home() {
   const searchBusy = useRef(false);
   const textarea = useRef<HTMLTextAreaElement | null>(null);
   const resultsRef = useRef<HTMLElement | null>(null);
-  const hasFilters = Object.values(filters).some((value) => value !== null);
-  const activeFilterCount = Object.values(filters).filter(
-    (value) => value !== null,
-  ).length;
+  const activeFilterCount =
+    [
+      filters.dateFrom,
+      filters.dateTo,
+      filters.maxPrice,
+      filters.category,
+    ].filter((value) => value !== null).length +
+    (filters.excludedCategories?.length ?? 0);
+  const hasFilters = activeFilterCount > 0;
   const catalogLabel = useMemo(() => {
     if (catalog?.status === 'stale') return 'Katalog yenilenmeyi bekliyor';
     if (catalog?.status === 'empty') return 'Katalog henüz hazır değil';
@@ -304,14 +309,14 @@ export default function Home() {
       if (!response.ok) throw new Error(data.error || 'Arama tamamlanamadı.');
       setResult(data);
       setFilters(data.filters);
-      setHistory((previous) =>
-        [
-          ...previous,
-          { role: 'user' as const, content: query },
-          { role: 'assistant' as const, content: data.message },
-        ].slice(-12),
-      );
-      setMessage('');
+      const needsRevision =
+        data.status === 'needs_input' || data.status === 'unsupported_location';
+      if (!needsRevision)
+        setHistory((previous) =>
+          [...previous, { role: 'user' as const, content: query }].slice(-10),
+        );
+      setLastRequest(query);
+      setMessage(needsRevision ? query : '');
       setExcluded(excludeIds);
       requestAnimationFrame(() =>
         resultsRef.current?.scrollIntoView({
@@ -340,6 +345,7 @@ export default function Home() {
     setMessage('');
     setFilters({ ...emptyFilters });
     setHistory([]);
+    setLastRequest('');
     setResult(null);
     setExcluded([]);
     setBusy(false);
@@ -461,22 +467,12 @@ export default function Home() {
                   <span>En fazla {formatMoney(filters.maxPrice)}</span>
                 )}
                 {filters.category && <span>{filters.category}</span>}
+                {filters.excludedCategories?.map((category) => (
+                  <span key={category}>{category} hariç</span>
+                ))}
                 <button type="button" onClick={reset}>
                   <X size={13} /> Temizle ({activeFilterCount})
                 </button>
-              </div>
-            )}
-            {history.length > 0 && (
-              <div className="messages">
-                {history.slice(-4).map((item, index) => (
-                  <div
-                    className={`message ${item.role}`}
-                    key={`${item.role}-${index}`}
-                  >
-                    <span>{item.role === 'user' ? 'Sen' : 'Bi’ Plan'}</span>
-                    <p>{item.content}</p>
-                  </div>
-                ))}
               </div>
             )}
           </div>
@@ -512,52 +508,61 @@ export default function Home() {
           {busy
             ? 'Sana uygun etkinlikler aranıyor.'
             : result
-              ? `${result.recommendations.length} etkinlik bulundu. ${result.message}`
+              ? `${result.recommendations.length} etkinlik bulundu.`
               : ''}
         </output>
-        <section className="events-section" id="etkinlikler" ref={resultsRef}>
+        <section
+          className="events-section"
+          id="etkinlikler"
+          ref={resultsRef}
+          aria-busy={busy}
+        >
           <div className="section-heading">
             <div>
               <p className="kicker">
                 <Compass size={13} />{' '}
-                {result ? 'Sana göre' : 'Yakında İstanbul’da'}
+                {result ? 'Arama sonuçları' : 'Yakında İstanbul’da'}
               </p>
               <h2>
-                {result
-                  ? result.recommendations.length
-                    ? 'Bunlara bir bak.'
-                    : 'Henüz bir eşleşme yok.'
-                  : 'Şehirde ne var?'}
+                {result ? lastRequest || 'Etkinlik araması' : 'Şehirde ne var?'}
               </h2>
             </div>
-            <span>
-              {result
-                ? `${result.recommendations.length} sonuç`
-                : total
-                  ? `${total} kayıt içinden seçki`
-                  : catalogLabel}
-            </span>
-          </div>
-          {result && (
-            <div className="conversation-note">
-              <div>
-                <MessageCircle size={16} />
-                <p>{result.message}</p>
-              </div>
-              {result.notice && <small>{result.notice}</small>}
+            <div className="result-meta">
+              {result && (
+                <span className="mode-badge">
+                  {result.mode === 'jev' ? 'Akıllı sıralama' : 'Temel arama'}
+                </span>
+              )}
+              <span>
+                {result
+                  ? `${result.recommendations.length} sonuç`
+                  : total
+                    ? `${total} kayıt içinden seçki`
+                    : catalogLabel}
+              </span>
             </div>
+          </div>
+          {result?.notice && result.status === 'results' && (
+            <output className="result-notice">
+              <Search size={16} aria-hidden="true" />
+              <p>{result.notice}</p>
+            </output>
           )}
-          {initialLoading ? (
+          {busy && (
+            <output className="searching-status">
+              <LoaderCircle className="spin" size={18} aria-hidden="true" />
+              Uygun etkinlikler aranıyor…
+            </output>
+          )}
+          {busy ? (
+            <LoadingCards />
+          ) : initialLoading ? (
             <LoadingCards />
           ) : displayedEvents.length ? (
             <div className="events-grid">
               {result
                 ? result.recommendations.map((item) => (
-                    <EventCard
-                      key={item.event.id}
-                      event={item.event}
-                      reason={item.reason}
-                    />
+                    <EventCard key={item.event.id} event={item.event} />
                   ))
                 : events
                     .slice(0, 6)
@@ -569,16 +574,37 @@ export default function Home() {
               <h3>
                 {catalog?.status === 'stale'
                   ? 'Etkinlik verileri yenilenmeli.'
-                  : 'Bu koşullarda etkinlik bulamadık.'}
+                  : result?.status === 'needs_input'
+                    ? 'Aramanı biraz netleştir.'
+                    : result?.status === 'unsupported_location'
+                      ? 'Şimdilik yalnızca İstanbul’dayız.'
+                      : 'Bu koşullarda etkinlik bulamadık.'}
               </h3>
               <p>
                 {catalog?.status === 'stale'
                   ? 'Eski etkinlikleri önermemek için sonuçları göstermiyoruz.'
-                  : 'Tarihi veya bütçeyi biraz genişletip yeniden deneyebilirsin.'}
+                  : result?.status === 'needs_input'
+                    ? result.notice ||
+                      'Tarih, etkinlik türü veya bütçe gibi bir ayrıntı ekleyebilirsin.'
+                    : result?.status === 'unsupported_location'
+                      ? result.notice ||
+                        'İstanbul için yeni bir arama yapabilirsin.'
+                      : result?.notice ||
+                        'Tarihi, bütçeyi veya etkinlik türünü değiştirip yeniden deneyebilirsin.'}
               </p>
-              <Button variant="outline" onClick={reset}>
-                Filtreleri kaldır
-              </Button>
+              {result?.status === 'needs_input' ||
+              result?.status === 'unsupported_location' ? (
+                <Button
+                  variant="outline"
+                  onClick={() => textarea.current?.focus()}
+                >
+                  Aramayı düzenle
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={reset}>
+                  Filtreleri kaldır
+                </Button>
+              )}
             </div>
           )}
           {result?.recommendations.length ? (

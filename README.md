@@ -2,7 +2,7 @@
 
 Yerel önizleme: **http://127.0.0.1:3001**. Aşağıdaki `local:start` komutuyla açılır; bu çalışma yayın yapmaz.
 
-İstanbul’da konuşarak etkinlik bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
+İstanbul’da doğal dille arayıp etkinlik kartları bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
 
 ## Yerel çalıştırma
 
@@ -39,8 +39,9 @@ Bu işlem liste sayfalarını ve bilinen etkinlik detaylarını yeniden kontrol 
 - Türkçe tarih, kişi başı bütçe ve kategori filtreleri; aramaya devam ederken önceki filtreleri koruma.
 - Aynı prodüksiyonun farklı seanslarını tek öneride toplama; başka seçenekleri isteme.
 - Geçmiş, iptal edilmiş, tükenmiş ve **72 saatten eski kontrol tarihli** kayıtları eleme. Bütçe varken fiyatı bilinmeyen kayıtları eleme. Kaynak fiyatları bilet garantisi değildir.
-- İsteğe bağlı OpenAI Responses veya OpenAI uyumlu Chat Completions API ile niyet/filtre çıkarımı, gerektiğinde netleştirme sorusu, adaylar arasından gerekçeli seçim.
-- Sohbetten bağımsız, isteğe bağlı embedding sağlayıcısıyla anlamsal sıralama; metin hash’i, API adresi, model ve boyuta göre kalıcı embedding önbelleği. Graph veritabanı gerektirmez.
+- TypeSafe Jev ile adayların isteğe uygunluğunu puanlama; sonuçlarda yalnızca doğrulanmış etkinlik kartları gösterilir. Üretilmiş sohbet yanıtı veya gerekçe yoktur.
+- Konser gibi kategorileri hariç tutma, toplam grup bütçesini kişi başına çevirme, belirsiz koşullarda statik netleştirme durumu.
+- Etkin öneri akışı embedding veya başka bir sohbet modeli çağırmaz. Eski sağlayıcı/embedding modülleri ve önbellek geçiş referansı olarak korunur; GPU veya graph veritabanı gerekmez.
 - AI kapalıysa veya sağlayıcı başarısızsa açıkça belirtilen kelime/filtre araması. Anahtarsız mod ruh hâlini yorumladığını iddia etmez.
 - Mobil uyumlu arayüz, yüklenme/hata/boş sonuç durumları, klavye ile gönderme (Enter; yeni satır Shift+Enter).
 
@@ -58,19 +59,17 @@ Yeni Crawlee toplayıcısı eski Python scraper'lardan bağımsızdır. Üç kay
 
 [Araç karşılaştırması, kapsam, kalite kuralları ve zamanlama](collector/README.md). Koleksiyon raporu `collector/output/report.json` altında. Günde iki toplama için GitHub iş akışı eklendi; master'a alındığında çalışır. Canlı aktarım hedefi ve sunucu sırrı tanımlanmadığında yalnızca artifact üretir. Canlıya aktarım için korumalı `/api/admin/import` ve `collector/publish.mjs` kullanılır; AI anahtarı gerekmez.
 
-## AI’ı açma
+## Jev’i açma
 
-`web/.env.example` anahtarsız önizleme için hazırdır. Sağlayıcı seçilene kadar anahtarları boş bırak; hiçbir AI çağrısı yapılmaz. Üçüncü taraf bağlantısında `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` ayarlanır. Yerelde `.env` değişikliğinden sonra geliştirme sunucusunu yeniden başlat; yayında anahtarlar sunucu sırları olarak tanımlanır.
+Anahtarsız önizleme çalışmaya devam eder. Jev sıralamasını kullanmak için `web/.dev.vars` içine `TYPESAFE_API_KEY` ekle ve yerel sunucuyu yeniden başlat. Anahtarı sohbete veya Git’e yazma. `TYPESAFE_MODEL` varsayılanı `jev-1.13.0`; eski `AI_API_KEY` / `OPENAI_API_KEY` ayarları öneri akışını açmaz. Kurulum ve değerlendirme: [Jev rehberi](web/docs/jev-evaluation.md).
 
-[Sağlayıcı kurulumu ve örnekler](web/docs/providers.md): OpenRouter, Gemini'nin OpenAI uyumlu arayüzü ve genel uyumlu servisler için ayarlar; bağımsız embedding ve hata davranışları. Sağlayıcı/model uyumluluğu gerçek anahtarla henüz test edilmedi.
+Akış: **kesin filtreleri yorumla → güncel adayları bul → en fazla 16 farklı prodüksiyon → tek Jev isteği → en fazla 5 etkinlik kartı**. Jev’e özgün istek, kısa kullanıcı arama geçmişi ve adayların kaynak metinleri gönderilir; embedding vektörü gönderilmez. Başlık, fiyat, tarih ve bağlantı her zaman veritabanındaki kayıttan gelir. Genel sohbet modeli çalışmaz.
 
-Eski doğrudan OpenAI ayarları da çalışır: yalnızca `OPENAI_API_KEY` ile sohbet modeli `OPENAI_MODEL` (varsayılan `gpt-4.1-mini`), embedding modeli `text-embedding-3-small` (512 boyut). Embedding'i kapatmak için `EMBEDDING_ENABLED=false`.
+Jev, dört seviyeli uygunluk ölçeğinde puan verir. Başlangıç politikası en az 2 puan alanları göstermektir; bu eşik Türkçe verilerle henüz kalibre edilmemiştir. Geçerli bir “uygun aday yok” yanıtı boş sonuç olarak kalır. Ağ/sağlayıcı hatasında açıkça belirtilen temel arama gösterilir. Belirsiz bütçe veya tarihte önceki filtreler değiştirilmez; kullanıcı aramasını düzenleyebilir. Doğal dil yorumlama her ifade biçimini desteklemez.
 
-Anlamsal arama için anahtar tanımlandıktan sonra korumalı `/api/admin/sync` işlemini çalıştır: etkinlikleri ve embedding önbelleğini oluşturur. Embedding bulunmuyorsa kelime tabanlı aday sıralaması + AI değerlendirmesi kullanılır. Embedding adresi/modeli/boyutu değişirse eski indeks kullanılmaz; sync ile yeniden oluşturulur. Yeni `embedding-v2` önbellek kimliğine geçişte de bir sync gerekir.
+Ücretli aramalar IP başına saatte 20, uygulama genelinde varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bir arama en fazla bir Jev çağrısı yapar; 15 saniye zaman aşımı ve sınırlı girdi/çıktı boyutu vardır. Otomatik ücretli tekrar yoktur. Bu sayaç dolar harcama limiti değildir. Arama geçmişi yalnızca açık sekmenin belleğinde tutulur.
 
-Akış: **isteği anla → kesin filtreler → embedding/kelime sıralaması → en fazla 16 farklı aday → 3–5 gerekçeli öneri**. AI yalnızca aday ID’lerini seçebilir; gösterilen etkinlik bilgileri veritabanından gelir. Öneri gerekçelerinin kalitesi gerçek sağlayıcıyla ayrıca değerlendirilmelidir.
-
-Ücretli aramalar IP başına saatte 20, tüm uygulama için varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bu bir dolar harcama limiti değildir; sağlayıcı hesabında ayrıca bütçe limiti tanımlanabilir. Veri yenilemenin embedding çağrıları bu sohbet sayacından ayrıdır ve yönetici sırrı gerektirir. Kullanıcı mesajı, kısa sohbet geçmişi ve aday açıklamaları AI sağlayıcısına gönderilir; Responses isteklerinde `store:false` kullanılır. Bu ayar üçüncü tarafların saklama politikasını garanti etmez. İstekler 25 saniyede zaman aşımına uğrar; otomatik ücretli tekrar denenmez. Sohbet geçmişi bu sürümde yalnızca açık sekmenin belleğinde tutulur.
+[Eski sağlayıcı rehberi](web/docs/providers.md) korunur, fakat aktif öneri yolunu anlatmaz. Embedding önbelleği isteğe bağlı eski yönetici araçlarında kalır; bu sürümün sonuç sıralaması onu kullanmaz. İlk canlı Jev denemesinde 10 etiketli isteğin ilk sonucu doğru, iki desteksiz tercih isteğinin sonucu boştu. Ciddi yetişkin oyunu isteğinde bazı zayıf ek sonuçlar da eşikten geçti; tüm sonuç listesinin kalitesi henüz doğrulanmış sayılmaz. [Ölçüm raporu](web/evals/reports/2026-09-22-jev-1.13.0.json) 12 çağrı, tokenlar ve gecikmeyi kaydeder. Daha geniş gerçek katalog denemeleri gerekir.
 
 ## Kontroller
 
@@ -83,7 +82,7 @@ npm run build
 npm run test:smoke
 ```
 
-Testler tarih/saat dilimi sınırlarını, fiyatı bilinmeyen ve eski kayıtları, kaynak ayrıştırmayı, yinelenen seansları, alternatif önerileri, AI kesintisini ve uydurma ID’lerin elenmesini kapsar. AI testlerinde sağlayıcı yerine kontrollü test yanıtları kullanılır; gerçek anahtarla model kalitesi/latans testi henüz yapılmamıştır.
+Testler tarih/saat dilimi sınırlarını, fiyatı bilinmeyen ve eski kayıtları, kaynak ayrıştırmayı, yinelenen seansları, alternatif önerileri, AI kesintisini ve uydurma ID’lerin elenmesini kapsar. Otomatik testler kontrollü sağlayıcı yanıtları kullanır ve ücretli API çağrısı yapmaz. Ayrıca kullanıcı onayıyla 12 örnek üzerinde bir canlı Jev değerlendirmesi kaydedilmiştir.
 
 GitHub Actions, `master` için her PR'da ve `master` push'larında bu kontrolleri çalıştırır. Smoke kontrolü derlenen Worker'ı geçici bir D1 veritabanıyla açar; sayfa, anahtarsız API, geçersiz istek ve yönetici erişim korumasını doğrular. Yerel sırları ve mevcut veritabanını kullanmaz. Eski Python testleri ayrı CI iş akışında korunur.
 
@@ -97,7 +96,7 @@ Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, f
 
 ## Destek ve reklam alanları
 
-Ana sayfa sohbet çubuğu, önerilen etkinlikler ve projeye destek bölümü içerir. Bağış sayfasının HTTPS adresini `web/.env` veya `web/.dev.vars` içine `DONATION_URL` olarak ekleyip yerel sunucuyu yeniden başlat. Bağlantı tanımlanana kadar destek bölümü “yakında” durumunda kalır; ödeme alınmaz. `/api/site` yalnızca bu herkese açık bağlantıyı döndürür.
+Ana sayfa doğal dil arama çubuğu, önerilen etkinlikler ve projeye destek bölümü içerir. Bağış sayfasının HTTPS adresini `web/.env` veya `web/.dev.vars` içine `DONATION_URL` olarak ekleyip yerel sunucuyu yeniden başlat. Bağlantı tanımlanana kadar destek bölümü “yakında” durumunda kalır; ödeme alınmaz. `/api/site` yalnızca bu herkese açık bağlantıyı döndürür.
 
 Sayfada iki ayrı reklam alanı ayrılmıştır. Henüz reklam ağı, takip betiği veya reklam isteği yoktur. Bu alanlar ileride reklam içeriğiyle doldurulabilir.
 
@@ -107,4 +106,4 @@ Sayfada iki ayrı reklam alanı ayrılmıştır. Henüz reklam ağı, takip beti
 
 `/api/health` uygulamanın çalıştığını, `/api/ready` ise kataloğun ve kalıcı toplama checkpoint'inin sağlığını gösterir. İkincisi eksik, 24 saatten eski veya ciddi şekilde küçülmüş katalog/checkpoint için 503 döner. Yerel sunucu D1 yanında yerel R2 deposunu da kalıcı tutar; normal arama checkpoint olmadan çalışır. `collector/publish.mjs --checkpoint` bütün import partileri tamamlandıktan sonra sunucudaki gerçek kayıtların R2 snapshot'ını alır ve geri okuyarak doğrular.
 
-[Jev deneme yolu](web/docs/jev-evaluation.md), 12 Türkçe örnekle sıralama kalitesini, gecikmeyi ve token tüketimini ölçmeye hazırlanmıştır. Varsayılan test API çağrısı yapmaz. Jev public öneri akışına henüz bağlanmamıştır; gerçek sağlayıcı kalitesi ayrıca ölçülmelidir.
+[Jev değerlendirmesi](web/docs/jev-evaluation.md), 12 Türkçe örnekle aday kapsamını, sıralamayı, boş sonuç davranışını, gecikmeyi ve token tüketimini ölçer. Varsayılan test API çağrısı yapmaz. Jev öneri akışına bağlanmıştır; anahtar olmadan temel arama çalışır. Gerçek sağlayıcı kalitesi ayrıca ölçülmelidir.

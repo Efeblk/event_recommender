@@ -1,6 +1,6 @@
 import { recommend, validateInput } from '@/lib/recommend';
-import { candidates, rateLimit, runtime, vectorsFor } from '@/lib/store';
-import { configFrom, embeddingConfigFrom } from '@/lib/ai';
+import { candidates, rateLimit, runtime } from '@/lib/store';
+import { jevConfigFrom } from '@/lib/jev';
 export async function POST(request: Request) {
   let input;
   try {
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     );
   }
   try {
-    const config = configFrom(runtime());
+    const config = jevConfigFrom(runtime());
     if (!(await rateLimit(request, Boolean(config))))
       return Response.json(
         {
@@ -32,9 +32,7 @@ export async function POST(request: Request) {
     return Response.json(
       await recommend(input, {
         candidates,
-        vectors: vectorsFor,
         config,
-        embeddings: () => embeddingConfigFrom(runtime()),
       }),
       { headers: { 'Cache-Control': 'no-store' } },
     );
