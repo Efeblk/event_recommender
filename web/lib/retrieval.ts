@@ -5,19 +5,17 @@ import {
   rankEvents,
   uniqueEvents,
 } from './search.ts';
+import { positiveCategoryText, requestedCategories } from './intent.ts';
+import type { Category } from './types.ts';
 
 export interface SearchContext {
   query: string;
   history: Message[];
   rejectedTerms: string[];
   reset: boolean;
+  category: Category | null;
 }
 
-const categoryPatterns = [
-  /\b(?:konser|muzik|rock|caz|jazz|akustik|techno|elektronik)\b/,
-  /\b(?:tiyatro|sahne oyunu)\b/,
-  /\b(?:stand[ -]?up|komedi)\b/,
-];
 const rejectionTerms = [
   'elektronik muzik',
   'cocuk tiyatrosu',
@@ -58,13 +56,7 @@ function explicitRejections(message: string) {
 }
 
 function positiveCategories(message: string) {
-  const q = normalize(message).replace(
-    /\b[\p{L}-]+(?:\s+[\p{L}-]+)?\s+(?:istemiyorum|istemem|olmasin|degil|haric|disinda)\b/gu,
-    ' ',
-  );
-  return categoryPatterns
-    .map((pattern, index) => (pattern.test(q) ? index : -1))
-    .filter((index) => index >= 0);
+  return requestedCategories(normalize(message));
 }
 
 function isPreferenceReset(message: string) {
@@ -78,7 +70,12 @@ export function searchContext(
   message: string,
   history: Message[],
 ): SearchContext {
-  const recent = history.filter(({ role }) => role === 'user').slice(-6);
+  const allRecent = history.filter(({ role }) => role === 'user').slice(-6);
+  const latestReset = allRecent.findLastIndex(({ content }) =>
+    isPreferenceReset(content),
+  );
+  const recent =
+    latestReset >= 0 ? allRecent.slice(latestReset + 1) : allRecent;
   const reset = isPreferenceReset(message);
   const currentCategories = positiveCategories(message);
   const latestCategories =
@@ -97,10 +94,7 @@ export function searchContext(
     for (const term of explicitRejections(item.content)) rejected.add(term);
   }
   for (const term of explicitRejections(message)) rejected.add(term);
-  const currentPositive = normalize(message).replace(
-    /\b[\p{L}-]+(?:\s+[\p{L}-]+)?\s+(?:istemiyorum|istemem|olmasin|degil|haric|disinda|yerine)\b/gu,
-    ' ',
-  );
+  const currentPositive = positiveCategoryText(normalize(message));
   for (const term of rejected) {
     if (new RegExp(`\\b${escapeRegExp(term)}\\b`).test(currentPositive))
       rejected.delete(term);
@@ -117,7 +111,35 @@ export function searchContext(
     history: relevantHistory,
     rejectedTerms: [...rejected],
     reset: reset || categorySwitch,
+    category: inheritedCategory(
+      currentCategories,
+      latestCategories,
+      rejected,
+      reset,
+    ),
   };
+}
+
+function inheritedCategory(
+  current: Category[],
+  latest: Category[],
+  rejected: Set<string>,
+  reset: boolean,
+): Category | null {
+  const candidate =
+    current.length === 1
+      ? current[0]
+      : !reset && latest.length === 1
+        ? latest[0]
+        : null;
+  if (!candidate) return null;
+  const blocked =
+    candidate === 'Konser'
+      ? ['konser', 'muzik']
+      : candidate === 'Tiyatro'
+        ? ['tiyatro', 'sahne oyunu']
+        : ['stand-up', 'stand up', 'komedi'];
+  return blocked.some((term) => rejected.has(term)) ? null : candidate;
 }
 
 function eventText(event: EventRecord) {
@@ -128,7 +150,9 @@ function eventText(event: EventRecord) {
 
 function eligibleForContext(event: EventRecord, context: SearchContext) {
   const text = eventText(event);
+  if (context.category && event.category !== context.category) return false;
   return !context.rejectedTerms.some((term) => {
+    if (term === 'cocuk') return hasChildAudienceEvidence(event);
     const matches = [
       ...text.matchAll(new RegExp(`\\b${escapeRegExp(term)}\\b`, 'g')),
     ];
@@ -140,6 +164,25 @@ function eligibleForContext(event: EventRecord, context: SearchContext) {
       return !/^\s+(?:degil(?:dir)?|icermez|yok)\b/.test(after);
     });
   });
+}
+
+function hasChildAudienceEvidence(event: EventRecord) {
+  const description = normalize(event.description);
+  const withoutNegatedChildClaims = description.replace(
+    /\bcocuk(?:lar|lara|larin)?\b[^.!?\n]{0,36}\b(?:degil(?:dir)?|degildir|icermez|yok)\b/g,
+    ' ',
+  );
+  return (
+    /\b(?:cocuk(?:lar|lara|larin)?\s+(?:icin|oyunu|tiyatrosu)|cocuklara\s+yonelik)\b/.test(
+      withoutNegatedChildClaims,
+    ) ||
+    /\b\d{1,2}\s*[–-]\s*\d{1,2}\s*yas\b[^.!?\n]{0,40}\bcocuk(?:lar|lara|larin)?\b/.test(
+      withoutNegatedChildClaims,
+    ) ||
+    /\bcocuk(?:lar|lara|larin)?\b[^.!?\n]{0,32}\b(?:aileleri|aileler)\b[^.!?\n]{0,16}\bicin\b/.test(
+      withoutNegatedChildClaims,
+    )
+  );
 }
 
 function rankedCandidates(

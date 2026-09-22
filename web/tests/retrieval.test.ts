@@ -80,6 +80,140 @@ await test('child-show negation excludes only events with explicit child evidenc
   );
 });
 
+await test('adult-play intent gates shortlist and fallback to theatre and handles child inflections', () => {
+  const child = make('child-inflected', {
+    category: 'Tiyatro',
+    description: '4–8 yaş çocuklar ve aileleri için kukla tiyatrosu.',
+  });
+  const adult = make('adult-drama', {
+    category: 'Tiyatro',
+    description: 'Yetişkinlere yönelik ciddi ve dramatik sahne yapımı.',
+  });
+  const unrelated = [
+    make('rock', { description: 'Rock konseri' }),
+    make('comedy', { category: 'Stand-up', description: 'Komedi gösterisi' }),
+  ];
+  const message =
+    'Çocuk oyunu istemiyorum, yetişkinlere uygun ciddi bir oyun olsun.';
+  for (const retrieve of [shortlistEvents, fallbackEvents])
+    assert.deepEqual(
+      retrieve([child, ...unrelated, adult], message, []).map(({ id }) => id),
+      ['adult-drama'],
+    );
+});
+
+await test('child exclusion requires positive audience evidence and ignores negated source claims', () => {
+  const titleOnly = make('title-only', {
+    title: 'Çocuk Adlı Yetişkin Oyunu',
+    category: 'Tiyatro',
+    description: 'Yetişkin izleyicilere yönelik dramatik yapım.',
+  });
+  const venueOnly = make('venue-only', {
+    venue: 'Çocuk Sanat Merkezi',
+    category: 'Tiyatro',
+    description: 'Yetişkinlere uygun ciddi oyun.',
+  });
+  const negated = make('negated-child', {
+    category: 'Tiyatro',
+    description: 'Çocuk oyunu değildir; yetişkinlere yönelik bir dramdır.',
+  });
+  const ids = fallbackEvents(
+    [titleOnly, venueOnly, negated],
+    'Çocuk oyunu istemiyorum, dramatik bir oyun olsun',
+    [],
+  ).map(({ id }) => id);
+  assert.deepEqual(
+    new Set(ids),
+    new Set(['title-only', 'venue-only', 'negated-child']),
+  );
+});
+
+await test('contextual theatre switch clears older concert history but alternatives retain it', () => {
+  const history: Message[] = [{ role: 'user', content: 'Rock konseri olsun' }];
+  const switched = searchContext(
+    'Bunun yerine yetişkinlere uygun ciddi bir oyun olsun',
+    history,
+  );
+  assert.equal(switched.category, 'Tiyatro');
+  assert.equal(switched.reset, true);
+  assert.deepEqual(switched.history, []);
+
+  const alternatives = searchContext('Başka alternatifler göster', [
+    { role: 'user', content: 'Dramatik bir oyun istiyorum' },
+  ]);
+  assert.equal(alternatives.reset, false);
+  assert.equal(alternatives.category, 'Tiyatro');
+  assert.equal(alternatives.query.includes('Dramatik bir oyun'), true);
+});
+
+await test('category rejection does not resurrect the same category from history', () => {
+  const context = searchContext('Konser istemiyorum', [
+    { role: 'user', content: 'Rock konseri istiyorum' },
+  ]);
+  assert.equal(context.category, null);
+  assert.deepEqual(
+    fallbackEvents(
+      [make('concert'), make('theatre', { category: 'Tiyatro' })],
+      'Konser istemiyorum',
+      [{ role: 'user', content: 'Rock konseri istiyorum' }],
+    ).map(({ id }) => id),
+    ['theatre'],
+  );
+});
+
+await test('alternatives after a history reset cannot resurrect earlier intent', () => {
+  const context = searchContext('Başka seçenekler', [
+    { role: 'user', content: 'Rock konseri istiyorum' },
+    { role: 'user', content: 'Her kategori olur' },
+  ]);
+  assert.equal(context.category, null);
+  assert.deepEqual(context.history, []);
+  assert.equal(context.query.includes('rock'), false);
+});
+
+await test('negated contextual play followed by concert has only concert intent', () => {
+  const context = searchContext('Ciddi bir oyun değil, konser istiyorum', [
+    { role: 'user', content: 'Dramatik bir tiyatro oyunu istiyorum' },
+  ]);
+  assert.equal(context.category, 'Konser');
+  assert.equal(context.reset, true);
+  assert.deepEqual(context.history, []);
+});
+
+await test('retrieval category agrees with filter synonyms when switching from theatre', () => {
+  const history: Message[] = [
+    { role: 'user', content: 'Dramatik tiyatro istiyorum' },
+  ];
+  for (const [message, category] of [
+    ['Techno istiyorum', 'Konser'],
+    ['Elektronik olsun', 'Konser'],
+    ['Biraz gülelim', 'Stand-up'],
+    ['Gülecek bir şey olsun', 'Stand-up'],
+  ] as const) {
+    const context = searchContext(message, history);
+    assert.equal(context.category, category);
+    assert.equal(context.reset, true);
+    assert.deepEqual(context.history, []);
+  }
+});
+
+await test('electronic-music rejection stays narrower than the concert category', () => {
+  const acoustic = make('acoustic-after-electronic', {
+    description: 'Akustik gitarla canlı müzik',
+  });
+  const electronic = make('electronic-rejected', {
+    description: 'Elektronik müzik ve techno',
+  });
+  const message = 'Elektronik müzik değil, akustik olsun';
+  const context = searchContext(message, []);
+  assert.equal(context.category, 'Konser');
+  assert.deepEqual(context.rejectedTerms, ['elektronik muzik']);
+  assert.deepEqual(
+    fallbackEvents([electronic, acoustic], message, []).map(({ id }) => id),
+    ['acoustic-after-electronic'],
+  );
+});
+
 await test('explicit category reset clears stale history and preserves category coverage', () => {
   const history: Message[] = [
     { role: 'user', content: 'Rock konserleri göster' },

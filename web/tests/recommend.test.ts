@@ -201,6 +201,138 @@ await test('valid low Jev scores produce no results, not unrelated fallback card
   assert.equal(result.status, 'empty');
   assert.deepEqual(result.recommendations, []);
 });
+const drama = {
+  ...event,
+  id: 'drama',
+  title: 'Son Mektup',
+  category: 'Tiyatro',
+  description:
+    'Yetişkinlere yönelik dramatik bir sahne oyunu. Komedi değildir.',
+  url: 'https://example.test/drama',
+};
+const children = {
+  ...drama,
+  id: 'children',
+  title: 'Ormandaki Arkadaşlar',
+  description: '4–8 yaş çocuklar ve aileleri için kukla tiyatrosu.',
+  url: 'https://example.test/children',
+};
+const adultPlayRequest = validateInput({
+  message: 'Çocuk oyunu istemiyorum, yetişkinlere uygun ciddi bir oyun olsun.',
+});
+await test('an adult play request excludes concerts and child shows even when Jev would score everything highly', async () => {
+  let calls = 0;
+  const result = await recommend(adultPlayRequest, {
+    ...deps,
+    config,
+    candidates: async () => [event, children, drama],
+    rank: mockRank([3], (body) => {
+      calls++;
+      assert.equal(body.state.verifiedFilters.category, 'Tiyatro');
+      assert.deepEqual(
+        body.state.candidates.map(({ id }) => id),
+        ['drama'],
+      );
+    }),
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.mode, 'jev');
+  assert.deepEqual(result.recommendations, [{ event: drama }]);
+});
+await test('keyless and provider-outage results obey the same play and child-show exclusions', async () => {
+  for (const live of [false, true]) {
+    const result = await recommend(adultPlayRequest, {
+      ...deps,
+      config: live ? config : null,
+      candidates: async () => [event, children, drama],
+      rank: async () => {
+        throw new Error('Simulated provider outage');
+      },
+    });
+    assert.equal(result.mode, 'filters');
+    assert.deepEqual(result.recommendations, [{ event: drama }]);
+  }
+});
+await test('a contradicted play shortlist stays empty without spending a model call', async () => {
+  let calls = 0;
+  const result = await recommend(adultPlayRequest, {
+    ...deps,
+    config,
+    candidates: async () => [event, children],
+    rank: async () => {
+      calls++;
+      throw new Error('Must not be called');
+    },
+  });
+  assert.equal(calls, 0);
+  assert.equal(result.status, 'empty');
+  assert.deepEqual(result.recommendations, []);
+});
+await test('switching from concerts to a serious play removes stale model context', async () => {
+  const result = await recommend(
+    {
+      ...adultPlayRequest,
+      filters: { ...emptyFilters, category: 'Konser', maxPrice: 800 },
+      history: [
+        { role: 'user', content: 'Yüksek sesli rock konseri arıyorum' },
+      ],
+    },
+    {
+      ...deps,
+      config,
+      candidates: async () => [event, children, drama],
+      rank: mockRank([3], (body) => {
+        assert.deepEqual(body.state.history, []);
+        assert.equal(body.state.verifiedFilters.maxPrice, 800);
+      }),
+    },
+  );
+  assert.deepEqual(result.recommendations, [{ event: drama }]);
+});
+await test('category follow-ups use the same vocabulary for database filters and the shortlist', async () => {
+  const comedy = {
+    ...drama,
+    id: 'comedy',
+    title: 'Gündelik Hayatlar',
+    category: 'Stand-up',
+    description: 'Yetişkinler için stand-up gösterisi.',
+    url: 'https://example.test/comedy',
+  };
+  for (const [message, expected] of [
+    ['Techno istiyorum', event],
+    ['Elektronik olsun', event],
+    ['Biraz gülelim', comedy],
+  ] as const) {
+    let calls = 0;
+    const result = await recommend(
+      validateInput({
+        message,
+        filters: { ...emptyFilters, category: 'Tiyatro' },
+        history: [{ role: 'user', content: 'Dramatik tiyatro istiyorum' }],
+      }),
+      {
+        ...deps,
+        config,
+        candidates: async (filters) => {
+          assert.equal(filters.category, expected.category);
+          return [event, comedy, drama].filter(
+            (candidate) => candidate.category === filters.category,
+          );
+        },
+        rank: mockRank([3], (body) => {
+          calls++;
+          assert.deepEqual(body.state.history, []);
+          assert.deepEqual(
+            body.state.candidates.map(({ id }) => id),
+            [expected.id],
+          );
+        }),
+      },
+    );
+    assert.equal(calls, 1);
+    assert.deepEqual(result.recommendations, [{ event: expected }]);
+  }
+});
 await test('failed or malformed Jev responses fall back visibly and preserve hard constraints', async () => {
   for (const response of [
     new Response('private error', { status: 429 }),

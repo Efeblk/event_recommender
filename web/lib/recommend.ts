@@ -12,7 +12,7 @@ import {
   uniqueEvents,
   validateFilters,
 } from './search.ts';
-import { rankWithJev, type JevConfig } from './jev.ts';
+import { rankWithJev, type JevConfig, type JevRanking } from './jev.ts';
 import { fallbackEvents, searchContext, shortlistEvents } from './retrieval.ts';
 
 export interface RecommendInput {
@@ -69,6 +69,28 @@ export interface Dependencies {
 // Initial product policy, not an empirically calibrated quality claim.
 // Level 2 requires source support; a valid no-match remains empty.
 export const MIN_JEV_SCORE = 2;
+
+// Shared with the evaluation harness so it measures exactly what users see.
+// Only canonical candidates may become cards, even if a ranker supplies others.
+export function selectJevEvents(
+  candidates: EventRecord[],
+  ranking: JevRanking,
+  limit = 5,
+): EventRecord[] {
+  const byId = new Map(candidates.map((event) => [event.id, event]));
+  const supported = ranking.ranked
+    .filter(
+      ({ event, score }) =>
+        byId.has(event.id) &&
+        Number.isFinite(score) &&
+        score >= MIN_JEV_SCORE &&
+        score <= 3,
+    )
+    .sort((a, b) => b.score - a.score)
+    .map(({ event }) => byId.get(event.id)!);
+  return uniqueEvents(supported, Math.max(0, Math.min(5, limit)));
+}
+
 const basicNotice =
   'Sonuçlar tarih, bütçe, kategori ve kelime eşleşmesine göre listeleniyor.';
 const issueNotices = {
@@ -149,20 +171,11 @@ export async function recommend(
         { ...input, filters, history: context.history },
         shortlist,
       );
-      const byId = new Map(shortlist.map((event) => [event.id, event]));
-      const supported = result.ranked
-        .filter(
-          ({ event, score }) =>
-            byId.has(event.id) &&
-            Number.isFinite(score) &&
-            score >= MIN_JEV_SCORE &&
-            score <= 3,
-        )
-        .sort((a, b) => b.score - a.score)
-        .map(({ event }) => byId.get(event.id)!);
-      const recommendations = uniqueEvents(supported, 5).map((event) => ({
-        event,
-      }));
+      const recommendations = selectJevEvents(shortlist, result).map(
+        (event) => ({
+          event,
+        }),
+      );
       return {
         recommendations,
         filters,

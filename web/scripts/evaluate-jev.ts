@@ -1,25 +1,38 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs, parseEnv } from 'node:util';
-import { rankWithJev, buildJevRequest } from '../lib/jev.ts';
-import {
-  interpretConstraints,
-  isEligible,
-  uniqueEvents,
-} from '../lib/search.ts';
-import { MIN_JEV_SCORE } from '../lib/recommend.ts';
+import { buildJevRequest, rankWithJev, type JevRanking } from '../lib/jev.ts';
+import { interpretConstraints, isEligible } from '../lib/search.ts';
+import { MIN_JEV_SCORE, selectJevEvents } from '../lib/recommend.ts';
 import { searchContext, shortlistEvents } from '../lib/retrieval.ts';
 import {
   evaluationCases,
   evaluationEvents,
   evaluationTime,
 } from '../evals/jev-cases.ts';
+import {
+  candidateRecall,
+  evaluationInputFingerprint,
+  evaluateRecommendationList,
+  summarizeEvaluations,
+  validateReplayCoverage,
+  validateReplaySnapshot,
+} from '../evals/jev-evaluation.ts';
 
+const DEFAULT_REPLAY = new URL(
+  '../evals/replays/2026-09-22-jev-1.13.0.json',
+  import.meta.url,
+);
+const MAX_LIVE_CALLS = 12;
 const { values } = parseArgs({
   options: {
     live: { type: 'boolean', default: false },
+    replay: { type: 'string' },
     out: { type: 'string' },
   },
 });
+if (values.live && values.replay)
+  throw new Error('--live and --replay are mutually exclusive.');
+
 const model = process.env.TYPESAFE_MODEL || 'jev-1.13.0';
 const cases = evaluationCases.map((item) => {
   const interpreted = interpretConstraints(
@@ -51,42 +64,156 @@ const cases = evaluationCases.map((item) => {
   buildJevRequest(model, prepared, candidates);
   return prepared;
 });
+
 const plan = cases.map((item) => ({
   id: item.id,
   shortlistCount: item.candidates.length,
-  acceptableCandidateIds: item.acceptableTop.filter((id) =>
+  acceptableCandidateIds: item.acceptableRecommendationIds.filter((id) =>
     item.candidates.some((candidate) => candidate.id === id),
   ),
-  labelReachable:
-    item.acceptableTop.length === 0 ||
-    item.acceptableTop.some((id) =>
-      item.candidates.some((candidate) => candidate.id === id),
-    ),
+  candidateRecall: candidateRecall(
+    item,
+    item.candidates.map(({ id }) => id),
+  ),
 }));
-const labeledPlan = plan.filter(
-  (_, index) => cases[index].acceptableTop.length > 0,
-);
-if (!values.live) {
-  console.log(
-    JSON.stringify(
-      {
-        status: 'not_run',
-        model,
-        cases: cases.length,
-        networkCalls: 0,
-        minJevScore: MIN_JEV_SCORE,
-        labelCandidateRecall: labeledPlan.length
-          ? labeledPlan.filter((item) => item.labelReachable).length /
-            labeledPlan.length
-          : null,
-        plan,
-        note: 'Production-equivalent constraint and shortlist validation only. Use --live with TYPESAFE_API_KEY to measure model quality; this spends API credit.',
-      },
-      null,
-      2,
+const positivePlan = plan.filter((item) => item.candidateRecall !== null);
+
+type CaseResult = ReturnType<typeof evaluateRecommendationList> & {
+  id: string;
+  model?: string;
+  ranking?: { id: string; score: number; confidence: number }[];
+  unknownCandidateScoreIds?: string[];
+  staleScoreIds?: string[];
+  latencyMs?: number;
+  usage?: JevRanking['usage'];
+  error?: string;
+};
+
+function makeReport(
+  results: CaseResult[],
+  mode: 'live-rescore' | 'saved-score-replay',
+  requestedModel: string,
+) {
+  const completed = results.filter((item) => !item.error);
+  const responseModels = [
+    ...new Set(completed.flatMap((item) => item.model ?? [])),
+  ];
+  return {
+    schemaVersion: 2,
+    evaluatedAt: new Date().toISOString(),
+    status: completed.length === cases.length ? 'completed' : 'incomplete',
+    mode,
+    requestedModel,
+    responseModels,
+    model: responseModels.length === 1 ? responseModels[0] : null,
+    calls: mode === 'live-rescore' ? results.length : 0,
+    plannedCalls: mode === 'live-rescore' ? cases.length : 0,
+    minJevScore: MIN_JEV_SCORE,
+    candidateRecall: positivePlan.length
+      ? positivePlan.reduce(
+          (sum, item) => sum + (item.candidateRecall ?? 0),
+          0,
+        ) / positivePlan.length
+      : null,
+    candidateRecallNoMatchCases: 'not_applicable',
+    ...summarizeEvaluations(completed),
+    inputTokens: results.reduce(
+      (sum, item) => sum + (item.usage?.inputTokens ?? 0),
+      0,
     ),
+    outputTokens: results.reduce(
+      (sum, item) => sum + (item.usage?.outputTokens ?? 0),
+      0,
+    ),
+    note:
+      mode === 'saved-score-replay'
+        ? 'Offline replay applies current candidate filtering and production acceptance to previously saved scores. It does not call Jev, rescore new candidates, or measure current model quality. Cases with unseen candidates are flagged instead of receiving guessed scores.'
+        : 'Small fictional Turkish evaluation, not production approval. Live-catalog and user evaluations remain necessary.',
+    plan,
+    results,
+  };
+}
+
+async function emit(value: unknown) {
+  const output = JSON.stringify(value, null, 2) + '\n';
+  if (values.out) await writeFile(values.out, output, { mode: 0o600 });
+  console.log(output);
+}
+
+if (!values.live) {
+  const replayUrl = values.replay
+    ? new URL(values.replay, `file://${process.cwd()}/`)
+    : DEFAULT_REPLAY;
+  const snapshot = validateReplaySnapshot(
+    JSON.parse(await readFile(replayUrl, 'utf8')),
   );
+  const currentFingerprint = evaluationInputFingerprint(
+    evaluationTime,
+    evaluationEvents,
+    evaluationCases,
+  );
+  if (snapshot.evaluationInputSha256 !== currentFingerprint)
+    throw new Error(
+      `Replay fixture/request fingerprint mismatch (saved ${snapshot.evaluationInputSha256}, current ${currentFingerprint}). Saved scores cannot be reused; make a new live snapshot. No request was made.`,
+    );
+  const replayById = new Map(snapshot.cases.map((item) => [item.id, item]));
+  const results: CaseResult[] = cases.map((item) => {
+    const saved = replayById.get(item.id);
+    if (!saved)
+      return {
+        id: item.id,
+        ...evaluateRecommendationList(item, []),
+        error: 'Replay snapshot has no scores for this case.',
+      };
+    const coverage = validateReplayCoverage(
+      item.candidates.map(({ id }) => id),
+      saved.ranking,
+    );
+    if (coverage.unknownCandidateScoreIds.length)
+      return {
+        id: item.id,
+        ...evaluateRecommendationList(item, []),
+        ...coverage,
+        error:
+          'Current shortlist contains candidates absent from the saved score snapshot; filtering replay is unknown.',
+      };
+    const byId = new Map(
+      item.candidates.map((candidate) => [candidate.id, candidate]),
+    );
+    const ranking: JevRanking = {
+      model: snapshot.model,
+      usage: { inputTokens: 0, outputTokens: 0 },
+      ranked: saved.ranking
+        .filter(({ id }) => byId.has(id))
+        .map(({ id, score, confidence }) => ({
+          event: byId.get(id)!,
+          score,
+          confidence,
+        })),
+    };
+    const acceptedIds = selectJevEvents(item.candidates, ranking).map(
+      ({ id }) => id,
+    );
+    return {
+      id: item.id,
+      model: snapshot.model,
+      ...evaluateRecommendationList(item, acceptedIds),
+      ...coverage,
+      ranking: saved.ranking,
+    };
+  });
+  const output = makeReport(results, 'saved-score-replay', snapshot.model);
+  await emit({
+    ...output,
+    replay: { source: replayUrl.pathname, provenance: snapshot.provenance },
+  });
+  if (output.status !== 'completed' || output.wholeListAccuracy !== 1)
+    process.exitCode = 1;
 } else {
+  if (cases.length > MAX_LIVE_CALLS)
+    throw new Error(
+      `Live evaluation suite has ${cases.length} cases; the hard ceiling is ${MAX_LIVE_CALLS}. No request was made.`,
+    );
   const local: Record<string, string> = {};
   for (const name of ['.env', '.dev.vars']) {
     try {
@@ -108,102 +235,39 @@ if (!values.live) {
     apiKey,
     model: process.env.TYPESAFE_MODEL || local.TYPESAFE_MODEL || model,
   };
-  const results = [];
-  // Deliberately serial and bounded: at most 12 requests, no automatic retries.
+  const results: CaseResult[] = [];
+  // Fixed suite only, deliberately serial, at most 12 calls, no retries.
   for (const item of cases) {
     const start = performance.now();
     try {
-      const result = await rankWithJev(config, item, item.candidates);
-      const byId = new Map(
-        item.candidates.map((candidate) => [candidate.id, candidate]),
+      const ranking = await rankWithJev(config, item, item.candidates);
+      const acceptedIds = selectJevEvents(item.candidates, ranking).map(
+        ({ id }) => id,
       );
-      const accepted = uniqueEvents(
-        result.ranked
-          .filter(
-            ({ event, score }) =>
-              byId.has(event.id) &&
-              Number.isFinite(score) &&
-              score >= MIN_JEV_SCORE &&
-              score <= 3,
-          )
-          .sort((a, b) => b.score - a.score)
-          .map(({ event }) => byId.get(event.id)!),
-        5,
-      );
-      const topRecommendation = accepted[0]?.id ?? null;
       results.push({
         id: item.id,
+        model: ranking.model,
+        ...evaluateRecommendationList(item, acceptedIds),
         latencyMs: Math.round(performance.now() - start),
-        model: result.model,
-        usage: result.usage,
-        baselineTop: item.candidates[0]?.id,
-        acceptableTop: item.acceptableTop,
-        shortlistCount: item.candidates.length,
-        acceptedCount: accepted.length,
-        topRecommendation,
-        falsePositive:
-          item.acceptableTop.length === 0 && topRecommendation !== null,
-        ranking: result.ranked.map(({ event, score, confidence }) => ({
+        usage: ranking.usage,
+        ranking: ranking.ranked.map(({ event, score, confidence }) => ({
           id: event.id,
           score,
           confidence,
         })),
-        top1Hit: item.acceptableTop.length
-          ? item.acceptableTop.includes(topRecommendation ?? '')
-          : null,
       });
     } catch (error) {
       results.push({
         id: item.id,
+        ...evaluateRecommendationList(item, []),
         latencyMs: Math.round(performance.now() - start),
         error: error instanceof Error ? error.message : 'Evaluation failed',
       });
-      // Authentication/rate-limit/service failure is actionable; don't keep spending blindly.
       break;
     }
   }
-  const labeled = results.filter(
-    (result) => result.top1Hit !== undefined && result.top1Hit !== null,
-  );
-  const report = {
-    schemaVersion: 1,
-    evaluatedAt: new Date().toISOString(),
-    status: results.some((result) => result.error) ? 'incomplete' : 'completed',
-    model: config.model,
-    calls: results.length,
-    plannedCalls: cases.length,
-    minJevScore: MIN_JEV_SCORE,
-    labelCandidateRecall: labeledPlan.length
-      ? labeledPlan.filter((item) => item.labelReachable).length /
-        labeledPlan.length
-      : null,
-    top1Accuracy: labeled.length
-      ? labeled.filter((result) => result.top1Hit).length / labeled.length
-      : null,
-    noMatchCases: results.filter(
-      (result) =>
-        result.acceptableTop?.length === 0 && result.error === undefined,
-    ).length,
-    noMatchFalsePositives: results.filter(
-      (result) => result.falsePositive === true,
-    ).length,
-    unsupportedFalsePositives: results.filter(
-      (result) =>
-        result.id?.startsWith('unsupported-') && result.falsePositive === true,
-    ).length,
-    inputTokens: results.reduce(
-      (sum, result) => sum + (result.usage?.inputTokens || 0),
-      0,
-    ),
-    outputTokens: results.reduce(
-      (sum, result) => sum + (result.usage?.outputTokens || 0),
-      0,
-    ),
-    note: 'Small fictional Turkish evaluation, not production approval. Unsupported-preference cases require inspecting scores; confidence is not factual correctness. Live-catalog and user evaluations remain necessary.',
-    results,
-  };
-  const output = JSON.stringify(report, null, 2) + '\n';
-  if (values.out) await writeFile(values.out, output, { mode: 0o600 });
-  console.log(output);
-  if (report.status !== 'completed') process.exitCode = 1;
+  const output = makeReport(results, 'live-rescore', config.model);
+  await emit(output);
+  if (output.status !== 'completed' || output.wholeListAccuracy !== 1)
+    process.exitCode = 1;
 }

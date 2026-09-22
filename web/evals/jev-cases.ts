@@ -85,62 +85,87 @@ export const evaluationEvents: EventRecord[] = [
   ...event,
   url: `https://example.com/evaluation-only/${event.id}`,
 }));
-export const evaluationCases: {
+export interface JevEvaluationCase {
   id: string;
   message: string;
   filters: Filters;
   history: Message[];
-  acceptableTop: string[];
-}[] = [
+  /** Every event that may safely appear anywhere in the recommendation list. */
+  acceptableRecommendationIds: string[];
+  /** Explicitly incorrect events, including incorrect secondary results. */
+  forbiddenRecommendationIds: string[];
+  expectedNoMatch: boolean;
+}
+
+const allEventIds = evaluationEvents.map(({ id }) => id);
+const labeledCase = (
+  item: Omit<
+    JevEvaluationCase,
+    'filters' | 'history' | 'forbiddenRecommendationIds' | 'expectedNoMatch'
+  > &
+    Partial<Pick<JevEvaluationCase, 'filters' | 'history'>>,
+): JevEvaluationCase => ({
+  filters: { ...emptyFilters },
+  history: [],
+  ...item,
+  forbiddenRecommendationIds: allEventIds.filter(
+    (id) => !item.acceptableRecommendationIds.includes(id),
+  ),
+  expectedNoMatch: item.acceptableRecommendationIds.length === 0,
+});
+
+// These twelve cases are the fixed live suite. Keep additions in a separate
+// offline suite so --live can never exceed the established 12-call ceiling.
+export const evaluationCases: JevEvaluationCase[] = [
   {
     id: 'acoustic',
     message: 'Elektronik müzik değil, akustik gitar dinlemek istiyorum.',
-    acceptableTop: ['acoustic'],
+    acceptableRecommendationIds: ['acoustic'],
   },
   {
     id: 'dance',
     message:
       'Oturup dinlemek istemiyorum, dans edebileceğim elektronik müzik arıyorum.',
-    acceptableTop: ['electronic'],
+    acceptableRecommendationIds: ['electronic'],
   },
   {
     id: 'family',
     message:
       'Beş yaşındaki çocuğumla yaşına uygun bir gösteriye gitmek istiyorum.',
-    acceptableTop: ['children'],
+    acceptableRecommendationIds: ['children'],
   },
   {
     id: 'comedy',
     message: 'Biraz gülmek istiyorum, yetişkinlere yönelik stand-up öner.',
-    acceptableTop: ['comedy'],
+    acceptableRecommendationIds: ['comedy'],
   },
   {
     id: 'drama',
     message:
       'Komedi değil, aile ilişkileri üzerine dramatik bir tiyatro oyunu arıyorum.',
-    acceptableTop: ['drama'],
+    acceptableRecommendationIds: ['drama'],
   },
   {
     id: 'rock',
     message: 'Sesi yüksek, elektro gitar ve davul olan bir rock konseri.',
-    acceptableTop: ['rock'],
+    acceptableRecommendationIds: ['rock'],
   },
   {
     id: 'seated',
     message: 'Ayakta durmak istemiyorum. Oturmalı düzende caz dinleyelim.',
-    acceptableTop: ['acoustic'],
+    acceptableRecommendationIds: ['acoustic'],
   },
   {
     id: 'negation',
     message:
       'Çocuk oyunu istemiyorum, yetişkinlere uygun ciddi bir oyun olsun.',
-    acceptableTop: ['drama'],
+    acceptableRecommendationIds: ['drama'],
   },
   {
     id: 'budget',
     message: '500 TL altında akustik konser arıyorum.',
     filters: { ...emptyFilters, maxPrice: 500, category: 'Konser' as const },
-    acceptableTop: ['acoustic'],
+    acceptableRecommendationIds: ['acoustic'],
   },
   {
     id: 'followup',
@@ -151,16 +176,16 @@ export const evaluationCases: {
         content: 'Yüksek sesli elektronik dans gecesi düşünüyordum.',
       },
     ],
-    acceptableTop: ['acoustic'],
+    acceptableRecommendationIds: ['acoustic'],
   },
   {
     id: 'unsupported-romance',
     message: 'Kesin romantik ve kalabalık olmayan bir yer istiyorum.',
-    acceptableTop: [],
+    acceptableRecommendationIds: [],
   },
   {
     id: 'unsupported-access',
     message: 'Tekerlekli sandalye erişimi açıkça doğrulanmış bir gösteri.',
-    acceptableTop: [],
+    acceptableRecommendationIds: [],
   },
-].map((item) => ({ filters: { ...emptyFilters }, history: [], ...item }));
+].map(labeledCase);

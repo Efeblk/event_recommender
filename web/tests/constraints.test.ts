@@ -95,6 +95,85 @@ await test('negated genres do not exclude their entire category', () => {
   );
 });
 
+await test('contextual adult stage plays map to theatre without broadening generic oyun', () => {
+  for (const message of [
+    'Yetişkinlere uygun ciddi bir oyun olsun',
+    'Dramatik bir oyun arıyorum',
+    'Sahnede ciddi oyun izlemek istiyorum',
+  ])
+    assert.equal(parseFilters(message, emptyFilters, now).category, 'Tiyatro');
+
+  for (const message of [
+    'Oyun havası dinlemek istiyorum',
+    'Oyun müzikleri gecesi',
+    'Arkadaşlarla kutu oyunu oynayalım',
+    'Yetişkinlere uygun kutu oyunu oynayalım',
+    'Ciddi bir masa oyunu arıyorum',
+    'Bir oyun olsun',
+  ])
+    assert.equal(parseFilters(message, emptyFilters, now).category, null);
+});
+
+await test('negated contextual plays do not become positive theatre intent', () => {
+  assert.deepEqual(
+    parseFilters('Ciddi bir oyun değil, konser istiyorum', emptyFilters, now),
+    { ...emptyFilters, category: 'Konser' },
+  );
+  assert.deepEqual(
+    parseFilters(
+      'Ciddi bir oyun değil, konser istiyorum',
+      { ...emptyFilters, category: 'Tiyatro' },
+      now,
+    ),
+    { ...emptyFilters, category: 'Konser' },
+  );
+});
+
+await test('a current contextual theatre request supersedes an older concert category', () => {
+  const previous = { ...emptyFilters, category: 'Konser' as const };
+  assert.equal(
+    parseFilters('Yetişkinlere yönelik dramatik bir oyun', previous, now)
+      .category,
+    'Tiyatro',
+  );
+});
+
+await test('shared category synonyms consistently switch an existing theatre filter', () => {
+  const previous = { ...emptyFilters, category: 'Tiyatro' as const };
+  for (const message of [
+    'Techno istiyorum',
+    'Elektronik olsun',
+    'Biraz gülelim',
+    'Gülecek bir şey olsun',
+  ]) {
+    const expected = /gül/i.test(message) ? 'Stand-up' : 'Konser';
+    assert.equal(parseFilters(message, previous, now).category, expected);
+  }
+  assert.deepEqual(
+    parseFilters('Elektronik müzik değil, akustik olsun', previous, now),
+    { ...emptyFilters, category: 'Konser' },
+  );
+});
+
+await test('standalone compound genre and child-show rejections do not become category intent', () => {
+  assert.deepEqual(
+    parseFilters('Elektronik müzik istemiyorum', emptyFilters, now),
+    emptyFilters,
+  );
+  assert.deepEqual(
+    parseFilters(
+      'Elektronik müzik istemiyorum',
+      { ...emptyFilters, category: 'Tiyatro' },
+      now,
+    ),
+    { ...emptyFilters, category: 'Tiyatro' },
+  );
+  assert.deepEqual(
+    parseFilters('Çocuk tiyatrosu istemiyorum', emptyFilters, now),
+    emptyFilters,
+  );
+});
+
 await test('budget syntax uncertainty and invalid values preserve prior filters', () => {
   const previous = { ...emptyFilters, maxPrice: 300 };
   for (const message of [

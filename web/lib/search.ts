@@ -5,6 +5,7 @@ import {
   type Filters,
   type Category,
 } from './types.ts';
+import { positiveCategoryText, requestedCategories } from './intent.ts';
 export const normalize = (s: string) =>
   s
     .toLocaleLowerCase('tr-TR')
@@ -88,7 +89,7 @@ const categoryTerms: Array<[Category, RegExp, RegExp]> = [
   [
     'Konser',
     /\b(?:konser|muzik|caz|jazz|rock|akustik)\b/,
-    /\b(?:konser|muzik)\b/,
+    /\b(?:konser|(?<!elektronik )muzik)\b/,
   ],
 ];
 
@@ -105,28 +106,20 @@ function parseCategories(q: string, previous: Filters) {
     };
 
   const negated = new Set<Category>();
-  let positiveText = q;
-  for (const [candidate, positiveTerms, exclusionTerms] of categoryTerms) {
+  for (const [candidate, , exclusionTerms] of categoryTerms) {
     const suffix = '(?:istemiyorum|istemem|olmasin|haric|degil|disinda)';
     const hardNegation = new RegExp(
       `(${exclusionTerms.source})\\s+${suffix}`,
       'g',
     );
-    if (hardNegation.test(positiveText)) negated.add(candidate);
-    positiveText = positiveText.replace(hardNegation, ' ');
-    positiveText = positiveText.replace(
-      new RegExp(`(${positiveTerms.source})\\s+${suffix}`, 'g'),
-      ' ',
-    );
+    if (hardNegation.test(q)) negated.add(candidate);
   }
   for (const candidate of negated) {
     excluded.add(candidate);
     if (category === candidate) category = null;
   }
-  const positives = categoryTerms
-    .filter(([, terms]) => terms.test(positiveText))
-    .map(([candidate]) => candidate);
-  const distinct = [...new Set(positives)];
+  const positiveText = positiveCategoryText(q);
+  const distinct = requestedCategories(positiveText);
   const hasChoice = /\b(?:veya|ya da|yahut)\b/.test(positiveText);
   if (distinct.length === 1) {
     category = distinct[0];

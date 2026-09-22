@@ -11,15 +11,22 @@ The public recommendation route uses this adapter when `TYPESAFE_API_KEY` is set
 Use Node 22.13+ from the repository root:
 
 ```sh
-# No key or network calls; validates production-equivalent constraints and shortlists.
+# No key or network calls; replay recorded scores through current filtering.
 node --experimental-strip-types web/scripts/evaluate-jev.ts
+
+# Save the offline report (CI runs this same zero-call check).
+node --experimental-strip-types web/scripts/evaluate-jev.ts --out /tmp/biplan-jev-replay.json
 
 # Explicit live evaluation; at most 12 requests. This uses provider credit.
 # Put TYPESAFE_API_KEY in ignored web/.dev.vars or the process environment first.
 node --experimental-strip-types web/scripts/evaluate-jev.ts --live --out /tmp/biplan-jev-evaluation.json
 ```
 
-Optional `TYPESAFE_MODEL` selects another Jev model. No key, provider response body, or private chat log is written to the report. Live evaluation sends only the checked-in fictional test cases, never the user's conversations. The dry run reports each planned shortlist count and whether the labeled answer survives constraint filtering and keyword shortlisting, plus aggregate label-candidate recall. The live report additionally contains returned model versions/token usage, elapsed times, raw score/confidence values, accepted recommendations, labeled top-1 accuracy, and false positives for cases that should produce no match. A failed call stops the run rather than retrying or proceeding blindly; the loop remains serial and is bounded to the 12 fixtures.
+Optional `TYPESAFE_MODEL` selects another model for live evaluation. No key, provider error body, or private chat log is written to the report. Live evaluation sends only the checked-in fictional test cases, never the user's conversations. A failed call stops the run rather than retrying or proceeding blindly; the loop remains serial and is bounded to the 12 fixtures.
+
+The default run uses the checked-in [saved-score snapshot](../evals/replays/2026-09-22-jev-1.13.0.json). It applies current constraints, shortlisting, and the same acceptance function as production to the scores already returned in the original live run. It performs no requests and reads no API key. A custom snapshot can be selected with `--replay PATH`; this cannot be combined with `--live`. Missing candidate scores make replay incomplete rather than receiving guessed values.
+
+Both modes report candidate recall, accepted IDs, recommendation precision across the whole list, forbidden secondary results, top-1 accuracy, and expected-empty correctness. No-match cases have no candidate-recall value. An empty result for a positive case is a failed case; a correct first card with an unrelated second card is also a failure. CI fails if the offline replay is incomplete or any list is incorrect. Live mode additionally records model/token usage and latency. This test suite's small fictional labels do not establish broader model accuracy.
 
 Production currently accepts scores of 2 or higher on the four-level scale. This threshold is a provisional product policy, not a calibrated guarantee. A candidate below it is omitted, so top-1 accuracy is measured against the first accepted recommendation rather than the raw highest score. The two unsupported-preference fixtures should return no accepted recommendation; any accepted result is reported as a false positive.
 
@@ -33,6 +40,12 @@ An authorized live run on 2026-09-22 completed all 12 serial calls with `jev-1.1
 - The serious-adult-play negation case ranked `drama` first, but the provisional threshold also accepted `rock` at 2.55, `comedy` at 2.52, and `electronic` at 2.32. Thus the correct top result does not mean every returned result was appropriate.
 
 These results are encouraging fixture evidence, not evidence that the public experience is quality-ready. The sample is small, fictional, and designed around known distinctions. It does not measure live-catalog shortlist recall, real-user language, repeated-run variance, or whether the threshold of 2 is calibrated well enough for multi-result recommendations.
+
+## Filtering regression fix and offline evidence
+
+The adult-play failure had a deterministic cause: the phrase "ciddi bir oyun" did not select theatre, and the child-show exclusion missed inflected audience wording such as "çocuklar". Contextual stage-play wording now selects theatre before retrieval; bounded positive child-audience evidence is excluded when requested. Ambiguous game wording stays unclassified. Category changes and resets clear conflicting history, while alternatives preserve current preferences. These guards also apply to the keyless and provider-outage paths.
+
+The model prompt and acceptance threshold remain unchanged. With saved scores, the original twelve cases now pass the whole-list check: ten accepted cards are labeled appropriate, both unsupported requests remain empty, and the three unrelated secondary cards are excluded before Jev. The immutable historical live report still records the original failure. This is a filtering regression check using reused scores, **not a second live evaluation**: changing the shortlist or history may change future provider scores. Fresh live checks and representative real-catalog labels remain launch requirements.
 
 ## Quality gate and operating checks
 

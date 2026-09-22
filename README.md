@@ -67,9 +67,13 @@ Akış: **kesin filtreleri yorumla → güncel adayları bul → en fazla 16 far
 
 Jev, dört seviyeli uygunluk ölçeğinde puan verir. Başlangıç politikası en az 2 puan alanları göstermektir; bu eşik Türkçe verilerle henüz kalibre edilmemiştir. Geçerli bir “uygun aday yok” yanıtı boş sonuç olarak kalır. Ağ/sağlayıcı hatasında açıkça belirtilen temel arama gösterilir. Belirsiz bütçe veya tarihte önceki filtreler değiştirilmez; kullanıcı aramasını düzenleyebilir. Doğal dil yorumlama her ifade biçimini desteklemez.
 
+“Ciddi bir oyun” gibi bağlamı açık tiyatro istekleri artık konser adaylarına genişlemez. Çocuk gösterisi istemeyen aramalarda açıklamadaki çocuklara yönelik yaş ve izleyici bilgileri de denetlenir. Aynı kurallar anahtarsız aramada ve sağlayıcı kesintisinde geçerlidir; az sonuç varsa ilgisiz kartlarla tamamlanmaz.
+
 Ücretli aramalar IP başına saatte 20, uygulama genelinde varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bir arama en fazla bir Jev çağrısı yapar; 15 saniye zaman aşımı ve sınırlı girdi/çıktı boyutu vardır. Otomatik ücretli tekrar yoktur. Bu sayaç dolar harcama limiti değildir. Arama geçmişi yalnızca açık sekmenin belleğinde tutulur.
 
 [Eski sağlayıcı rehberi](web/docs/providers.md) korunur, fakat aktif öneri yolunu anlatmaz. Embedding önbelleği isteğe bağlı eski yönetici araçlarında kalır; bu sürümün sonuç sıralaması onu kullanmaz. İlk canlı Jev denemesinde 10 etiketli isteğin ilk sonucu doğru, iki desteksiz tercih isteğinin sonucu boştu. Ciddi yetişkin oyunu isteğinde bazı zayıf ek sonuçlar da eşikten geçti; tüm sonuç listesinin kalitesi henüz doğrulanmış sayılmaz. [Ölçüm raporu](web/evals/reports/2026-09-22-jev-1.13.0.json) 12 çağrı, tokenlar ve gecikmeyi kaydeder. Daha geniş gerçek katalog denemeleri gerekir.
+
+Değerlendirme artık yalnızca ilk sırayı değil, dönen bütün kartların uygunluğunu ölçer. Kayıtlı puanları ağ çağrısı yapmadan tekrar uygulayan denetim, filtre değişikliklerinin bilinen yanlış ek sonuçları engellediğini sınar. Bu denetim yeni bir canlı Jev ölçümü değildir; eşik ve modelin Türkçe kalitesi için daha geniş örnekler gerekir.
 
 ## Kontroller
 

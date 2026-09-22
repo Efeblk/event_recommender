@@ -492,8 +492,65 @@ try {
   const checkpointRecovered = await worker.fetch('/api/ready');
   assert.equal(checkpointRecovered.status, 200);
   await checkpointRecovered.arrayBuffer();
+  // Regression through the actual HTTP route and D1, without a provider key.
+  // A play request must not be padded with concerts or child performances.
+  // The restart test reseeded other pages; expire those in this disposable DB
+  // so the regression does not depend on today's scraped catalogue ordering.
+  await env.DB.prepare(
+    "UPDATE events SET checked_at=?, payload=json_set(payload,'$.checkedAt',?)",
+  )
+    .bind(expiredCheckedAt, expiredCheckedAt)
+    .run();
+  const plays = [
+    {
+      id: 'smoke-adult-play',
+      title: 'Son Mektup',
+      description: 'Yetişkinlere yönelik dramatik bir oyun. Komedi değildir.',
+    },
+    {
+      id: 'smoke-child-play',
+      title: 'Ormandaki Arkadaşlar',
+      description: '4–8 yaş çocuklar ve aileleri için kukla tiyatrosu.',
+    },
+  ].map((play) => ({
+    ...importedEvent,
+    ...play,
+    category: 'Tiyatro',
+    url: `https://biletinial.com/tr-tr/tiyatro/${play.id}`,
+  }));
+  for (const play of plays) {
+    const importedPlay = await request(
+      '/api/admin/import',
+      envelope(play),
+      true,
+    );
+    assert.equal(importedPlay.status, 200, await importedPlay.clone().text());
+    await importedPlay.arrayBuffer();
+  }
+  const playMessage =
+    'Çocuk oyunu istemiyorum, yetişkinlere uygun ciddi bir oyun olsun.';
+  const playResponse = await request('/api/recommend', {
+    message: playMessage,
+  });
+  assert.equal(playResponse.status, 200);
+  const playResult = await playResponse.json();
+  assert.equal(playResult.filters.category, 'Tiyatro');
+  assert.deepEqual(
+    playResult.recommendations.map(({ event }) => event.id),
+    ['smoke-adult-play'],
+  );
+  const noMorePlays = await request('/api/recommend', {
+    message: 'Aynı koşullarda başka etkinlikler bul',
+    filters: playResult.filters,
+    history: [{ role: 'user', content: playMessage }],
+    excludeIds: ['smoke-adult-play'],
+  });
+  assert.equal(noMorePlays.status, 200);
+  const noMoreResult = await noMorePlays.json();
+  assert.equal(noMoreResult.status, 'empty');
+  assert.deepEqual(noMoreResult.recommendations, []);
   console.log(
-    'Built Worker smoke check passed: page, D1, protected import, restart-safe source replacement, canonical R2 checkpoints and stale/missing-state readiness.',
+    'Built Worker smoke check passed: page, D1, protected import, restart-safe source replacement, canonical R2 checkpoints, stale/missing-state readiness and play recommendation exclusions.',
   );
 } catch (error) {
   server?.debug();
