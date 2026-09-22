@@ -1,21 +1,37 @@
 # Bi’ Plan
 
-[Özel önizlemeyi aç](https://biplan-istanbul.efebalikofc.chatgpt.site) — yalnızca site sahibine açık, anahtarsız sürüm.
+Yerel önizleme: **http://127.0.0.1:3001**. Aşağıdaki `local:start` komutuyla açılır; bu çalışma yayın yapmaz.
 
 İstanbul’da konuşarak etkinlik bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
 
-## Çalıştırma
+## Yerel çalıştırma
 
-Node **22.13+** gerekir (Node 20 desteklenmez).
+Node **22.13+** gerekir. Proje kökünde bağımlılıkları kur:
+
+```sh
+npm ci --prefix web
+npm ci --prefix collector
+```
+
+İlk terminalde önizlemeyi başlat:
 
 ```sh
 cd web
-npm ci
-cp .env.example .env
-npm run dev
+npm run local:start
 ```
 
-Terminalin gösterdiği yerel adresi aç. `.env` dosyasında API anahtarı boş bırakıldığında uygulama **Filtreli önizleme · AI henüz bağlı değil** modunda çalışır. Anahtar tarayıcıya gönderilmez. Geliştirme veritabanı `.wrangler/` altında yerel SQLite/D1 olarak tutulur.
+**http://127.0.0.1:3001** adresini aç. Bu komut uygulamayı derler ve kalıcı yerel D1 ile çalıştırır; hiçbir şeyi yayına göndermez. API anahtarı olmadan tarih, bütçe, kategori ve kelime eşleşmesi çalışır. İkinci terminalde güncel veri toplayıp çalışan uygulamaya aktar:
+
+```sh
+cd web
+npm run local:refresh -- --collect
+```
+
+Bu işlem liste sayfalarını ve bilinen etkinlik detaylarını yeniden kontrol ettiği için birkaç dakika sürebilir. Daha önce üretilmiş başarılı raporu yeniden aktarmak için `npm run local:refresh`; farklı bir rapor için `npm run local:refresh -- --report /tam/yol/report.json` kullan.
+
+`local:start` yalnızca `127.0.0.1:3001` adresini dinler. Yoksa rastgele bir `SYNC_TOKEN` üretip Git tarafından yok sayılan `web/.dev.vars` dosyasında saklar; mevcut ayarları korur ve sırrı terminale basmaz. İsteğe bağlı sağlayıcı ayarlarını `.env.example` rehberiyle `.env` veya `.dev.vars` içinde tutabilirsin. Sırlar yalnızca yok sayılan yerel çalışma klasörüne yüklenir; derleme çıktısına eklenmez.
+
+`local:refresh`, sunucunun hazır olmasını bekleyip doğrulanmış raporu korumalı import endpoint'ine gönderir. Başarılı import anında aramaya yansır; veri için yeniden başlatma gerekmez. Kod veya sağlayıcı ayarı değiştiğinde `local:start` komutunu yeniden çalıştır. HMR geliştirme modu ayrıca `npm run local:start -- --dev` ile açılır. Kayıtlar `.wrangler/` altındaki yerel SQLite/D1 içinde yeniden başlatmalar arasında korunur.
 
 ## Şu an ne çalışıyor?
 
@@ -78,3 +94,17 @@ Yeni uygulama React + TypeScript + Vinext üzerinde tek Cloudflare Worker ve D1 
 `db/schema.ts` şema kaynağıdır; değişiklik sonrası `npm run db:generate` ile SQL üret. Migration’lar `drizzle/` altında sürümlenir. Çalışma sırasında ilk açılışta doğrulanmış başlangıç seçkisi veritabanına aktarılır.
 
 Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve eksiksiz şehir kapsamı. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.
+
+## Destek ve reklam alanları
+
+Ana sayfa sohbet çubuğu, önerilen etkinlikler ve projeye destek bölümü içerir. Bağış sayfasının HTTPS adresini `web/.env` veya `web/.dev.vars` içine `DONATION_URL` olarak ekleyip yerel sunucuyu yeniden başlat. Bağlantı tanımlanana kadar destek bölümü “yakında” durumunda kalır; ödeme alınmaz. `/api/site` yalnızca bu herkese açık bağlantıyı döndürür.
+
+Sayfada iki ayrı reklam alanı ayrılmıştır. Henüz reklam ağı, takip betiği veya reklam isteği yoktur. Bu alanlar ileride reklam içeriğiyle doldurulabilir.
+
+## Public beta hazırlığı
+
+[Cloudflare kurulum, staging/production ayrımı, deployment ve rollback](docs/deployment.md) hazırdır. Deployment iş akışı yalnızca elle başlatılır; PR veya push siteyi yayınlamaz. [Yayın sırası ve kalan doğrulamalar](docs/launch-checklist.md) tamamlanmadan public beta hazır sayılmaz.
+
+`/api/health` uygulamanın çalıştığını, `/api/ready` ise kataloğun ve kalıcı toplama checkpoint'inin sağlığını gösterir. İkincisi eksik, 24 saatten eski veya ciddi şekilde küçülmüş katalog/checkpoint için 503 döner. Yerel sunucu D1 yanında yerel R2 deposunu da kalıcı tutar; normal arama checkpoint olmadan çalışır. `collector/publish.mjs --checkpoint` bütün import partileri tamamlandıktan sonra sunucudaki gerçek kayıtların R2 snapshot'ını alır ve geri okuyarak doğrular.
+
+[Jev deneme yolu](web/docs/jev-evaluation.md), 12 Türkçe örnekle sıralama kalitesini, gecikmeyi ve token tüketimini ölçmeye hazırlanmıştır. Varsayılan test API çağrısı yapmaz. Jev public öneri akışına henüz bağlanmamıştır; gerçek sağlayıcı kalitesi ayrıca ölçülmelidir.

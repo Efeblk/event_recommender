@@ -257,6 +257,22 @@ function extractBubilet($, url, category, nodes, now) {
   // Independently advertised future session dates must exist in the detailed state.
   // A truncated payload is an error, not evidence that those sessions disappeared.
   const observedDates = new Set(events.map((e) => e.startsAt));
+  const corroboratedNonIstanbul = (node) => {
+    if (!Array.isArray(props.allSessions)) return false;
+    const timestamp = Date.parse(node.startDate),
+      venue = clean(node.location?.name);
+    if (!Number.isFinite(timestamp) || !venue) return false;
+    const matching = props.allSessions.filter(
+      (row) =>
+        typeof row?.date === "string" &&
+        Date.parse(row.date) === timestamp &&
+        clean(row.venueName) === venue,
+    );
+    return (
+      matching.length > 0 &&
+      matching.every((row) => Number.isInteger(row.cityId) && row.cityId !== 34)
+    );
+  };
   for (const node of nodes) {
     if (Array.isArray(node.subEvent) && node.subEvent.length) continue;
     if (
@@ -269,7 +285,10 @@ function extractBubilet($, url, category, nodes, now) {
     if (!Number.isFinite(Date.parse(node.startDate))) throw new Error("session_schema_changed");
     // Bubilet JSON-LD can copy the first venue into all subEvents (observed on
     // Usta Komedyen); use the actual session's venue, and corroborate dates only.
-    if (!observedDates.has(new Date(node.startDate).toISOString()))
+    if (
+      !observedDates.has(new Date(node.startDate).toISOString()) &&
+      !corroboratedNonIstanbul(node)
+    )
       throw new Error("session_coverage_mismatch");
   }
   if (!events.length) throw new Error("no_verified_sessions");

@@ -5,7 +5,11 @@
   "scripts": {
     "collect": "node --experimental-strip-types run.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "publish": "node publish.mjs"
+    "publish": "node publish.mjs",
+    "publish:local": "node publish.mjs --allow-loopback-http",
+    "checkpoint:restore": "node checkpoint.mjs",
+    "monitor": "node monitor.mjs",
+    "soak:report": "node soak-report.mjs"
   },
   "dependencies": {
     "@crawlee/basic": "3.18.1",

@@ -15,7 +15,15 @@
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "test:smoke": "node scripts/smoke.mjs",
     "typecheck": "tsc --noEmit",
-    "data:refresh": "node --experimental-strip-types scripts/refresh.ts"
+    "data:refresh": "node --experimental-strip-types scripts/refresh.ts",
+    "local:setup": "node scripts/local-setup.mjs",
+    "local:start": "node scripts/local-start.mjs",
+    "local:refresh": "node scripts/local-refresh.mjs",
+    "deploy:config": "node scripts/deploy-config.mjs",
+    "deploy:prepare": "node scripts/deploy.mjs prepare",
+    "deploy:dry-run": "node scripts/deploy.mjs dry-run",
+    "test:deploy-config": "node --test deploy/config.test.mjs",
+    "deploy:run": "node scripts/deploy.mjs deploy"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

@@ -1,0 +1,3343 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-22T06:42:15.524Z",
+  "finishedAt": "2026-09-22T06:49:51.610Z",
+  "pages": [
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/bogazici-komedi-kulubu-kadikoy-stand-up-gecesi",
+      "checkedAt": "2026-09-22T06:42:44.610Z",
+      "contentHash": "e5c9c861e1e793e99c8043cbacec14ef38955759361ce9fcd01c3b506967c507",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/gokhan-unver",
+      "checkedAt": "2026-09-22T06:42:46.628Z",
+      "contentHash": "c2d7b8637af3e1b86abac7c7d93fec738c3d6b57e10109c89078b4c958890d89",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+      "checkedAt": "2026-09-22T06:42:48.797Z",
+      "contentHash": "66f60fe186d58c976bc11589a3470529f28e40ed2fe1f59db05801bf389cb9fe",
+      "parserVersion": "3",
+      "sessions": 10
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/mutlu-aile-tablosu",
+      "checkedAt": "2026-09-22T06:42:50.587Z",
+      "contentHash": "cc6a3a9c9a834092396f77c097220dfca43fa86daaa68a4fc78b100bd44d6d06",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/zengin-mutfagi",
+      "checkedAt": "2026-09-22T06:42:52.706Z",
+      "contentHash": "9cd06931512e2be43766357cd7212336e3c3c4ce10bd5224a54687701d1c5aa2",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/olun-bizi-ayirana-dek-grg",
+      "checkedAt": "2026-09-22T06:42:54.654Z",
+      "contentHash": "97cce261f7cd1d106d2d5d97fd929ef9d9dca35fa18ecf8f700f25097762833b",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ozgur-turhan-yepyenisi",
+      "checkedAt": "2026-09-22T06:42:55.666Z",
+      "contentHash": "4f50e2d173f02dd563b44250a9220d221ca2eda729f0788b2b381a08a679ba73",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/serdar-ortac-konseri",
+      "checkedAt": "2026-09-22T06:42:56.701Z",
+      "contentHash": "f5c26014380e8d3a589588f509c64ea313a70f4395d83d987a172fe4023a2866",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/babami-kim-oldurdu-tyndn",
+      "checkedAt": "2026-09-22T06:42:57.637Z",
+      "contentHash": "c01d4d7cb7f46486b9f79dac9c977ace6664885960b00a3bf8b49591c8b3069d",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ali-riza-tanyeli-kendime-dusunceler-stand-up",
+      "checkedAt": "2026-09-22T06:42:58.589Z",
+      "contentHash": "b6fbcd0f43b5ba2500d26fbe0710cde71fde3d15f6c79423ebeb4b00be9b004e",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/soner-sarikabadayi-jj",
+      "checkedAt": "2026-09-22T06:43:01.652Z",
+      "contentHash": "b7b872f784d2a744fb6be93fc544d40bc1d1991aa9f8b38c34e745ff34f6fba9",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/simge-jj",
+      "checkedAt": "2026-09-22T06:43:04.678Z",
+      "contentHash": "c65438aff6c5e1187f8a6b17f4470d497d3be23f7036797c084d83351a78673f",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/gokhan-turkmen-jj",
+      "checkedAt": "2026-09-22T06:43:05.678Z",
+      "contentHash": "fcc65918781964c692ab151d1da450469ca3de63c2beff7c590fd8ebcaff11f3",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sevgili-arsiz-olum-dirmit-moda",
+      "checkedAt": "2026-09-22T06:43:07.582Z",
+      "contentHash": "d2e06ca7469b1608c4bcf15c1dca44cccd9a80b89c9826b528944db554e0b779",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/cem-adrian-jj",
+      "checkedAt": "2026-09-22T06:43:08.648Z",
+      "contentHash": "34c785f3a5539ec6cf6ee36b56cb5731101c7c1dbd01f876a8f4f5fb5dcc331b",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/ayna-konserii",
+      "checkedAt": "2026-09-22T06:43:09.634Z",
+      "contentHash": "2a93b2b7a5a0f96dad6957d68ae5405135fd54864f916ebc75c4ab3ef163e33c",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/askin-nur-yengi-jj",
+      "checkedAt": "2026-09-22T06:43:11.708Z",
+      "contentHash": "3a34d0a2fc2e79bc3d8e7ce8e3ca51904c3f4326781b75e7a12fbccf094dd9c9",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/bosanma-teklifi",
+      "checkedAt": "2026-09-22T06:43:12.637Z",
+      "contentHash": "3532680919517b76c20962cbc7a517af803e95762c3ff96296a729230030d6f4",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sesler-salih-bademci",
+      "checkedAt": "2026-09-22T06:43:13.621Z",
+      "contentHash": "93b060e8eb3d473b53f862afaea24c93ef93d9f0dc4c226005a8f62580ebbb3a",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/haydaa-mhmt-myda-kiraz",
+      "checkedAt": "2026-09-22T06:43:15.620Z",
+      "contentHash": "37042a4f46903e7e18362de8d37f00eb69e7346310c12808eeef44a37137a536",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/amadeus-piu",
+      "checkedAt": "2026-09-22T06:43:16.896Z",
+      "contentHash": "b81169abb2e9edf277682884e16637c32e7bfb902f7a90222163240268a310b2",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/mechul-pasa",
+      "checkedAt": "2026-09-22T06:43:17.638Z",
+      "contentHash": "7bcf0ddea311da9ae5d0bde705b86f35500e299d6357134f53e9e48e3ef71d48",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/othello-",
+      "checkedAt": "2026-09-22T06:43:18.606Z",
+      "contentHash": "acee9f0daf066de348bf8ec29c9c10c0f1454a9188559843e102fb605c113ad8",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/dogu-ekspresinde-cinayet-",
+      "checkedAt": "2026-09-22T06:43:22.606Z",
+      "contentHash": "f3eb6df3df9a6c0e01162d60124dc14f500e4f48c476ef1df369c30e4013f0d8",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/meliksah-altuntas-bunu-kendime-neden-yapiyorum-standup",
+      "checkedAt": "2026-09-22T06:43:24.606Z",
+      "contentHash": "62eb5b49b788a1ada38f371c1d7e724af045129ba6e9eb5f3700a338d9a0897b",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sirreti-evcillestirmek",
+      "checkedAt": "2026-09-22T06:43:25.589Z",
+      "contentHash": "570e12cbfaeb7b9c34a74e5c97ad43c47158dca252b5caec9aaa2e16e3b64227",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/yasar-jj",
+      "checkedAt": "2026-09-22T06:43:27.608Z",
+      "contentHash": "fd861d727602a58e2ddfa2d4c1d6199c2d06fa49f418dc5395653965f4c62859",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/derya-bedavaci-jj",
+      "checkedAt": "2026-09-22T06:43:28.630Z",
+      "contentHash": "01d4331fd825af6886722507dcd2b16aae5434c6bd0d643ddb21215996ac3d43",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/anlatanadam",
+      "checkedAt": "2026-09-22T06:43:29.593Z",
+      "contentHash": "8ed5eb9ba3be7b435b42419884c92328e7de2fdd642b50fd0d261a973affb74e",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/kalben-jj",
+      "checkedAt": "2026-09-22T06:43:31.618Z",
+      "contentHash": "a2ec2cda49b141e4326a455c95deb98b18e4b3aba6ee5bb1d94fbe215a177f34",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/gulsen",
+      "checkedAt": "2026-09-22T06:43:32.662Z",
+      "contentHash": "0d6e5a079716d0ed696d18dc08602e630654b9b0960b35ac061540e034f5a249",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/berkay-jj",
+      "checkedAt": "2026-09-22T06:43:33.593Z",
+      "contentHash": "47255d3c128ca74cc59c118dac368391b6e9395ea879624e33c4a1f7361eb099",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/seda-yuz-stand-up-",
+      "checkedAt": "2026-09-22T06:43:35.600Z",
+      "contentHash": "35e79a9b684dbc700be397c481ecebc0556a66edb9067e7411e4176594928ed6",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/fani-but-funny",
+      "checkedAt": "2026-09-22T06:43:36.598Z",
+      "contentHash": "b1901fd3a89470160d0888cbdf6c33bafd66784df0c89282f498de71c598d0b0",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/pinar-fidan-stand-up-modasahne",
+      "checkedAt": "2026-09-22T06:43:38.595Z",
+      "contentHash": "237b9bbc249adb1f8a8d83b83d7051288dc50e098a6f67218b464e5485157fc3",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/acik-iliski",
+      "checkedAt": "2026-09-22T06:43:39.587Z",
+      "contentHash": "b99812c0c64c9529337abd05806b27f4e9d734804c215a86de8156a9fbd3205e",
+      "parserVersion": "3",
+      "sessions": 8
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/diksin-buyuk-sans",
+      "checkedAt": "2026-09-22T06:43:41.577Z",
+      "contentHash": "fa726d76df9b7ff97ea5d88fb437512237ee586c9b357aee9cb07eec31fc0b4c",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/bir-aile-provasi",
+      "checkedAt": "2026-09-22T06:43:42.568Z",
+      "contentHash": "a80f9df68b92e22c0547105eeb2935c2cfe4241407be08ea7ea850386b9f21a3",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/bengi-idil-uras-ile-beng-beng-show",
+      "checkedAt": "2026-09-22T06:43:43.594Z",
+      "contentHash": "562e5d19519c6660047ae0f95f0f1d220a9bba00c40466a73905873bd81964f2",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kanli-kabare-tiyatro-oyunu",
+      "checkedAt": "2026-09-22T06:43:44.617Z",
+      "contentHash": "c9c2bf17c5d07846b45c3f9c19975d197844eef393edb243110cbac810164867",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/metot-tiyatro-oyunu",
+      "checkedAt": "2026-09-22T06:43:45.576Z",
+      "contentHash": "64242033ed3302177cc4996768bbfcfe6188459c15ab2642b8fff663a5c82f43",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ilkergumusoluk-tekkisilikgosteri",
+      "checkedAt": "2026-09-22T06:43:46.617Z",
+      "contentHash": "7abdc2a8be85a47f00b03f9ad84d4a2583f6dee11f3031655720a76736411053",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ozlem-kosif-hayatim-yanlis-anlama",
+      "checkedAt": "2026-09-22T06:43:47.572Z",
+      "contentHash": "81f21df9d458d3035d654a7229636de1c422ad101327d40ab2bb5fa4babfe0dc",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/afife-tiyatro-oyunu",
+      "checkedAt": "2026-09-22T06:43:48.677Z",
+      "contentHash": "620ceaa668e52d3c6ae4a3ce682c695db93f0be4eef1d899c68540d29ed955dc",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/balli-sut",
+      "checkedAt": "2026-09-22T06:43:49.585Z",
+      "contentHash": "ba91df5c399bc23413caee3f7b72e60b5db4be73ee71ac9fef5b9e5dba4cd93b",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/elma-labrador-cimen",
+      "checkedAt": "2026-09-22T06:43:50.568Z",
+      "contentHash": "1f78df5eb8bc76a990c9d6aa24fa63294ce855b542eac8f1accecf19d6778c12",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/girgiriye-muzikali",
+      "checkedAt": "2026-09-22T06:43:51.743Z",
+      "contentHash": "484d679642a6e1edad27a1d57d9528b2ff56fcdc8e2d1564e061109374114be3",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/sami-yusuf",
+      "checkedAt": "2026-09-22T06:43:52.598Z",
+      "contentHash": "5406dfb18c091331fc2870e3e4552f15f8fd4e80d3d5fb82636e66d9ce43bc05",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/morkomedyen",
+      "checkedAt": "2026-09-22T06:43:53.624Z",
+      "contentHash": "be9467523d91802d7eb4c42ab19b951a03d29e56f2d69651d22aa028d5a50e58",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/miray-akovaligil-ya-bende-bir-sey-yoksa",
+      "checkedAt": "2026-09-22T06:43:54.673Z",
+      "contentHash": "bf665c41d53509dbb10344431404230d9fc6172a2866b981c2a58a72294085a7",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/aydinlikevler",
+      "checkedAt": "2026-09-22T06:43:55.583Z",
+      "contentHash": "ae8f07118c701077d9c30603200c9fc142e798edbe41725fd58e7898791c0455",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/eric-christian",
+      "checkedAt": "2026-09-22T06:43:56.593Z",
+      "contentHash": "ccb2e55367ab6b265050ff641c1dc3f2a87e7f400b47f3074067bed755dc74b6",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/1-sunar-kadebostany-jj",
+      "checkedAt": "2026-09-22T06:43:57.652Z",
+      "contentHash": "d5eef0c8d24362343ad495a5e670041b9dfd51582ed831d0ad1abe717a1d4532",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/amr-diab",
+      "checkedAt": "2026-09-22T06:43:58.647Z",
+      "contentHash": "da8244aa543e5065c79bd54d4c3e45c56c31ad64fb780060a12612dc16244620",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/redd-jj",
+      "checkedAt": "2026-09-22T06:43:59.599Z",
+      "contentHash": "d5d548f07c1fc078992915dffdb5248afda7adb4b5deef599b89e0a662d4fec6",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/hande-yener-jj",
+      "checkedAt": "2026-09-22T06:44:00.602Z",
+      "contentHash": "fea26ab5dc8f6aed7da2a1fa759f6f644f100e0278fa699f1e55c79c92a6e297",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/halil-sezai-konser",
+      "checkedAt": "2026-09-22T06:44:01.568Z",
+      "contentHash": "cc52ed177284a37da1a36335c1c5d849b07ea02ab8a10a5ddc1250eaba6843ca",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/don-quixote",
+      "checkedAt": "2026-09-22T06:44:02.712Z",
+      "contentHash": "abd6be286bc042fe542e6564098c83baaf303ac230d33a41cbce9850a3010a73",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/evgeny-grinko",
+      "checkedAt": "2026-09-22T06:44:03.645Z",
+      "contentHash": "cbc9d106d8a3185b9b26efc1095ab6607b9c0286806cca5b182dc28c957a1731",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/leyla-the-band",
+      "checkedAt": "2026-09-22T06:44:04.605Z",
+      "contentHash": "1bd36ee5ead1fcaec8263b83eafeb31b31063b3829ec146932e64c07b43cfc5e",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/eser-yenenler-ile-itiraf-et",
+      "checkedAt": "2026-09-22T06:44:05.600Z",
+      "contentHash": "6e9db0c4e6c8260d01646756db90d991047100f1d073280cffdbd3bf0025d49f",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/iki-bekar-es",
+      "checkedAt": "2026-09-22T06:44:06.576Z",
+      "contentHash": "7bf0d6af0f804a53d5e0a56294fc4c1046bd41c0052df1f3b281d508e0d9bac0",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sergen-deveci-ketenpere-olan-stand-up",
+      "checkedAt": "2026-09-22T06:44:07.596Z",
+      "contentHash": "dec1218acc04242a9529a626eb14dc960549c41bdfa4afceb6f74396cf1c0892",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/emre-altug-bir-pop-masali-jj",
+      "checkedAt": "2026-09-22T06:44:08.695Z",
+      "contentHash": "cc9eefeefd9a6e12ae062d53fe542f4944a19fd85af62106e162c6c75021541b",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/evlilikte-ufak-tefek-cinayetler-aysa",
+      "checkedAt": "2026-09-22T06:44:09.587Z",
+      "contentHash": "27e4082f9fdff49f63ced5914f65677125e7b8e5523b43d8a11156b78cff5ccc",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/profesyonel",
+      "checkedAt": "2026-09-22T06:44:10.892Z",
+      "contentHash": "9c101c4bf48c12e362c2d9ddaff8301310768894380e0aaa4d48b7730779263f",
+      "parserVersion": "3",
+      "sessions": 7
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/the-blaze",
+      "checkedAt": "2026-09-22T06:44:11.579Z",
+      "contentHash": "e522383c1bdf52701c3de243b92af909cfcb2c1c7abc4c242fefb7af58789b13",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/little-prince-on-ice",
+      "checkedAt": "2026-09-22T06:44:12.753Z",
+      "contentHash": "8841464b1ff0664816994c2ae15ee39a4c96c5450ce1230c21abfba8c68e0381",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/synthony",
+      "checkedAt": "2026-09-22T06:44:13.595Z",
+      "contentHash": "e15f26d94e55325cbb7241fb03fa6828f94c5b3a39d8cb4e7c123b46197bd201",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/alice-in-wonderland-on-ice",
+      "checkedAt": "2026-09-22T06:44:14.761Z",
+      "contentHash": "daaf645eafdfd4a8c88f68e45e24b3010c27f9b341e83d8e4a88c6e16c8cf63f",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kirli-sepeti",
+      "checkedAt": "2026-09-22T06:44:15.677Z",
+      "contentHash": "50c9a36837728a7a8d6c604a416bc346195089607917e9dd63bdab7e9b7fa0e2",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/fazli-polat-saka-saka-stand-up",
+      "checkedAt": "2026-09-22T06:44:16.721Z",
+      "contentHash": "3c1086ee64bee32778d2e1bd4e6ad43d5e91ede0e06ab00625f92aacdf5b6438",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/devlerin-savasi",
+      "checkedAt": "2026-09-22T06:44:17.789Z",
+      "contentHash": "6378756178f4234fc1adbd11ed33bf3432329760baea07f471e92ac362e4bfe8",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/veda-yemegi",
+      "checkedAt": "2026-09-22T06:44:18.667Z",
+      "contentHash": "f0fdee493db0eef8f6dfe257d4d3bd448ffca656fe92e9b9cff9df3be3b60012",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/saatleri-ayarlama-enstitusu",
+      "checkedAt": "2026-09-22T06:44:19.610Z",
+      "contentHash": "981044963f418c7fbd4af7b5e6cb7ad991b7260bd5608cb662e87ce91749c881",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/baba-oyunu",
+      "checkedAt": "2026-09-22T06:44:20.580Z",
+      "contentHash": "9d323598ab8c376b7ae701d70f1f939fa9a8129dfbd7005f3c3db30fa9baa8d4",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/ebru-gundes-konseri-biletleri",
+      "checkedAt": "2026-09-22T06:44:21.641Z",
+      "contentHash": "72a45d45972626e85ca00882d6397305919cb8f05e9191a36a237321a3c5515a",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kotu-bir-gun-soldoutevent",
+      "checkedAt": "2026-09-22T06:44:22.650Z",
+      "contentHash": "7fe796e21286d19c81e899e00db3035b42f8e77025db37c6c4bcfb8de3307f42",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kaltin-podcasti",
+      "checkedAt": "2026-09-22T06:44:23.578Z",
+      "contentHash": "44329d0c90908928fee9870860c7b67a0e6e934c9ff88b4e4c0de807ee85d77e",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ruh-salatasi",
+      "checkedAt": "2026-09-22T06:44:24.668Z",
+      "contentHash": "71b0f5b076ffb46508ce62098f7bc21111cd7f2828949d40e1acaa837afe51af",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/esyanin-tabiati",
+      "checkedAt": "2026-09-22T06:44:25.603Z",
+      "contentHash": "05cdcae60e2abb9f6b332fd2f291db4bc94754381f6c0326c936787d0c01bb0a",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/cimri-fskhne",
+      "checkedAt": "2026-09-22T06:44:26.640Z",
+      "contentHash": "21172406af2765a3441c112f59e97d4d9ccc7854de94114421c4004f520d4234",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/joseph-k",
+      "checkedAt": "2026-09-22T06:44:27.579Z",
+      "contentHash": "45570540639f81db3bd349d5b4c74c734088361b8f7d60a7efff6879610cac8f",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/merve-ozbey-jj",
+      "checkedAt": "2026-09-22T06:44:28.703Z",
+      "contentHash": "f3e20cd0f3a32ea1de93a66ba5cb36d27c6ba5a128c0fbbde9c8cbd38ebb2f10",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/hayko-cepkin-electric",
+      "checkedAt": "2026-09-22T06:44:29.601Z",
+      "contentHash": "63905d9e7afb31fe9022210a4e1ce316725414b8ff14e8bb9fea41b098b914c4",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/mahsun-kirmizigul",
+      "checkedAt": "2026-09-22T06:44:30.742Z",
+      "contentHash": "10009249dac7c0153ab4bc3a0e7920f6f76ccc780387fdea60ac77bc43c6b21e",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/melek-mosso-jj",
+      "checkedAt": "2026-09-22T06:44:31.662Z",
+      "contentHash": "bc9d52d590718662f3776fb5e3818b14ccfdff5ef33fde651210d752971aa21d",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/jodok-cello-turkey-tour",
+      "checkedAt": "2026-09-22T06:44:32.621Z",
+      "contentHash": "f4b5e4a101408e88843e90b5c3093fa5b779bccf866effff63839752a25446f1",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/carmen-by-antonio-gades-carlos-saura",
+      "checkedAt": "2026-09-22T06:44:33.625Z",
+      "contentHash": "3b3badbbfb08012f0363c0dbc65be871cd88b0e7fbc7ad1bcb8da4cae13604d8",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/ragheb-alama",
+      "checkedAt": "2026-09-22T06:44:34.619Z",
+      "contentHash": "390ef8f40f243218372688a348b40d9736d820cc5b42d2de25306c3191068a3d",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kaktus-cicegi",
+      "checkedAt": "2026-09-22T06:44:35.641Z",
+      "contentHash": "78a65814444daa525cd6852c59783ce270959cc4b1511fac524969059ac8d16b",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/demet-akalin-jj",
+      "checkedAt": "2026-09-22T06:44:36.689Z",
+      "contentHash": "61c95cbf57c40c7ca2ca785a131af94fec69f95b7cb20edfaffdfa476af4f91e",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/luka-sulic",
+      "checkedAt": "2026-09-22T06:44:37.665Z",
+      "contentHash": "4ade42e566da3204e81d1d6a2437c155f13e97dafaccf8d20aa8b49afe59c321",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/emir-can-igrek-jj",
+      "checkedAt": "2026-09-22T06:44:38.632Z",
+      "contentHash": "bfbd471a1a47da1af830a8584e8c24b401e3e07d7e394025111c225f5a21443f",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/harry-potter-ve-ates-kadehi-in-concert",
+      "checkedAt": "2026-09-22T06:44:39.623Z",
+      "contentHash": "76d29d214b930405ab2306c070b7c2985cbbda30e073c3570a1b1dd5cadfe5a3",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/levi-sct",
+      "checkedAt": "2026-09-22T06:44:40.587Z",
+      "contentHash": "573533c6b5462eb266bca5e7a72c3490d83d4caebbf34e29777740d5eb932e58",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/karsu-konseri",
+      "checkedAt": "2026-09-22T06:44:41.658Z",
+      "contentHash": "ade0a1a2a469013f81099db3665766f5360519b5aeb78faf42503e7c4f6247f3",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/duman-jj",
+      "checkedAt": "2026-09-22T06:44:42.583Z",
+      "contentHash": "3210bbd827dfbb9a694eddd2a7ca546ca65340f2862ee543acaf7850fe044339",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/ogun-sanlisoy-konser",
+      "checkedAt": "2026-09-22T06:44:43.604Z",
+      "contentHash": "c32889fdbd36343b26d678a3e2b07c057790af16943dfb2261f5ad92bc08919f",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/the-imperial-russian-ballet-company-the-nutcracker-findikkiran-balesi",
+      "checkedAt": "2026-09-22T06:44:44.668Z",
+      "contentHash": "63e8d0daada505837698fda16e6aadcc462260da46442520f840dbe7a741ad20",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/jakuzi",
+      "checkedAt": "2026-09-22T06:44:45.563Z",
+      "contentHash": "e0a2bae97303b249ad290bbe0dcd79c5ff5bb7b46b565d84548b14e3178ba909",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/paris-the-show",
+      "checkedAt": "2026-09-22T06:44:46.596Z",
+      "contentHash": "f3728814f3adb7422116ec1a72cd3e725d161e2592eb5929605002cb539642a1",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/the-nutcracker-findikkiran",
+      "checkedAt": "2026-09-22T06:44:47.884Z",
+      "contentHash": "bc32b077a75207d12206bdd348dc2f951dcd988daa77ab7c55ce62c4a8ea2e05",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/cristina-mariani-stand-up",
+      "checkedAt": "2026-09-22T06:44:48.642Z",
+      "contentHash": "259057db66ca6600b162001d45b040fdd3aa9fc1c38246fb731b4dd78154c7c4",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-komedi-kulubu-stand-up-gecesi",
+      "checkedAt": "2026-09-22T06:44:56.939Z",
+      "contentHash": "73f6387a598891a1c3495b488c381b0a562e0c878cbd86ec8c0c3b9d2e319fc1",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-emre-gunduz-yunusun-odasi-talk-show",
+      "checkedAt": "2026-09-22T06:44:59.034Z",
+      "contentHash": "35238083e53c83d3a83a78a5a8ee3b4afb4ee481d1c79e274c2d049c80b3e47e",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/-gokhan-unver-cok-tanidik-",
+      "checkedAt": "2026-09-22T06:45:00.157Z",
+      "contentHash": "73a70110f0091cfa3fa32adaeb45cfc3fca2a59882d21f4312590a6ad2081fcd",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up-gecesi-falan-",
+      "checkedAt": "2026-09-22T06:45:01.317Z",
+      "contentHash": "b6c7e389df564b03253ace2aabfcb2a2f98e49c55b5da27e8c93fe46c44364c5",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up--gecesi--",
+      "checkedAt": "2026-09-22T06:45:02.295Z",
+      "contentHash": "a93ceaecef38c6f5bea5f6cedad0536db8f68908fd883befca6723d246c2acc6",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bogazici-komedi-kulubu-kadikoy-acik-mikrofon-stand-up",
+      "checkedAt": "2026-09-22T06:45:06.316Z",
+      "contentHash": "c3afea2748aa97282af87fe9803a1f1edd8065d404b44d4f9a2322c9c98cf2d3",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/olun-bizi-ayirana-dek-oyunu",
+      "checkedAt": "2026-09-22T06:45:07.091Z",
+      "contentHash": "a9ac6bf78c9a48b6fac99f36515bb8062223fae3509f03c5b1ad3668c73ccfc9",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up-taksim-gecesi-acik-mikrofon-persembe-",
+      "checkedAt": "2026-09-22T06:45:08.191Z",
+      "contentHash": "4b6ab19bd2c708c63b2688d2be3ac24e6ae18405864804e45235ebbed5563a2c",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ozgur-turhan-yepyenisi",
+      "checkedAt": "2026-09-22T06:45:09.973Z",
+      "contentHash": "00ac31e712e7143af662c839c63106675b6e4fb4382f77cca4804b9d42a4dddd",
+      "parserVersion": "3",
+      "sessions": 13
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/serdar-ortac-konseri",
+      "checkedAt": "2026-09-22T06:45:11.820Z",
+      "contentHash": "d16c3f5f86bbb250bb421e7a57be496b48db4971023f697470512e54006dbe14",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bu-hikaye-senden-uzun-osman",
+      "checkedAt": "2026-09-22T06:45:13.173Z",
+      "contentHash": "5cb745f3f8954ecec004cfa010a8f01d28295cbce4a85184200c196345a47096",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/maceraci-annelerin-savunmasi-adina",
+      "checkedAt": "2026-09-22T06:45:15.135Z",
+      "contentHash": "919a30e62a9894b6dbf308d4eb7002eb6c0c081663d6fe45326af7e467db2da6",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/operadaki-hayalet",
+      "checkedAt": "2026-09-22T06:45:16.140Z",
+      "contentHash": "50496406e8e189c14213a267d38c98b7c935d91793966449c0a00c63cc403628",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/-gokhan-turkmen",
+      "checkedAt": "2026-09-22T06:45:16.919Z",
+      "contentHash": "0cb5fb8ce65c01fd6af6a6d0cb5dcfd703b28053ac88790781baa4da7f03083f",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/candle-experience",
+      "checkedAt": "2026-09-22T06:45:18.901Z",
+      "contentHash": "e3557fb301642119be07084b85db2c3fd0cd077405902b70d07c99a7512bf707",
+      "parserVersion": "3",
+      "sessions": 8
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-cumartesi-21-45",
+      "checkedAt": "2026-09-22T06:45:22.224Z",
+      "contentHash": "ebaf2aa3fd7b8c4333b5be76cb0c18e6fc6fece872e284cc290374ac60a596e5",
+      "parserVersion": "3",
+      "sessions": 14
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/eser-yenenler-ile-itiraf-et",
+      "checkedAt": "2026-09-22T06:45:23.110Z",
+      "contentHash": "b8bb246bc5f663fc9c2a203a7f2b29ae63161e51f6cd5fd671d32b677b25d6f0",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sesler-salih-bademci",
+      "checkedAt": "2026-09-22T06:45:24.843Z",
+      "contentHash": "491a7fe566675cadbc98f679a8b95712b67b61682e9a8c5a96bdcfc48ada8b0d",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/amadeus",
+      "checkedAt": "2026-09-22T06:45:25.737Z",
+      "contentHash": "f22b29b6d7124965af1a720151da423df3692f20e183e9706732ab0e398b8c67",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-sali-acik-mikrofon-",
+      "checkedAt": "2026-09-22T06:45:27.076Z",
+      "contentHash": "12c61a552dd59c03b0bb842101f950bdc8a9fa59d9c35dcf5559c1af892ea049",
+      "parserVersion": "3",
+      "sessions": 15
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bir-idam-mahkumunun-son-gunu-oyunu",
+      "checkedAt": "2026-09-22T06:45:28.092Z",
+      "contentHash": "df17bdd6a6eb678121285b4dbfb112689b59e5a7b63d08fce4f2f31ae22f4660",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/karanlikta-kumpas",
+      "checkedAt": "2026-09-22T06:45:28.798Z",
+      "contentHash": "a628b6329faea612a1dc42257183bc0fa31a1ecdc31b046f92cb2185baa9bc74",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/zengin-mutfagi-",
+      "checkedAt": "2026-09-22T06:45:29.889Z",
+      "contentHash": "7075b0b1eac7c6acb209f0c29438cdcfb72c76dc6fd1657bf01e26962d42daef",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/dogu-demirkol",
+      "checkedAt": "2026-09-22T06:45:32.916Z",
+      "contentHash": "dd1ab03fdec2463659d4df35a89e5cf963d00cd3b7fe01a5a66b74bd71945990",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/berk-karan-dul-",
+      "checkedAt": "2026-09-22T06:45:34.440Z",
+      "contentHash": "90ff27aacd4ef9791f8f998a22cfa5079adb7b9d770e15c5649f38968495b161",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ask-hikayen-dusmus-oyunu",
+      "checkedAt": "2026-09-22T06:45:38.016Z",
+      "contentHash": "38a378aa8ac06fbcb40e5192c9afcbacebda2b891c60bd4b4b814fc5aa44e62a",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/anlatanadam-standup",
+      "checkedAt": "2026-09-22T06:45:38.876Z",
+      "contentHash": "e8985c73a12cac688ba8ff1415ca4c522a7882b20232a27183e1472a7cf19c20",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/musti-kusti-kara-mizah",
+      "checkedAt": "2026-09-22T06:45:41.846Z",
+      "contentHash": "2b771af87e022ff5c9b8bf74a391cb5a8df59a944f80f97f4086093393149d40",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/usta-komedyen",
+      "checkedAt": "2026-09-22T06:45:43.147Z",
+      "contentHash": "9fbbe6410b21c13057ce67b87a8a6a973d764181680f7e06ef922ebdb75fbdab",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/edis-konseri",
+      "checkedAt": "2026-09-22T06:45:44.795Z",
+      "contentHash": "f6043ec4a6abfed9ea97606823d904db75fbebe044e967f8b04fe108333cffd5",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sebbaz",
+      "checkedAt": "2026-09-22T06:45:47.025Z",
+      "contentHash": "03d6cff28721d6163f8a89149b5fd8516b840b6bf8b4520fc2a049a3aca90089",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/mabel-matiz-konseri-",
+      "checkedAt": "2026-09-22T06:45:47.750Z",
+      "contentHash": "50749906dccf8ba6b89cad1c85ca36757a5233004ecf9e797144c44dcd46cf2e",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/guldur-guldur-show",
+      "checkedAt": "2026-09-22T06:45:48.775Z",
+      "contentHash": "9e976eb33bbc72d8cc589bbb860ffb38810874c93a89b6a7f01e19d250ed0a37",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bengi-idil-uras-ile-beng-beng-show",
+      "checkedAt": "2026-09-22T06:45:50.032Z",
+      "contentHash": "0f779ae9e0ad9859ba92bc3925c93b7ff343b8fac5a1c99ff097322a333c970a",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ilker-gumusoluk-tek-kisilik-gosteri",
+      "checkedAt": "2026-09-22T06:45:51.104Z",
+      "contentHash": "b14151bb3a29392b9f7c3ed346502046c93b7951d974e5f0fbad950ea2819c83",
+      "parserVersion": "3",
+      "sessions": 7
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/askim-kapismak-tek-hucreliler",
+      "checkedAt": "2026-09-22T06:45:51.961Z",
+      "contentHash": "04d64e665ecdba8a788e3b6d154185dee7a24d0bc3b999d931b1c52adcbd79b6",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sebnem-ferah",
+      "checkedAt": "2026-09-22T06:45:52.830Z",
+      "contentHash": "ea1f847a612b4f24560e9463fdb8f2890e9d9d983b78a8c1414a96d452684826",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/olay-yeri-inceleme",
+      "checkedAt": "2026-09-22T06:45:53.905Z",
+      "contentHash": "3adf137493702f4452f7e8ff31b48874b40914543559578c29bc8de61cd64c9c",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/meksika-acmazi",
+      "checkedAt": "2026-09-22T06:45:54.872Z",
+      "contentHash": "237bdb748a4f23591a5d78cc040d4abdff6b1cd4ac2605d8956e2c97191e898c",
+      "parserVersion": "3",
+      "sessions": 7
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sehribanla-memleket-kahkahasi",
+      "checkedAt": "2026-09-22T06:45:56.149Z",
+      "contentHash": "216436a901d53e1963cd6c4481d1b3f20c3cc194e89f1c2fd66e4d8a922c694d",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/alpay-erdem-gecenlerde",
+      "checkedAt": "2026-09-22T06:45:57.047Z",
+      "contentHash": "6137a5fb84eb0525c10ed76a2819d7fa9b33cd8ff7f9f2055ca67b138758a47a",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/cok-guzel-hareketler-2-",
+      "checkedAt": "2026-09-22T06:45:57.906Z",
+      "contentHash": "7b7eb45bfc9c7601430765a2aaf42a3c4c4a192dbe6ff2ba7f547456119bce42",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/balli-sut",
+      "checkedAt": "2026-09-22T06:45:59.113Z",
+      "contentHash": "c8998ee8473c297d68776a69df5068608b57884eec7d281b3e60e1af9613539d",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/gokhan-ozen--konseri",
+      "checkedAt": "2026-09-22T06:46:00.130Z",
+      "contentHash": "2a38da4faaba86ce657ef02f25400172bbec90e93928a9fd216b8d67d4c558e7",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/gulsen--",
+      "checkedAt": "2026-09-22T06:46:01.810Z",
+      "contentHash": "41796cf467ba720b67c8cf76f4d745c75ad01ebf14c12fe72efe0c997fd1e6cf",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/miray-akovaligil-ya-bende-bir-sey-yoksa",
+      "checkedAt": "2026-09-22T06:46:02.861Z",
+      "contentHash": "34c9d0654126c74f1b368fa38b8b8ddaf12dad93b1ce4b5500df0faf55d127b8",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/girgiriye-muzikali",
+      "checkedAt": "2026-09-22T06:46:03.788Z",
+      "contentHash": "755e228325de1de8e8efce2c338dd284f16daf9cac02d400d65eb1af4ed2d851",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/one-more",
+      "checkedAt": "2026-09-22T06:46:05.004Z",
+      "contentHash": "dbb3e20cd131940514cb57d58580b21a503e2a890d4e6dbf2943ac282071fd06",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sahane-pazar",
+      "checkedAt": "2026-09-22T06:46:05.706Z",
+      "contentHash": "7975dc38180995c1492a47412f16f27a7007bfe4e02689b5a15b999075e42454",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sami-yusuf",
+      "checkedAt": "2026-09-22T06:46:06.826Z",
+      "contentHash": "a1ab21e1f942642dda14938aeeaabd2b0774a1c212734e8c2bc63eaa7d2d8703",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/adil-yildirim-toksik-iliski-yeni-gosteri-",
+      "checkedAt": "2026-09-22T06:46:07.793Z",
+      "contentHash": "92b33ff4067fa5148d1b5fb2e93b3058f32e4b427897b0101f3a3b67e5390860",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bir-sehnaz-oyun-muzikali",
+      "checkedAt": "2026-09-22T06:46:08.931Z",
+      "contentHash": "d36b5dda771d755bfa35363354f1d7346ebed300fea114220e9c30d4c911af5b",
+      "parserVersion": "3",
+      "sessions": 8
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/hayrettin-ile-kaos-show",
+      "checkedAt": "2026-09-22T06:46:10.005Z",
+      "contentHash": "bf6dc1de12d51a9b1afbffaf1f0e86b7bacd1b8aa8a4d9a80f90dc6af700fdc7",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/barcelona-gipsy-balkan-orchestra",
+      "checkedAt": "2026-09-22T06:46:11.213Z",
+      "contentHash": "264acc36ad49ba10624ad4d7a8c34978e846b76525b7d9d1072c75e007122e5c",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/diyojen-podcast",
+      "checkedAt": "2026-09-22T06:46:12.190Z",
+      "contentHash": "5a8b48d998619f05ad6fe02a212fd2d2a88cd72eaebc0d8171e8ddc8eb8713c7",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kahpe-feleknaz-ile-dogaclama-varyete",
+      "checkedAt": "2026-09-22T06:46:13.067Z",
+      "contentHash": "dbc1974647c862c903647d9ec1f05fb1d79e46485dde9b464eecda75cc6d48e1",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/koma-amed-konseri",
+      "checkedAt": "2026-09-22T06:46:13.764Z",
+      "contentHash": "5339d1fed2543c13c418d27752b09a397f0647bcae7ba587dd9f5a44b3f3e11c",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kaan-sekban-stand-up",
+      "checkedAt": "2026-09-22T06:46:15.191Z",
+      "contentHash": "52a8214f5b88c10d459b62673c91b62c55b5bf4db2aa8c2c6b38856d4e53e4d4",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/icimizdeki-seytan",
+      "checkedAt": "2026-09-22T06:46:16.101Z",
+      "contentHash": "99e420e0bca5725bdc54f3b00b050e2e0fe30b520fa68faec6d79c55e5dc92a8",
+      "parserVersion": "3",
+      "sessions": 9
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/klarnetin-yildizlari",
+      "checkedAt": "2026-09-22T06:46:16.741Z",
+      "contentHash": "252f4b9a444f03d0d2718ee110b29d67ca81266f900bba449bd3028c0a1e0d0c",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ilk-11-dogaclama-tiyatro-sporu",
+      "checkedAt": "2026-09-22T06:46:17.741Z",
+      "contentHash": "20e8ce559fcf0906d986419bf65da12c7854530738bb57803c6a4956a6799ad8",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/edi-ile-budu",
+      "checkedAt": "2026-09-22T06:46:19.024Z",
+      "contentHash": "90b69d3a524751d1b8a2ce57359474e2a4c917880c4fc2975388485f21ca790b",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/7-kocali-hurmuz-muzikali",
+      "checkedAt": "2026-09-22T06:46:19.755Z",
+      "contentHash": "b74974965a84e84e08fd8fa1652a1369bede6fc15bd41e395d17f23e1726e4e6",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/don-quixote",
+      "checkedAt": "2026-09-22T06:46:20.753Z",
+      "contentHash": "5a71ce8d6d9454fb1ff5b532cbbcde9aecf7b321a8a24bfdd78a1bad60d95da9",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/evgeny-grinko-konseri",
+      "checkedAt": "2026-09-22T06:46:21.791Z",
+      "contentHash": "2025d164c0836e78873133a0ca922a3a95e97fa091b55964e1ed57f5aef7dc40",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sagopa-kajmer-konseri",
+      "checkedAt": "2026-09-22T06:46:22.824Z",
+      "contentHash": "612ebfe662612e7d5d2a4aebf822f5c93fee8afc1111f032e305d46d8919dbab",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/dus-payi",
+      "checkedAt": "2026-09-22T06:46:24.255Z",
+      "contentHash": "2c5816e58605e64dce62b6e2ef99c3b2871858e04511b80dce3c01b2e61a3d9f",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/firat-tanis-ile-gelin-tanis-olalim-oyunu",
+      "checkedAt": "2026-09-22T06:46:25.205Z",
+      "contentHash": "3169dd9679173c463e04d945bc8e71cdd875553b2992f76cd4f6cf725295d6f5",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/doktor-bana-bir-care",
+      "checkedAt": "2026-09-22T06:46:26.626Z",
+      "contentHash": "ffb60a985e25f7c37441363cdf7a62dc2fc9ac94e475556554fca6ff4dd6c399",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yildiz-tilbe-konseri-",
+      "checkedAt": "2026-09-22T06:46:27.115Z",
+      "contentHash": "72ce5041a9f8dfb00212817540049aefc0bd011e9dcd63ef8fcaed028f614a90",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/tahsin-hasoglu",
+      "checkedAt": "2026-09-22T06:46:27.991Z",
+      "contentHash": "9213e8c4d044cf0b25597362cdcc42ad372adcc618eafe5fa58b32afe4f25ded",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/the-blaze",
+      "checkedAt": "2026-09-22T06:46:29.110Z",
+      "contentHash": "a056db5fad6623172812060cb542fd87d9e161d591f9b96301ab8a5e4d8bb71b",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/gulsen--konseri-",
+      "checkedAt": "2026-09-22T06:46:29.820Z",
+      "contentHash": "78a990f3aead4d2764d8149473d080623ef6ee395f3fc48f5a16811810ce70c0",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/fazli-polat-saka-saka-stand-up",
+      "checkedAt": "2026-09-22T06:46:31.033Z",
+      "contentHash": "fdf2d92f7ef1d2c37ce1f44b487a16755bb26ac7153f4b08bc31cdbf431a2d7a",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/hikayeden-adamlar",
+      "checkedAt": "2026-09-22T06:46:32.115Z",
+      "contentHash": "5f7d1f11bd7993f0316c012d6e08dabc2e0eab9a0220033b77cc5aa245e109b1",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/dogu-ekspresinde-cinayet-oyunu",
+      "checkedAt": "2026-09-22T06:46:32.781Z",
+      "contentHash": "30aa0cb2e94194ef83355dde336871efad02c2ab06ceb8ff197c4b94c7c53019",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/profesyonel",
+      "checkedAt": "2026-09-22T06:46:33.785Z",
+      "contentHash": "7f2fcd979763ad9499d53592c9af3e3a1069c3288accfa975687f9452885273b",
+      "parserVersion": "3",
+      "sessions": 8
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/-veda-yemegi-",
+      "checkedAt": "2026-09-22T06:46:35.081Z",
+      "contentHash": "ece310690b7bff934e897a684b300fb3a9612cf30f5099138ca441de3900f926",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/baba",
+      "checkedAt": "2026-09-22T06:46:35.817Z",
+      "contentHash": "baa127468755fdc269a706a15c1cef1a0621e6934fc49a3364ec2798d401a347",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/saatleri-ayarlama-enstitusu",
+      "checkedAt": "2026-09-22T06:46:36.889Z",
+      "contentHash": "b9c25320a9556baf08dea58cbf94aaecdfeac345831721d6a80a4a0aca0ec7c6",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/cem-erdost-ileri-ile-portakalalti-bulusmalari-",
+      "checkedAt": "2026-09-22T06:46:37.853Z",
+      "contentHash": "bcb1dfb5a1625debc8d40e85b64106c035af24f725a67c7730a6e07e83b143f1",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/motive--konseri-",
+      "checkedAt": "2026-09-22T06:46:38.798Z",
+      "contentHash": "12c7e4b7635ec1c8478624cb9faa9655e5af96d87cb2510b665d69c4ca5c7213",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kenan-dogulu-konseri-",
+      "checkedAt": "2026-09-22T06:46:40.179Z",
+      "contentHash": "499fc5934fbb330a58071e4c355d0ad7b381d7ad00d48792e18639f296658c0d",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/-hayko-cepkin-",
+      "checkedAt": "2026-09-22T06:46:40.684Z",
+      "contentHash": "953ec995bbd63d19c8251f8fe421d2d9a12e48c371bbae6d0ef4e79a5acbc5d7",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/zengin-mutfagi",
+      "checkedAt": "2026-09-22T06:46:41.810Z",
+      "contentHash": "b6d51ccabad00979c2ff5e00f5f3eafeebcdbd3e3bc3b7660e568e040861b23c",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/mahsun-kirmizigul-",
+      "checkedAt": "2026-09-22T06:46:42.812Z",
+      "contentHash": "715a88965256fe9d8306727d2452acbddda1f492f0d272dadb97daf2d6adc529",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/motive---konseri",
+      "checkedAt": "2026-09-22T06:46:43.742Z",
+      "contentHash": "c48e76dc4f330bd8027d687cdc4031ce345d7ea9cb7ff93e0d61337bcc30ca9a",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/hayrettin-ile-kaos-show-",
+      "checkedAt": "2026-09-22T06:46:44.801Z",
+      "contentHash": "644d40a89945034ce5b6ecde872d042f318b30f037b63922eda53f670ab0712c",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/hakan-altun-konseri-",
+      "checkedAt": "2026-09-22T06:46:45.770Z",
+      "contentHash": "5dab685dd8a079e81ddfb0045bd6819dbaa5eae6f50d0d51ea5cc4b275ebdc7a",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yalin-bir-buyulu-gece",
+      "checkedAt": "2026-09-22T06:46:46.727Z",
+      "contentHash": "c1de228ff9907890c83b6eb2836bc800de16a4cfebf23ee4ffa5ec97a1027e58",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kiracla-kokler-konseri",
+      "checkedAt": "2026-09-22T06:46:47.783Z",
+      "contentHash": "2351679d4c96cfda5f7425f472d485203f26ef42dfbef51e8c3319e553c737c1",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/duman--",
+      "checkedAt": "2026-09-22T06:46:48.906Z",
+      "contentHash": "51f75381463c23a243d92977ff374abf8169d66aa2c9cbc72b41ce7db61a1311",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/nukhet-duru-",
+      "checkedAt": "2026-09-22T06:46:49.870Z",
+      "contentHash": "9f3a1f5096ebe27c89df2a3f104a6a236f0781a296dbd553940a3de1cdf67944",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/the-imperial-russian-ballet-company-the-nutcrakcer-findikkiran-balesi",
+      "checkedAt": "2026-09-22T06:46:50.713Z",
+      "contentHash": "08f15f265e770930047d63bdc3dea109820a902861c71946414948bd77323d8e",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/the-nutcracker-findikkiran-balesi-state-ballet-of-georgia",
+      "checkedAt": "2026-09-22T06:46:52.161Z",
+      "contentHash": "6296158083fa3650208743d40e1bdedfa89c3b125cb77c03e6b49d6d2cc1955c",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/swan-lake-kugu-golu-balesi-state-ballet-of-georgia",
+      "checkedAt": "2026-09-22T06:46:52.762Z",
+      "contentHash": "9a22f1d3edf45e2b4b3aa44b04128ebae15b437b7896753689fe772fc37d78bf",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/cristina-mariani",
+      "checkedAt": "2026-09-22T06:46:54.105Z",
+      "contentHash": "4ac8b494f151f7b4f791eae370ebbf5b682a5c9f0bec40a76168dfae3021d869",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5PA17/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:00.127Z",
+      "contentHash": "681d8dec9422ebdce49422045406cf4b7e909451838e9a222765a940968bfc22",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5FKEF/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:02.196Z",
+      "contentHash": "3282d57adca16ddfaa307eac8f6645ff77ccf559f951f2f680a2ebd94e269844",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5HXN8/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:10.482Z",
+      "contentHash": "0350440394f0c35524ceb3afde59d6356f0a53af293b1c36395e75867ddb18fb",
+      "parserVersion": "3",
+      "sessions": 9
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5ZENK/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:12.187Z",
+      "contentHash": "6af757ac924878f0353cbd33069f17382f7b1d53ef4857a372004618e4064cec",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5MTDM/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:14.463Z",
+      "contentHash": "721359bd1a6008161bea21f4c437b80b472e1ed779788ad26aa871013b199381",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5MTDA/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:16.504Z",
+      "contentHash": "5f09c19995a17baefdb7fdac1faa757131fe4ec9ebd74925700c03abf9434c69",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:19.504Z",
+      "contentHash": "29123c1b7b32abd596235a8d795fa1e5640019d25bbb1f910ab0f27515f9fea2",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5MM75/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:21.234Z",
+      "contentHash": "7656c55697b6d26113ea9a7aca03ff7b70ce389ae34688504a6946461156d928",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5MM82/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:22.113Z",
+      "contentHash": "eddd18e4f67942628323dc45ca4d12da3a7d78d93d3a748d986757c742483c30",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5FKEG/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:27.125Z",
+      "contentHash": "5c8f172e001afde99b2c78d7e9bea83e002863409a37134fe70b0ed6de668217",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5AZU6/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:32.406Z",
+      "contentHash": "1bf57c2b514a50e65103826484922afbcc4d4df372c1d2560d873512d84796ac",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/55AK5/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:33.185Z",
+      "contentHash": "adf7813d0b0a942f14dfc8fdf9ab17dd29713d809493dfb9fc6d91f23a444360",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/55AN5/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:34.108Z",
+      "contentHash": "a97144c1313a51e169fc544990db01e003c7219135221cc5b35b6324ce5e0f57",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5AP27/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:36.291Z",
+      "contentHash": "42d3169bc54412cc8102a5519cd1130081d5116203c9e512be0a996c69f880a8",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5AZU5/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:36.346Z",
+      "contentHash": "f8aa5fb36060bcd3843c553f9b849fc5c63c3615969fc0b3b5eece24eafba995",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5AKBB/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:37.164Z",
+      "contentHash": "7405c64f777919276d111e56e368fb435ade38ccabd78ce334618e3a93f375b7",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/55AK6/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:38.182Z",
+      "contentHash": "835955d25881607b4a2f88fec37b0a447b35880507093d8af8d5dd50071b77b3",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5MKSX/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:39.192Z",
+      "contentHash": "74843378e6e25b07bacc60baeed305a257f92589fa5ea52eff235324de0118df",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5POSS/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:40.133Z",
+      "contentHash": "493e7976755759e521cb53c3adef1c0635924803e6becdc23cb332f47e615159",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/6PE00/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:47:41.234Z",
+      "contentHash": "feb8d84760ee402abe19a83ca7608983f248a6c3b496fe853d861147efbec9eb",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/gulsen-jj",
+      "checkedAt": "2026-09-22T06:47:41.750Z",
+      "contentHash": "57b6c1565dfac4de5bb87775489584cba5a06a7c469a655d8933b35b070ca168",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/sebnem-ferah",
+      "checkedAt": "2026-09-22T06:47:42.666Z",
+      "contentHash": "0f37b8bf851b3dfcb8fbeeeb15647c355b20492dcbd9ffc0e1ab2f801ceeeb5e",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/an-epic-symphony-pentagram",
+      "checkedAt": "2026-09-22T06:47:43.717Z",
+      "contentHash": "2b8829c887ebd77f3a0ef3b9d267c3464b86a2b8dc5f7bcc09fae4a81624ffdb",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/candela-concert",
+      "checkedAt": "2026-09-22T06:47:45.137Z",
+      "contentHash": "704dbafed4191fe95c95df0be96307481d50125ec4a19d5dec8b447a59919174",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/serdar-ortac-jj",
+      "checkedAt": "2026-09-22T06:47:45.666Z",
+      "contentHash": "db08e096e61ac78afad54975429e1ef322ac7a38f7356d09fc8fb089213cf17d",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/askin-nur-yengi-konseri",
+      "checkedAt": "2026-09-22T06:47:46.747Z",
+      "contentHash": "23054f447df14750059c1e482c855fc6aa7aec7f2e70398e17969ef22eb46799",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/soft-analog",
+      "checkedAt": "2026-09-22T06:47:47.608Z",
+      "contentHash": "a07cc4e70733cb09b103bfbdabd3eecbfad844ef4c57d263f7c24d291f21676b",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/bulent-ersoy-jj",
+      "checkedAt": "2026-09-22T06:47:48.638Z",
+      "contentHash": "0842c1a4585074b98cb7248fc1a031636bf7ec12160d8e31bba458a05e83a4b0",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/yuzdeyuzmuzik-istanbul-oktoberfest-ikibinyirmialti",
+      "checkedAt": "2026-09-22T06:47:49.635Z",
+      "contentHash": "88290b2270551fedb05efb332abfc56f3c6f559d85e407209167d4a49a851323",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/ezginin-gunlugu",
+      "checkedAt": "2026-09-22T06:47:51.631Z",
+      "contentHash": "c88ec7211cf7c365a3c8a7f0d08b043b8fd226ed68aa6c2e9789b0de5af04d7e",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/yildiz-tilbe-jj",
+      "checkedAt": "2026-09-22T06:47:51.779Z",
+      "contentHash": "6d1fdaee61d3d188e2135049fb1a3806432643bbd97020f95ae6ca57a978ddd4",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/levent-yuksel-jj",
+      "checkedAt": "2026-09-22T06:47:52.749Z",
+      "contentHash": "a2cba504435111d667c4a82fddde8863ce3dbb892df44647ffab8966481ed344",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/goksel",
+      "checkedAt": "2026-09-22T06:47:53.917Z",
+      "contentHash": "79022bc38ccb83da54e98f2f8f0fc98bd5df3adcee9e265342df526e83042b20",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/ozbi-konseri",
+      "checkedAt": "2026-09-22T06:47:55.580Z",
+      "contentHash": "5a0b19196ee7214cef7da3c1d64e535345c65bdd8fb68fbd191fdc3096274f9f",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ozge-ozel-stand-up",
+      "checkedAt": "2026-09-22T06:47:57.594Z",
+      "contentHash": "45b38693425acf895dade3f1420a678b8f377626b6002f837393183e8d52b3ef",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/stand-up-gecesi-tytr-kiraz",
+      "checkedAt": "2026-09-22T06:47:59.670Z",
+      "contentHash": "9388ac5288f655afccd08b060a5d5ae3808c998bf98ab79c95fc374065a9157b",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sirt-sirta-stand-up",
+      "checkedAt": "2026-09-22T06:48:00.678Z",
+      "contentHash": "e9f5e138695b3741c350e63f8e05818b174191c09f48b6a84fd291eb45958148",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ismail-nuri-stand-up-yeni-gosteri",
+      "checkedAt": "2026-09-22T06:48:01.739Z",
+      "contentHash": "04904750ff3263c874b193988e994dad91e48a4521a7c6fe468d9ab86eb489eb",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-acik-mikrofon-stand-up",
+      "checkedAt": "2026-09-22T06:48:03.148Z",
+      "contentHash": "36310a9abe0b503bfdcdafaf79081896260419003ef62064cb0d91df60feff02",
+      "parserVersion": "3",
+      "sessions": 10
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesi-acik-mikrofon",
+      "checkedAt": "2026-09-22T06:48:03.762Z",
+      "contentHash": "077f865d19f00296f746f3671c65602f1a1cca1736ddacec12ee96718236d17d",
+      "parserVersion": "3",
+      "sessions": 10
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-komedi-kulubu-stand-up-gecesi",
+      "checkedAt": "2026-09-22T06:48:04.782Z",
+      "contentHash": "fedf70ee1da42825d7c0af457b0bbf8daefea97971377047348e8f372e97c64d",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/acik-mikrofon-ekstra-tkiraz",
+      "checkedAt": "2026-09-22T06:48:05.646Z",
+      "contentHash": "d2d9338038792eb6c052677e12d3a012e110a610bf079a0f79f676266b8fd142",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/hidayet-tili-stand-up",
+      "checkedAt": "2026-09-22T06:48:06.700Z",
+      "contentHash": "3fcd03c9586cfb4ab834d62ee69ae77d365caf195d9b92827804f82f8926de28",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesii",
+      "checkedAt": "2026-09-22T06:48:07.713Z",
+      "contentHash": "c6e1cdc04636437f578ed26f7df729938189e764b23df16218e0edca0f2da1cd",
+      "parserVersion": "3",
+      "sessions": 10
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/beyoglu-stand-up-acik-mikrofon-gecesi",
+      "checkedAt": "2026-09-22T06:48:08.778Z",
+      "contentHash": "7f1c38df2fc7a95387a8ebaffd582f6cca9e480665f186f9ca9fcb29877ee60b",
+      "parserVersion": "3",
+      "sessions": 10
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/bogazici-komedi-kulubu-kadikoy-acik-mikrofon-standup-",
+      "checkedAt": "2026-09-22T06:48:09.654Z",
+      "contentHash": "213595fc00d811b3f2efacf6e8188b2fa2dcb352026c7bd14fcfeca30044bbb6",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+      "checkedAt": "2026-09-22T06:48:10.637Z",
+      "contentHash": "c44bf3081bff4251a97a1fe0e5fa10ae903449a214a085c7ac8a534cd3eed26d",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sahane-pazar-sahnede",
+      "checkedAt": "2026-09-22T06:48:11.692Z",
+      "contentHash": "7cf87bed4ea744ed69b3f89047466c6d2b7deebe3eac481490892d85ff7f9635",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/toz-tiyatro-oyunu",
+      "checkedAt": "2026-09-22T06:48:12.634Z",
+      "contentHash": "880982b5cb65a811f350e44341a93b8b3a9e199305c5cce4298017d02052fa9a",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sabotaj-tiyatro-oyunu",
+      "checkedAt": "2026-09-22T06:48:13.578Z",
+      "contentHash": "b0c5c281057bc7f74b3b09b18a43b1d9444b28f6e67d1d9925cf111a14494b2a",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/kucuk-seyler-bir-sesin-pesinde",
+      "checkedAt": "2026-09-22T06:48:14.866Z",
+      "contentHash": "fa4f5828643e3ac3db2bd2b11b14579daaa087491ef9139874b463f7ea3605ed",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/jekyll-hyde-muzikali",
+      "checkedAt": "2026-09-22T06:48:15.666Z",
+      "contentHash": "aec0d788ad91766390b591a8363f33444caeed9420aba1849c4ff4c3f7187956",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/ahududu-ss",
+      "checkedAt": "2026-09-22T06:48:16.601Z",
+      "contentHash": "61fcde7f85ad2217b59303b5df8e615f5400a5934d00cd34ae2f0d5181d81f18",
+      "parserVersion": "3",
+      "sessions": 7
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/7-kocali-hurmuz-muzikali",
+      "checkedAt": "2026-09-22T06:48:17.669Z",
+      "contentHash": "6bb29a0014294c2edf7b974e37d8f6c739ee8172593bcf15b9f01cd884e11f46",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/sebbaz",
+      "checkedAt": "2026-09-22T06:48:18.598Z",
+      "contentHash": "0850014b728f15bef267cdb6790eb684ef6b217d436d5c07a89b5b10ba224ead",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/dus-payi",
+      "checkedAt": "2026-09-22T06:48:19.610Z",
+      "contentHash": "b6e9559d3eb69e8a1ed4497ffa4aa2bda7fb2ce39d32fe3fc67da74202da4db1",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/koku",
+      "checkedAt": "2026-09-22T06:48:22.580Z",
+      "contentHash": "6b3a8615304cf5094a96193ff14ff0bae0f53411a48ef0b121ee2f9ca891d1d4",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/hizmetciler",
+      "checkedAt": "2026-09-22T06:48:23.645Z",
+      "contentHash": "98cc4c1c3952e1de0dff06c8cdf89e5ef36cae62c3510f21b97471d004435231",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/on-ikinci-ev",
+      "checkedAt": "2026-09-22T06:48:24.586Z",
+      "contentHash": "b31d874f0955299bcd6c0b8788e03a0ebf1cf0760a3405ed48a6a4c6ad7aa37d",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/herkes-kocama-benziyor",
+      "checkedAt": "2026-09-22T06:48:25.626Z",
+      "contentHash": "2561c929fdd2a1ef9580686b11377cdb2ace744e2da7ce108621dd6573f90730",
+      "parserVersion": "3",
+      "sessions": 6
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ebru-gundes",
+      "checkedAt": "2026-09-22T06:48:26.898Z",
+      "contentHash": "764f77fc7a48248b0aac3e0e8044918efe1f9ead512de5f65595af58e2419c10",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/emir-can--igrek-",
+      "checkedAt": "2026-09-22T06:48:27.838Z",
+      "contentHash": "93ae57d24ea3ccbae873fc83555a616fa79334cada9eca98481d8c332544c496",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/-bulent-ersoy--",
+      "checkedAt": "2026-09-22T06:48:29.126Z",
+      "contentHash": "0fc2c68ce131d0b864450b7f3b60fd431705d0eabab2bdb0417b51d480dbd702",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/aleksandrov-rus-kizilordu-korosu-ve-dans-toplulugu-ile-hayko-cepkin",
+      "checkedAt": "2026-09-22T06:48:30.078Z",
+      "contentHash": "597031100c0cefe8358f104922c644e143205dabd823140a5bd2a2710f59edc3",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/cem-adrian-konseri",
+      "checkedAt": "2026-09-22T06:48:32.182Z",
+      "contentHash": "4e155ff91b0bfd508763b673f5bcd744b0403b230df380e9d05350d9914477d7",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/levent-yuksel-konseri-",
+      "checkedAt": "2026-09-22T06:48:34.014Z",
+      "contentHash": "a075c9721e82451c7d4d1f73e5b62446de4b3ba25e0b3c620a3a65676b04a2d7",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/black-coffee",
+      "checkedAt": "2026-09-22T06:48:36.548Z",
+      "contentHash": "b4a239f832802ee3eac7b7114dd5beae742cc0ae9141c3679e757d1a8ba2a6bb",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/Duman-istanbul",
+      "checkedAt": "2026-09-22T06:48:37.459Z",
+      "contentHash": "7af7988d0cd6a13645e005d3928847da2d483aa059ee0b1ef8f51e52a0306dff",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ari-barokas-konseri",
+      "checkedAt": "2026-09-22T06:48:40.499Z",
+      "contentHash": "9b88826bb4d7ef688191bb1aa51c0097c6c35046949e8d7c3b15757eb51a46b2",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/soner-arica-konseri",
+      "checkedAt": "2026-09-22T06:48:42.449Z",
+      "contentHash": "4254e68e502589d92d017400d328a0a942b91215622d25158fd584eff4af95c9",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/hood-in-the-woods",
+      "checkedAt": "2026-09-22T06:48:43.013Z",
+      "contentHash": "92b2b90ec2e11368c00ce194c04ec7943d383d9392310c79c491a31db8c92854",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ebru-yasar-senfoni",
+      "checkedAt": "2026-09-22T06:48:44.019Z",
+      "contentHash": "b78bb5316be3950eb5f1221470915ce2b1c3250e5b3259b5976cd6e851b4a024",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/nevermore-istanbul",
+      "checkedAt": "2026-09-22T06:48:45.331Z",
+      "contentHash": "018c6e777d9f0a92ad161e463764a04741887c253cdc0ef116662cdf03f4779a",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ankara-echoes-",
+      "checkedAt": "2026-09-22T06:48:46.833Z",
+      "contentHash": "7b0673638181cc634ec714142c7b73dd3a7e817306b700bb502cb02bbdd80d80",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ekaterina-shelehova",
+      "checkedAt": "2026-09-22T06:48:47.838Z",
+      "contentHash": "33ab75f5a4f0f33e58d39ff89d208fa375a3debd54c54125c4f5efa81334ef2b",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/guldur-guldur-show-",
+      "checkedAt": "2026-09-22T06:48:48.668Z",
+      "contentHash": "4f8053b6650f23531e3ec82688150e8aab293225ce94cbe543505fa2319e71d4",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/girgiriye-muzikali-",
+      "checkedAt": "2026-09-22T06:48:49.084Z",
+      "contentHash": "73fe2afeb77cdb9ca80eb285d130bc278508bd5f89276ad46cdc1987e3a4badc",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bir-aile-provasi-yasayin-gitsin",
+      "checkedAt": "2026-09-22T06:48:50.066Z",
+      "contentHash": "be1019a26e60d71532f6ed271c3619e9b50fbeb8597c3277c74672fcd228341b",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/troya",
+      "checkedAt": "2026-09-22T06:48:53.452Z",
+      "contentHash": "32058a74ac2937c7ff454c85f9abc63473bea8f63352a4b80e515e24d2bbd8bd",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/jekyll-hyde-muzikali",
+      "checkedAt": "2026-09-22T06:48:55.760Z",
+      "contentHash": "58ad7ce73b4a59eda1591aebdc8445b68993d15ee074922e22daffb699c8695c",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/jekyll-hyde",
+      "checkedAt": "2026-09-22T06:48:57.200Z",
+      "contentHash": "7fcebba25e29a163e628dda724b9385f21660cdc393c2e1bcd5b9d31fc3adda9",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/haybeden",
+      "checkedAt": "2026-09-22T06:49:00.484Z",
+      "contentHash": "b64e83676f0c5eeda813ec0d5371e1c15c3212104e18c7a2f4779b6e79aba1d8",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/eifman-ballet-st-petersburg-anna-karenina",
+      "checkedAt": "2026-09-22T06:49:03.268Z",
+      "contentHash": "3688675fddcc9404ff6c11e53a8026c61db258c61da76c95258f85803508135e",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/olden-1545-bilinmeyen-bir-kadinin-mektubu",
+      "checkedAt": "2026-09-22T06:49:04.763Z",
+      "contentHash": "f7582a9dde94f6caeeda21154a18e81e95369a1151971801a0bbc1beac5ac0f1",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadin-kafasi",
+      "checkedAt": "2026-09-22T06:49:08.076Z",
+      "contentHash": "079af6e35fc515f08082363ba33539402d3d2702c540b5327c32202bea0b4a66",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/anadolu-atesi-gosterisi",
+      "checkedAt": "2026-09-22T06:49:09.530Z",
+      "contentHash": "332a867acc343778897ad58468b5e6e6389069aff793630cc66828b4ec20605d",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ahududu-oyunu",
+      "checkedAt": "2026-09-22T06:49:10.325Z",
+      "contentHash": "1934bc091b4686af8d270e273022b1efbe39a910c3de78af3de38cde8e0bccaf",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/shirley-valentine-oyunu",
+      "checkedAt": "2026-09-22T06:49:11.648Z",
+      "contentHash": "572b2b20a28d42ad930b18d1842dbec0cda7fe31155431a79caab1b3b3bf7630",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/gumusbaligi-ya-da-palimpsest-beden",
+      "checkedAt": "2026-09-22T06:49:12.143Z",
+      "contentHash": "19c3b2a4c3087feb09ee77e30c5c6e965ce9b06f2ee25d749636e2373c303b52",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/cyrano-de-bergerac-cyrano-rock",
+      "checkedAt": "2026-09-22T06:49:14.475Z",
+      "contentHash": "2bd077db615ba573c9a89b91c0c9bc5ad09180d08c50776694dec7bfc4000201",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kukla-kabare-bilgi-deryasi-canli",
+      "checkedAt": "2026-09-22T06:49:15.918Z",
+      "contentHash": "ebfc67177859aac33207e463ad866ca1e7723cc1c35b7cb839059d21c18ced20",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yasemin-sakallioglu-peki-ya-ben-sarkici-olsaydim",
+      "checkedAt": "2026-09-22T06:49:17.544Z",
+      "contentHash": "65e3826e417ea35d2220ca531688f8b330908afac4a31d24b90f1a4bc5832ed3",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/anlatsam-film-olur-konuk-musti-kusti",
+      "checkedAt": "2026-09-22T06:49:18.113Z",
+      "contentHash": "a0868e45cb6eb99299a5a2ca2790ee81cee8d79ba97779c5d386251bc464b8c9",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-emre-gunduz-4-gosteri-stand-up",
+      "checkedAt": "2026-09-22T06:49:20.102Z",
+      "contentHash": "cabf4fb5cdfcd3833801f19e1925c61c4690bd104401f3f457574a887de2d7ee",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/onur-gokcek--",
+      "checkedAt": "2026-09-22T06:49:21.132Z",
+      "contentHash": "c3783dc4773f1c498a7002f5d5f06a37a96d435ef129171f789e4e44e6535d8b",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/cem-isciler-stand-up-gosterisi",
+      "checkedAt": "2026-09-22T06:49:22.863Z",
+      "contentHash": "838cebba7bba0b89193275f3e2dd81c047064c18713923c1e39dbce4462f2ac1",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/-askim-kapismak-tek-hucreliler-",
+      "checkedAt": "2026-09-22T06:49:25.632Z",
+      "contentHash": "76d7dcad5478e9eb41e6c76fa9bf5d4635ebc49e67e8233db3ddd0afdd043422",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/mahalle-yanarken-",
+      "checkedAt": "2026-09-22T06:49:26.624Z",
+      "contentHash": "d450f00d6c8c59565b55304f54dfc5794f81eeaea768f8d430ce10f4f9541af0",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ozlem-kosif-hayatim-yanlis-anlama",
+      "checkedAt": "2026-09-22T06:49:27.893Z",
+      "contentHash": "2a1515db612c042f5d0c0d6c40082aa31a62334700c7e6bf3d82c5908a4488e6",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sergi-polo-",
+      "checkedAt": "2026-09-22T06:49:28.967Z",
+      "contentHash": "c9f4f34eee14e348328538d30327caa1865c4cc6753f71338398dac26f54645f",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ismail-nuri-stand-up-yeni-gosteri-",
+      "checkedAt": "2026-09-22T06:49:30.121Z",
+      "contentHash": "08c6fe0433d8e928b0ad3df36f6165563619f8c01e02467c3e85615711957b29",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/azize-show",
+      "checkedAt": "2026-09-22T06:49:30.917Z",
+      "contentHash": "01f1005228aced9d2118a1a8828ef1b2180fc66a3f910ca3adbfc86c37429f7d",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-yilmaz-olay-yeri-inceleme-stand-up-",
+      "checkedAt": "2026-09-22T06:49:31.960Z",
+      "contentHash": "d3be81819e25446f534d2537800de38ac801427660a14256381d792193045a55",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bar-psikologu-psikogosteri",
+      "checkedAt": "2026-09-22T06:49:33.001Z",
+      "contentHash": "b4e733d20dfd81bcf03403368d3ac71545aab909881fa81c70bfe34f4d24368c",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sergen-deveci-ketenpere-olan-stand-up-",
+      "checkedAt": "2026-09-22T06:49:34.209Z",
+      "contentHash": "b4ceb8bd0b55ec45703b1c1462074e5a2bd1b607477d13ed02c9283c34628bf5",
+      "parserVersion": "3",
+      "sessions": 3
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5R197/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:35.200Z",
+      "contentHash": "e6ac2246fee52f6bfb63e1deb0082a3630e2b8451fe60ebd70b6e45ea214f464",
+      "parserVersion": "3",
+      "sessions": 4
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5EF9R/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:36.559Z",
+      "contentHash": "69dbaac3b94a8ed31a4a5bfc3427c8dc4f9f39b9f1364dd8bff81f88aaf7356a",
+      "parserVersion": "3",
+      "sessions": 11
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5R204/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:37.497Z",
+      "contentHash": "1a2f242d2c95d3d3c1357400138998c5c99550ff04f7c8ccc3d1eaf9a81e7dfc",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5EF8H/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:38.662Z",
+      "contentHash": "f835b9c873332d34299f8467ba2bc833fee7e6d380dea3e26053bd62e12a487b",
+      "parserVersion": "3",
+      "sessions": 13
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5R187/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:39.664Z",
+      "contentHash": "d0f9707dd1f93a1a9c90845a83f5d46095845bbd0140596c9936b8570b97a320",
+      "parserVersion": "3",
+      "sessions": 5
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5EF9D/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:40.787Z",
+      "contentHash": "f441ed6afc41bd55eefe5ad1f36ded3a6681d88ae05078b36ae96df52f2ba71f",
+      "parserVersion": "3",
+      "sessions": 11
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5EF9E/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:42.966Z",
+      "contentHash": "4276f1cfce78640dc47a44d055ddbf259774b124690ef9c7e778a4e77259c115",
+      "parserVersion": "3",
+      "sessions": 11
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5R205/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:44.063Z",
+      "contentHash": "2dd6b067c343b28938ebb8fd8682cf3a2315edb3a2a3621805824da9743e869a",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5EF9M/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:45.060Z",
+      "contentHash": "7ff051d63c025eb1ae0f37103c6325c7450c920dd0bdbaff6515fb24d9f3cb46",
+      "parserVersion": "3",
+      "sessions": 12
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5FN66/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:45.965Z",
+      "contentHash": "52812b8cda5e7997e8c29d0789b0889ddd7ebf4a401cca230010cc2530e52e49",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5IIN6/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:46.932Z",
+      "contentHash": "ed964f07bcce44ab26b06266fb4a5fe9ffa5d940cbdd3a565ce7fdf63c3ac5c8",
+      "parserVersion": "3",
+      "sessions": 2
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/55AK9/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:48.002Z",
+      "contentHash": "ddae77cb8383534d02a6f794a5ccf6c843fa2082fcde86928d17804f675dddc2",
+      "parserVersion": "3",
+      "sessions": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5D795/ISTANBUL/tr",
+      "checkedAt": "2026-09-22T06:49:50.656Z",
+      "contentHash": "c715e764b2edce24ac3c2c81df6cbf05783056179ee96c0c35e34c0e3b131ee8",
+      "parserVersion": "3",
+      "sessions": 1
+    }
+  ],
+  "listings": [
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/istanbul",
+      "initial": 46,
+      "discovered": 382,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": null,
+      "requests": [
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=1",
+          "method": "GET",
+          "contentHash": "db851560e1fcfb37f45c1a01ba74ccb5e9afb89b2f0c91fe393e984e0feabc0a",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=2",
+          "method": "GET",
+          "contentHash": "9d00c19c716bd56e6bd184065ed24133f8042e0b358697486402532e458002eb",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=3",
+          "method": "GET",
+          "contentHash": "bea017f4011fe68781e5e9d682525d55f5dde1396c9db5fde70e8b79c8877dbc",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=4",
+          "method": "GET",
+          "contentHash": "d4ee691437fc6a485c69e330017676ef56ddffcd1a25cc09411372ff02cf6702",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=5",
+          "method": "GET",
+          "contentHash": "984e78ef64669cb2c0d2d46a56d6426b0532190926740ff0b99b1bf572f2d1a2",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=6",
+          "method": "GET",
+          "contentHash": "0ee644992831a363a393824ac6d3d5ca3c15b0aeaf4ef303b2f7be460267891f",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=7",
+          "method": "GET",
+          "contentHash": "8c0a2ec93376f3345cbd303ecf58fcdf4d4ce7991671a07507e0143daa5188a7",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=muzik&page=8",
+          "method": "GET",
+          "contentHash": "766fa7c588bd4d53d949062664ede5ec23690483143f3938e7d1e429ece51fd4",
+          "items": 28
+        }
+      ]
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/etkinlikleri/stand-up",
+      "initial": 6,
+      "discovered": 66,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 83,
+      "requests": [
+        {
+          "url": "https://biletinial.com/tr-tr/EventGroup/GetData?eventGroupId=311&type=events&cityId=147&filmTypesId=0&page=1&pageSize=30",
+          "method": "GET",
+          "contentHash": "c4ca257cc8978a43f2482c2bc2a97b2c4e7b1618a81acb7e443527db5de269f6",
+          "items": 30
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/EventGroup/GetData?eventGroupId=311&type=events&cityId=147&filmTypesId=0&page=2&pageSize=30",
+          "method": "GET",
+          "contentHash": "13be547f20b93ff262f7620d4c4202541af25c3d47ed204b54166f1a1408b650",
+          "items": 30
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/EventGroup/GetData?eventGroupId=311&type=events&cityId=147&filmTypesId=0&page=3&pageSize=30",
+          "method": "GET",
+          "contentHash": "b79b566a05a20151613a5745e895cd79efb5d004c16a6c1994e65bd423b57cd0",
+          "items": 23
+        }
+      ]
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/istanbul",
+      "initial": 45,
+      "discovered": 666,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": null,
+      "requests": [
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=1",
+          "method": "GET",
+          "contentHash": "ee6e1b954ac1f880e3aaee7d4c2f7b0e2d53e02f9f59fef8ef48012724f675b3",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=2",
+          "method": "GET",
+          "contentHash": "73334f827f02c5ae39eb547cb2ee752fa549f5bb097e9407c7336fae8bc2466c",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=3",
+          "method": "GET",
+          "contentHash": "c29e582de2b4ad6160df8bf3b42142850581347419d67e9d6c56c1de806d0863",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=4",
+          "method": "GET",
+          "contentHash": "0cab4e9153d9b90dfe87d7104e15b7967e8ea6bafac6eace6149c581d882daaf",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=5",
+          "method": "GET",
+          "contentHash": "857e4f9d613b8779f96c8c5b21c718a889f0323ecc14c7a4a3c48289cc38070e",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=6",
+          "method": "GET",
+          "contentHash": "e8369c491e555e70cb080c3ea116041232b677ded18cb735ac00ca2a53d83287",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=7",
+          "method": "GET",
+          "contentHash": "6fe6fffa644814f13eaf233dc1a3f8798f4fcb6f2c2d445ab5db378415fc2c84",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=8",
+          "method": "GET",
+          "contentHash": "3a9eb07e7d59527937d074cea79fa9b38d5be0c9cf52e3bfb62f430fdb2f91d1",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=9",
+          "method": "GET",
+          "contentHash": "7d085b8e194eeadc5535ce11c6d5eae61518a068ce051052ea638cd6f4b19f82",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=10",
+          "method": "GET",
+          "contentHash": "52c17d8bfa0c5c2dc4067874f27faa19d407af0599148b11b39f1cb00386ca0f",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=11",
+          "method": "GET",
+          "contentHash": "ef09675f51807415f9d1916be0b1f36ebb936d778f883ac353ee68f373489bc9",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=12",
+          "method": "GET",
+          "contentHash": "2903177a206b1fea280d9e0fb868f38b2e499689e363812147eb78eea99e5a9d",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=13",
+          "method": "GET",
+          "contentHash": "f6752a59c5a5a79792f7f2bf88a9253c1fc43cbdc5e8917b26c993b74ff96b29",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=14",
+          "method": "GET",
+          "contentHash": "723093f4901d08cd0af5a205623f2a02c8fc6e06668396b2af47884175b8a7c2",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=15",
+          "method": "GET",
+          "contentHash": "590b35a4cc1c6e193bda24d3a3903eac95f462e156d65746139e4c9fe9a7fc15",
+          "items": 50
+        },
+        {
+          "url": "https://biletinial.com/tr-tr/List/GetMoreItems?region=tr-tr&cityId=147&cityUrl=istanbul&order=0&isKids=false&isCampaign=false&isForeign=false&organizerUrl=tiyatro&page=16",
+          "method": "GET",
+          "contentHash": "0492161d1d491a3da9b04f7b57d619055737a22d5fedfd601ba716e40b6c61c4",
+          "items": 17
+        }
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/konser",
+      "initial": 27,
+      "discovered": 492,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 492,
+      "requests": [
+        {
+          "url": "https://platform.api.bubilet.com.tr/v3/event/city/34/tag/2",
+          "method": "GET",
+          "contentHash": "3bd0d7cca764daffcd80bec92cc59aa55cb2c291992e50c6b9b9aa9c8999bbfc",
+          "items": 492
+        }
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/tiyatro",
+      "initial": 28,
+      "discovered": 281,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 281,
+      "requests": [
+        {
+          "url": "https://platform.api.bubilet.com.tr/v3/event/city/34/tag/1",
+          "method": "GET",
+          "contentHash": "059632edd00ff4efdaac2403625222064994fef5b5277fb26823ad9464508e3e",
+          "items": 281
+        }
+      ]
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etiket/stand-up",
+      "initial": 25,
+      "discovered": 149,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 149,
+      "requests": [
+        {
+          "url": "https://platform.api.bubilet.com.tr/v3/event/city/34/tag/40",
+          "method": "GET",
+          "contentHash": "ffa13907873de7fe41b5fae59fbf1c0f87ef00dcfbac985c32887d1c89408d34",
+          "items": 149
+        }
+      ]
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/search/ISTANBUL/tr",
+      "initial": 0,
+      "discovered": 1186,
+      "selected": 15,
+      "truncated": true,
+      "completion": "exhausted",
+      "total": 1186,
+      "requests": [
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=0&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "a8cfc7eb5af4b36079a992e870af6c2c0f68ec55e3bbe8269fac9f8e68f866dd",
+          "items": 100,
+          "offset": 0
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=100&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "ad9cac8942e03ba7d1ad490029bb1d68fe9438f6a024b984b1134ec0bf58297f",
+          "items": 100,
+          "offset": 100
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=200&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "200c3d15f7a62911e4e417335637fa9a4e021d43e135549ccf8a2424b792de9c",
+          "items": 100,
+          "offset": 200
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=300&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "d3894a74ed47e040c82f8f4c7a173b635ade14d2a0c6a1f002ef1992e3d22c2a",
+          "items": 100,
+          "offset": 300
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=400&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "f67f553a4dc89b69dedd72a8c3137495f14751032bce722d27ba82921e994145",
+          "items": 100,
+          "offset": 400
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=500&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "2f50f3c37934cc0370c3cf61572369aab3ae3ee02c6339ad9481fa3e4c000165",
+          "items": 100,
+          "offset": 500
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=600&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "873e0816a87888106f105526a82f881cc94ec184ad225fdbb42bf9f652e457f8",
+          "items": 100,
+          "offset": 600
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=700&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "4cf01f542ee45b2663024ae6f4d69381f1f81aed843b5d94d7d6ee78d8137d74",
+          "items": 100,
+          "offset": 700
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=800&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "28ca639ebb3a180df945ca16b9f0f4678212a1a9d9a54886795bfd69bea38a2f",
+          "items": 100,
+          "offset": 800
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=900&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "c0858931a8a115505d7ea9dfa299777569196abf241ce41c0dc0ab2271944a43",
+          "items": 100,
+          "offset": 900
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=1000&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "d3033a65715ed63863ba16384ecf909259cde106dea75cc34d4896a1ca06b43e",
+          "items": 100,
+          "offset": 1000
+        },
+        {
+          "url": "https://www.biletix.com/solr/tr/select",
+          "method": "POST",
+          "body": "wt=json&q=*%3A*&sort=start+asc%2Cid+asc&start=1100&rows=100&fq=%28start%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D+OR+end%3A%5B2026-09-22T00%3A00%3A00Z+TO+2028-09-21T23%3A59%3A59Z%5D%29&fq=city%3A%22%C4%B0stanbul%22&fq=category%3A%28MUSIC+OR+ART%29&fq=type%3Aevent",
+          "contentHash": "71249289ac18ba56404e720e8afe2301b3fb9a63483a5d4435394241f5838f57",
+          "items": 86,
+          "offset": 1100
+        }
+      ]
+    }
+  ],
+  "failures": [
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/candan-ercetin-dogu-bati-senfonisi-rengahenk-konser",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/the-bodyguard",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/madrigal-jj",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/leman-sam-knsr",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/ajda-pekkan-konseri",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/okan-cabalar",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/maher-zain-konseri-biletleri",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/zulfu-livaneli-maria-farantouri",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/zengin-mutfagi-bkm",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/garou-the-best-of",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/a-teen-odyssey",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/dirty-dancing-in-concert",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/gipsy-kings-feat-tonino-baliardo",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/barbie-the-movie-in-concert",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/birsen-tezer",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/alevli-gunler-",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/macbeth-trajedi-tiyatro-oyunu",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/icimizdeki-seytan-oyunu",
+      "reason": "session_coverage_mismatch",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/mutlu-aile-tablosu-oyunu",
+      "reason": "session_coverage_mismatch",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/candan-ercetin-dogu-bati-senfonisi-rengahenk-konser",
+      "reason": "session_coverage_mismatch",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/baturay-ozdemir-stand-up",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/sairler-mezarligi",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bodyguard-muzikali",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ajda-pekkan",
+      "reason": "session_coverage_mismatch",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/okan-cabalar",
+      "reason": "session_coverage_mismatch",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/maher-zain",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/caner-karatas-stand-up",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/garou-the-best-of",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/dirty-dancing-in-concert",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/gipsy-kings-feat-tonino-baliardo",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/watsons-genclik-festivali-",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/istanbul-cocktail-festival-2026",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/--gulsen-konseri",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kenan--dogulu-",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/alevli-gunler-oyunu-",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/salih-tiras",
+      "reason": "session_coverage_mismatch",
+      "attempts": 1
+    },
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/-semicenk",
+      "reason": "schema_missing",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5SPHP/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5FKEH/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5CRRC/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5NA56/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5FKD3/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5TBS2/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/50A35/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5W951/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5R183/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5LR03/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5JBD3/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5WTSN/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5POSP/ISTANBUL/tr",
+      "reason": "http_301",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/muzik/cem-adrian-konseri",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/dogu-demirkol-stand-up-gosterisi",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/cem-isciler-stand-up",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/katarsis-gel-yeniden-baslayalim",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletinial",
+      "url": "https://biletinial.com/tr-tr/tiyatro/cok-guzel-hareketler",
+      "reason": "no_verified_sessions",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5APAH/ISTANBUL/tr",
+      "reason": "unsupported_category",
+      "attempts": 1
+    },
+    {
+      "source": "biletix",
+      "url": "https://www.biletix.com/etkinlik/5APAJ/ISTANBUL/tr",
+      "reason": "unsupported_category",
+      "attempts": 1
+    }
+  ],
+  "quarantined": [
+    {
+      "source": "bubilet",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/olun-bizi-ayirana-dek-oyunu",
+      "id": "be6f3d73a343266cf3cbdd48",
+      "errors": [
+        "invalid_start"
+      ]
+    }
+  ],
+  "summary": {
+    "blocked": null,
+    "events": 907,
+    "available": 886,
+    "carried": 0,
+    "refreshedPages": 319,
+    "failedPages": 58,
+    "quarantined": 1,
+    "discovery": {
+      "completedListings": 7,
+      "incompleteListings": 0,
+      "limitedListings": 7
+    },
+    "sources": {
+      "biletinial": 392,
+      "bubilet": 395,
+      "biletix": 120
+    },
+    "coverage": "paginated discovery with explicit completion status; bounded detail refresh plus previously known productions"
+  },
+  "geographyRecheck": {
+    "checkedAt": "2026-09-22T06:50:41.846Z",
+    "failures": [
+      {
+        "source": "bubilet",
+        "url": "https://www.bubilet.com.tr/istanbul/etkinlik/icimizdeki-seytan-oyunu",
+        "reason": "no_verified_sessions",
+        "attempts": 1
+      },
+      {
+        "source": "bubilet",
+        "url": "https://www.bubilet.com.tr/istanbul/etkinlik/mutlu-aile-tablosu-oyunu",
+        "reason": "no_verified_sessions",
+        "attempts": 1
+      },
+      {
+        "source": "bubilet",
+        "url": "https://www.bubilet.com.tr/istanbul/etkinlik/candan-ercetin-dogu-bati-senfonisi-rengahenk-konser",
+        "reason": "no_verified_sessions",
+        "attempts": 1
+      },
+      {
+        "source": "bubilet",
+        "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ajda-pekkan",
+        "reason": "no_verified_sessions",
+        "attempts": 1
+      },
+      {
+        "source": "bubilet",
+        "url": "https://www.bubilet.com.tr/istanbul/etkinlik/okan-cabalar",
+        "reason": "no_verified_sessions",
+        "attempts": 1
+      },
+      {
+        "source": "bubilet",
+        "url": "https://www.bubilet.com.tr/istanbul/etkinlik/salih-tiras",
+        "reason": "no_verified_sessions",
+        "attempts": 1
+      }
+    ],
+    "explanation": "Six false Istanbul geography mismatches rechecked with explicit allSessions city evidence; all six have no verified Istanbul sessions. Successful initial snapshot retained."
+  }
+}

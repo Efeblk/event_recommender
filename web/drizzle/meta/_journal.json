@@ -8,6 +8,13 @@
       "when": 1788769694069,
       "tag": "0000_eminent_bloodstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790063626613,
+      "tag": "0001_rich_yellow_claw",
+      "breakpoints": true
     }
   ]
 }

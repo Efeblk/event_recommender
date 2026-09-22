@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   }
   const db = await database(),
     now = Date.now(),
-    lease = String(now + 300000);
+    lease = `${now + 300000}:${crypto.randomUUID()}`;
   const lock = await db
     .prepare(
       "INSERT INTO metadata(key,value) VALUES('sync_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(value AS INTEGER)<? RETURNING value",

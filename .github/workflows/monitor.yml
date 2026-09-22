@@ -1,0 +1,49 @@
+name: Monitor catalog readiness
+on:
+  schedule:
+    - cron: '47 * * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment environment
+        type: choice
+        options: [staging, production]
+        default: production
+permissions:
+  contents: read
+jobs:
+  ready:
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ${{ github.event_name == 'schedule' && fromJSON('["staging","production"]') || fromJSON(format('["{0}"]', inputs.environment)) }}
+    environment: ${{ matrix.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BIPLAN_URL: ${{ vars.BIPLAN_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+      - name: Check catalog readiness
+        working-directory: collector
+        run: |
+          if [ -z "$BIPLAN_URL" ]; then
+            echo "BIPLAN_URL is missing in the ${{ matrix.environment }} GitHub environment." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if ! result=$(npm run --silent monitor 2>&1); then
+            {
+              echo "### ${{ matrix.environment }} readiness failed"
+              echo '```'
+              echo "$result"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          {
+            echo "### ${{ matrix.environment }} readiness passed"
+            echo "$result"
+          } >> "$GITHUB_STEP_SUMMARY"
