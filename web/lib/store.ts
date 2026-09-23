@@ -19,6 +19,9 @@ export interface RuntimeEnv extends ProviderEnv {
   DEPLOYMENT_SHA?: string;
   TYPESAFE_API_KEY?: string;
   TYPESAFE_MODEL?: string;
+  VOYAGE_API_KEY?: string;
+  VOYAGE_MODEL?: string;
+  VOYAGE_DIMENSIONS?: string;
 }
 export function runtime() {
   return env as unknown as RuntimeEnv;
@@ -47,6 +50,9 @@ async function initialize(db: D1Database) {
     ),
     db.prepare(
       'CREATE TABLE IF NOT EXISTS embeddings (event_id TEXT PRIMARY KEY, hash TEXT NOT NULL, model TEXT NOT NULL, vector TEXT NOT NULL)',
+    ),
+    db.prepare(
+      'CREATE TABLE IF NOT EXISTS voyage_embeddings (profile TEXT NOT NULL, hash TEXT NOT NULL, vector TEXT NOT NULL, PRIMARY KEY(profile,hash))',
     ),
     db.prepare(
       'CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
@@ -166,15 +172,27 @@ export async function candidates(f: Filters, now = new Date()) {
     sql.push('price IS NOT NULL AND price<=?');
     args.push(f.maxPrice);
   }
-  const result = await db
-    .prepare(
-      `SELECT payload FROM events WHERE ${sql.join(' AND ')} ORDER BY starts_at LIMIT 1000`,
-    )
-    .bind(...args)
-    .all<{ payload: string }>();
-  return result.results
-    .map((r) => JSON.parse(r.payload) as EventRecord)
-    .filter((e) => isEligible(e, f, now));
+  const events: EventRecord[] = [];
+  let afterStart = '',
+    afterId = '';
+  for (;;) {
+    const page = await db
+      .prepare(
+        `SELECT id,starts_at,payload FROM events WHERE ${sql.join(' AND ')}
+         AND (starts_at>? OR (starts_at=? AND id>?))
+         ORDER BY starts_at,id LIMIT 200`,
+      )
+      .bind(...args, afterStart, afterStart, afterId)
+      .all<{ id: string; starts_at: string; payload: string }>();
+    if (!page.results.length) break;
+    for (const row of page.results) {
+      const event = JSON.parse(row.payload) as EventRecord;
+      if (isEligible(event, f, now)) events.push(event);
+      afterStart = row.starts_at;
+      afterId = row.id;
+    }
+  }
+  return events;
 }
 export async function catalogStatus(now = new Date()) {
   const db = await database();

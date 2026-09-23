@@ -153,7 +153,7 @@ export async function rankWithJev(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(buildJevRequest(config.model, input, events)),
-    redirect: 'error',
+    redirect: 'manual',
     signal: AbortSignal.timeout(15000),
   });
   // No paid automatic retries or provider response bodies in errors/logs.

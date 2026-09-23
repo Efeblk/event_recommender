@@ -23,6 +23,7 @@ jobs:
       BIPLAN_URL: ${{ vars.BIPLAN_URL }}
       SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
       SITES_ACCESS_TOKEN: ${{ secrets.SITES_ACCESS_TOKEN }}
+      INDEX_EMBEDDINGS: ${{ vars.INDEX_EMBEDDINGS }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,6 +54,9 @@ jobs:
       - name: Import, checkpoint, and read back canonical state
         if: env.BIPLAN_URL != '' && env.SYNC_TOKEN != ''
         run: npm run publish --prefix collector -- --checkpoint --snapshot state/events.json
+      - name: Index Voyage embeddings
+        if: env.BIPLAN_URL != '' && env.SYNC_TOKEN != '' && env.INDEX_EMBEDDINGS == 'true'
+        run: node web/scripts/index-embeddings.mjs --live
       - name: Record run evidence
         if: success()
         working-directory: collector

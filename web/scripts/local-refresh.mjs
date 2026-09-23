@@ -14,6 +14,7 @@ requireNode22();
 const { values } = parseArgs({
   options: {
     collect: { type: 'boolean', default: false },
+    index: { type: 'boolean', default: false },
     report: { type: 'string' },
     origin: { type: 'string', default: localOrigin },
   },
@@ -80,6 +81,19 @@ await run(
   ],
   { ...process.env, BIPLAN_URL: origin.origin, SYNC_TOKEN: token },
 );
+if (values.index) {
+  console.log('Indexing pending Voyage documents…');
+  await run(
+    [
+      join(projectRoot, 'web/scripts/index-embeddings.mjs'),
+      '--live',
+      '--origin',
+      origin.origin,
+      '--allow-loopback-http',
+    ],
+    { ...process.env, BIPLAN_URL: origin.origin, SYNC_TOKEN: token },
+  );
+}
 console.log(
   'Local D1 refresh completed. The running website now uses the imported catalog.',
 );

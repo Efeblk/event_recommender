@@ -48,6 +48,9 @@ export function validateDeploymentConfig({
     ...(process.env.DEPLOYMENT_SHA ? ['DEPLOYMENT_SHA'] : []),
     ...(process.env.TYPESAFE_API_KEY ? ['TYPESAFE_API_KEY'] : []),
     ...(process.env.TYPESAFE_MODEL ? ['TYPESAFE_MODEL'] : []),
+    ...(process.env.VOYAGE_API_KEY ? ['VOYAGE_API_KEY'] : []),
+    ...(process.env.VOYAGE_MODEL ? ['VOYAGE_MODEL'] : []),
+    ...(process.env.VOYAGE_DIMENSIONS ? ['VOYAGE_DIMENSIONS'] : []),
     ...(process.env.AI_DAILY_LIMIT ? ['AI_DAILY_LIMIT'] : []),
   ];
   const multiline = checked.filter((name) => /[\r\n]/.test(process.env[name]));
@@ -65,6 +68,14 @@ export function validateDeploymentConfig({
   const model = process.env.TYPESAFE_MODEL || 'jev-1.13.0';
   if (!/^jev-[a-z0-9.-]+$/.test(model))
     throw new Error('TYPESAFE_MODEL must be a valid Jev model name.');
+  const voyageModel = process.env.VOYAGE_MODEL || 'voyage-4-large';
+  if (!['voyage-4-large', 'voyage-4', 'voyage-4-lite'].includes(voyageModel))
+    throw new Error(
+      'VOYAGE_MODEL must be voyage-4-large, voyage-4, or voyage-4-lite.',
+    );
+  const voyageDimensions = process.env.VOYAGE_DIMENSIONS || '1024';
+  if (!['256', '512', '1024', '2048'].includes(voyageDimensions))
+    throw new Error('VOYAGE_DIMENSIONS must be 256, 512, 1024, or 2048.');
   if (!/^[0-9a-f]{32}$/i.test(process.env.CLOUDFLARE_ACCOUNT_ID))
     throw new Error(
       'CLOUDFLARE_ACCOUNT_ID must be a 32-character hexadecimal ID.',
@@ -118,6 +129,8 @@ export function publicDeploymentVariables(environment) {
       : {}),
     SITE_URL: new URL(process.env.CF_PUBLIC_URL).origin,
     TYPESAFE_MODEL: process.env.TYPESAFE_MODEL || 'jev-1.13.0',
+    VOYAGE_MODEL: process.env.VOYAGE_MODEL || 'voyage-4-large',
+    VOYAGE_DIMENSIONS: process.env.VOYAGE_DIMENSIONS || '1024',
     AI_DAILY_LIMIT: process.env.AI_DAILY_LIMIT || '100',
   };
 }
@@ -127,6 +140,9 @@ export function deploymentSecrets() {
     SYNC_TOKEN: process.env.SYNC_TOKEN,
     ...(process.env.TYPESAFE_API_KEY?.trim()
       ? { TYPESAFE_API_KEY: process.env.TYPESAFE_API_KEY }
+      : {}),
+    ...(process.env.VOYAGE_API_KEY?.trim()
+      ? { VOYAGE_API_KEY: process.env.VOYAGE_API_KEY }
       : {}),
   };
 }

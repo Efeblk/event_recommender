@@ -39,6 +39,8 @@ jobs:
       CF_R2_BUCKET_NAME: ${{ vars.CF_R2_BUCKET_NAME }}
       CF_PUBLIC_URL: ${{ vars.CF_PUBLIC_URL }}
       TYPESAFE_MODEL: ${{ vars.TYPESAFE_MODEL }}
+      VOYAGE_MODEL: ${{ vars.VOYAGE_MODEL }}
+      VOYAGE_DIMENSIONS: ${{ vars.VOYAGE_DIMENSIONS }}
       AI_DAILY_LIMIT: ${{ vars.AI_DAILY_LIMIT }}
     steps:
       - uses: actions/checkout@v4
@@ -99,4 +101,5 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
         run: npm run deploy:run -- --env "$DEPLOY_TARGET"

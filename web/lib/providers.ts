@@ -170,7 +170,7 @@ async function post(
 ) {
   const response = await fetcher(`${config.baseUrl}/${path}`, {
     method: 'POST',
-    redirect: 'error',
+    redirect: 'manual',
     signal: AbortSignal.timeout(25000),
     headers: {
       Authorization: `Bearer ${config.key}`,

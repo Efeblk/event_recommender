@@ -187,7 +187,7 @@ export async function fetchPage(url: string) {
       'Accept-Language': 'tr-TR,tr;q=0.9',
     },
     signal: AbortSignal.timeout(15000),
-    redirect: 'error',
+    redirect: 'manual',
   });
   if (!res.ok) throw new Error(`Source returned ${res.status}`);
   const text = await res.text();

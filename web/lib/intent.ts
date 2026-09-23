@@ -11,7 +11,7 @@ const negation = '(?:istemiyorum|istemem|olmasin|degil|haric|disinda|yerine)';
 const categoryPatterns: Array<[Category, RegExp]> = [
   ['Konser', /\b(?:konser|muzik|rock|caz|jazz|akustik|techno|elektronik)\b/],
   ['Tiyatro', /\b(?:tiyatro|sahne oyunu)\b/],
-  ['Stand-up', /\b(?:stand[ -]?up|komedi|gulecek|gulelim)\b/],
+  ['Stand-up', /\b(?:stand[ -]?up)\b/],
 ];
 
 export function requestedCategories(normalizedMessage: string): Category[] {

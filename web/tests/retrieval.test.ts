@@ -187,8 +187,6 @@ await test('retrieval category agrees with filter synonyms when switching from t
   for (const [message, category] of [
     ['Techno istiyorum', 'Konser'],
     ['Elektronik olsun', 'Konser'],
-    ['Biraz gülelim', 'Stand-up'],
-    ['Gülecek bir şey olsun', 'Stand-up'],
   ] as const) {
     const context = searchContext(message, history);
     assert.equal(context.category, category);
@@ -302,5 +300,16 @@ await test('a negated long phrase does not broaden to its nested category word',
       [],
     ).map(({ id }) => id),
     ['acoustic'],
+  );
+});
+
+await test('a humour preference searches across categories unless the user already chose one', () => {
+  assert.equal(searchContext('Biraz gülelim', []).category, null);
+  assert.equal(searchContext('Komedi istiyorum', []).category, null);
+  assert.equal(
+    searchContext('Biraz gülelim', [
+      { role: 'user', content: 'Tiyatro istiyorum' },
+    ]).category,
+    'Tiyatro',
   );
 });

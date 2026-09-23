@@ -41,7 +41,7 @@ Bu işlem liste sayfalarını ve bilinen etkinlik detaylarını yeniden kontrol 
 - Geçmiş, iptal edilmiş, tükenmiş ve **72 saatten eski kontrol tarihli** kayıtları eleme. Bütçe varken fiyatı bilinmeyen kayıtları eleme. Kaynak fiyatları bilet garantisi değildir.
 - TypeSafe Jev ile adayların isteğe uygunluğunu puanlama; sonuçlarda yalnızca doğrulanmış etkinlik kartları gösterilir. Üretilmiş sohbet yanıtı veya gerekçe yoktur.
 - Konser gibi kategorileri hariç tutma, toplam grup bütçesini kişi başına çevirme, belirsiz koşullarda statik netleştirme durumu.
-- Etkin öneri akışı embedding veya başka bir sohbet modeli çağırmaz. Eski sağlayıcı/embedding modülleri ve önbellek geçiş referansı olarak korunur; GPU veya graph veritabanı gerekmez.
+- Voyage 4 Large ile anlamsal arama ve kelime sıralaması birleştirilir; Jev kısa aday listesini değerlendirir. Etkinlik vektörleri D1’de önbelleğe alınır; GPU veya graph veritabanı gerekmez.
 - AI kapalıysa veya sağlayıcı başarısızsa açıkça belirtilen kelime/filtre araması. Anahtarsız mod ruh hâlini yorumladığını iddia etmez.
 - Mobil uyumlu arayüz, yüklenme/hata/boş sonuç durumları, klavye ile gönderme (Enter; yeni satır Shift+Enter).
 
@@ -63,17 +63,23 @@ Yeni Crawlee toplayıcısı eski Python scraper'lardan bağımsızdır. Üç kay
 
 Anahtarsız önizleme çalışmaya devam eder. Jev sıralamasını kullanmak için `web/.dev.vars` içine `TYPESAFE_API_KEY` ekle ve yerel sunucuyu yeniden başlat. Anahtarı sohbete veya Git’e yazma. `TYPESAFE_MODEL` varsayılanı `jev-1.13.0`; eski `AI_API_KEY` / `OPENAI_API_KEY` ayarları öneri akışını açmaz. Kurulum ve değerlendirme: [Jev rehberi](web/docs/jev-evaluation.md).
 
-Akış: **kesin filtreleri yorumla → güncel adayları bul → en fazla 16 farklı prodüksiyon → tek Jev isteği → en fazla 5 etkinlik kartı**. Jev’e özgün istek, kısa kullanıcı arama geçmişi ve adayların kaynak metinleri gönderilir; embedding vektörü gönderilmez. Başlık, fiyat, tarih ve bağlantı her zaman veritabanındaki kayıttan gelir. Genel sohbet modeli çalışmaz.
+Akış: **kesin filtreleri yorumla → tüm güncel adayları bul → Voyage anlamsal arama + kelime araması → en fazla 16 farklı prodüksiyon → tek Jev isteği → en fazla 5 etkinlik kartı**. Jev’e özgün istek, kısa kullanıcı arama geçmişi ve adayların kaynak metinleri gönderilir; embedding vektörü gönderilmez. Başlık, fiyat, tarih ve bağlantı her zaman veritabanındaki kayıttan gelir. Genel sohbet modeli çalışmaz.
 
 Jev, dört seviyeli uygunluk ölçeğinde puan verir. Başlangıç politikası en az 2 puan alanları göstermektir; bu eşik Türkçe verilerle henüz kalibre edilmemiştir. Geçerli bir “uygun aday yok” yanıtı boş sonuç olarak kalır. Ağ/sağlayıcı hatasında açıkça belirtilen temel arama gösterilir. Belirsiz bütçe veya tarihte önceki filtreler değiştirilmez; kullanıcı aramasını düzenleyebilir. Doğal dil yorumlama her ifade biçimini desteklemez.
 
 “Ciddi bir oyun” gibi bağlamı açık tiyatro istekleri artık konser adaylarına genişlemez. Çocuk gösterisi istemeyen aramalarda açıklamadaki çocuklara yönelik yaş ve izleyici bilgileri de denetlenir. Aynı kurallar anahtarsız aramada ve sağlayıcı kesintisinde geçerlidir; az sonuç varsa ilgisiz kartlarla tamamlanmaz.
 
-Ücretli aramalar IP başına saatte 20, uygulama genelinde varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bir arama en fazla bir Jev çağrısı yapar; 15 saniye zaman aşımı ve sınırlı girdi/çıktı boyutu vardır. Otomatik ücretli tekrar yoktur. Bu sayaç dolar harcama limiti değildir. Arama geçmişi yalnızca açık sekmenin belleğinde tutulur.
+AI etkin öneri istekleri IP başına saatte 20, uygulama genelinde varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bir arama en fazla bir Voyage sorgu embedding çağrısı ve bir Jev çağrısı yapar; 15 saniye zaman aşımı ve sınırlı girdi/çıktı boyutu vardır. Otomatik ücretli tekrar yoktur. Bu sayaç dolar harcama limiti değildir. Arama geçmişi yalnızca açık sekmenin belleğinde tutulur.
 
-[Eski sağlayıcı rehberi](web/docs/providers.md) korunur, fakat aktif öneri yolunu anlatmaz. Embedding önbelleği isteğe bağlı eski yönetici araçlarında kalır; bu sürümün sonuç sıralaması onu kullanmaz. İlk canlı Jev denemesinde 10 etiketli isteğin ilk sonucu doğru, iki desteksiz tercih isteğinin sonucu boştu. Ciddi yetişkin oyunu isteğinde bazı zayıf ek sonuçlar da eşikten geçti; tüm sonuç listesinin kalitesi henüz doğrulanmış sayılmaz. [Ölçüm raporu](web/evals/reports/2026-09-22-jev-1.13.0.json) 12 çağrı, tokenlar ve gecikmeyi kaydeder. Daha geniş gerçek katalog denemeleri gerekir.
+[Eski sağlayıcı rehberi](web/docs/providers.md) korunur, fakat aktif öneri yolunu anlatmaz. Eski embedding adaptörleri etkin öneri yolunda kullanılmaz; Voyage için ayrı, içerik adresli bir D1 indeksi bulunur. İlk canlı Jev denemesinde 10 etiketli isteğin ilk sonucu doğru, iki desteksiz tercih isteğinin sonucu boştu. Ciddi yetişkin oyunu isteğinde bazı zayıf ek sonuçlar da eşikten geçti; tüm sonuç listesinin kalitesi henüz doğrulanmış sayılmaz. [Ölçüm raporu](web/evals/reports/2026-09-22-jev-1.13.0.json) 12 çağrı, tokenlar ve gecikmeyi kaydeder. Daha geniş gerçek katalog denemeleri gerekir.
 
 Değerlendirme artık yalnızca ilk sırayı değil, dönen bütün kartların uygunluğunu ölçer. Kayıtlı puanları ağ çağrısı yapmadan tekrar uygulayan denetim, filtre değişikliklerinin bilinen yanlış ek sonuçları engellediğini sınar. Bu denetim yeni bir canlı Jev ölçümü değildir; eşik ve modelin Türkçe kalitesi için daha geniş örnekler gerekir.
+
+## Voyage anlamsal arama
+
+`web/.dev.vars` dosyasına `VOYAGE_API_KEY` ekleyip sunucuyu yeniden başlat. Varsayılan model `voyage-4-large`, boyut 1024. Sonra önce `npm run embeddings:index --prefix web -- --origin http://127.0.0.1:3001 --allow-loopback-http` ile kapsamı kontrol et; `--live` eklemek eksik etkinlik vektörlerini oluşturur ve Voyage kotasını kullanır. Tam kurulum ve sınırlar: [Voyage rehberi](web/docs/voyage-retrieval.md).
+
+Sorgu embedding’i bütün uygun katalog üzerinde karşılaştırılır; 1.000 seans kesintisi kaldırılmıştır. İndeks eksikse veya Voyage erişilemiyorsa kelime araması devreye girer ve bu durum kullanıcıya belirtilir. “Biraz gülelim” gibi tercihler yalnızca stand-up filtresine dönüştürülmez. Yeni veya değişen içerik indekslenir; yalnızca tarih/fiyat/güncellik değişmesi yeniden embedding gerektirmez. `local:refresh -- --collect --index` ve `INDEX_EMBEDDINGS=true` ile koleksiyon sonrası indeksleme isteğe bağlı açılır.
 
 ## Kontroller
 

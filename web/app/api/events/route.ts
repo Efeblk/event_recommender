@@ -1,4 +1,5 @@
 import { jevConfigFrom } from '@/lib/jev';
+import { voyageConfigFrom } from '@/lib/voyage';
 import { candidates, catalogStatus, runtime } from '@/lib/store';
 import { emptyFilters } from '@/lib/types';
 import { uniqueEvents } from '@/lib/search';
@@ -12,7 +13,9 @@ export async function GET() {
       {
         events: uniqueEvents(events, 12),
         total: events.length,
-        aiEnabled: Boolean(jevConfigFrom(runtime())),
+        aiEnabled: Boolean(
+          jevConfigFrom(runtime()) || voyageConfigFrom(runtime()),
+        ),
         catalog,
         checkedAt:
           events.reduce(

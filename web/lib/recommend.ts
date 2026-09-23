@@ -14,6 +14,8 @@ import {
 } from './search.ts';
 import { rankWithJev, type JevConfig, type JevRanking } from './jev.ts';
 import { fallbackEvents, searchContext, shortlistEvents } from './retrieval.ts';
+import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
+import { semanticQuery, type SemanticRanking } from './hybrid.ts';
 
 export interface RecommendInput {
   message: string;
@@ -64,6 +66,12 @@ export interface Dependencies {
   config: JevConfig | null;
   now?: Date;
   rank?: typeof rankWithJev;
+  embeddingConfig?: VoyageConfig | null;
+  vectors?: (
+    events: EventRecord[],
+    config: VoyageConfig,
+  ) => Promise<Map<string, number[]>>;
+  embed?: typeof embedWithVoyage;
 }
 
 // Initial product policy, not an empirically calibrated quality claim.
@@ -150,10 +158,7 @@ export async function recommend(
       totalCandidates,
     };
   const context = searchContext(input.message, input.history);
-  const fallback = fallbackEvents(events, input.message, input.history, 5).map(
-    (event) => ({ event }),
-  );
-  const shortlist = shortlistEvents(events, input.message, input.history, 16);
+  let shortlist = shortlistEvents(events, input.message, input.history, 16);
   if (!shortlist.length)
     return {
       recommendations: [],
@@ -164,6 +169,43 @@ export async function recommend(
         'Belirttiğin tercih ve hariç tutmalara uyan bir etkinlik bulunamadı.',
       totalCandidates,
     };
+  let semantic: SemanticRanking | undefined;
+  let retrievalNotice: string | null = null;
+  if (deps.embeddingConfig) {
+    try {
+      const vectors = await deps.vectors?.(events, deps.embeddingConfig);
+      if (vectors?.size) {
+        const [queryVector] = await (deps.embed ?? embedWithVoyage)(
+          deps.embeddingConfig,
+          [semanticQuery(input.message, context.history)],
+          'query',
+        );
+        semantic = { queryVector, vectors };
+        if (vectors.size < events.length)
+          retrievalNotice =
+            'Anlamsal dizin kısmen hazır; yeni etkinlikler kelime aramasıyla da değerlendiriliyor.';
+      } else
+        retrievalNotice =
+          'Anlamsal arama dizini henüz hazır değil; kelime araması kullanılıyor.';
+    } catch {
+      retrievalNotice =
+        'Anlamsal aramaya şu anda ulaşılamıyor; kelime araması kullanılıyor.';
+    }
+  }
+  shortlist = shortlistEvents(
+    events,
+    input.message,
+    input.history,
+    16,
+    semantic,
+  );
+  const fallback = fallbackEvents(
+    events,
+    input.message,
+    input.history,
+    5,
+    semantic,
+  ).map((event) => ({ event }));
   if (deps.config) {
     try {
       const result = await (deps.rank ?? rankWithJev)(
@@ -182,7 +224,7 @@ export async function recommend(
         mode: 'jev',
         status: recommendations.length ? 'results' : 'empty',
         notice: recommendations.length
-          ? null
+          ? retrievalNotice
           : 'İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.',
         totalCandidates,
       };
@@ -192,8 +234,12 @@ export async function recommend(
         filters,
         mode: 'filters',
         status: fallback.length ? 'results' : 'empty',
-        notice:
+        notice: [
+          retrievalNotice,
           'Akıllı sıralamaya şu anda ulaşılamıyor. Temel arama sonuçları gösteriliyor.',
+        ]
+          .filter(Boolean)
+          .join(' '),
         totalCandidates,
       };
     }
@@ -203,7 +249,11 @@ export async function recommend(
     filters,
     mode: 'filters',
     status: fallback.length ? 'results' : 'empty',
-    notice: basicNotice,
+    notice:
+      retrievalNotice ??
+      (semantic
+        ? 'Sonuçlar anlamsal benzerlik ve kelime eşleşmesine göre listeleniyor.'
+        : basicNotice),
     totalCandidates,
   };
 }

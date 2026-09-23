@@ -1,6 +1,8 @@
 import { recommend, validateInput } from '@/lib/recommend';
 import { candidates, rateLimit, runtime } from '@/lib/store';
 import { jevConfigFrom } from '@/lib/jev';
+import { voyageConfigFrom } from '@/lib/voyage';
+import { voyageVectorsFor } from '@/lib/voyage-index';
 export async function POST(request: Request) {
   let input;
   try {
@@ -21,7 +23,8 @@ export async function POST(request: Request) {
   }
   try {
     const config = jevConfigFrom(runtime());
-    if (!(await rateLimit(request, Boolean(config))))
+    const embeddingConfig = voyageConfigFrom(runtime());
+    if (!(await rateLimit(request, Boolean(config || embeddingConfig))))
       return Response.json(
         {
           error:
@@ -33,6 +36,8 @@ export async function POST(request: Request) {
       await recommend(input, {
         candidates,
         config,
+        embeddingConfig,
+        vectors: voyageVectorsFor,
       }),
       { headers: { 'Cache-Control': 'no-store' } },
     );

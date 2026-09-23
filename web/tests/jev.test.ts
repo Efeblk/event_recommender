@@ -98,7 +98,7 @@ await test('Jev uses its own HTTPS API and never retries a failed paid call', as
   const fetcher = (async (url, init) => {
     calls++;
     assert.equal(url, 'https://api.typesafe.ai/v1/systemone');
-    assert.equal(init?.redirect, 'error');
+    assert.equal(init?.redirect, 'manual');
     assert.equal(
       new Headers(init?.headers).get('Authorization'),
       'Bearer test-only',
@@ -123,6 +123,26 @@ await test('Jev uses its own HTTPS API and never retries a failed paid call', as
       fetcher,
     ),
     /TYPESAFE_API_KEY/,
+  );
+  assert.equal(calls, 1);
+});
+await test('Jev rejects manual redirects without following them', async () => {
+  let calls = 0;
+  await assert.rejects(
+    rankWithJev(
+      { apiKey: 'test-only', model: 'jev-1.13.0' },
+      input,
+      candidates,
+      (async (_url, init) => {
+        calls++;
+        assert.equal(init?.redirect, 'manual');
+        return new Response(null, {
+          status: 307,
+          headers: { Location: 'https://untrusted.example/collect' },
+        });
+      }) as typeof fetch,
+    ),
+    /HTTP 307/,
   );
   assert.equal(calls, 1);
 });

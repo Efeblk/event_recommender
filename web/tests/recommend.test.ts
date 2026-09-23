@@ -301,7 +301,7 @@ await test('category follow-ups use the same vocabulary for database filters and
   for (const [message, expected] of [
     ['Techno istiyorum', event],
     ['Elektronik olsun', event],
-    ['Biraz gülelim', comedy],
+    ['Stand-up olsun', comedy],
   ] as const) {
     let calls = 0;
     const result = await recommend(
@@ -421,4 +421,119 @@ await test('input validation rejects invalid roles, oversized histories and bad 
       history: Array(13).fill({ role: 'user', content: 'hi' }),
     }),
   );
+});
+
+const voyage = {
+  apiKey: 'test-voyage',
+  model: 'voyage-4-large',
+  dimensions: 1024 as const,
+};
+const unitVector = (position: number) =>
+  Array.from({ length: 1024 }, (_, i) => (i === position ? 1 : 0));
+await test('Voyage retrieves a semantic match from the whole candidate pool before one Jev call', async () => {
+  const pool = Array.from({ length: 40 }, (_, i) => ({
+    ...event,
+    id: `generic-${i}`,
+    title: 'Program',
+    description: 'Etkinlik ayrıntıları',
+    url: `https://example.test/generic-${i}`,
+  }));
+  const match = {
+    ...event,
+    id: 'quiet',
+    title: 'Akustik Üçlü',
+    description: 'Oturmalı amplifikasyonsuz performans',
+    url: 'https://example.test/quiet',
+  };
+  pool.push(match);
+  let embeddingCalls = 0,
+    jevCalls = 0;
+  const result = await recommend(
+    validateInput({ message: 'Yorucu bir haftadan sonra huzurlu bir mola' }),
+    {
+      ...deps,
+      config,
+      embeddingConfig: voyage,
+      candidates: async () => pool,
+      vectors: async (events) => {
+        assert.equal(events.length, 41);
+        return new Map(
+          events.map((e) => [e.id, unitVector(e.id === 'quiet' ? 0 : 1)]),
+        );
+      },
+      embed: async (_config, texts, inputType) => {
+        embeddingCalls++;
+        assert.equal(inputType, 'query');
+        assert.equal(texts.length, 1);
+        return [unitVector(0)];
+      },
+      rank: mockRank([3, ...Array(15).fill(0)], (body) => {
+        jevCalls++;
+        assert.equal(body.state.candidates.length, 16);
+        assert.equal(body.state.candidates[0].id, 'quiet');
+        assert.equal('vector' in body.state.candidates[0], false);
+      }),
+    },
+  );
+  assert.equal(embeddingCalls, 1);
+  assert.equal(jevCalls, 1);
+  assert.deepEqual(result.recommendations, [{ event: match }]);
+});
+await test('missing index avoids a wasted query embedding and makes keyword degradation visible', async () => {
+  const result = await recommend(request, {
+    ...deps,
+    config,
+    embeddingConfig: voyage,
+    vectors: async () => new Map(),
+    embed: async () => {
+      throw new Error('No query call without document vectors');
+    },
+    rank: mockRank([3]),
+  });
+  assert.equal(result.mode, 'jev');
+  assert.match(result.notice!, /dizini henüz hazır değil/);
+  assert.deepEqual(result.recommendations, [{ event }]);
+});
+await test('Voyage failure preserves Jev ranking and a visible keyword fallback', async () => {
+  let calls = 0;
+  const result = await recommend(request, {
+    ...deps,
+    config,
+    embeddingConfig: voyage,
+    vectors: async () => new Map([[event.id, unitVector(0)]]),
+    embed: async () => {
+      calls++;
+      throw new Error('Provider unavailable');
+    },
+    rank: mockRank([3]),
+  });
+  assert.equal(calls, 1);
+  assert.equal(result.mode, 'jev');
+  assert.match(result.notice!, /kelime araması/);
+  assert.deepEqual(result.recommendations, [{ event }]);
+});
+await test('no eligible events spends neither Voyage nor Jev calls', async () => {
+  let calls = 0;
+  const result = await recommend(
+    validateInput({ message: '100 TL altında konser' }),
+    {
+      ...deps,
+      config,
+      embeddingConfig: voyage,
+      vectors: async () => {
+        calls++;
+        return new Map();
+      },
+      embed: async () => {
+        calls++;
+        return [unitVector(0)];
+      },
+      rank: async () => {
+        calls++;
+        throw new Error('Not called');
+      },
+    },
+  );
+  assert.equal(calls, 0);
+  assert.equal(result.status, 'empty');
 });

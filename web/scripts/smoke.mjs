@@ -1,5 +1,7 @@
 // Exercise the production Worker and disposable D1 through Cloudflare's test harness.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { voyageCacheKey, voyageDocumentText } from '../lib/voyage.ts';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -26,6 +28,7 @@ try {
     AI_API_KEY: 'unused-legacy-smoke-key',
     OPENAI_API_KEY: 'unused-legacy-smoke-key',
     TYPESAFE_API_KEY: '',
+    VOYAGE_API_KEY: '',
     EMBEDDING_API_KEY: '',
     EMBEDDING_ENABLED: 'false',
     SYNC_TOKEN: 'local-smoke-only',
@@ -549,8 +552,127 @@ try {
   const noMoreResult = await noMorePlays.json();
   assert.equal(noMoreResult.status, 'empty');
   assert.deepEqual(noMoreResult.recommendations, []);
+  const indexUnauthorized = await worker.fetch('/api/admin/embeddings');
+  assert.equal(indexUnauthorized.status, 401);
+  await indexUnauthorized.arrayBuffer();
+  const indexHeaders = { Authorization: 'Bearer local-smoke-only' };
+  const noKeyIndex = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.equal(noKeyIndex.status, 200);
+  assert.equal((await noKeyIndex.json()).configured, false);
+  const noKeyPost = await worker.fetch('/api/admin/embeddings', {
+    method: 'POST',
+    headers: indexHeaders,
+  });
+  assert.equal(noKeyPost.status, 503);
+  await noKeyPost.arrayBuffer();
+  // Over 1,000 identical-time sessions exercise the stable pagination tie-breaker.
+  const manySessions = Array.from({ length: 1005 }, (_, i) => ({
+    ...plays[0],
+    id: `voyage-pagination-${String(i).padStart(4, '0')}`,
+    url: `https://biletinial.com/tr-tr/tiyatro/voyage-pagination-${Math.floor(i / 250)}`,
+    title: 'Sayfalama Oyunu',
+    description: 'Yetişkinlere yönelik sahne oyunu.',
+  }));
+  const manyImport = await request(
+    '/api/admin/import',
+    {
+      schemaVersion: 1,
+      pages: [...new Set(manySessions.map((event) => event.url))].map(
+        (url) => ({
+          url,
+          events: manySessions.filter((event) => event.url === url),
+        }),
+      ),
+    },
+    true,
+  );
+  assert.equal(manyImport.status, 200, await manyImport.clone().text());
+  await manyImport.arrayBuffer();
+  const allEvents = await worker.fetch('/api/events');
+  assert.equal((await allEvents.json()).total, 1007);
+  const indexBefore = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  const beforeCoverage = await indexBefore.json();
+  assert.equal(beforeCoverage.eligible, 1007);
+  assert.equal(beforeCoverage.documents, 3);
+
+  const profile = voyageCacheKey({
+    apiKey: 'unused-fake-key',
+    model: 'voyage-4-large',
+    dimensions: 1024,
+  });
+  const vector = JSON.stringify(
+    Array.from({ length: 1024 }, (_, i) => (i === 0 ? 1 : 0)),
+  );
+  for (const event of [...plays, manySessions[0]]) {
+    const hash = createHash('sha256')
+      .update(voyageDocumentText(event))
+      .digest('hex');
+    await env.DB.prepare(
+      'INSERT INTO voyage_embeddings(profile,hash,vector) VALUES(?,?,?)',
+    )
+      .bind(profile, hash, vector)
+      .run();
+  }
+  // A fake key enables status inspection only. No recommendation/model request.
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: {
+              ...configuredWorker.secrets,
+              VOYAGE_API_KEY: 'unused-fake-key',
+            },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
+  const cachedCoverage = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.deepEqual(await cachedCoverage.json(), {
+    configured: true,
+    eligible: 1007,
+    documents: 3,
+    indexed: 3,
+    pending: 0,
+  });
+  // Content changes invalidate only their own vectors, without matching by ID.
+  await env.DB.prepare(
+    "UPDATE events SET payload=json_set(payload,'$.description','Değişen yetişkin oyunu açıklaması') WHERE id=?",
+  )
+    .bind(plays[0].id)
+    .run();
+  const changedCoverage = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.equal((await changedCoverage.json()).pending, 1);
+  // A different dimensions profile cannot silently reuse the old vectors.
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: { ...configuredWorker.secrets, VOYAGE_DIMENSIONS: '512' },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  const otherProfile = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.equal((await otherProfile.json()).indexed, 0);
   console.log(
-    'Built Worker smoke check passed: page, D1, protected import, restart-safe source replacement, canonical R2 checkpoints, stale/missing-state readiness and play recommendation exclusions.',
+    'Built Worker smoke check passed: page, D1, protected import, restart-safe source replacement, canonical R2 checkpoints, stale/missing-state readiness play recommendation exclusions, catalog pagination and Voyage cache coverage.',
   );
 } catch (error) {
   server?.debug();

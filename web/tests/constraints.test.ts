@@ -140,13 +140,8 @@ await test('a current contextual theatre request supersedes an older concert cat
 
 await test('shared category synonyms consistently switch an existing theatre filter', () => {
   const previous = { ...emptyFilters, category: 'Tiyatro' as const };
-  for (const message of [
-    'Techno istiyorum',
-    'Elektronik olsun',
-    'Biraz gülelim',
-    'Gülecek bir şey olsun',
-  ]) {
-    const expected = /gül/i.test(message) ? 'Stand-up' : 'Konser';
+  for (const message of ['Techno istiyorum', 'Elektronik olsun']) {
+    const expected = 'Konser';
     assert.equal(parseFilters(message, previous, now).category, expected);
   }
   assert.deepEqual(
@@ -282,5 +277,24 @@ await test('filter validation deduplicates exclusions and removes contradictions
   );
   assert.throws(() =>
     validateFilters({ ...emptyFilters, excludedCategories: ['Sinema'] }),
+  );
+});
+
+await test('humour preferences do not exclude comedy theatre by inferring stand-up', () => {
+  for (const message of [
+    'Biraz gülelim',
+    'Gülecek bir şey olsun',
+    'Komedi istiyorum',
+  ]) {
+    assert.equal(parseFilters(message, emptyFilters, now).category, null);
+    assert.equal(
+      parseFilters(message, { ...emptyFilters, category: 'Tiyatro' }, now)
+        .category,
+      'Tiyatro',
+    );
+  }
+  assert.equal(
+    parseFilters('Sadece stand-up', emptyFilters, now).category,
+    'Stand-up',
   );
 });

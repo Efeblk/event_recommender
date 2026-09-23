@@ -7,6 +7,7 @@ import {
 } from './search.ts';
 import { positiveCategoryText, requestedCategories } from './intent.ts';
 import type { Category } from './types.ts';
+import { hybridRank, type SemanticRanking } from './hybrid.ts';
 
 export interface SearchContext {
   query: string;
@@ -189,12 +190,21 @@ function rankedCandidates(
   events: EventRecord[],
   message: string,
   history: Message[],
+  semantic?: SemanticRanking,
 ) {
   const context = searchContext(message, history);
-  const allowed = events.filter((event) => eligibleForContext(event, context));
+  const allowed = uniqueEvents(
+    events.filter((event) => eligibleForContext(event, context)),
+    events.length,
+  );
   return {
     context,
-    ranked: uniqueEvents(rankEvents(allowed, context.query), allowed.length),
+    ranked: uniqueEvents(
+      semantic
+        ? hybridRank(allowed, context.query, semantic)
+        : rankEvents(allowed, context.query),
+      allowed.length,
+    ),
   };
 }
 
@@ -203,9 +213,11 @@ export function shortlistEvents(
   message: string,
   history: Message[],
   limit = 16,
+  semantic?: SemanticRanking,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  const { ranked } = rankedCandidates(events, message, history);
+  const { ranked } = rankedCandidates(events, message, history, semantic);
+  if (semantic) return ranked.slice(0, limit);
   const selected: EventRecord[] = [];
   const seenProductions = new Set<string>();
   const seenCategories = new Set<string>();
@@ -231,7 +243,11 @@ export function fallbackEvents(
   message: string,
   history: Message[],
   limit = 5,
+  semantic?: SemanticRanking,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  return rankedCandidates(events, message, history).ranked.slice(0, limit);
+  return rankedCandidates(events, message, history, semantic).ranked.slice(
+    0,
+    limit,
+  );
 }

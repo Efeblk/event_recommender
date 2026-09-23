@@ -21,6 +21,9 @@ const names = [
   'SYNC_TOKEN',
   'TYPESAFE_API_KEY',
   'TYPESAFE_MODEL',
+  'VOYAGE_API_KEY',
+  'VOYAGE_MODEL',
+  'VOYAGE_DIMENSIONS',
   'AI_DAILY_LIMIT',
 ];
 let saved;
@@ -139,33 +142,55 @@ await test('rejects multiline secrets before creating a secrets file', () => {
       }),
     /single-line/,
   );
+  process.env.SYNC_TOKEN = 'sync-token';
+  process.env.VOYAGE_API_KEY = 'first\nsecond';
+  assert.throws(
+    () =>
+      validateDeploymentConfig({
+        requireSecrets: true,
+        environment: 'staging',
+      }),
+    /single-line.*VOYAGE_API_KEY/,
+  );
 });
 
-await test('uses safe Jev deployment defaults without requiring a key', () => {
+await test('uses safe provider defaults without requiring optional keys', () => {
   delete process.env.TYPESAFE_API_KEY;
   delete process.env.TYPESAFE_MODEL;
+  delete process.env.VOYAGE_API_KEY;
+  delete process.env.VOYAGE_MODEL;
+  delete process.env.VOYAGE_DIMENSIONS;
   delete process.env.AI_DAILY_LIMIT;
   const variables = publicDeploymentVariables('staging');
   assert.equal(variables.TYPESAFE_MODEL, 'jev-1.13.0');
+  assert.equal(variables.VOYAGE_MODEL, 'voyage-4-large');
+  assert.equal(variables.VOYAGE_DIMENSIONS, '1024');
   assert.equal(variables.AI_DAILY_LIMIT, '100');
   assert.deepEqual(deploymentSecrets(), { SYNC_TOKEN: 'sync-token' });
 });
 
-await test('keeps Jev secrets out of public deployment variables', () => {
+await test('keeps provider secrets out of public deployment variables', () => {
   process.env.TYPESAFE_API_KEY = 'private-jev-key';
   process.env.TYPESAFE_MODEL = 'jev-1.13.0';
+  process.env.VOYAGE_API_KEY = 'private-voyage-key';
+  process.env.VOYAGE_MODEL = 'voyage-4';
+  process.env.VOYAGE_DIMENSIONS = '512';
   process.env.AI_DAILY_LIMIT = '250';
   const variables = publicDeploymentVariables('staging');
   assert.equal(JSON.stringify(variables).includes('private-jev-key'), false);
+  assert.equal(JSON.stringify(variables).includes('private-voyage-key'), false);
   assert.equal(variables.TYPESAFE_MODEL, 'jev-1.13.0');
+  assert.equal(variables.VOYAGE_MODEL, 'voyage-4');
+  assert.equal(variables.VOYAGE_DIMENSIONS, '512');
   assert.equal(variables.AI_DAILY_LIMIT, '250');
   assert.deepEqual(deploymentSecrets(), {
     SYNC_TOKEN: 'sync-token',
     TYPESAFE_API_KEY: 'private-jev-key',
+    VOYAGE_API_KEY: 'private-voyage-key',
   });
 });
 
-await test('rejects invalid Jev public deployment settings', () => {
+await test('rejects invalid public provider settings', () => {
   process.env.AI_DAILY_LIMIT = '10001';
   assert.throws(
     () => validateDeploymentConfig({ environment: 'staging' }),
@@ -176,5 +201,17 @@ await test('rejects invalid Jev public deployment settings', () => {
   assert.throws(
     () => validateDeploymentConfig({ environment: 'staging' }),
     /TYPESAFE_MODEL/,
+  );
+  process.env.TYPESAFE_MODEL = 'jev-1.13.0';
+  process.env.VOYAGE_MODEL = 'voyage-3';
+  assert.throws(
+    () => validateDeploymentConfig({ environment: 'staging' }),
+    /VOYAGE_MODEL/,
+  );
+  process.env.VOYAGE_MODEL = 'voyage-4-large';
+  process.env.VOYAGE_DIMENSIONS = '768';
+  assert.throws(
+    () => validateDeploymentConfig({ environment: 'staging' }),
+    /VOYAGE_DIMENSIONS/,
   );
 });

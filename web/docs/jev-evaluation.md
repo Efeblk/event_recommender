@@ -1,10 +1,10 @@
 # Jev recommendation ranking and evaluation
 
-Jev scores a shortlist of events against a request. It does not generate the application's conversational response or explanatory strings. Exact date, budget, category and availability rules stay in code; the interface shows event cards plus ordinary status and filter labels. The active request path is results-only: deterministic code interprets constraints and retrieves eligible events, keyword ranking selects at most 16 unique candidates, and Jev reranks only that shortlist.
+Jev scores a shortlist of events against a request. It does not generate the application's conversational response or explanatory strings. Exact date, budget, category and availability rules stay in code; the interface shows event cards plus ordinary status and filter labels. The active request path is results-only: deterministic code interprets constraints and retrieves eligible events, Voyage semantic retrieval and keyword ranking select at most 16 unique candidates, and Jev reranks only that shortlist. Without Voyage configuration or a usable index, retrieval falls back to keywords.
 
 The adapter in `lib/jev.ts` uses the official HTTPS `/v1/systemone` API, defaults to the pinned `jev-1.13.0` model, and asks one comparable Score question per candidate. Each question explicitly points to its candidate's state path. It sends at most 16 candidates with bounded descriptions, has a 15-second timeout, blocks redirects, validates all returned scores, and never retries paid calls automatically. It preserves original event objects; Jev cannot supply fabricated IDs, prices or URLs through this interface.
 
-The public recommendation route uses this adapter when `TYPESAFE_API_KEY` is set. Without a key it returns an honest deterministic fallback. `AI_API_KEY` and `OPENAI_API_KEY` do not enable the recommendation route. The route performs no embedding calls.
+The public recommendation route uses this adapter when `TYPESAFE_API_KEY` is set. Without a key it returns an honest deterministic fallback. `AI_API_KEY` and `OPENAI_API_KEY` do not enable the recommendation route. With `VOYAGE_API_KEY` and a usable document index, the route makes one query embedding call before Jev. See [Voyage retrieval](voyage-retrieval.md). The saved-score evaluator below deliberately exercises the keyword path without an embedding provider; it is not a Voyage quality evaluation.
 
 ## Run
 
