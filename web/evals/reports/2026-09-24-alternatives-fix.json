@@ -1,0 +1,277 @@
+{
+  "codeRevision": "06676e3",
+  "startedAt": "2026-09-23T22:41:41.085Z",
+  "live": true,
+  "maxHttpRequests": 1,
+  "automaticRetries": 0,
+  "expectation": "New website request contract: preserve original comedy/budget/exclusions and exclude previously shown productions even though their sessions have started.",
+  "input": {
+    "message": "Aynı koşullarda başka seçenekler göster; az önce gösterdiklerini tekrar istemiyorum.",
+    "history": [
+      {
+        "role": "user",
+        "content": "Keyfim kaçık, biraz gülüp kafamı dağıtmak istiyorum. Konser istemiyorum, çocuk etkinliği de olmasın. Kişi başı en fazla 800 TL."
+      }
+    ],
+    "filters": {
+      "dateFrom": null,
+      "dateTo": null,
+      "maxPrice": 800,
+      "category": null,
+      "excludedCategories": [
+        "Konser"
+      ]
+    },
+    "excludeIds": [
+      "9d1d11b0795ac672c51f0b69",
+      "production-ed258e091e3ebaba397540d5c382150f",
+      "b1b69adbdc0dfef23e94e30c",
+      "production-ed3bdb73323ea35ad510e28d20f384bf",
+      "session-dfc595559b0d74a1e0c0346cec7419d6",
+      "production-0c765ec61c808930e6cc1f718b01f8a8",
+      "11dd28528f4e183244287005",
+      "production-1dea369f3fdd9a13a49b96b72b488dfa",
+      "b7ba7ed7dfe590fbadab16ff",
+      "production-8ceaac7c07d2b98e9fc95f214e153758"
+    ]
+  },
+  "httpStatus": 200,
+  "body": {
+    "recommendations": [
+      {
+        "event": {
+          "id": "46d7198b7c90299fe891f6da",
+          "title": "Edepsiz Komedi",
+          "description": "Edepsiz Komedi Tiyatro Oyunu Metin Zakoğlu ile EVDE TİYATRO sizlerle buluşuyor. Gerçek bir ev, gerçek bir komedyen ve içeri alınan sadece 30 kişi Metin Zakoğlu’nun evinin salonunda bir araya geliyorlar ve sıradan bir ev salonunu hep birlikte şenlikli bir kabare çeviriyorlar. Dünyanın bu en avangard mekanında yerinizi ayırtmakta acele edin. Metin Zakoğlu'ndan cinselleşemeyen ülkenin insanları ve durumları üzerine edepsiz bir komedi. Zakoğlu hikayelerinde kadın - erkek ilişkilerinde erkeğin",
+          "startsAt": "2026-10-02T17:30:00.000Z",
+          "checkedAt": "2026-09-22T06:42:48.787Z",
+          "venue": "Evde Tiyatro",
+          "district": "İstanbul Anadolu",
+          "address": "Caddebostan mahallesi Dr Vasıf çıkmazı 4/3 villa apartmanı kat 1 Caddebostan",
+          "city": "İstanbul",
+          "currency": "TRY",
+          "price": 658,
+          "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+          "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/edepsiz-komedi-2023518114826.png",
+          "category": "Stand-up",
+          "availability": "available",
+          "source": "biletinial",
+          "productionKey": "b358f189fca71239618cec63",
+          "offers": [
+            {
+              "id": "46d7198b7c90299fe891f6da",
+              "source": "biletinial",
+              "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+              "price": 658,
+              "currency": "TRY",
+              "checkedAt": "2026-09-22T06:42:48.787Z",
+              "category": "Stand-up",
+              "venue": "Evde Tiyatro",
+              "availability": "available"
+            }
+          ],
+          "mergedIds": [
+            "46d7198b7c90299fe891f6da",
+            "session-25a09b01e54a1e39a448e96544478d84"
+          ],
+          "canonicalProductionKey": "production-7e5bf482f5f19034f1165c14cc503b11"
+        }
+      },
+      {
+        "event": {
+          "id": "37b2e5a3aae537cedb67c9ce",
+          "title": "Yunus Emre Gündüz – 4. Gösteri - Stand up",
+          "description": "Yunus Emre Gündüz – 4. Gösteri - Stand up Youtube’da yayınladığı “Kemikleşmiş Travma”, \"Başka Biri Var\" ve \"Varınca Ara\" gösterileri ile yüzbinlerce izlenmeye ulaşan Yunus Emre Gündüz bir yandan da sosyal medyada çizdiği karikatür ve Youtube’da ve Instagram’da yayınladığı animasyonlarıyla, yine Youtube’da yayınladığı podcastleri ile adından söz ettirmeyi başarmıştır. 4. yeni gösterisinde ilişkiler, arkadaşlık, şehir hayatı, yolculuk, kaos ve politik konular üzerine 60-90 dakikalık eğlenceli h",
+          "startsAt": "2026-09-25T17:00:00.000Z",
+          "checkedAt": "2026-09-22T06:48:10.626Z",
+          "venue": "Maltica Gastro Pub",
+          "district": "İstanbul Avrupa",
+          "address": "",
+          "city": "İstanbul",
+          "currency": "TRY",
+          "price": 336,
+          "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+          "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/yunus-emre-gunduz-4-gosteri-stand-up-202621216313730a0ace1697454fa43c1304bf85a19e.jpg",
+          "category": "Stand-up",
+          "availability": "available",
+          "source": "biletinial",
+          "productionKey": "acd0e24b10af1c51ae37a008",
+          "offers": [
+            {
+              "id": "37b2e5a3aae537cedb67c9ce",
+              "source": "biletinial",
+              "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+              "price": 336,
+              "currency": "TRY",
+              "checkedAt": "2026-09-22T06:48:10.626Z",
+              "category": "Stand-up",
+              "venue": "Maltica Gastro Pub",
+              "availability": "available"
+            }
+          ],
+          "mergedIds": [
+            "37b2e5a3aae537cedb67c9ce",
+            "session-5aec15c9d15f34c51ea1a39bffb0ca83"
+          ],
+          "canonicalProductionKey": "production-d416120c7e7b769b476447789cc1fb3c"
+        }
+      },
+      {
+        "event": {
+          "id": "session-eb09b30d9e8b850bb132924676a1e250",
+          "title": "Edepsiz Komedi",
+          "description": "Edepsiz Komedi Tiyatro Oyunu Metin Zakoğlu ile EVDE TİYATRO sizlerle buluşuyor. Gerçek bir ev, gerçek bir komedyen ve içeri alınan sadece 30 kişi Metin Zakoğlu’nun evinin salonunda bir araya geliyorlar ve sıradan bir ev salonunu hep birlikte şenlikli bir kabare çeviriyorlar. Dünyanın bu en avangard mekanında yerinizi ayırtmakta acele edin. Metin Zakoğlu'ndan cinselleşemeyen ülkenin insanları ve durumları üzerine edepsiz bir komedi. Zakoğlu hikayelerinde kadın - erkek ilişkilerinde erkeğin",
+          "startsAt": "2026-09-25T20:00:00.000Z",
+          "checkedAt": "2026-09-22T06:42:48.787Z",
+          "venue": "Cafe Theatre",
+          "district": "İstanbul Anadolu",
+          "address": "",
+          "city": "İstanbul",
+          "currency": "TRY",
+          "price": 658,
+          "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+          "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/edepsiz-komedi-2023518114826.png",
+          "category": "Stand-up",
+          "availability": "available",
+          "source": "biletinial",
+          "productionKey": "09e588a9e448f775e9a2e853",
+          "offers": [
+            {
+              "id": "4f3b1d7c0ad7ab32ab86e944",
+              "source": "biletinial",
+              "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+              "price": 658,
+              "currency": "TRY",
+              "checkedAt": "2026-09-22T06:42:48.787Z",
+              "category": "Stand-up",
+              "venue": "Cafe Theatre",
+              "availability": "available"
+            },
+            {
+              "id": "f7719d2c0ec32e84f2f96454",
+              "source": "biletix",
+              "url": "https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr",
+              "price": 672,
+              "currency": "TRY",
+              "checkedAt": "2026-09-22T06:47:19.500Z",
+              "category": "Tiyatro",
+              "venue": "Cafe Theatre Koşuyolu",
+              "availability": "available"
+            }
+          ],
+          "mergedIds": [
+            "4f3b1d7c0ad7ab32ab86e944",
+            "f7719d2c0ec32e84f2f96454",
+            "session-eb09b30d9e8b850bb132924676a1e250"
+          ],
+          "canonicalProductionKey": "production-c8d5eb34bac413c2cc07826eb8bfd505"
+        }
+      },
+      {
+        "event": {
+          "id": "95d5a7fe7a1321d1fcc37328",
+          "title": "Yunus Emre Gündüz – 4. Gösteri - Stand up",
+          "description": "Yunus Emre Gündüz – 4. Gösteri - Stand up Youtube’da yayınladığı “Kemikleşmiş Travma”, \"Başka Biri Var\" ve \"Varınca Ara\" gösterileri ile yüzbinlerce izlenmeye ulaşan Yunus Emre Gündüz bir yandan da sosyal medyada çizdiği karikatür ve Youtube’da ve Instagram’da yayınladığı animasyonlarıyla, yine Youtube’da yayınladığı podcastleri ile adından söz ettirmeyi başarmıştır. 4. yeni gösterisinde ilişkiler, arkadaşlık, şehir hayatı, yolculuk, kaos ve politik konular üzerine 60-90 dakikalık eğlenceli h",
+          "startsAt": "2026-09-24T17:00:00.000Z",
+          "checkedAt": "2026-09-22T06:48:10.626Z",
+          "venue": "Beylidüzü Doz Live",
+          "district": "İstanbul Avrupa",
+          "address": "",
+          "city": "İstanbul",
+          "currency": "TRY",
+          "price": 336,
+          "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+          "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/yunus-emre-gunduz-4-gosteri-stand-up-202621216313730a0ace1697454fa43c1304bf85a19e.jpg",
+          "category": "Stand-up",
+          "availability": "available",
+          "source": "biletinial",
+          "productionKey": "ee05bfd5f9d62e0f8764504b",
+          "offers": [
+            {
+              "id": "95d5a7fe7a1321d1fcc37328",
+              "source": "biletinial",
+              "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+              "price": 336,
+              "currency": "TRY",
+              "checkedAt": "2026-09-22T06:48:10.626Z",
+              "category": "Stand-up",
+              "venue": "Beylidüzü Doz Live",
+              "availability": "available"
+            }
+          ],
+          "mergedIds": [
+            "95d5a7fe7a1321d1fcc37328",
+            "session-6b522d076284447f0029191ebc444919"
+          ],
+          "canonicalProductionKey": "production-a030acfc9e96896da5d975e5b4115a00"
+        }
+      },
+      {
+        "event": {
+          "id": "session-966078742ae3922e7c6b5e02e5a16a11",
+          "title": "Yunus Emre Gündüz – 4. Gösteri - Stand up",
+          "description": "Yunus Emre Gündüz – 4. Gösteri - Stand up Youtube’da yayınladığı “Kemikleşmiş Travma”, \"Başka Biri Var\" ve \"Varınca Ara\" gösterileri ile yüzbinlerce izlenmeye ulaşan Yunus Emre Gündüz bir yandan da sosyal medyada çizdiği karikatür ve Youtube’da ve Instagram’da yayınladığı animasyonlarıyla, yine Youtube’da yayınladığı podcastleri ile adından söz ettirmeyi başarmıştır. 4. yeni gösterisinde ilişkiler, arkadaşlık, şehir hayatı, yolculuk, kaos ve politik konular üzerine 60-90 dakikalık eğlenceli h",
+          "startsAt": "2026-10-09T17:00:00.000Z",
+          "checkedAt": "2026-09-22T06:48:10.626Z",
+          "venue": "Ayı Pub & Disko Rıhtım",
+          "district": "İstanbul Anadolu",
+          "address": "Caferağa, Albay Faik Sözdener Cd. No:5/A, 34710 Kadıköy/İstanbul",
+          "city": "İstanbul",
+          "currency": "TRY",
+          "price": 336,
+          "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+          "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/yunus-emre-gunduz-4-gosteri-stand-up-202621216313730a0ace1697454fa43c1304bf85a19e.jpg",
+          "category": "Stand-up",
+          "availability": "available",
+          "source": "biletinial",
+          "productionKey": "33e085e902f613b247c0c8ea",
+          "offers": [
+            {
+              "id": "e00d0995b7958541a20f83b7",
+              "source": "biletinial",
+              "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+              "price": 336,
+              "currency": "TRY",
+              "checkedAt": "2026-09-22T06:48:10.626Z",
+              "category": "Stand-up",
+              "venue": "Ayı Pub & Disko Rıhtım",
+              "availability": "available"
+            },
+            {
+              "id": "75136690130e629fddeed393",
+              "source": "bubilet",
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-emre-gunduz-4-gosteri-stand-up",
+              "price": 450.5,
+              "currency": "TRY",
+              "checkedAt": "2026-09-22T06:49:19.794Z",
+              "category": "Stand-up",
+              "venue": "Ayı Pub & Disko (Rıhtım)",
+              "availability": "available"
+            }
+          ],
+          "mergedIds": [
+            "75136690130e629fddeed393",
+            "e00d0995b7958541a20f83b7",
+            "session-966078742ae3922e7c6b5e02e5a16a11"
+          ],
+          "canonicalProductionKey": "production-b67363edfa598b42b6bc3bca339d289d"
+        }
+      }
+    ],
+    "filters": {
+      "dateFrom": null,
+      "dateTo": null,
+      "maxPrice": 800,
+      "category": null,
+      "excludedCategories": [
+        "Konser"
+      ]
+    },
+    "mode": "jev",
+    "status": "results",
+    "notice": null,
+    "totalCandidates": 198
+  },
+  "durationMs": 1705,
+  "repeatedProductions": []
+}

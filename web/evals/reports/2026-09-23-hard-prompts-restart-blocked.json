@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "codeRevision": "14f05b4",
+  "startedAt": "2026-09-23T13:55:50.393Z",
+  "origin": "http://127.0.0.1:3001",
+  "live": true,
+  "maxHttpRequests": 12,
+  "automaticRetries": 0,
+  "grading": "Expectations declared before execution; returned cards require manual source-based review. This is a small adversarial evaluation, not a population accuracy estimate.",
+  "cases": [
+    {
+      "id": "quiet_mood",
+      "message": "Bugün işten çok bunaldım. Bu akşam oturarak nefes alabileceğim, arkadaşımla rahatça konuşabileceğim sakin bir şey istiyorum. Yüksek sesli müzik ve ayakta kalabalık ortam olmasın.",
+      "expectation": "Tonight; no loud music/standing crowd; quiet seated conversational setting requires source evidence. Empty is preferable to unsupported claims."
+    },
+    {
+      "id": "laugh_budget",
+      "message": "Keyfim kaçık, biraz gülüp kafamı dağıtmak istiyorum. Konser istemiyorum, çocuk etkinliği de olmasın. Kişi başı en fazla 800 TL.",
+      "expectation": "Comic experience supported by facts; no concert or child event; each starting price <=800 TRY."
+    },
+    {
+      "id": "adult_drama",
+      "message": "Yetişkinlere uygun ciddi bir sahne oyunu arıyorum. Çocuk oyunu ve komedi istemiyorum; düşündüren, dramatik bir hikâye olsun.",
+      "expectation": "Adult dramatic theatre only; exclude comedy, child shows and concerts. Source evidence required."
+    },
+    {
+      "id": "group_weekend",
+      "message": "Bu hafta sonu iki kişiyiz, toplam 1200 TL bütçemiz var. Stand-up olsun, konser istemiyorum.",
+      "expectation": "Sep26-27 Istanbul; stand-up; each starting price <=600 TRY, not1200."
+    },
+    {
+      "id": "district_time",
+      "message": "Cumartesi sadece Kadıköy’de, 20:30’dan sonra başlayan bir stand-up arıyorum. Kişi başı 500 TL’yi geçmesin; Avrupa yakasına geçmeyeceğim.",
+      "expectation": "Sep26; confirmed Kadikoy venue; strictly after20:30 Istanbul; <=500TRY; stand-up only."
+    },
+    {
+      "id": "accessibility",
+      "message": "Tekerlekli sandalye kullanıyorum. Girişin basamaksız olduğu ve erişilebilir tuvaleti bulunduğu açıklamasında açıkça belirtilen bir etkinlik öner. Bu iki özellik kesin olmalı.",
+      "expectation": "Both step-free entry AND accessible toilet explicitly supported. Unknown cannot be treated as accessible; no catalog matches likely."
+    },
+    {
+      "id": "unsupported_activity",
+      "message": "Pazar sabahı Boğaz’da kürek çekmek veya kano yapmak istiyorum. Tekne partisi, yemekli gemi turu ya da konser aramıyorum.",
+      "expectation": "Sep27 morning rowing/kayaking, not boatparty/dinner cruise/concert. Empty if missing."
+    },
+    {
+      "id": "family_comedy",
+      "message": "Annemle birlikte güleceğimiz bir gösteri arıyorum. Küfür ya da cinsel mizah olmasın; bunu açıklamasından anlayabildiğimiz seçenekleri göster, emin değilsen önerme.",
+      "expectation": "Comedy with positive evidence of nonsexual/nonswearing family suitability; explicit sexual comedy is forbidden. Unknown unsuitable for strict request."
+    },
+    {
+      "id": "english_request",
+      "message": "I want to laugh this Saturday, but no concerts or children’s shows. Keep it under 600 Turkish lira per person. A stand-up show or a comedy play would work.",
+      "expectation": "Sep26; adult stand-up/comedy play; no concerts or children; known starting price <600TRY."
+    },
+    {
+      "id": "switch_preferences",
+      "parent": "group_weekend",
+      "message": "Vazgeçtim, stand-up istemiyorum. Onun yerine caz konseri olsun; bütçeyi kaldır ama hafta sonu kalsın.",
+      "expectation": "Retain Sep26-27; remove budget; switch to jazz concerts, exclude stand-up; no stale category."
+    },
+    {
+      "id": "alternatives",
+      "parent": "laugh_budget",
+      "excludeParent": true,
+      "message": "Aynı koşullarda başka seçenekler göster; az önce gösterdiklerini tekrar istemiyorum.",
+      "expectation": "Keep comic mood/no concert/no child/<=800 preferences and exclude prior productions across providers."
+    },
+    {
+      "id": "ambiguous_budget",
+      "message": "İki kişiyiz, bütçemiz 800 TL, cumartesi gülebileceğimiz bir şey olsun.",
+      "expectation": "Ask whether800 total or per person; do not silently assume."
+    }
+  ],
+  "results": [
+    {
+      "id": "quiet_mood",
+      "input": {
+        "message": "Bugün işten çok bunaldım. Bu akşam oturarak nefes alabileceğim, arkadaşımla rahatça konuşabileceğim sakin bir şey istiyorum. Yüksek sesli müzik ve ayakta kalabalık ortam olmasın."
+      },
+      "error": "TypeError",
+      "durationMs": 16
+    }
+  ],
+  "finishedAt": "2026-09-23T13:55:50.411Z"
+}
