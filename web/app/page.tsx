@@ -68,10 +68,10 @@ const formatShortDate = (date: string) =>
     day: 'numeric',
     month: 'short',
   }).format(new Date(date));
-const formatMoney = (price: number) =>
+const formatMoney = (price: number, currency = 'TRY') =>
   new Intl.NumberFormat('tr-TR', {
     style: 'currency',
-    currency: 'TRY',
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(price);
@@ -80,10 +80,19 @@ const sourceName = (source: EventRecord['source']) =>
     ? 'Bubilet'
     : source === 'biletix'
       ? 'Biletix'
-      : 'Biletinial';
-
+      : source === 'biletinial'
+        ? 'Biletinial'
+        : 'Bilet sitesi';
+const sourceLinkLabel = (source: EventRecord['source']) =>
+  source === 'biletinial'
+    ? `${sourceName(source)}’de aç`
+    : source === 'bubilet' || source === 'biletix'
+      ? `${sourceName(source)}’te aç`
+      : 'Bilet sitesinde aç';
 function EventCard({ event }: { event: EventRecord }) {
   const [imageFailed, setImageFailed] = useState(false);
+  const offers = event.offers ?? [];
+  const hasMultipleOffers = offers.length > 1;
   return (
     <article className="event-card">
       <div className="event-poster">
@@ -116,25 +125,74 @@ function EventCard({ event }: { event: EventRecord }) {
             {event.district ? ` · ${event.district}` : ''}
           </span>
         </p>
-        <div className="event-actions">
-          <div className="event-price">
-            <span>
-              {event.price === null
-                ? 'Fiyat bilgisi yok'
-                : event.price === 0
-                  ? 'Ücretsiz'
-                  : formatMoney(event.price)}
-            </span>
-            {event.price !== null && event.price > 0 && (
-              <small>başlangıç</small>
-            )}
+        {hasMultipleOffers ? (
+          <div className="event-actions event-offers">
+            <span className="offers-label">Bilet seçenekleri</span>
+            <ul aria-label={`${event.title} için bilet seçenekleri`}>
+              {offers.map((offer) => {
+                const priceLabel =
+                  offer.price === null
+                    ? 'Fiyat bilgisi yok'
+                    : offer.price === 0
+                      ? 'Ücretsiz'
+                      : formatMoney(offer.price, offer.currency);
+                const isCheapest =
+                  offers.every(
+                    (item) =>
+                      item.price !== null && item.currency === event.currency,
+                  ) &&
+                  offer.price !== null &&
+                  offer.price === event.price;
+                return (
+                  <li key={offer.id}>
+                    <a
+                      href={offer.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${sourceName(offer.source)}: ${priceLabel}; ${event.title} biletlerini yeni sekmede aç`}
+                    >
+                      <span className="offer-source">
+                        {sourceName(offer.source)}
+                      </span>
+                      <span className="offer-price">
+                        {priceLabel}
+                        {offer.price !== null && offer.price > 0
+                          ? ' başlangıç'
+                          : ''}
+                        {isCheapest && <small>en düşük</small>}
+                      </span>
+                      <ExternalLink size={14} aria-hidden="true" />
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
-          <a href={event.url} target="_blank" rel="noopener noreferrer">
-            {sourceName(event.source)}
-            {event.source === 'biletinial' ? '’de' : '’te'} aç{' '}
-            <ExternalLink size={14} />
-          </a>
-        </div>
+        ) : (
+          <div className="event-actions">
+            <div className="event-price">
+              <span>
+                {event.price === null
+                  ? 'Fiyat bilgisi yok'
+                  : event.price === 0
+                    ? 'Ücretsiz'
+                    : formatMoney(event.price, event.currency)}
+              </span>
+              {event.price !== null && event.price > 0 && (
+                <small>başlangıç</small>
+              )}
+            </div>
+            <a
+              href={event.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${sourceLinkLabel(event.source)}: ${event.title}; yeni sekmede açılır`}
+            >
+              {sourceLinkLabel(event.source)}{' '}
+              <ExternalLink size={14} aria-hidden="true" />
+            </a>
+          </div>
+        )}
       </div>
     </article>
   );

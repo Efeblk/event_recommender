@@ -591,12 +591,24 @@ try {
   assert.equal(manyImport.status, 200, await manyImport.clone().text());
   await manyImport.arrayBuffer();
   const allEvents = await worker.fetch('/api/events');
-  assert.equal((await allEvents.json()).total, 1007);
+  const paginatedCatalog = await allEvents.json();
+  assert.equal(paginatedCatalog.total, 3);
+  const mergedPagination = paginatedCatalog.events.find(
+    (event) => event.title === 'Sayfalama Oyunu',
+  );
+  assert.ok(mergedPagination.mergedIds.includes('voyage-pagination-0000'));
+  assert.ok(mergedPagination.mergedIds.includes('voyage-pagination-1004'));
+  assert.equal(
+    mergedPagination.mergedIds.filter((id) =>
+      id.startsWith('voyage-pagination-'),
+    ).length,
+    1005,
+  );
   const indexBefore = await worker.fetch('/api/admin/embeddings', {
     headers: indexHeaders,
   });
   const beforeCoverage = await indexBefore.json();
-  assert.equal(beforeCoverage.eligible, 1007);
+  assert.equal(beforeCoverage.eligible, 3);
   assert.equal(beforeCoverage.documents, 3);
 
   const profile = voyageCacheKey({
@@ -639,7 +651,7 @@ try {
   });
   assert.deepEqual(await cachedCoverage.json(), {
     configured: true,
-    eligible: 1007,
+    eligible: 3,
     documents: 3,
     indexed: 3,
     pending: 0,
@@ -671,6 +683,88 @@ try {
     headers: indexHeaders,
   });
   assert.equal((await otherProfile.json()).indexed, 0);
+  // Cross-provider identity is resolved before category/budget filters. These
+  // two source listings reproduce the reported Edepsiz Komedi duplicate.
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: { ...configuredWorker.secrets, VOYAGE_API_KEY: '' },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
+  await env.DB.prepare('DELETE FROM events').run();
+  const mergedSources = [
+    {
+      ...plays[0],
+      id: 'merge-biletinial',
+      source: 'biletinial',
+      title: 'Edepsiz Komedi',
+      venue: 'Cafe Theatre',
+      category: 'Stand-up',
+      description: 'Metin Zakoğlu stand-up gösterisi.',
+      price: 658,
+      url: 'https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi',
+    },
+    {
+      ...plays[0],
+      id: 'merge-biletix',
+      source: 'biletix',
+      title: 'Edepsiz Komedi',
+      venue: 'Cafe Theatre Koşuyolu',
+      category: 'Tiyatro',
+      description: 'Metin Zakoğlu stand-up gösterisi.',
+      price: 672,
+      url: 'https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr',
+    },
+  ];
+  const mergedImport = await request(
+    '/api/admin/import',
+    {
+      schemaVersion: 1,
+      pages: mergedSources.map((event) => ({
+        url: event.url,
+        events: [event],
+      })),
+    },
+    true,
+  );
+  assert.equal(mergedImport.status, 200, await mergedImport.clone().text());
+  await mergedImport.arrayBuffer();
+  const mergedCatalog = await (await worker.fetch('/api/events')).json();
+  assert.equal(mergedCatalog.total, 1);
+  assert.equal(mergedCatalog.events.length, 1);
+  const mergedCard = mergedCatalog.events[0];
+  assert.equal(mergedCard.category, 'Stand-up');
+  assert.equal(mergedCard.offers.length, 2);
+  assert.equal(mergedCard.price, 658);
+  const mergedResult = await (
+    await request('/api/recommend', { message: '660 TL altında stand-up' })
+  ).json();
+  assert.equal(mergedResult.recommendations.length, 1);
+  assert.equal(mergedResult.recommendations[0].event.offers.length, 2);
+  assert.equal(
+    (await env.DB.prepare('SELECT COUNT(*) AS count FROM events').first())
+      .count,
+    2,
+  );
+  // If one provider disappears, an already shown merged ID must still exclude
+  // the surviving offer when asking for alternatives.
+  await env.DB.prepare('DELETE FROM events WHERE id=?')
+    .bind('merge-biletinial')
+    .run();
+  const surviving = await (
+    await request('/api/recommend', {
+      message: 'Başka etkinlik',
+      excludeIds: [mergedCard.id],
+    })
+  ).json();
+  assert.deepEqual(surviving.recommendations, []);
   console.log(
     'Built Worker smoke check passed: page, D1, protected import, restart-safe source replacement, canonical R2 checkpoints, stale/missing-state readiness play recommendation exclusions, catalog pagination and Voyage cache coverage.',
   );

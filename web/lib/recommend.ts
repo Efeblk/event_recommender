@@ -16,6 +16,7 @@ import { rankWithJev, type JevConfig, type JevRanking } from './jev.ts';
 import { fallbackEvents, searchContext, shortlistEvents } from './retrieval.ts';
 import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
 import { semanticQuery, type SemanticRanking } from './hybrid.ts';
+import { mergeEventSessions } from './event-merge.ts';
 
 export interface RecommendInput {
   message: string;
@@ -134,18 +135,21 @@ export async function recommend(
       notice: issueNotices[issue],
       totalCandidates: 0,
     };
-  let events = (await deps.candidates(filters)).filter((event) =>
-    isEligible(event, filters, now),
-  );
+  let events = mergeEventSessions(
+    (await deps.candidates(filters)).filter((event) =>
+      isEligible(event, emptyFilters, now),
+    ),
+  ).filter((event) => isEligible(event, filters, now));
+  const excludedIds = new Set(input.excludeIds);
+  const isExcluded = (event: EventRecord) =>
+    excludedIds.has(event.id) ||
+    event.mergedIds?.some((id) => excludedIds.has(id));
   const excludedProductions = new Set(
-    events
-      .filter((event) => input.excludeIds.includes(event.id))
-      .map(productionIdentity),
+    events.filter(isExcluded).map(productionIdentity),
   );
   events = events.filter(
     (event) =>
-      !input.excludeIds.includes(event.id) &&
-      !excludedProductions.has(productionIdentity(event)),
+      !isExcluded(event) && !excludedProductions.has(productionIdentity(event)),
   );
   const totalCandidates = events.length;
   if (!events.length)

@@ -1,0 +1,229 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+
+import { mergeEventSessions } from '../lib/event-merge.ts';
+import type { EventRecord } from '../lib/types.ts';
+
+function event(overrides: Partial<EventRecord> = {}): EventRecord {
+  return {
+    id: 'biletinial:1',
+    title: 'Edepsiz Komedi',
+    description: 'Metin Zakoğlu ile stand-up gösterisi',
+    startsAt: '2026-10-10T17:00:00.000Z',
+    venue: 'Cafe Theatre',
+    city: 'İstanbul',
+    district: 'Kadıköy',
+    address: 'Adres',
+    price: 500,
+    currency: 'TRY',
+    url: 'https://biletinial.example/1',
+    imageUrl: 'https://images.example/1.jpg',
+    category: 'Stand-up',
+    availability: 'available',
+    source: 'biletinial',
+    productionKey: 'existing-source-production',
+    checkedAt: '2026-09-23T09:00:00.000Z',
+    ...overrides,
+  };
+}
+
+await test('merges the screenshot category and curated venue conflict', () => {
+  const result = mergeEventSessions([
+    event({ category: 'Tiyatro', description: 'Metin Zakoğlu gösterisi' }),
+    event({
+      id: 'bubilet:9',
+      source: 'bubilet',
+      category: 'Stand-up',
+      venue: 'Cafe Theatre Koşuyolu',
+      price: 350,
+      url: 'https://bubilet.example/9',
+    }),
+  ]);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].category, 'Stand-up');
+  assert.equal(result[0].price, 350);
+  assert.equal(result[0].url, 'https://bubilet.example/9');
+  assert.equal(result[0].source, 'bubilet');
+  assert.equal(result[0].offers?.length, 2);
+  assert.ok(result[0].mergedIds?.includes('biletinial:1'));
+  assert.ok(result[0].mergedIds?.includes('bubilet:9'));
+  assert.equal(result[0].productionKey, 'existing-source-production');
+});
+
+await test('requires exact normalized title, city, venue identity and instant', () => {
+  const base = event();
+  const cases = [
+    event({ id: 'title', title: 'Edepsiz Komedi 2' }),
+    event({ id: 'city', city: 'Ankara' }),
+    event({ id: 'venue', venue: 'Cafe Theatre Beşiktaş' }),
+    event({ id: 'time', startsAt: '2026-10-10T17:01:00.000Z' }),
+  ];
+  assert.equal(mergeEventSessions([base, ...cases]).length, 5);
+});
+
+await test('normalizes Turkish accents and punctuation but not words', () => {
+  const result = mergeEventSessions([
+    event({ title: 'Şımarık: Gösteri!' }),
+    event({ id: 'two', title: 'simarik gosteri' }),
+  ]);
+  assert.equal(result.length, 1);
+});
+
+await test('is independent of input order and idempotent', () => {
+  const input = [event(), event({ id: 'two', source: 'bubilet', price: 400 })];
+  const forward = mergeEventSessions(input);
+  const reverse = mergeEventSessions([...input].reverse());
+  assert.deepEqual(forward, reverse);
+  assert.deepEqual(mergeEventSessions(forward), forward);
+  assert.ok(forward[0].id.startsWith('session-'));
+  assert.ok(forward[0].id.length <= 100);
+});
+
+await test('keeps singleton id and includes canonical session and raw ids', () => {
+  const result = mergeEventSessions([event()])[0];
+  assert.equal(result.id, 'biletinial:1');
+  assert.ok(result.mergedIds?.includes('biletinial:1'));
+  assert.ok(result.mergedIds?.some((id) => id.startsWith('session-')));
+  assert.ok(result.canonicalProductionKey?.startsWith('production-'));
+});
+
+await test('does not derive a production key for generic venues', () => {
+  const generic = event({ venue: 'Çeşitli Mekanlar' });
+  assert.equal(
+    mergeEventSessions([generic])[0].canonicalProductionKey,
+    undefined,
+  );
+  assert.equal(
+    mergeEventSessions([
+      generic,
+      event({ id: 'other', venue: 'Çeşitli Mekanlar' }),
+    ]).length,
+    2,
+  );
+  assert.equal(
+    mergeEventSessions([
+      event({ id: 'invalid-a', startsAt: 'not-a-date' }),
+      event({ id: 'invalid-b', startsAt: 'not-a-date' }),
+    ]).length,
+    2,
+  );
+});
+
+await test('does not compare prices in different currencies', () => {
+  const result = mergeEventSessions([
+    event({ id: 'a', currency: 'USD', price: 100, url: 'https://example/a' }),
+    event({ id: 'b', currency: 'TRY', price: 1, url: 'https://example/b' }),
+  ])[0];
+  assert.equal(result.currency, 'USD');
+  assert.equal(result.price, 100);
+  assert.equal(result.url, 'https://example/a');
+  assert.deepEqual(result.offers?.map((offer) => offer.currency).sort(), [
+    'TRY',
+    'USD',
+  ]);
+});
+
+await test('keeps unknown prices and separate offers for separate sessions', () => {
+  const result = mergeEventSessions([
+    event({ id: 'a', price: null }),
+    event({ id: 'b', source: 'bubilet', price: null }),
+    event({ id: 'later', startsAt: '2026-10-11T17:00:00.000Z', price: 10 }),
+  ]);
+  assert.equal(result.length, 2);
+  assert.equal(result[0].price, null);
+  assert.deepEqual(
+    result.map((item) => item.offers?.length),
+    [2, 1],
+  );
+});
+
+await test('supports every curated venue alias without fuzzy stage matching', () => {
+  const aliases = [
+    ['HoP Sahne', 'House of Performance - HoP'],
+    ['Biletinial Torium Sahne', 'Torium Sahne'],
+    ['Kartal Sanat Tiyatrosu', 'Kartal Sanat Tiyatro Salonu'],
+    ['Maltepe Dragos Sahne', 'Sahne Dragos'],
+    ['İnal Aydınoğlu KM', 'İnal Aydınoğlu Kültür Merkezi'],
+    ['Paribu Vadi Açıkhava', 'Paribu Vadi Açık Hava'],
+  ];
+  for (const [left, right] of aliases)
+    assert.equal(
+      mergeEventSessions([
+        event({ venue: left }),
+        event({ id: right, venue: right }),
+      ]).length,
+      1,
+    );
+  assert.equal(
+    mergeEventSessions([
+      event({ venue: 'Zorlu PSM Turkcell Sahnesi' }),
+      event({ id: 'other', venue: 'Zorlu PSM Platinum Sahnesi' }),
+    ]).length,
+    2,
+  );
+});
+
+await test('does not infer stand-up from generic comedy or negated text', () => {
+  const result = mergeEventSessions([
+    event({ id: 'a', category: 'Tiyatro', description: 'Komedi oyunu' }),
+    event({
+      id: 'b',
+      category: 'Stand-up',
+      description: 'Bu bir stand-up değil, komedi oyunudur',
+    }),
+  ])[0];
+  assert.equal(result.category, 'Tiyatro');
+});
+
+await test('keeps conflicting source facts attached to each ticket offer', () => {
+  const merged = mergeEventSessions([
+    event(),
+    event({
+      id: 'other',
+      source: 'biletix',
+      venue: 'Cafe Theatre Koşuyolu',
+      category: 'Tiyatro',
+      price: 672,
+    }),
+  ])[0];
+  const offer = merged.offers!.find((item) => item.id === 'other')!;
+  assert.equal(offer.category, 'Tiyatro');
+  assert.equal(offer.venue, 'Cafe Theatre Koşuyolu');
+  assert.equal(offer.availability, 'available');
+});
+
+await test('reviewed show aliases merge only at the same venue and session', () => {
+  const first = event({ title: 'Gökhan Ünver Stand Up', venue: 'HOP Sahne' });
+  const named = event({
+    id: 'named',
+    title: "Gökhan Ünver 'Çok Tanıdık'",
+    venue: 'House of Performance - HoP',
+    source: 'bubilet',
+  });
+  assert.equal(mergeEventSessions([first, named]).length, 1);
+  assert.equal(
+    mergeEventSessions([
+      first,
+      { ...named, startsAt: '2026-10-10T18:00:00.000Z' },
+    ]).length,
+    2,
+  );
+  assert.equal(
+    mergeEventSessions([
+      first,
+      { ...named, title: 'Gökhan Ünver Yeni Gösteri' },
+    ]).length,
+    2,
+  );
+  assert.equal(
+    mergeEventSessions([first, { ...named, venue: 'Trump Sahne' }]).length,
+    2,
+  );
+  assert.equal(
+    mergeEventSessions([
+      event({ title: 'Operadaki Hayalet' }),
+      event({ id: 'play', title: 'Operadaki Hayalet Tiyatro Oyunu' }),
+    ]).length,
+    1,
+  );
+});

@@ -1,4 +1,15 @@
 export type Category = 'Konser' | 'Tiyatro' | 'Stand-up';
+export interface EventOffer {
+  id: string;
+  source?: EventRecord['source'];
+  url: string;
+  price: number | null;
+  currency: string;
+  checkedAt: string;
+  category: string;
+  venue: string;
+  availability: EventRecord['availability'];
+}
 export interface EventRecord {
   id: string;
   title: string;
@@ -18,6 +29,9 @@ export interface EventRecord {
   sourceVersion?: string;
   extraction?: string;
   productionKey?: string;
+  offers?: EventOffer[];
+  mergedIds?: string[];
+  canonicalProductionKey?: string;
   checkedAt: string;
 }
 export interface Filters {

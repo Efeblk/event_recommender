@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import seed from '../data/events.json';
-import type { EventRecord, Filters } from './types.ts';
+import { emptyFilters, type EventRecord, type Filters } from './types.ts';
+import { mergeEventSessions } from './event-merge.ts';
 import { isEligible } from './search.ts';
 import { embeddingText } from './ai.ts';
 import {
@@ -160,18 +161,8 @@ export async function candidates(f: Filters, now = new Date()) {
       ).toISOString(),
     );
   }
-  if (f.category) {
-    sql.push('category=?');
-    args.push(f.category);
-  }
-  if (f.excludedCategories?.length) {
-    sql.push('category NOT IN (SELECT value FROM json_each(?))');
-    args.push(JSON.stringify(f.excludedCategories));
-  }
-  if (f.maxPrice !== null) {
-    sql.push('price IS NOT NULL AND price<=?');
-    args.push(f.maxPrice);
-  }
+  // Resolve provider disagreements before applying category/price filters.
+  // Otherwise filtering a single provider row can split one session back up.
   const events: EventRecord[] = [];
   let afterStart = '',
     afterId = '';
@@ -187,12 +178,14 @@ export async function candidates(f: Filters, now = new Date()) {
     if (!page.results.length) break;
     for (const row of page.results) {
       const event = JSON.parse(row.payload) as EventRecord;
-      if (isEligible(event, f, now)) events.push(event);
+      if (isEligible(event, emptyFilters, now)) events.push(event);
       afterStart = row.starts_at;
       afterId = row.id;
     }
   }
-  return events;
+  return mergeEventSessions(events).filter((event) =>
+    isEligible(event, f, now),
+  );
 }
 export async function catalogStatus(now = new Date()) {
   const db = await database();

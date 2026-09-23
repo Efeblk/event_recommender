@@ -4,6 +4,8 @@ Yerel önizleme: **http://127.0.0.1:3001**. Aşağıdaki `local:start` komutuyla
 
 İstanbul’da doğal dille arayıp etkinlik kartları bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
 
+Aynı seansın farklı bilet sitelerindeki kayıtları eşleştirilerek tek kartta fiyatları ve bilet bağlantılarıyla gösterilir. Ham kaynak kayıtları korunur; farklı saat ve mekanlar ayrı kalır. [Eşleştirme kuralları](web/docs/event-merging.md).
+
 ## Yerel çalıştırma
 
 Node **22.13+** gerekir. Proje kökünde bağımlılıkları kur:

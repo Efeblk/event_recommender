@@ -33,6 +33,34 @@ const deps: Dependencies = {
 const request = validateInput({ message: 'Cumartesi 800 TL altında konser' });
 const config = jevConfigFrom({ TYPESAFE_API_KEY: 'test-only' })!;
 
+function assertRecommendedEvent(actual: EventRecord, expected: EventRecord) {
+  const sourceFields = (record: EventRecord) => {
+    return Object.fromEntries(
+      Object.entries(record).filter(
+        ([key, value]) =>
+          value !== undefined &&
+          !['id', 'offers', 'mergedIds', 'canonicalProductionKey'].includes(
+            key,
+          ),
+      ),
+    );
+  };
+  assert.deepEqual(sourceFields(actual), sourceFields(expected));
+  assert.ok(
+    actual.id === expected.id || actual.mergedIds?.includes(expected.id),
+    `Expected canonical event to retain source ID ${expected.id}`,
+  );
+  assert.ok(
+    actual.offers?.some(
+      (offer) =>
+        offer.id === expected.id &&
+        offer.url === expected.url &&
+        offer.price === expected.price,
+    ),
+    `Expected canonical event to retain source offer ${expected.id}`,
+  );
+}
+
 function mockRank(
   scores: number[],
   seen?: (body: ReturnType<typeof buildJevRequest>) => void,
@@ -72,7 +100,7 @@ await test('keyless results contain only eligible event records, without generat
     ...deps,
     candidates: async () => [
       event,
-      { ...event, id: 'expensive', price: 900 },
+      { ...event, id: 'expensive', title: 'Pahalı Konser', price: 900 },
       { ...event, id: 'stale', checkedAt: '2025-01-01' },
     ],
     rank: async () => {
@@ -82,7 +110,8 @@ await test('keyless results contain only eligible event records, without generat
   assert.equal(result.mode, 'filters');
   assert.equal(result.status, 'results');
   assert.match(result.notice!, /kelime eşleşmesi/);
-  assert.deepEqual(result.recommendations, [{ event }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, event);
   assert.equal('message' in result, false);
   assert.equal('reason' in result.recommendations[0], false);
 });
@@ -164,12 +193,14 @@ await test('group total and category exclusion are enforced before Jev', async (
   );
   assert.equal(calls, 1);
   assert.equal(result.mode, 'jev');
-  assert.deepEqual(result.recommendations, [{ event: theatre }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, theatre);
 });
 await test('one bounded Jev request ranks text candidates and preserves their facts', async () => {
   const events = Array.from({ length: 30 }, (_, i) => ({
     ...event,
     id: String(i),
+    title: `Gerçek Konser ${i}`,
     url: `https://example.test/${i}`,
   }));
   let calls = 0;
@@ -189,7 +220,7 @@ await test('one bounded Jev request ranks text candidates and preserves their fa
   assert.equal(calls, 1);
   assert.equal(result.recommendations.length, 5);
   assert.equal(result.recommendations[0].event.id, '1');
-  assert.strictEqual(result.recommendations[0].event, events[1]);
+  assertRecommendedEvent(result.recommendations[0].event, events[1]);
 });
 await test('valid low Jev scores produce no results, not unrelated fallback cards', async () => {
   const result = await recommend(request, {
@@ -237,7 +268,8 @@ await test('an adult play request excludes concerts and child shows even when Je
   });
   assert.equal(calls, 1);
   assert.equal(result.mode, 'jev');
-  assert.deepEqual(result.recommendations, [{ event: drama }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, drama);
 });
 await test('keyless and provider-outage results obey the same play and child-show exclusions', async () => {
   for (const live of [false, true]) {
@@ -250,7 +282,8 @@ await test('keyless and provider-outage results obey the same play and child-sho
       },
     });
     assert.equal(result.mode, 'filters');
-    assert.deepEqual(result.recommendations, [{ event: drama }]);
+    assert.equal(result.recommendations.length, 1);
+    assertRecommendedEvent(result.recommendations[0].event, drama);
   }
 });
 await test('a contradicted play shortlist stays empty without spending a model call', async () => {
@@ -287,7 +320,8 @@ await test('switching from concerts to a serious play removes stale model contex
       }),
     },
   );
-  assert.deepEqual(result.recommendations, [{ event: drama }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, drama);
 });
 await test('category follow-ups use the same vocabulary for database filters and the shortlist', async () => {
   const comedy = {
@@ -330,7 +364,8 @@ await test('category follow-ups use the same vocabulary for database filters and
       },
     );
     assert.equal(calls, 1);
-    assert.deepEqual(result.recommendations, [{ event: expected }]);
+    assert.equal(result.recommendations.length, 1);
+    assertRecommendedEvent(result.recommendations[0].event, expected);
   }
 });
 await test('failed or malformed Jev responses fall back visibly and preserve hard constraints', async () => {
@@ -351,7 +386,8 @@ await test('failed or malformed Jev responses fall back visibly and preserve har
     assert.equal(calls, 1);
     assert.equal(result.mode, 'filters');
     assert.match(result.notice!, /ulaşılamıyor/);
-    assert.deepEqual(result.recommendations, [{ event }]);
+    assert.equal(result.recommendations.length, 1);
+    assertRecommendedEvent(result.recommendations[0].event, event);
     assert.equal(JSON.stringify(result).includes('private error'), false);
   }
 });
@@ -373,7 +409,8 @@ await test('ranking cannot substitute invented IDs, URLs or prices', async () =>
       ],
     }),
   });
-  assert.deepEqual(result.recommendations, [{ event }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, event);
 });
 await test('follow-ups preserve validated filters and user context without assistant prose', async () => {
   const input = validateInput({
@@ -434,7 +471,7 @@ await test('Voyage retrieves a semantic match from the whole candidate pool befo
   const pool = Array.from({ length: 40 }, (_, i) => ({
     ...event,
     id: `generic-${i}`,
-    title: 'Program',
+    title: `Program ${i}`,
     description: 'Etkinlik ayrıntıları',
     url: `https://example.test/generic-${i}`,
   }));
@@ -477,7 +514,8 @@ await test('Voyage retrieves a semantic match from the whole candidate pool befo
   );
   assert.equal(embeddingCalls, 1);
   assert.equal(jevCalls, 1);
-  assert.deepEqual(result.recommendations, [{ event: match }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, match);
 });
 await test('missing index avoids a wasted query embedding and makes keyword degradation visible', async () => {
   const result = await recommend(request, {
@@ -492,7 +530,8 @@ await test('missing index avoids a wasted query embedding and makes keyword degr
   });
   assert.equal(result.mode, 'jev');
   assert.match(result.notice!, /dizini henüz hazır değil/);
-  assert.deepEqual(result.recommendations, [{ event }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, event);
 });
 await test('Voyage failure preserves Jev ranking and a visible keyword fallback', async () => {
   let calls = 0;
@@ -510,7 +549,8 @@ await test('Voyage failure preserves Jev ranking and a visible keyword fallback'
   assert.equal(calls, 1);
   assert.equal(result.mode, 'jev');
   assert.match(result.notice!, /kelime araması/);
-  assert.deepEqual(result.recommendations, [{ event }]);
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, event);
 });
 await test('no eligible events spends neither Voyage nor Jev calls', async () => {
   let calls = 0;
@@ -536,4 +576,81 @@ await test('no eligible events spends neither Voyage nor Jev calls', async () =>
   );
   assert.equal(calls, 0);
   assert.equal(result.status, 'empty');
+});
+
+await test('same performance reaches Jev once with both provider offers and cheapest-price filtering', async () => {
+  const listings: EventRecord[] = [
+    {
+      ...event,
+      id: 'source-a',
+      title: 'Edepsiz Komedi',
+      venue: 'Cafe Theatre',
+      category: 'Stand-up',
+      description: 'Metin Zakoğlu stand-up gösterisi.',
+      price: 658,
+      source: 'biletinial',
+    },
+    {
+      ...event,
+      id: 'source-b',
+      title: 'Edepsiz Komedi',
+      venue: 'Cafe Theatre Koşuyolu',
+      category: 'Tiyatro',
+      description: 'Metin Zakoğlu stand-up gösterisi.',
+      price: 672,
+      source: 'biletix',
+      url: 'https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr',
+    },
+    {
+      ...event,
+      id: 'stale-cheap',
+      title: 'Edepsiz Komedi',
+      venue: 'Cafe Theatre',
+      category: 'Stand-up',
+      price: 100,
+      checkedAt: '2026-08-01T00:00:00Z',
+    },
+  ];
+  let seen = 0;
+  const result = await recommend(
+    validateInput({ message: '700 TL altında stand-up' }),
+    {
+      ...deps,
+      candidates: async () => listings,
+      config,
+      rank: async (_config, _input, candidates) => {
+        seen = candidates.length;
+        assert.equal(candidates[0].offers?.length, 2);
+        return {
+          ranked: candidates.map((event) => ({
+            event,
+            score: 3,
+            confidence: 1,
+          })),
+          model: 'test',
+          usage: { inputTokens: 0, outputTokens: 0 },
+        };
+      },
+    },
+  );
+  assert.equal(seen, 1);
+  const card = result.recommendations[0].event;
+  assert.equal(card.price, 658);
+  assert.equal(card.url, listings[0].url);
+  assert.deepEqual(
+    card.offers?.map((offer) => offer.price),
+    [658, 672],
+  );
+  for (const excludeId of [card.id, 'source-a', 'source-b']) {
+    const alternatives = await recommend(
+      validateInput({ message: 'Başka etkinlik', excludeIds: [excludeId] }),
+      { ...deps, candidates: async () => listings },
+    );
+    assert.equal(alternatives.recommendations.length, 0);
+  }
+  const survived = await recommend(
+    validateInput({ message: 'Başka etkinlik', excludeIds: [card.id] }),
+    { ...deps, candidates: async () => [listings[1]] },
+  );
+  assert.equal(survived.recommendations.length, 0);
 });

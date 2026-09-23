@@ -418,6 +418,70 @@ a {
   gap: 4px;
   border-bottom: 1px solid #bdcbbf;
 }
+.event-actions a:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.event-offers {
+  display: block;
+}
+.offers-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #6f7d74;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.event-offers ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.event-offers a {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid #d9dfd6;
+  border-radius: 8px;
+  background: #f8f8f3;
+}
+.event-offers a:hover {
+  background: #eef2e9;
+  border-color: #aebdaf;
+}
+.offer-source {
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 700;
+}
+.offer-price {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 3px 6px;
+  margin-left: auto;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+.offer-price small {
+  padding: 2px 5px;
+  border-radius: 99px;
+  background: #e2eadf;
+  color: #426852;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.event-offers svg {
+  flex: none;
+}
 .result-notice {
   background: #e9eddf;
   padding: 16px 18px;
@@ -656,6 +720,9 @@ footer small {
   }
   .events-grid {
     grid-template-columns: 1fr;
+  }
+  .event-actions:not(.event-offers) a {
+    min-height: 44px;
   }
   .donation-section {
     margin: 0 -18px;
