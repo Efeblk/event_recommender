@@ -338,7 +338,12 @@ export default function Home() {
         ? [
             ...new Set([
               ...excluded,
-              ...(result?.recommendations.map((item) => item.event.id) ?? []),
+              ...(result?.recommendations.flatMap(({ event }) => [
+                event.id,
+                ...(event.canonicalProductionKey
+                  ? [event.canonicalProductionKey]
+                  : []),
+              ]) ?? []),
             ]),
           ].slice(-100)
         : []);

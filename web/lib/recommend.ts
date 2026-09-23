@@ -144,6 +144,8 @@ export async function recommend(
   const excludedIds = new Set(input.excludeIds);
   const isExcluded = (event: EventRecord) =>
     excludedIds.has(event.id) ||
+    (event.canonicalProductionKey &&
+      excludedIds.has(event.canonicalProductionKey)) ||
     event.mergedIds?.some((id) => excludedIds.has(id));
   const excludedProductions = new Set(
     events.filter(isExcluded).map(productionIdentity),

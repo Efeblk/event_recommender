@@ -762,3 +762,28 @@ await test('strict content uncertainty produces an evidence notice without paid 
   assert.equal(result.status, 'empty');
   assert.match(result.notice!, /doğrulayamadık/);
 });
+
+await test('stable production exclusion still works after the shown session starts', async () => {
+  const first = await recommend(validateInput({ message: 'Konser' }), deps);
+  const shown = first.recommendations[0].event;
+  assert.ok(shown.canonicalProductionKey);
+  const later = {
+    ...event,
+    id: 'next-week',
+    startsAt: '2026-09-19T18:00:00Z',
+    checkedAt: '2026-09-13T09:00:00Z',
+  };
+  const result = await recommend(
+    validateInput({
+      message: 'Başka seçenekler göster',
+      history: [{ role: 'user', content: 'Konser' }],
+      excludeIds: [shown.id, shown.canonicalProductionKey],
+    }),
+    {
+      ...deps,
+      now: new Date('2026-09-13T09:00:00Z'),
+      candidates: async () => [later],
+    },
+  );
+  assert.equal(result.recommendations.length, 0);
+});
