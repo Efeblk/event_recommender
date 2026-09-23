@@ -313,3 +313,22 @@ await test('a humour preference searches across categories unless the user alrea
     'Tiyatro',
   );
 });
+
+await test('ranks every session before selecting the best representative of a production', () => {
+  const early = make('early', {
+    productionKey: 'same',
+    description: 'Genel program',
+    startsAt: '2026-09-26T16:00:00Z',
+  });
+  const late = make('late', {
+    productionKey: 'same',
+    description: 'Doğaçlama deneysel özgün gösteri',
+    startsAt: '2026-09-26T19:00:00Z',
+  });
+  assert.deepEqual(
+    shortlistEvents([early, late], 'Doğaçlama deneysel özgün gösteri', []).map(
+      (e) => e.id,
+    ),
+    ['late'],
+  );
+});

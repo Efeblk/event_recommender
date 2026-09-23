@@ -654,3 +654,111 @@ await test('same performance reaches Jev once with both provider offers and chea
   );
   assert.equal(survived.recommendations.length, 0);
 });
+
+await test('late district sessions survive earlier siblings before production selection', async () => {
+  const early = {
+    ...event,
+    id: 'early',
+    title: 'Stand-up Gecesi',
+    category: 'Stand-up',
+    venue: 'Ada Bar Kadıköy',
+    district: 'Kadıköy',
+    startsAt: '2026-09-12T16:00:00Z',
+    price: 250,
+  };
+  const late = { ...early, id: 'late', startsAt: '2026-09-12T18:45:00Z' };
+  const wrongDistrict = {
+    ...late,
+    id: 'wrong',
+    district: 'Beşiktaş',
+    venue: 'Başka Sahne',
+  };
+  const result = await recommend(
+    validateInput({
+      message:
+        'Cumartesi sadece Kadıköy’de 20:30’dan sonra stand-up, kişi başı 500 TL.',
+    }),
+    {
+      ...deps,
+      candidates: async () => [early, wrongDistrict, late],
+      config,
+      rank: mockRank([3], (body) => {
+        assert.equal(body.state.candidates.length, 1);
+        assert.equal(
+          body.state.candidates[0].startsAtLocal,
+          '2026-09-12 21:45',
+        );
+      }),
+    },
+  );
+  assert.equal(result.status, 'results');
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, late);
+});
+
+await test('mandatory jazz evidence gates Jev and provider-failure fallback alike', async () => {
+  const jazz = {
+    ...event,
+    id: 'jazz',
+    title: 'Bir Caz Akşamı',
+    description: 'Canlı caz konseri ve jazz trio.',
+    url: event.url + '-jazz',
+  };
+  const popular = {
+    ...event,
+    id: 'pop',
+    title: 'Popüler Sanatçı',
+    description: 'Unutulmaz bir konser.',
+    url: event.url + '-pop',
+  };
+  const input = validateInput({ message: 'Caz konseri istiyorum' });
+  for (const available of [true, false]) {
+    const result = await recommend(input, {
+      ...deps,
+      config,
+      candidates: async () => [popular, jazz],
+      rank: async (_config, request, candidates) => {
+        assert.equal(candidates.length, 1);
+        assert.equal(candidates[0].title, jazz.title);
+        assert.ok(request.requirements?.length);
+        if (!available) throw new Error('Provider offline');
+        return {
+          ranked: candidates.map((event) => ({
+            event,
+            score: 3,
+            confidence: 1,
+          })),
+          model: config.model,
+          usage: { inputTokens: 1, outputTokens: 1 },
+        };
+      },
+    });
+    assert.equal(result.recommendations.length, 1);
+    assertRecommendedEvent(result.recommendations[0].event, jazz);
+  }
+});
+
+await test('strict content uncertainty produces an evidence notice without paid calls', async () => {
+  const result = await recommend(
+    validateInput({
+      message: 'Küfür ya da cinsel mizah olmasın; emin değilsen önerme.',
+    }),
+    {
+      ...deps,
+      config,
+      candidates: async () => [
+        {
+          ...event,
+          title: 'Stand-up',
+          category: 'Stand-up',
+          description: 'Ailece eğlenceli bir akşam.',
+        },
+      ],
+      rank: async () => {
+        assert.fail('Unsupported facts must not reach the model');
+      },
+    },
+  );
+  assert.equal(result.status, 'empty');
+  assert.match(result.notice!, /doğrulayamadık/);
+});

@@ -5,7 +5,11 @@ import {
   type Filters,
   type Category,
 } from './types.ts';
-import { positiveCategoryText, requestedCategories } from './intent.ts';
+import {
+  CATEGORY_NEGATION,
+  positiveCategoryText,
+  requestedCategories,
+} from './intent.ts';
 export const normalize = (s: string) =>
   s
     .toLocaleLowerCase('tr-TR')
@@ -51,6 +55,13 @@ export function validateFilters(value: unknown): Filters {
   if (f.category != null && !CATEGORIES.includes(f.category as never))
     throw new Error('Kategori geçersiz.');
   if (
+    f.categories != null &&
+    (!Array.isArray(f.categories) ||
+      !f.categories.length ||
+      f.categories.some((category) => !CATEGORIES.includes(category as never)))
+  )
+    throw new Error('Kategoriler geçersiz.');
+  if (
     f.excludedCategories != null &&
     (!Array.isArray(f.excludedCategories) ||
       f.excludedCategories.some(
@@ -64,6 +75,30 @@ export function validateFilters(value: unknown): Filters {
       Object.keys(emptyFilters).map((k) => [k, f[k] ?? null]),
     ),
   } as Filters;
+  if (typeof f.district === 'string' && f.district.trim())
+    result.district = f.district.trim().slice(0, 80);
+  else if (f.district != null) throw new Error('İlçe geçersiz.');
+  for (const key of ['startTimeFrom', 'startTimeTo'] as const) {
+    if (
+      f[key] != null &&
+      (typeof f[key] !== 'string' ||
+        !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(f[key]))
+    )
+      throw new Error('Saat biçimi geçersiz.');
+    if (typeof f[key] === 'string') result[key] = f[key];
+  }
+  for (const key of [
+    'startTimeFromExclusive',
+    'startTimeToExclusive',
+  ] as const) {
+    if (f[key] != null && typeof f[key] !== 'boolean')
+      throw new Error('Kesinlik alanı geçersiz.');
+    if (typeof f[key] === 'boolean') result[key] = f[key];
+  }
+  if (Array.isArray(f.categories)) {
+    result.categories = [...new Set(f.categories as Category[])];
+    result.category = null;
+  }
   const exclusions = [
     ...new Set((f.excludedCategories as Category[] | undefined) ?? []),
   ].filter((category) => category !== result.category);
@@ -80,16 +115,16 @@ export type ConstraintIssue =
   | 'constraint_ambiguous';
 
 const categoryTerms: Array<[Category, RegExp, RegExp]> = [
+  ['Stand-up', /\b(?:stand[ -]?up)\b/, /\b(?:stand[ -]?up|komedi|comedy)\b/],
   [
-    'Stand-up',
-    /\b(?:stand[ -]?up|komedi|gulecek|gulelim)\b/,
-    /\b(?:stand[ -]?up|komedi)\b/,
+    'Tiyatro',
+    /\b(?:tiyatro|sahne oyunu|komedi oyunu|comedy play|theatre|theater)\b/,
+    /\b(?:tiyatro|sahne oyunu|theatre|theater)\b/,
   ],
-  ['Tiyatro', /\b(?:tiyatro|sahne oyunu)\b/, /\b(?:tiyatro|sahne oyunu)\b/],
   [
     'Konser',
-    /\b(?:konser|muzik|caz|jazz|rock|akustik)\b/,
-    /\b(?:konser|(?<!elektronik )muzik)\b/,
+    /\b(?:konser|concert|music|muzik|caz|jazz|rock|akustik)\b/,
+    /\b(?:konser|concerts?)\b/,
   ],
 ];
 
@@ -106,13 +141,21 @@ function parseCategories(q: string, previous: Filters) {
     };
 
   const negated = new Set<Category>();
+  const clauses = q.split(/\b(?:ama|fakat|ancak|but)\b/);
   for (const [candidate, , exclusionTerms] of categoryTerms) {
-    const suffix = '(?:istemiyorum|istemem|olmasin|haric|degil|disinda)';
+    const suffix = CATEGORY_NEGATION;
     const hardNegation = new RegExp(
-      `(${exclusionTerms.source})\\s+${suffix}`,
+      `(${exclusionTerms.source})[^,.!?;]{0,60}\\s+${suffix}`,
       'g',
     );
-    if (hardNegation.test(q)) negated.add(candidate);
+    if (clauses.some((clause) => hardNegation.test(clause)))
+      negated.add(candidate);
+    const englishNegation = new RegExp(
+      `\\b(?:no|without|excluding?|except)\\s+(?:any\\s+)?${exclusionTerms.source}`,
+      'g',
+    );
+    if (clauses.some((clause) => englishNegation.test(clause)))
+      negated.add(candidate);
   }
   for (const candidate of negated) {
     excluded.add(candidate);
@@ -120,7 +163,7 @@ function parseCategories(q: string, previous: Filters) {
   }
   const positiveText = positiveCategoryText(q);
   const distinct = requestedCategories(positiveText);
-  const hasChoice = /\b(?:veya|ya da|yahut)\b/.test(positiveText);
+  const hasChoice = /\b(?:veya|ya da|yahut|or)\b/.test(positiveText);
   if (distinct.length === 1) {
     category = distinct[0];
     excluded.delete(category);
@@ -133,8 +176,9 @@ function parseCategories(q: string, previous: Filters) {
   }
   return {
     category,
+    categories: distinct.length > 1 && hasChoice ? distinct : undefined,
     excludedCategories: [...excluded],
-    ambiguous: distinct.length > 1 && (hasChoice || !negated.size),
+    ambiguous: distinct.length > 1 && !hasChoice && !negated.size,
   };
 }
 
@@ -148,7 +192,7 @@ function budgetIssue(q: string): ConstraintIssue | null {
   if (/\bbutce(?:m|miz)?\s*-\s*\d/.test(q)) return 'budget_ambiguous';
   const currencyAmounts = [
     ...q.matchAll(
-      /\b\d[\d.]*(?:,\d{1,2})?\s*(?:(?:tl|lira)(?=\s|$|[.,!?])|₺)/g,
+      /(?:₺\s*\d[\d.,]*|\d[\d.,]*\s*(?:tl|try|turkish liras?|lira|₺))(?=\s|$|[.,!?])/g,
     ),
   ];
   const bareBudget = q.match(/\bbutce(?:m|miz)?\s*(\d[\d.]*(?:,\d{1,2})?)/);
@@ -161,7 +205,8 @@ function budgetIssue(q: string): ConstraintIssue | null {
   if (!amounts.length) return null;
   const amount = Number(
     amounts[0]
-      .replace(/\s*(?:tl|lira|₺).*$/, '')
+      .replace(/^₺\s*/, '')
+      .replace(/\s*(?:tl|try|turkish liras?|lira|₺).*$/, '')
       .replaceAll('.', '')
       .replace(',', '.'),
   );
@@ -169,17 +214,166 @@ function budgetIssue(q: string): ConstraintIssue | null {
     return 'budget_ambiguous';
   if (/-\s*\d[\d.]*(?:,\d{1,2})?\s*(?:tl|lira|₺)/.test(q))
     return 'budget_ambiguous';
-  const total = /\b(?:toplam|toplamda|butun grup|hepimiz icin)\b/.test(q);
-  const perPerson = /\bkisi basi\b/.test(q);
-  const numericParty = q.match(/\b([1-9]\d?)\s*kisi\b/);
-  const wordParty = q.match(
-    /\b(bir|iki|uc|dort|bes|alti|yedi|sekiz|dokuz|on)\s+kisi\b/,
-  );
-  const hasParty = Boolean(numericParty || wordParty);
+  const total =
+    /\b(?:toplam|toplamda|butun grup|hepimiz icin|total|altogether|for (?:the )?(?:whole )?group)\b/.test(
+      q,
+    );
+  const perPerson = /\b(?:kisi basi|per[ -]?person|each|per ticket)\b/.test(q);
+  const hasParty = partySize(q) !== null;
   if (total && perPerson) return 'budget_ambiguous';
   if (total) return hasParty ? null : 'budget_ambiguous';
   if (hasParty && !perPerson) return 'budget_ambiguous';
   return null;
+}
+
+function partySize(q: string): number | null {
+  const numeric = q.match(
+    /\b([1-9]\d?)\s*(?:kisi(?:yiz|lik)?|people|persons?|of us)\b/,
+  );
+  if (numeric) return Number(numeric[1]);
+  const word = q.match(
+    /\b(bir|iki|uc|dort|bes|alti|yedi|sekiz|dokuz|on|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:kisi(?:yiz|lik)?|people|persons?|of us)\b/,
+  );
+  if (!word) return null;
+  const values: Record<string, number> = {
+    bir: 1,
+    iki: 2,
+    uc: 3,
+    dort: 4,
+    bes: 5,
+    alti: 6,
+    yedi: 7,
+    sekiz: 8,
+    dokuz: 9,
+    on: 10,
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  };
+  return values[word[1]] ?? null;
+}
+
+const ISTANBUL_DISTRICTS = [
+  'adalar',
+  'arnavutkoy',
+  'atasehir',
+  'avcilar',
+  'bagcilar',
+  'bahcelievler',
+  'bakirkoy',
+  'basaksehir',
+  'bayrampasa',
+  'besiktas',
+  'beykoz',
+  'beylikduzu',
+  'beyoglu',
+  'buyukcekmece',
+  'catalca',
+  'cekmekoy',
+  'esenler',
+  'esenyurt',
+  'eyupsultan',
+  'fatih',
+  'gaziosmanpasa',
+  'gungoren',
+  'kadikoy',
+  'kagithane',
+  'kartal',
+  'kucukcekmece',
+  'maltepe',
+  'pendik',
+  'sancaktepe',
+  'sariyer',
+  'silivri',
+  'sultanbeyli',
+  'sultangazi',
+  'sile',
+  'sisli',
+  'tuzla',
+  'umraniye',
+  'uskudar',
+  'zeytinburnu',
+] as const;
+
+const displayDistrict = (district: string) =>
+  district.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase('tr-TR'));
+
+function parsedDistrict(q: string): {
+  district?: string;
+  ambiguous: boolean;
+} {
+  const positive = ISTANBUL_DISTRICTS.filter((name) => {
+    const matches = [...q.matchAll(new RegExp(`\\b${name}\\b`, 'g'))];
+    return matches.some((match) => {
+      const index = match.index ?? 0;
+      const after = q.slice(
+        index + match[0].length,
+        index + match[0].length + 32,
+      );
+      return !/^(?:['’]?[a-z]{0,8})?\s*(?:degil|haric|disinda|istemiyorum|istemem)\b/.test(
+        after,
+      );
+    });
+  });
+  return {
+    district: positive.length === 1 ? displayDistrict(positive[0]) : undefined,
+    ambiguous: positive.length > 1,
+  };
+}
+
+function parseLocalTimes(q: string) {
+  const result: Pick<
+    Filters,
+    | 'startTimeFrom'
+    | 'startTimeTo'
+    | 'startTimeFromExclusive'
+    | 'startTimeToExclusive'
+  > = {};
+  const clock = '(?:[01]?\\d|2[0-3])(?:[:.]?[0-5]\\d)';
+  const format = (raw: string) => {
+    const digits = raw.replace('.', ':');
+    if (digits.includes(':')) {
+      const [hour, minute] = digits.split(':');
+      return `${hour.padStart(2, '0')}:${minute}`;
+    }
+    return `${digits.slice(0, -2).padStart(2, '0')}:${digits.slice(-2)}`;
+  };
+  const from = q.match(
+    new RegExp(`\\b(after|sonra|itibaren|from)\\s+(?:saat\\s*)?(${clock})\\b`),
+  );
+  const fromPrefix = q.match(
+    new RegExp(
+      `\\b(?:saat\\s*)?(${clock})['’]?(?:dan|den|tan|ten)\\s+sonra\\b`,
+    ),
+  );
+  const to = q.match(
+    new RegExp(`\\b(before|once|until|by)\\s+(?:saat\\s*)?(${clock})\\b`),
+  );
+  const toPrefix = q.match(
+    new RegExp(`\\b(?:saat\\s*)?(${clock})['’]?(?:dan|den|tan|ten)\\s+once\\b`),
+  );
+  const fromMatch = from?.[2] ?? fromPrefix?.[1];
+  const toMatch = to?.[2] ?? toPrefix?.[1];
+  if (fromMatch) {
+    result.startTimeFrom = format(fromMatch);
+    result.startTimeFromExclusive = /\b(?:after|sonra)\b/.test(
+      from?.[1] ?? q.slice(fromPrefix!.index),
+    );
+  }
+  if (toMatch) {
+    result.startTimeTo = format(toMatch);
+    result.startTimeToExclusive = /\b(?:before|once)\b/.test(
+      to?.[1] ?? q.slice(toPrefix!.index),
+    );
+  }
+  return result;
 }
 
 function unsupportedLocation(q: string) {
@@ -332,34 +526,21 @@ export function parseFilters(
   )
     f.maxPrice = null;
   else {
+    const prefixedMoney = q.match(/₺\s*(\d[\d.]*(?:,\d{1,2})?)/);
+    const suffixedMoney = q.match(
+      /(\d[\d.]*(?:,\d{1,2})?)\s*(?:tl|try|turkish liras?|₺|lira)/,
+    );
     const money =
-      q.match(/(\d[\d.]*(?:,\d{1,2})?)\s*(?:tl|₺|lira)/) ||
-      q.match(/butce(?:m|miz)?\s*(\d[\d.]*)/);
+      prefixedMoney || suffixedMoney || q.match(/butce(?:m|miz)?\s*(\d[\d.]*)/);
     if (money) {
       let amount = Number(money[1].replaceAll('.', '').replace(',', '.'));
-      if (/\b(?:toplam|toplamda|butun grup|hepimiz icin)\b/.test(q)) {
-        const numericParty = q.match(/\b([1-9]\d?)\s*kisi\b/);
-        const wordParty = q.match(
-          /\b(bir|iki|uc|dort|bes|alti|yedi|sekiz|dokuz|on)\s+kisi\b/,
-        );
-        const wordNumbers: Record<string, number> = {
-          bir: 1,
-          iki: 2,
-          uc: 3,
-          dort: 4,
-          bes: 5,
-          alti: 6,
-          yedi: 7,
-          sekiz: 8,
-          dokuz: 9,
-          on: 10,
-        };
-        const partySize = numericParty
-          ? Number(numericParty[1])
-          : wordParty
-            ? wordNumbers[wordParty[1]]
-            : null;
-        if (partySize) amount /= partySize;
+      if (
+        /\b(?:toplam|toplamda|butun grup|hepimiz icin|total|altogether|for (?:the )?(?:whole )?group)\b/.test(
+          q,
+        )
+      ) {
+        const size = partySize(q);
+        if (size) amount /= size;
       }
       f.maxPrice = amount;
     }
@@ -368,16 +549,39 @@ export function parseFilters(
   const parsedCategories = parseCategories(q, f);
   f.category = parsedCategories.category;
   f.excludedCategories = parsedCategories.excludedCategories;
+  if (parsedCategories.categories) f.categories = parsedCategories.categories;
+  else if (parsedCategories.category) delete f.categories;
+  else if (
+    /her (?:tur|kategori)|kategori.*(?:kaldir|fark etmez|onemli degil)/.test(q)
+  )
+    delete f.categories;
+  if (
+    /\b(?:konum|ilce|district|location).*(?:fark etmez|onemli degil|kaldir|anywhere)\b/.test(
+      q,
+    )
+  ) {
+    delete f.district;
+  } else {
+    const parsed = parsedDistrict(q);
+    if (parsed.ambiguous) throw new Error('İlçe seçimi belirsiz.');
+    if (parsed.district) f.district = parsed.district;
+  }
+  if (/\b(?:saat|time).*(?:fark etmez|onemli degil|kaldir|anytime)\b/.test(q)) {
+    delete f.startTimeFrom;
+    delete f.startTimeTo;
+    delete f.startTimeFromExclusive;
+    delete f.startTimeToExclusive;
+  } else Object.assign(f, parseLocalTimes(q));
   if (/tarih.*(fark etmez|kaldir)|herhangi bir gun/.test(q)) {
     f.dateFrom = null;
     f.dateTo = null;
-  } else if (/yarin/.test(q)) {
+  } else if (/\b(?:yarin|tomorrow)\b/.test(q)) {
     f.dateFrom = addDays(today, 1);
     f.dateTo = f.dateFrom;
-  } else if (/bugun|bu aksam/.test(q)) {
+  } else if (/\b(?:bugun|bu aksam|today|tonight)\b/.test(q)) {
     f.dateFrom = today;
     f.dateTo = today;
-  } else if (/hafta sonu|haftasonu/.test(q)) {
+  } else if (/hafta sonu|haftasonu|\b(?:this )?weekend\b/.test(q)) {
     const day = new Date(today + 'T12:00:00Z').getUTCDay();
     const delta = day === 0 ? 0 : (6 - day + 7) % 7;
     f.dateFrom = addDays(today, delta);
@@ -397,13 +601,13 @@ export function parseFilters(
       f.dateTo = iso[1] || iso[0];
     } else {
       const weekdays = [
-        'pazar',
-        'pazartesi',
-        'sali',
-        'carsamba',
-        'persembe',
-        'cuma',
-        'cumartesi',
+        '(?:pazar|sunday)',
+        '(?:pazartesi|monday)',
+        '(?:sali|tuesday)',
+        '(?:carsamba|wednesday)',
+        '(?:persembe|thursday)',
+        '(?:cuma|friday)',
+        '(?:cumartesi|saturday)',
       ];
       const found = weekdays.findIndex((d) => new RegExp(`\\b${d}\\b`).test(q));
       if (found >= 0) {
@@ -426,10 +630,12 @@ export function interpretConstraints(
   const q = normalize(message);
   const previousFilters = validateFilters(previous);
   const category = parseCategories(q, previous);
+  const district = parsedDistrict(q);
   let issue: ConstraintIssue | null = null;
   if (unsupportedLocation(q)) issue = 'unsupported_location';
   else if (budgetIssue(q)) issue = 'budget_ambiguous';
   else if (dateIssue(q)) issue = 'date_ambiguous';
+  else if (district.ambiguous) issue = 'constraint_ambiguous';
   else if (category.ambiguous) issue = 'constraint_ambiguous';
   if (issue) return { filters: previousFilters, issue };
   try {
@@ -471,10 +677,41 @@ export function isEligible(
   )
     return false;
   const day = todayInIstanbul(new Date(start));
+  const localTime = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Istanbul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(new Date(start));
+  const eventDistrict = normalize(e.district);
+  const requestedDistrict = f.district ? normalize(f.district) : null;
+  const hasSpecificDistrict = (
+    ISTANBUL_DISTRICTS as readonly string[]
+  ).includes(eventDistrict);
+  const locationEvidence = normalize(`${e.venue} ${e.address}`);
+  const districtMatches =
+    !requestedDistrict ||
+    eventDistrict === requestedDistrict ||
+    (!hasSpecificDistrict &&
+      new RegExp(`\\b${requestedDistrict}\\b`).test(locationEvidence));
+  const afterFrom =
+    !f.startTimeFrom ||
+    (f.startTimeFromExclusive
+      ? localTime > f.startTimeFrom
+      : localTime >= f.startTimeFrom);
+  const beforeTo =
+    !f.startTimeTo ||
+    (f.startTimeToExclusive
+      ? localTime < f.startTimeTo
+      : localTime <= f.startTimeTo);
   return (
     (!f.dateFrom || day >= f.dateFrom) &&
     (!f.dateTo || day <= f.dateTo) &&
+    districtMatches &&
+    afterFrom &&
+    beforeTo &&
     (!f.category || e.category === f.category) &&
+    (!f.categories || f.categories.includes(e.category as Category)) &&
     !(f.excludedCategories ?? []).includes(e.category as Category) &&
     (f.maxPrice === null ||
       (e.price !== null && e.currency === 'TRY' && e.price <= f.maxPrice))

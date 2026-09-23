@@ -241,7 +241,11 @@ export default function Home() {
       filters.dateTo,
       filters.maxPrice,
       filters.category,
-    ].filter((value) => value !== null).length +
+      filters.district,
+      filters.startTimeFrom,
+      filters.startTimeTo,
+    ].filter((value) => value != null).length +
+    (filters.categories?.length ? 1 : 0) +
     (filters.excludedCategories?.length ?? 0);
   const hasFilters = activeFilterCount > 0;
   const catalogLabel = useMemo(() => {
@@ -525,6 +529,28 @@ export default function Home() {
                   <span>En fazla {formatMoney(filters.maxPrice)}</span>
                 )}
                 {filters.category && <span>{filters.category}</span>}
+                {!!filters.categories?.length && (
+                  <span>{filters.categories.join(' veya ')}</span>
+                )}
+                {filters.district && <span>{filters.district}</span>}
+                {filters.startTimeFrom && (
+                  <span>
+                    {filters.startTimeFrom}
+                    {filters.startTimeFromExclusive
+                      ? ' sonrası'
+                      : ' ve sonrası'}{' '}
+                    (İstanbul)
+                  </span>
+                )}
+                {filters.startTimeTo && (
+                  <span>
+                    {filters.startTimeTo}
+                    {filters.startTimeToExclusive
+                      ? ' öncesi'
+                      : ' ve öncesi'}{' '}
+                    (İstanbul)
+                  </span>
+                )}
                 {filters.excludedCategories?.map((category) => (
                   <span key={category}>{category} hariç</span>
                 ))}

@@ -298,3 +298,156 @@ await test('humour preferences do not exclude comedy theatre by inferring stand-
     'Stand-up',
   );
 });
+
+await test('inflected Turkish and English group budgets share one basis policy', () => {
+  for (const message of [
+    'İki kişiyiz, toplam 1.200 TL',
+    'We are two people, ₺1200 total',
+    '1200 Turkish lira altogether for two people',
+  ])
+    assert.deepEqual(interpretConstraints(message, emptyFilters, now), {
+      filters: { ...emptyFilters, maxPrice: 600 },
+      issue: null,
+    });
+
+  for (const message of [
+    'İki kişiyiz, bütçemiz 800 TL',
+    'We are two people with a budget of 800 TRY',
+  ])
+    assert.equal(
+      interpretConstraints(message, emptyFilters, now).issue,
+      'budget_ambiguous',
+    );
+
+  assert.equal(
+    interpretConstraints('Up to ₺750 per person', emptyFilters, now).filters
+      .maxPrice,
+    750,
+  );
+});
+
+await test('coordinated bilingual negations cannot become positive categories', () => {
+  assert.deepEqual(
+    parseFilters(
+      'Konser ve çocuk etkinliği istemiyorum, tiyatro olsun',
+      emptyFilters,
+      now,
+    ),
+    {
+      ...emptyFilters,
+      category: 'Tiyatro',
+      excludedCategories: ['Konser'],
+    },
+  );
+  assert.deepEqual(
+    parseFilters('No concerts or music, stand-up please', emptyFilters, now),
+    {
+      ...emptyFilters,
+      category: 'Stand-up',
+      excludedCategories: ['Konser'],
+    },
+  );
+});
+
+await test('negation does not cross contrast-clause boundaries', () => {
+  assert.deepEqual(
+    parseFilters('Konser istiyorum ama rock istemiyorum', emptyFilters, now),
+    { ...emptyFilters, category: 'Konser' },
+  );
+  assert.deepEqual(
+    parseFilters(
+      'Tiyatro istiyorum fakat çocuk oyunu olmasın',
+      emptyFilters,
+      now,
+    ),
+    { ...emptyFilters, category: 'Tiyatro' },
+  );
+});
+
+await test('explicit stand-up or comedy-play requests preserve category OR', () => {
+  assert.deepEqual(
+    parseFilters('Stand-up veya komedi oyunu', emptyFilters, now),
+    {
+      ...emptyFilters,
+      categories: ['Stand-up', 'Tiyatro'],
+    },
+  );
+  assert.equal(
+    interpretConstraints('stand-up or comedy play', emptyFilters, now).issue,
+    null,
+  );
+});
+
+await test('English weekdays, exact district and strict local time are hard filters', () => {
+  const filters = parseFilters(
+    'This Saturday, only Kadıköy, after 20:30, stand-up under ₺500',
+    emptyFilters,
+    now,
+  );
+  assert.deepEqual(filters, {
+    ...emptyFilters,
+    dateFrom: '2026-09-12',
+    dateTo: '2026-09-12',
+    maxPrice: 500,
+    category: 'Stand-up',
+    district: 'Kadikoy',
+    startTimeFrom: '20:30',
+    startTimeFromExclusive: true,
+  });
+  const late = {
+    ...event,
+    startsAt: '2026-09-12T18:00:00Z', // 21:00 Europe/Istanbul
+    category: 'Stand-up',
+  };
+  assert.equal(isEligible(late, filters, now), true);
+  assert.equal(isEligible({ ...late, district: 'Şişli' }, filters, now), false);
+  assert.equal(
+    isEligible(
+      {
+        ...late,
+        district: 'İstanbul Anadolu',
+        venue: 'Ada Bar Kadıköy',
+      },
+      filters,
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    isEligible(
+      { ...late, district: '', address: 'Osmanağa, Kadıköy/İstanbul' },
+      filters,
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    isEligible({ ...late, startsAt: '2026-09-12T17:30:00Z' }, filters, now),
+    false,
+  );
+});
+
+await test('optional hard-filter fields are validated', () => {
+  assert.throws(() =>
+    validateFilters({ ...emptyFilters, startTimeFrom: '25:00' }),
+  );
+  assert.throws(() =>
+    validateFilters({ ...emptyFilters, categories: ['Sinema'] }),
+  );
+  assert.throws(() =>
+    validateFilters({ ...emptyFilters, startTimeToExclusive: 'yes' }),
+  );
+});
+
+await test('district parsing respects negation and clarifies multiple choices', () => {
+  assert.deepEqual(
+    parseFilters('Beşiktaş değil Kadıköy olsun', emptyFilters, now),
+    { ...emptyFilters, district: 'Kadikoy' },
+  );
+  const previous = { ...emptyFilters, district: 'Şişli' };
+  assert.deepEqual(
+    interpretConstraints('Kadıköy veya Beşiktaş', previous, now),
+    { filters: previous, issue: 'constraint_ambiguous' },
+  );
+  assert.throws(() => parseFilters('Kadıköy veya Beşiktaş', emptyFilters, now));
+});

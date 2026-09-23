@@ -130,7 +130,7 @@ function inheritedCategory(
   const candidate =
     current.length === 1
       ? current[0]
-      : !reset && latest.length === 1
+      : current.length === 0 && !reset && latest.length === 1
         ? latest[0]
         : null;
   if (!candidate) return null;
@@ -193,10 +193,8 @@ function rankedCandidates(
   semantic?: SemanticRanking,
 ) {
   const context = searchContext(message, history);
-  const allowed = uniqueEvents(
-    events.filter((event) => eligibleForContext(event, context)),
-    events.length,
-  );
+  // Rank sessions before selecting a representative for each production.
+  const allowed = events.filter((event) => eligibleForContext(event, context));
   return {
     context,
     ranked: uniqueEvents(

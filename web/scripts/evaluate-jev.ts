@@ -4,6 +4,9 @@ import { buildJevRequest, rankWithJev, type JevRanking } from '../lib/jev.ts';
 import { interpretConstraints, isEligible } from '../lib/search.ts';
 import { MIN_JEV_SCORE, selectJevEvents } from '../lib/recommend.ts';
 import { searchContext, shortlistEvents } from '../lib/retrieval.ts';
+import { deriveRequirements, meetsRequirements } from '../lib/requirements.ts';
+import { mergeEventSessions } from '../lib/event-merge.ts';
+import { emptyFilters } from '../lib/types.ts';
 import {
   evaluationCases,
   evaluationEvents,
@@ -45,23 +48,29 @@ const cases = evaluationCases.map((item) => {
       `Evaluation case ${item.id} cannot reach Jev: ${interpreted.issue}.`,
     );
   const context = searchContext(item.message, item.history);
+  const requirements = deriveRequirements(item.message, context.history);
   const candidates = shortlistEvents(
-    evaluationEvents.filter((event) =>
-      isEligible(event, interpreted.filters, evaluationTime),
+    mergeEventSessions(
+      evaluationEvents.filter((event) =>
+        isEligible(event, emptyFilters, evaluationTime),
+      ),
+    ).filter(
+      (event) =>
+        isEligible(event, interpreted.filters, evaluationTime) &&
+        meetsRequirements(event, requirements),
     ),
     item.message,
     item.history,
     16,
   );
-  if (!candidates.length)
-    throw new Error(`Evaluation case ${item.id} has no eligible candidates.`);
   const prepared = {
     ...item,
     filters: interpreted.filters,
     history: context.history,
+    requirements,
     candidates,
   };
-  buildJevRequest(model, prepared, candidates);
+  if (candidates.length) buildJevRequest(model, prepared, candidates);
   return prepared;
 });
 
@@ -87,6 +96,8 @@ type CaseResult = ReturnType<typeof evaluateRecommendationList> & {
   latencyMs?: number;
   usage?: JevRanking['usage'];
   error?: string;
+  deterministic?: boolean;
+  calledJev?: boolean;
 };
 
 function makeReport(
@@ -106,8 +117,11 @@ function makeReport(
     requestedModel,
     responseModels,
     model: responseModels.length === 1 ? responseModels[0] : null,
-    calls: mode === 'live-rescore' ? results.length : 0,
-    plannedCalls: mode === 'live-rescore' ? cases.length : 0,
+    calls: results.filter((item) => item.calledJev).length,
+    plannedCalls:
+      mode === 'live-rescore'
+        ? cases.filter((item) => item.candidates.length).length
+        : 0,
     minJevScore: MIN_JEV_SCORE,
     candidateRecall: positivePlan.length
       ? positivePlan.reduce(
@@ -127,7 +141,7 @@ function makeReport(
     ),
     note:
       mode === 'saved-score-replay'
-        ? 'Offline replay applies current candidate filtering and production acceptance to previously saved scores. It does not call Jev, rescore new candidates, or measure current model quality. Cases with unseen candidates are flagged instead of receiving guessed scores.'
+        ? 'Historical score replay applies current candidate filtering, mandatory-evidence gates and production acceptance to previously saved scores. Saved scores use the historical rubric and cannot validate the current rubric or model quality. Empty filtered pools are deterministic zero-call results. Cases with unseen candidates are flagged instead of receiving guessed scores.'
         : 'Small fictional Turkish evaluation, not production approval. Live-catalog and user evaluations remain necessary.',
     plan,
     results,
@@ -158,6 +172,12 @@ if (!values.live) {
     );
   const replayById = new Map(snapshot.cases.map((item) => [item.id, item]));
   const results: CaseResult[] = cases.map((item) => {
+    if (!item.candidates.length)
+      return {
+        id: item.id,
+        deterministic: true,
+        ...evaluateRecommendationList(item, []),
+      };
     const saved = replayById.get(item.id);
     if (!saved)
       return {
@@ -210,9 +230,10 @@ if (!values.live) {
   if (output.status !== 'completed' || output.wholeListAccuracy !== 1)
     process.exitCode = 1;
 } else {
-  if (cases.length > MAX_LIVE_CALLS)
+  const plannedCalls = cases.filter((item) => item.candidates.length).length;
+  if (plannedCalls > MAX_LIVE_CALLS)
     throw new Error(
-      `Live evaluation suite has ${cases.length} cases; the hard ceiling is ${MAX_LIVE_CALLS}. No request was made.`,
+      `Live evaluation suite requires ${plannedCalls} calls; the hard ceiling is ${MAX_LIVE_CALLS}. No request was made.`,
     );
   const local: Record<string, string> = {};
   for (const name of ['.env', '.dev.vars']) {
@@ -238,6 +259,14 @@ if (!values.live) {
   const results: CaseResult[] = [];
   // Fixed suite only, deliberately serial, at most 12 calls, no retries.
   for (const item of cases) {
+    if (!item.candidates.length) {
+      results.push({
+        id: item.id,
+        deterministic: true,
+        ...evaluateRecommendationList(item, []),
+      });
+      continue;
+    }
     const start = performance.now();
     try {
       const ranking = await rankWithJev(config, item, item.candidates);
@@ -246,6 +275,7 @@ if (!values.live) {
       );
       results.push({
         id: item.id,
+        calledJev: true,
         model: ranking.model,
         ...evaluateRecommendationList(item, acceptedIds),
         latencyMs: Math.round(performance.now() - start),
@@ -259,6 +289,7 @@ if (!values.live) {
     } catch (error) {
       results.push({
         id: item.id,
+        calledJev: true,
         ...evaluateRecommendationList(item, []),
         latencyMs: Math.round(performance.now() - start),
         error: error instanceof Error ? error.message : 'Evaluation failed',

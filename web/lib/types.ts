@@ -40,6 +40,16 @@ export interface Filters {
   maxPrice: number | null;
   category: Category | null;
   excludedCategories?: Category[];
+  /** Exact Istanbul district constraint, compared accent/case-insensitively. */
+  district?: string;
+  /** Local Europe/Istanbul wall-clock bounds in HH:mm form. */
+  startTimeFrom?: string;
+  startTimeTo?: string;
+  /** Strict bounds for "after" / "before" (as opposed to "from" / "until"). */
+  startTimeFromExclusive?: boolean;
+  startTimeToExclusive?: boolean;
+  /** An inclusive category choice (for example, stand-up OR theatre). */
+  categories?: Category[];
 }
 export interface Message {
   role: 'user' | 'assistant';

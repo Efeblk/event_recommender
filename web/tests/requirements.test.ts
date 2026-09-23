@@ -1,0 +1,233 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  checkRequirements,
+  deriveRequirements,
+  meetsRequirements,
+} from '../lib/requirements.ts';
+import type { EventRecord, Message } from '../lib/types.ts';
+
+function event(description: string, title = 'Etkinlik'): EventRecord {
+  return {
+    id: 'e',
+    title,
+    description,
+    category: 'Konser',
+    startsAt: '2026-09-26T18:00:00Z',
+    checkedAt: '2026-09-23',
+    venue: 'Sahne',
+    city: 'İstanbul',
+    district: '',
+    address: '',
+    price: 200,
+    currency: 'TRY',
+    url: 'https://example.test',
+    imageUrl: '',
+    availability: 'available',
+  };
+}
+
+await test('requested jazz needs actual jazz source evidence', () => {
+  const requirements = deriveRequirements('Only jazz, please', []);
+  assert.deepEqual(requirements, [
+    { kind: 'genre', value: 'jazz', policy: 'require_support' },
+  ]);
+  assert.equal(
+    checkRequirements(event('A candlelight concert.'), requirements)[0].status,
+    'unknown',
+  );
+  assert.equal(
+    meetsRequirements(event('Caz ve blues parçaları.'), requirements),
+    true,
+  );
+  assert.equal(
+    checkRequirements(event('Bu bir caz konseri değildir.'), requirements)[0]
+      .status,
+    'contradicted',
+  );
+});
+
+await test('same-kind follow-up replaces genre and explicit alternatives use OR', () => {
+  const history: Message[] = [
+    { role: 'user', content: 'Weekend stand-up' },
+    { role: 'assistant', content: 'Anything else?' },
+  ];
+  const switched = deriveRequirements('Switch from stand-up to jazz', history);
+  assert.deepEqual(
+    switched.filter((item) => item.kind === 'genre'),
+    [
+      { kind: 'genre', value: 'jazz', policy: 'require_support' },
+      {
+        kind: 'genre',
+        value: 'comedy',
+        policy: 'exclude_positive_evidence',
+      },
+    ],
+  );
+  const alternatives = deriveRequirements('Jazz or blues is required', []);
+  assert.equal(alternatives[0].value, 'jazz|blues');
+  assert.equal(meetsRequirements(event('Blues gecesi.'), alternatives), true);
+});
+
+await test('a current positive genre removes the matching stale exclusion', () => {
+  assert.deepEqual(
+    deriveRequirements('Caz olsun', [
+      { role: 'user', content: 'Caz istemiyorum' },
+    ]),
+    [{ kind: 'genre', value: 'jazz', policy: 'require_support' }],
+  );
+});
+
+await test('a coordinated genre negation excludes every alternative', () => {
+  assert.deepEqual(deriveRequirements('Rock veya jazz istemiyorum', []), [
+    {
+      kind: 'genre',
+      value: 'jazz|rock',
+      policy: 'exclude_positive_evidence',
+    },
+  ]);
+});
+
+await test('ordinary child exclusion rejects only positive child evidence', () => {
+  const requirements = deriveRequirements('No concerts or children', []);
+  assert.deepEqual(requirements, [
+    {
+      kind: 'audience',
+      value: 'children',
+      policy: 'exclude_positive_evidence',
+    },
+  ]);
+  assert.equal(
+    meetsRequirements(event('Çocuklar için aile dostu gösteri.'), requirements),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(event('Yeni bir komedi gösterisi.'), requirements),
+    true,
+  );
+});
+
+await test('strict content constraints require exact positive absence evidence', () => {
+  const requirements = deriveRequirements(
+    'No swearing or sexual humour; omit uncertain matches',
+    [],
+  );
+  assert.equal(requirements.length, 1);
+  assert.equal(requirements[0].policy, 'require_support');
+  assert.equal(
+    meetsRequirements(
+      event('Ailece izlenebilecek family-friendly comedy.'),
+      requirements,
+    ),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(event('No swearing and no sexual humour.'), requirements),
+    true,
+  );
+  assert.equal(
+    checkRequirements(event('Includes sexual humour.'), requirements)[0].status,
+    'contradicted',
+  );
+});
+
+await test('Turkish coordinated content prohibitions and uncertainty policy are recognized', () => {
+  const requirements = deriveRequirements(
+    'Küfür ya da cinsel mizah olmasın; emin değilsen önerme',
+    [],
+  );
+  assert.equal(requirements[0].value, 'swearing|sexual_content');
+  assert.equal(requirements[0].policy, 'require_support');
+});
+
+await test('venue names do not prove genre and family-friendly does not mean a child event', () => {
+  const jazz = deriveRequirements('Jazz istiyorum', []);
+  assert.equal(
+    meetsRequirements(
+      { ...event('Stand-up gösterisi.', 'Comedy Night'), venue: 'Jazz Club' },
+      jazz,
+    ),
+    false,
+  );
+  const noChildren = deriveRequirements('Çocuk etkinliği olmasın', []);
+  assert.equal(
+    meetsRequirements(event('Ailece izlenebilecek komedi.'), noChildren),
+    true,
+  );
+});
+
+await test('both accessibility facts must be explicitly supported', () => {
+  const requirements = deriveRequirements(
+    'Must have step-free entry and an accessible toilet',
+    [],
+  );
+  assert.deepEqual(requirements, [
+    {
+      kind: 'accessibility',
+      value: 'step_free|accessible_toilet',
+      policy: 'require_support',
+    },
+  ]);
+  assert.equal(
+    meetsRequirements(event('Wheelchair accessible venue.'), requirements),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Wheelchair accessible venue with an accessible toilet.'),
+      requirements,
+    ),
+    true,
+  );
+});
+
+await test('Turkish accessibility inflection is retained as a required fact', () => {
+  assert.deepEqual(
+    deriveRequirements('Basamaksız giriş ve erişilebilir tuvaleti olmalı', []),
+    [
+      {
+        kind: 'accessibility',
+        value: 'step_free|accessible_toilet',
+        policy: 'require_support',
+      },
+    ],
+  );
+});
+
+await test('mood remains soft unless explicitly mandatory', () => {
+  assert.deepEqual(
+    deriveRequirements('I feel tired and want something quiet and seated', []),
+    [],
+  );
+  assert.deepEqual(deriveRequirements('It must be quiet', []), [
+    { kind: 'activity', value: 'quiet', policy: 'require_support' },
+  ]);
+  assert.deepEqual(deriveRequirements('Mutlaka sakin ve oturmalı olsun', []), [
+    { kind: 'activity', value: 'quiet', policy: 'require_support' },
+    { kind: 'activity', value: 'seated', policy: 'require_support' },
+  ]);
+});
+
+await test('inflected source negation and contradictory genre titles cannot become evidence', () => {
+  const noComedy = deriveRequirements('Komedi istemiyorum', []);
+  assert.equal(
+    meetsRequirements(event('Yetişkin tiyatrosu. Komedi değildir.'), noComedy),
+    true,
+  );
+  const jazz = deriveRequirements('Caz istiyorum', []);
+  assert.equal(
+    meetsRequirements(
+      event('Bu bir caz konseri değildir.', 'Jazz Night'),
+      jazz,
+    ),
+    false,
+  );
+  const choice = deriveRequirements('Jazz or blues', []);
+  assert.equal(
+    meetsRequirements(
+      event('Caz değildir. Blues konseri.', 'Jazz Night'),
+      choice,
+    ),
+    true,
+  );
+});

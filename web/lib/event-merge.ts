@@ -4,6 +4,7 @@ import type { EventOffer, EventRecord } from './types.ts';
 
 const VENUE_ALIASES = [
   ['Cafe Theatre', 'Cafe Theatre Koşuyolu'],
+  ['Ada Bar Kadıköy', 'Ada Bar'],
   ['HoP Sahne', 'House of Performance - HoP'],
   ['Biletinial Torium Sahne', 'Torium Sahne'],
   ['Kartal Sanat Tiyatrosu', 'Kartal Sanat Tiyatro Salonu'],
@@ -28,6 +29,11 @@ const VENUE_ALIASES = [
 const TITLE_ALIASES = [
   ['Gökhan Ünver Stand Up', "Gökhan Ünver 'Çok Tanıdık'"],
   ['Operadaki Hayalet', 'Operadaki Hayalet Tiyatro Oyunu'],
+  [
+    'Kadıköy Stand-up Gecesi',
+    'Kadıköy Stand Up Gecesi Çarşamba 20:30',
+    'Kadıköy Stand up Gecesi Cumartesi 21:45',
+  ],
 ] as const;
 
 const GENERIC_VENUES = new Set([
@@ -224,6 +230,17 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
     .map(([key, members]) => {
       const ordered = [...members].sort(eventOrder);
       const representative = selectRepresentative(ordered);
+      // A provider may omit the address even when another offer for this exact
+      // session supplies it. Fill only an unambiguous missing address; never
+      // replace conflicting source facts or embedding document fields.
+      const addresses = new Map(
+        ordered
+          .filter((event) => event.address.trim())
+          .map((event) => [normalize(event.address), event.address]),
+      );
+      const address =
+        representative.address ||
+        (addresses.size === 1 ? [...addresses.values()][0] : '');
       const offers = uniqueOffers(ordered);
       const offer = selectOffer(offers, representative);
       const value = identity(representative);
@@ -245,6 +262,7 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
           : undefined;
       return {
         ...representative,
+        address,
         id: members.length === 1 ? representative.id : sessionId,
         source: offer.source,
         url: offer.url,

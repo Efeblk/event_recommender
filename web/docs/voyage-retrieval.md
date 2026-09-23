@@ -3,9 +3,9 @@
 The recommendation pipeline uses `voyage-4-large` at 1,024 dimensions by default. Voyage embeds event text as `document` and the current request with bounded relevant user history as `query`. Jev receives the original request and candidate facts, never vectors.
 
 1. Interpret clear constraints and find all eligible sessions using stable database pagination. There is no total 1,000-session cutoff.
-2. Apply explicit exclusions and deduplicate productions before ranking. General humour preferences do not force the Stand-up category.
-3. Rank eligible productions by semantic cosine similarity and keyword BM25, then merge their ranks using reciprocal rank fusion (constant 60). Zero-keyword matches receive no arbitrary lexical boost.
-4. Send the best 16 productions to Jev and show up to five supported results. The provisional Jev threshold is unchanged; 16 is an initial setting that needs recall evaluation.
+2. Merge cross-provider sessions, then apply exact local time/district constraints, exclusions and mandatory source-evidence checks. General humour preferences do not force the Stand-up category.
+3. Rank every eligible session by semantic cosine similarity and keyword BM25, then combine their ranks using reciprocal rank fusion (constant 60). Only then choose the best session per production. Zero-keyword matches receive no arbitrary lexical boost.
+4. Send the best 16 productions to Jev and show up to five supported results. Jev receives verified constraints, source-evidence checks and Istanbul-local timestamps. Score 2 may leave optional preferences unknown, never mandatory requirements. The provisional acceptance threshold remains 2; 16 is an initial setting that needs recall evaluation.
 
 ## Configuration and indexing
 
@@ -38,3 +38,11 @@ No Voyage key means keyword retrieval. An empty index avoids a wasted query call
 `AI_DAILY_LIMIT` limits AI-enabled recommendation requests when either provider is configured, including attempts that ultimately need no provider call. It is not an exact billable-call or dollar limit. Authenticated document indexing is separate from that counter and bounded by the indexing driver's batch limit.
 
 Tests cover mocked embedding transport, semantic candidates beyond the old shortlist, missing-index/outage behavior, exact-name keyword coverage, duplicate productions, all-catalog pagination and cache validity. The previous 12-case saved-score Jev replay remains a keyword-path regression test; it does not validate Voyage quality. Evaluate real Turkish mood requests, negation and follow-ups on held-out catalog labels, compare shortlist recall at 16/32, and measure Worker latency before public release. No embedding model or dimension setting is declared quality-optimal from mock tests.
+
+## Mandatory evidence and language limits
+
+Exact budget, date, district and clock constraints are deterministic and apply before ranking. English and Turkish parsing supports common phrasing, including inflected party sizes and explicit category alternatives. A group budget without a total/per-person basis requests clarification. This is a supported parser, not unrestricted natural-language understanding.
+
+Recognized genres, activities and explicit verification requirements are checked against source facts before either AI or fallback ranking. Missing jazz evidence cannot pass a jazz request just because the event is a concert. A generic family-friendly description does not prove absence of swearing and sexual humour. Ordinary child-show exclusions reject positive child-audience evidence; they do not require an adult-only certificate. Unknown mandatory facts produce an evidence-specific empty notice. The bilingual evidence taxonomy is intentionally bounded, and unsupported concepts still depend on Jev's relevance judgment; this does not establish universal constraint coverage.
+
+The original hard-prompt evaluation remains an immutable baseline in `hard-prompt-evaluation.md`. Follow-up evaluation reports must be kept separate. Old saved Jev scores cannot validate changes to the scoring rubric.

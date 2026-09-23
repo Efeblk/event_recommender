@@ -17,6 +17,7 @@ import { fallbackEvents, searchContext, shortlistEvents } from './retrieval.ts';
 import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
 import { semanticQuery, type SemanticRanking } from './hybrid.ts';
 import { mergeEventSessions } from './event-merge.ts';
+import { deriveRequirements, meetsRequirements } from './requirements.ts';
 
 export interface RecommendInput {
   message: string;
@@ -151,6 +152,10 @@ export async function recommend(
     (event) =>
       !isExcluded(event) && !excludedProductions.has(productionIdentity(event)),
   );
+  const context = searchContext(input.message, input.history);
+  const requirements = deriveRequirements(input.message, context.history);
+  const beforeEvidence = events.length;
+  events = events.filter((event) => meetsRequirements(event, requirements));
   const totalCandidates = events.length;
   if (!events.length)
     return {
@@ -158,10 +163,12 @@ export async function recommend(
       filters,
       mode: 'filters',
       status: 'empty',
-      notice: 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
+      notice:
+        beforeEvidence && requirements.length
+          ? 'Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.'
+          : 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
       totalCandidates,
     };
-  const context = searchContext(input.message, input.history);
   let shortlist = shortlistEvents(events, input.message, input.history, 16);
   if (!shortlist.length)
     return {
@@ -214,7 +221,7 @@ export async function recommend(
     try {
       const result = await (deps.rank ?? rankWithJev)(
         deps.config,
-        { ...input, filters, history: context.history },
+        { ...input, filters, history: context.history, requirements },
         shortlist,
       );
       const recommendations = selectJevEvents(shortlist, result).map(

@@ -227,3 +227,64 @@ await test('reviewed show aliases merge only at the same venue and session', () 
     1,
   );
 });
+
+await test('fills a missing address only from consistent exact-session source facts', () => {
+  const primary = event({ address: '' });
+  const secondary = event({
+    id: 'bubilet:2',
+    source: 'bubilet',
+    address: 'Kadıköy/İstanbul',
+  });
+  const filled = mergeEventSessions([primary, secondary])[0];
+  assert.equal(filled.address, secondary.address);
+  assert.equal(filled.description, primary.description);
+  assert.equal(filled.venue, primary.venue);
+  assert.equal(
+    mergeEventSessions([
+      primary,
+      secondary,
+      event({
+        id: 'biletix:3',
+        source: 'biletix',
+        address: 'Üsküdar/İstanbul',
+      }),
+    ])[0].address,
+    '',
+  );
+  assert.equal(
+    mergeEventSessions([event({ address: 'Original' }), secondary])[0].address,
+    'Original',
+  );
+});
+
+await test('reviewed Ada Bar schedule titles merge only at the same performance time', () => {
+  const base = event({
+    title: 'Kadıköy Stand-up Gecesi',
+    venue: 'Ada Bar Kadıköy',
+  });
+  const schedule = event({
+    id: 'bubilet:ada',
+    source: 'bubilet',
+    title: 'Kadıköy Stand up Gecesi Cumartesi 21:45',
+    venue: 'Ada Bar',
+    price: 300,
+  });
+  const same = mergeEventSessions([base, schedule]);
+  assert.equal(same.length, 1);
+  assert.equal(same[0].offers?.length, 2);
+  assert.equal(same[0].price, 300);
+  assert.equal(
+    mergeEventSessions([
+      base,
+      { ...schedule, startsAt: '2026-10-10T19:00:00Z' },
+    ]).length,
+    2,
+  );
+  assert.equal(
+    mergeEventSessions([
+      base,
+      { ...schedule, title: 'Kadıköy Stand Up Gecesi Açık Mikrofon' },
+    ]).length,
+    2,
+  );
+});
