@@ -120,6 +120,8 @@ export interface ReplayRankingItem {
   id: string;
   score: number;
   confidence: number;
+  probabilities?: readonly [number, number, number, number];
+  supportProbability?: number;
 }
 
 export interface ReplayCase {
@@ -229,10 +231,52 @@ export function validateReplaySnapshot(value: unknown): ReplaySnapshot {
           `Invalid replay confidence for ${caseId}/${candidateId}.`,
         );
       const confidence = ranked.confidence;
+      let probabilityFields: Pick<
+        ReplayRankingItem,
+        'probabilities' | 'supportProbability'
+      > = {};
+      if (ranked.probabilities !== undefined || ranked.supportProbability !== undefined) {
+        if (
+          !Array.isArray(ranked.probabilities) ||
+          ranked.probabilities.length !== 4 ||
+          !ranked.probabilities.every(
+            (value) =>
+              typeof value === 'number' &&
+              Number.isFinite(value) &&
+              value >= 0 &&
+              value <= 1,
+          ) ||
+          Math.abs(
+            ranked.probabilities.reduce(
+              (sum: number, value: number) => sum + value,
+              0,
+            ) - 1,
+          ) > 0.02 ||
+          typeof ranked.supportProbability !== 'number' ||
+          !Number.isFinite(ranked.supportProbability) ||
+          Math.abs(
+            ranked.supportProbability -
+              (ranked.probabilities[2] + ranked.probabilities[3]),
+          ) > 1e-9
+        )
+          throw new Error(
+            `Invalid replay probabilities for ${caseId}/${candidateId}.`,
+          );
+        probabilityFields = {
+          probabilities: ranked.probabilities as unknown as readonly [
+            number,
+            number,
+            number,
+            number,
+          ],
+          supportProbability: ranked.supportProbability,
+        };
+      }
       return {
         id: candidateId,
         score,
         confidence,
+        ...probabilityFields,
       };
     });
     return { id: caseId, ranking };
