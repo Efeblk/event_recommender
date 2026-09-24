@@ -22,6 +22,10 @@ const provider = createServer(async (request, response) => {
       body: JSON.parse(Buffer.concat(chunks).toString('utf8')),
     };
     response.setHeader('content-type', 'application/json');
+    if (request.url?.endsWith('/slow-body')) {
+      response.write('{"data":');
+      return;
+    }
     response.end(JSON.stringify({ data: [{ index: 0, embedding: vector }] }));
   } catch {
     response.statusCode = 400;
@@ -40,7 +44,21 @@ try {
   assert(address && typeof address === 'object');
   const mockUrl = `http://127.0.0.1:${address.port}/embeddings`;
 
-  const source = await readFile(join(root, 'lib/voyage.ts'), 'utf8');
+  const source = (await readFile(join(root, 'lib/voyage.ts'), 'utf8')).replace(
+    "import { withDeadline } from './deadline.ts';",
+    '',
+  );
+  const deadline = ts.transpileModule(
+    await readFile(join(root, 'lib/deadline.ts'), 'utf8'),
+    {
+      compilerOptions: {
+        module: ts.ModuleKind.ESNext,
+        target: ts.ScriptTarget.ES2022,
+      },
+      fileName: 'deadline.ts',
+      reportDiagnostics: true,
+    },
+  );
   const adapter = ts.transpileModule(source, {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -50,21 +68,28 @@ try {
     reportDiagnostics: true,
   });
   assert.deepEqual(
-    adapter.diagnostics?.filter(
+    [...(deadline.diagnostics ?? []), ...(adapter.diagnostics ?? [])].filter(
       (diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error,
     ),
     [],
   );
-  const worker = `${adapter.outputText}
+  const worker = `${deadline.outputText}
+${adapter.outputText}
 export default {
-  async fetch() {
-    const vectors = await embedWithVoyage(
-      { apiKey: 'offline-test-key', model: 'voyage-4-large', dimensions: 1024 },
-      ['hello'],
-      'query',
-      (_url, init) => fetch(${JSON.stringify(mockUrl)}, init),
-    );
-    return Response.json({ rows: vectors.length, dimensions: vectors[0]?.length });
+  async fetch(request) {
+    const slow = request.headers.get('x-test-slow-body') === 'yes';
+    try {
+      const vectors = await embedWithVoyage(
+        { apiKey: 'offline-test-key', model: 'voyage-4-large', dimensions: 1024 },
+        ['hello'],
+        'query',
+        (_url, init) => fetch(${JSON.stringify(mockUrl)} + (slow ? '/slow-body' : '/'), init),
+        slow ? 50 : 15000,
+      );
+      return Response.json({ rows: vectors.length, dimensions: vectors[0]?.length });
+    } catch (error) {
+      return Response.json({ error: error instanceof Error ? error.message : 'unknown' }, { status: 504 });
+    }
   },
 };
 `;
@@ -100,9 +125,21 @@ export default {
       output_dtype: 'float',
     },
   });
+  const slowStarted = Date.now();
+  const slowResponse = await harness
+    .getWorker()
+    .fetch('http://worker.test/slow-body', {
+      headers: { 'x-test-slow-body': 'yes' },
+    });
+  assert.equal(slowResponse.status, 504);
+  assert.deepEqual(await slowResponse.json(), {
+    error: 'Voyage request timed out.',
+  });
+  assert.ok(Date.now() - slowStarted < 2000);
   console.log('Voyage adapter workerd smoke test passed.');
 } finally {
   await harness?.close();
+  provider.closeAllConnections();
   provider.close();
   if (provider.listening) await once(provider, 'close');
   await rm(temp, {

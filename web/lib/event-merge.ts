@@ -67,6 +67,12 @@ for (const aliases of TITLE_ALIASES) {
     titleAliases.set(normalize(alias), normalize(aliases[0]));
 }
 
+/** Exact or explicitly reviewed show-title identity; never merges event facts. */
+export function canonicalShowTitle(title: string): string {
+  const normalized = normalize(title);
+  return titleAliases.get(normalized) ?? normalized;
+}
+
 function venueKey(venue: string): string {
   const normalized = normalize(venue);
   return venueAliases.get(normalized) ?? normalized;
@@ -88,7 +94,7 @@ function identity(event: EventRecord): {
   instant: string | null;
 } {
   return {
-    title: titleAliases.get(normalize(event.title)) ?? normalize(event.title),
+    title: canonicalShowTitle(event.title),
     city: normalize(event.city),
     venue: venueKey(event.venue),
     instant: parsedInstant(event.startsAt),

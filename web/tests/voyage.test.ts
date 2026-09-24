@@ -226,3 +226,65 @@ await test('manual redirects are rejected without following the target', async (
   );
   assert.equal(calls, 1);
 });
+
+await test('one deadline bounds delayed response headers and aborts the paid call', async () => {
+  let calls = 0;
+  let aborted = false;
+  const started = Date.now();
+  await assert.rejects(
+    embedWithVoyage(
+      config,
+      ['x'],
+      'query',
+      (async (_url, init) => {
+        calls++;
+        return new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener(
+            'abort',
+            () => {
+              aborted = true;
+              reject(init.signal?.reason);
+            },
+            { once: true },
+          );
+        });
+      }) as typeof fetch,
+      30,
+    ),
+    { message: 'Voyage request timed out.' },
+  );
+  assert.equal(calls, 1);
+  assert.equal(aborted, true);
+  assert.ok(Date.now() - started < 1000);
+});
+
+await test('the same deadline covers a response body that stops streaming', async () => {
+  let calls = 0;
+  let cancelled = false;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('{"data":'));
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+  await assert.rejects(
+    embedWithVoyage(
+      config,
+      ['x'],
+      'query',
+      (async () => {
+        calls++;
+        return new Response(body, {
+          headers: { 'content-type': 'application/json' },
+        });
+      }) as typeof fetch,
+      30,
+    ),
+    { message: 'Voyage request timed out.' },
+  );
+  assert.equal(calls, 1);
+  // Synthetic streams are not wired to the fetch signal; the caller is still bounded.
+  assert.equal(cancelled, false);
+});

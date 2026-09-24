@@ -128,15 +128,22 @@ function normalize(value: string) {
 }
 
 function isNegated(text: string, matchIndex: number, matchLength: number) {
-  const before = text.slice(Math.max(0, matchIndex - 36), matchIndex);
-  const after = text.slice(
-    matchIndex + matchLength,
-    matchIndex + matchLength + 24,
+  const boundary = /[,.!?;]|\b(?:but|ama|fakat|ancak)\b/;
+  const before = text.slice(0, matchIndex).split(boundary).at(-1) ?? '';
+  const after = text
+    .slice(matchIndex + matchLength)
+    .split(boundary)[0]
+    .slice(0, 80);
+  const coordinatedEnglish =
+    /\b(?:no|not|without|excluding?)\s+(?:(?:jazz|caz|rock|blues|classical|klasik|comedy|komedi|stand[ -]?up)\s+(?:or|and)\s+)*$/;
+  const genreList =
+    '(?:jazz|caz|rock|blues|classical|klasik|comedy|komedi|stand[ -]?up)';
+  const trailingListNegation = new RegExp(
+    `^\\s*,\\s*${genreList}(?:\\s*(?:,|ve|veya|ya da|or|and)\\s*${genreList})*\\s+(?:istemiyorum|istemem|olmasin|haric)\\b`,
   );
   return (
-    /(?:\bno|\bnot|\bwithout|istemiyorum|istemem|olmasin|haric|disinda)\s*$/.test(
-      before,
-    ) ||
+    trailingListNegation.test(text.slice(matchIndex + matchLength)) ||
+    coordinatedEnglish.test(before) ||
     /^\s*(?:degil|olmasin|istemiyorum|istemem|haric|to\b)/.test(after) ||
     /^[^.!?]{0,50}\b(?:istemiyorum|istemem|olmasin|haric)\b/.test(after)
   );
@@ -176,6 +183,23 @@ function removeExcludedValues(
   else requirements.splice(requirements.indexOf(exclusion), 1);
 }
 
+function removeRequiredValues(
+  requirements: Requirement[],
+  kind: RequirementKind,
+  values: string[],
+) {
+  for (let i = requirements.length - 1; i >= 0; i--) {
+    const requirement = requirements[i];
+    if (requirement.kind !== kind || requirement.policy !== 'require_support')
+      continue;
+    const retained = requirement.value
+      .split('|')
+      .filter((value) => !values.includes(value));
+    if (retained.length) requirement.value = retained.join('|');
+    else requirements.splice(i, 1);
+  }
+}
+
 function addIndependentRequirement(
   requirements: Requirement[],
   requirement: Requirement,
@@ -192,7 +216,7 @@ function addIndependentRequirement(
 }
 
 function strictContentRequested(text: string) {
-  return /\b(?:omit|exclude|skip|leave out|onerme|onermeyin|oneri yapma|ele|cikar)\b[^.!?]{0,80}\b(?:uncertain|unverified|unknown|emin olmad|emin degil(?:sen)?|dogrulanmam|belirsiz)\b|\b(?:uncertain|unverified|unknown|emin olmad|emin degil(?:sen)?|dogrulanmam|belirsiz)\b[^.!?]{0,80}\b(?:omit|exclude|skip|onerme|onermeyin|ele|cikar)\b/.test(
+  return /\b(?:omit|exclude|skip|leave out|onerme|onermeyin|oneri yapma|ele|cikar)\b[^.!?]{0,80}\b(?:uncertain|unverified|unknown|emin olmad[a-z]*|emin degil[a-z]*|dogrulanmam|belirsiz)\b|\b(?:uncertain|unverified|unknown|emin olmad[a-z]*|emin degil[a-z]*|dogrulanmam|belirsiz)\b[^.!?]{0,80}\b(?:omit|exclude|skip|onerme|onermeyin|ele|cikar)\b/.test(
     text,
   );
 }
@@ -226,12 +250,14 @@ export function deriveRequirements(
         policy: 'require_support',
       });
     }
-    if (excludedGenres.length)
+    if (excludedGenres.length) {
+      removeRequiredValues(requirements, 'genre', excludedGenres);
       upsert(requirements, {
         kind: 'genre',
         value: excludedGenres.join('|'),
         policy: 'exclude_positive_evidence',
       });
+    }
     if (activities.length)
       upsert(requirements, {
         kind: 'activity',
@@ -291,7 +317,25 @@ export function deriveRequirements(
       });
     }
 
+    const waiverClauses = text.split(/[,.!?;]|\b(?:ama|fakat|ancak|but)\b/);
+    const stepFreeWaived = waiverClauses.some((clause) =>
+      /\b(?:step[ -]?free|basamaksiz(?: giris)?)\b[^.!?;]{0,24}\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary)\b/.test(
+        clause,
+      ),
+    );
+    const toiletWaived = waiverClauses.some((clause) =>
+      /\b(?:accessible (?:toilet|restroom)|erisilebilir tuvalet(?:i)?)\b[^.!?;]{0,24}\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary)\b/.test(
+        clause,
+      ),
+    );
+    if (stepFreeWaived)
+      removeRequiredValues(requirements, 'accessibility', ['step_free']);
+    if (toiletWaived)
+      removeRequiredValues(requirements, 'accessibility', [
+        'accessible_toilet',
+      ]);
     if (
+      !stepFreeWaived &&
       /\b(?:step[ -]?free|basamaksiz|engelsiz erisim|wheelchair accessible)\b/.test(
         text,
       )
@@ -302,6 +346,7 @@ export function deriveRequirements(
         policy: 'require_support',
       });
     if (
+      !toiletWaived &&
       /\b(?:accessible (?:toilet|restroom|bathroom)|disabled (?:toilet|restroom)|engelli tuvaleti|erisilebilir tuvalet(?:i)?)\b/.test(
         text,
       )

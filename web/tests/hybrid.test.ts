@@ -9,7 +9,7 @@ await test('semantic retrieval finds a paraphrase beyond sixteen keyword candida
   const events = Array.from({ length: 80 }, (_, i) => ({
     ...base,
     id: `generic-${i}`,
-    title: 'Program',
+    title: `Program ${i + 1}`,
     description: 'Etkinlik detayları',
     url: `https://example.test/${i}`,
   }));

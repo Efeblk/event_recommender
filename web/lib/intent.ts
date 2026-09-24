@@ -1,5 +1,18 @@
 import type { Category } from './types.ts';
 
+export function isAlternativesRequest(message: string): boolean {
+  const normalized = message
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  return /\b(?:other|different|more)\s+(?:options|events|suggestions|recommendations)\b|\b(?:show|suggest)\s+(?:me\s+)?alternatives\b|\b(?:baska|diger|alternatif)\b[^.!?\n]{0,32}\b(?:secenek|etkinlik|oneri|alternatif)(?:ler|leri)?\b/.test(
+    normalized,
+  );
+}
+
 // "Oyun" is too broad on its own (games, music and idioms). Treat it as
 // theatre only when the surrounding request supplies stage/adult-drama context.
 const theatrePlay =

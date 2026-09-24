@@ -1,5 +1,6 @@
 import type { EventRecord, Filters, Message } from './types.ts';
 import { checkRequirements, type Requirement } from './requirements.ts';
+import { withDeadline } from './deadline.ts';
 
 // Exact constraints and displayed event facts stay in code; Jev supplies scores.
 export interface JevEnv {
@@ -153,45 +154,51 @@ export async function rankWithJev(
   input: JevInput,
   events: EventRecord[],
   fetcher: typeof fetch = fetch,
+  timeoutMs = 15000,
 ): Promise<JevRanking> {
   if (!config.apiKey.trim())
     throw new Error('TYPESAFE_API_KEY is required for Jev.');
-  const response = await fetcher('https://api.typesafe.ai/v1/systemone', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(buildJevRequest(config.model, input, events)),
-    redirect: 'manual',
-    signal: AbortSignal.timeout(15000),
-  });
-  // No paid automatic retries or provider response bodies in errors/logs.
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`Jev request failed (HTTP ${response.status}).`);
-  }
-  const reader = response.body?.getReader();
-  if (!reader) throw new Error('Missing Jev response.');
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > 256000) throw new Error('Jev response is too large.');
-      chunks.push(value);
+  return withDeadline(timeoutMs, 'Jev request timed out.', async (signal) => {
+    const response = await fetcher('https://api.typesafe.ai/v1/systemone', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(buildJevRequest(config.model, input, events)),
+      redirect: 'manual',
+      signal,
+    });
+    // No paid automatic retries or provider response bodies in errors/logs.
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new Error(`Jev request failed (HTTP ${response.status}).`);
     }
-  } finally {
-    await reader.cancel();
-    reader.releaseLock();
-  }
-  const buffer = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    buffer.set(chunk, offset);
-    offset += chunk.length;
-  }
-  return parseJevRanking(JSON.parse(new TextDecoder().decode(buffer)), events);
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error('Missing Jev response.');
+    const chunks: Uint8Array[] = [];
+    let size = 0;
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.byteLength;
+        if (size > 256000) throw new Error('Jev response is too large.');
+        chunks.push(value);
+      }
+    } finally {
+      await reader.cancel();
+      reader.releaseLock();
+    }
+    const buffer = new Uint8Array(size);
+    let offset = 0;
+    for (const chunk of chunks) {
+      buffer.set(chunk, offset);
+      offset += chunk.length;
+    }
+    return parseJevRanking(
+      JSON.parse(new TextDecoder().decode(buffer)),
+      events,
+    );
+  });
 }

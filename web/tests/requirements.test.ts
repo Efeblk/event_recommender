@@ -231,3 +231,90 @@ await test('inflected source negation and contradictory genre titles cannot beco
     true,
   );
 });
+
+await test('fresh coordinated English exclusion leaves only the requested classical genre', () => {
+  assert.deepEqual(
+    deriveRequirements(
+      'No jazz or rock, please. A classical concert would help me unwind',
+      [],
+    ),
+    [
+      { kind: 'genre', value: 'classical', policy: 'require_support' },
+      {
+        kind: 'genre',
+        value: 'jazz|rock',
+        policy: 'exclude_positive_evidence',
+      },
+    ],
+  );
+  assert.equal(
+    deriveRequirements('Rock olsun, jazz istemiyorum', [])[0].value,
+    'rock',
+  );
+});
+
+await test('strict uncertainty recognizes Turkish inflections in both orders', () => {
+  for (const phrase of [
+    'emin olmadıklarını önerme',
+    'önerme emin olmadıklarını',
+  ]) {
+    const requirements = deriveRequirements(
+      `Küfür ve cinsel içerik olmasın; ${phrase}`,
+      [],
+    );
+    assert.equal(requirements[0].policy, 'require_support');
+    assert.equal(
+      meetsRequirements(event('Ailece izlenebilir.'), requirements),
+      false,
+    );
+  }
+});
+
+await test('waived accessibility and newly rejected genres remove earlier requirements', () => {
+  const requirements = deriveRequirements(
+    'Basamaksız giriş şart değil. Caz olsun',
+    [
+      {
+        role: 'user',
+        content: 'Basamaksız giriş ve erişilebilir tuvalet şart',
+      },
+    ],
+  );
+  assert.equal(
+    requirements.find((x) => x.kind === 'accessibility')?.value,
+    'accessible_toilet',
+  );
+  assert.deepEqual(
+    deriveRequirements('Caz istemiyorum', [
+      { role: 'user', content: 'Caz olsun' },
+    ]),
+    [{ kind: 'genre', value: 'jazz', policy: 'exclude_positive_evidence' }],
+  );
+});
+
+await test('pure comma-separated genre lists share negation but accessibility clauses do not', () => {
+  const genres = deriveRequirements('Caz, rock istemiyorum; klasik olsun.', []);
+  assert.equal(
+    genres.find((x) => x.policy === 'require_support')?.value,
+    'classical',
+  );
+  assert.equal(
+    genres.find((x) => x.policy === 'exclude_positive_evidence')?.value,
+    'jazz|rock',
+  );
+  for (const separator of [',', ' ama']) {
+    assert.deepEqual(
+      deriveRequirements(
+        `Basamaksız giriş şart${separator} tuvalet şart değil.`,
+        [],
+      ),
+      [
+        {
+          kind: 'accessibility',
+          value: 'step_free',
+          policy: 'require_support',
+        },
+      ],
+    );
+  }
+});

@@ -5,9 +5,14 @@ import {
   rankEvents,
   uniqueEvents,
 } from './search.ts';
-import { positiveCategoryText, requestedCategories } from './intent.ts';
+import {
+  isAlternativesRequest,
+  positiveCategoryText,
+  requestedCategories,
+} from './intent.ts';
 import type { Category } from './types.ts';
 import { hybridRank, type SemanticRanking } from './hybrid.ts';
+import { canonicalShowTitle } from './event-merge.ts';
 
 export interface SearchContext {
   query: string;
@@ -15,6 +20,39 @@ export interface SearchContext {
   rejectedTerms: string[];
   reset: boolean;
   category: Category | null;
+}
+
+export { isAlternativesRequest };
+
+const genericShowTitles = new Set([
+  'etkinlik',
+  'konser',
+  'tiyatro',
+  'stand up',
+  'komedi',
+  'acik mikrofon',
+  'open mic',
+]);
+
+/**
+ * Removes repeated cards for a clearly identical show title across venues or
+ * sessions. This is presentation-only: session and provider records stay
+ * separate, and generic titles retain their normal production identity.
+ */
+export function diverseEvents(events: EventRecord[], limit = 5): EventRecord[] {
+  const seen = new Set<string>();
+  return events
+    .filter((event) => {
+      const title = canonicalShowTitle(event.title);
+      const key =
+        title && !genericShowTitles.has(title)
+          ? `${normalize(event.city)}\u001f${event.category}\u001f${title}`
+          : productionIdentity(event);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, Math.max(0, limit));
 }
 
 const rejectionTerms = [
@@ -215,18 +253,19 @@ export function shortlistEvents(
 ): EventRecord[] {
   if (limit <= 0) return [];
   const { ranked } = rankedCandidates(events, message, history, semantic);
-  if (semantic) return ranked.slice(0, limit);
+  const diverseRanked = diverseEvents(ranked, ranked.length);
+  if (semantic) return diverseRanked.slice(0, limit);
   const selected: EventRecord[] = [];
   const seenProductions = new Set<string>();
   const seenCategories = new Set<string>();
-  for (const event of ranked) {
+  for (const event of diverseRanked) {
     if (seenCategories.has(event.category)) continue;
     selected.push(event);
     seenCategories.add(event.category);
     seenProductions.add(productionIdentity(event));
     if (selected.length === limit) return selected;
   }
-  for (const event of ranked) {
+  for (const event of diverseRanked) {
     const key = productionIdentity(event);
     if (seenProductions.has(key)) continue;
     selected.push(event);
@@ -244,8 +283,8 @@ export function fallbackEvents(
   semantic?: SemanticRanking,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  return rankedCandidates(events, message, history, semantic).ranked.slice(
-    0,
+  return diverseEvents(
+    rankedCandidates(events, message, history, semantic).ranked,
     limit,
   );
 }

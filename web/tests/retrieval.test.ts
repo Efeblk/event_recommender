@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  diverseEvents,
   fallbackEvents,
+  isAlternativesRequest,
   searchContext,
   shortlistEvents,
 } from '../lib/retrieval.ts';
@@ -29,6 +31,70 @@ const make = (id: string, patch: Partial<EventRecord> = {}): EventRecord => ({
   id,
   url: `https://example.test/${id}`,
   ...patch,
+});
+
+await test('display diversity suppresses the same recognized show across venues without fuzzy title merging', () => {
+  const events = [
+    make('edepsiz-one', { title: 'Edepsiz', venue: 'Sahne Bir' }),
+    make('edepsiz-two', { title: 'Edepsiz', venue: 'Sahne İki' }),
+    make('yunus-one', { title: 'Yunus', venue: 'Sahne Bir' }),
+    make('yunus-two', {
+      title: 'Yunus: Başka Bir Gösteri',
+      venue: 'Sahne İki',
+    }),
+    make('yunus-three', { title: 'Yunus 3', venue: 'Sahne Üç' }),
+  ];
+  assert.deepEqual(
+    diverseEvents(events).map(({ id }) => id),
+    ['edepsiz-one', 'yunus-one', 'yunus-two', 'yunus-three'],
+  );
+  assert.equal(events[0].venue, 'Sahne Bir');
+  assert.equal(events[1].venue, 'Sahne İki');
+});
+
+await test('lexical shortlist fills from distinct shows beyond repeated top-ranked titles', () => {
+  const repeated = Array.from({ length: 20 }, (_, index) =>
+    make(`repeat-${index}`, {
+      title: 'Edepsiz',
+      venue: `Sahne ${index}`,
+      description: 'Özgün komedi',
+    }),
+  );
+  const distinct = Array.from({ length: 5 }, (_, index) =>
+    make(`distinct-${index}`, {
+      title: `Farklı Gösteri ${index}`,
+      description: '',
+    }),
+  );
+  const result = shortlistEvents(
+    [...repeated, ...distinct],
+    'Özgün komedi',
+    [],
+    5,
+  );
+  assert.equal(result.length, 5);
+  assert.equal(result[0].id, 'repeat-0');
+  assert.equal(new Set(result.map(({ title }) => title)).size, 5);
+});
+
+await test('generic titles remain distinct productions and alternatives wording is shared', () => {
+  const generic = [
+    make('open-mic-one', { title: 'Open Mic', venue: 'Sahne Bir' }),
+    make('open-mic-two', { title: 'Open Mic', venue: 'Sahne İki' }),
+  ];
+  assert.deepEqual(
+    diverseEvents(generic).map(({ id }) => id),
+    ['open-mic-one', 'open-mic-two'],
+  );
+  assert.equal(isAlternativesRequest('Bana başka seçenekler göster'), true);
+  assert.equal(isAlternativesRequest('Diğer etkinlikleri bul'), true);
+  assert.equal(isAlternativesRequest('Alternatif öneri var mı?'), true);
+  assert.equal(isAlternativesRequest('Başka bir semtte konser'), false);
+  assert.equal(isAlternativesRequest('Show me alternatives'), true);
+  assert.equal(
+    isAlternativesRequest('More options under the same budget'),
+    true,
+  );
 });
 
 await test('soft-negated rock cannot crowd alternatives out of the Jev shortlist', () => {

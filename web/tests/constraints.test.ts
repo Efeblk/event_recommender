@@ -220,6 +220,7 @@ await test('ambiguous date forms preserve the previous exact date', () => {
     'gelecek hafta cuma',
     'cuma değil cumartesi',
     '12.09.2026',
+    '9.30 konser',
     '12 Eylül konser',
   ]) {
     const result = interpretConstraints(message, previous, now);
@@ -230,6 +231,31 @@ await test('ambiguous date forms preserve the previous exact date', () => {
     interpretConstraints('sakin bir akşam', emptyFilters, now).issue,
     null,
   );
+});
+
+await test('recognized before and after clocks are not mistaken for ambiguous dates', () => {
+  const cases = [
+    ['Tomorrow after 19:30, a concert under 600 TL.', 'startTimeFrom', true],
+    ['Tomorrow after 19.30, a concert under 600 TL.', 'startTimeFrom', true],
+    ['Tomorrow before 19:30, a concert under 600 TL.', 'startTimeTo', true],
+    ['Tomorrow before 19.30, a concert under 600 TL.', 'startTimeTo', true],
+    ["Yarın 19:30'dan sonra 600 TL altı konser.", 'startTimeFrom', true],
+    ["Yarın 19.30'dan sonra 600 TL altı konser.", 'startTimeFrom', true],
+    ["Yarın 19:30'dan önce 600 TL altı konser.", 'startTimeTo', true],
+    ["Yarın 19.30'dan önce 600 TL altı konser.", 'startTimeTo', true],
+  ] as const;
+  for (const [message, timeKey, exclusive] of cases) {
+    const result = interpretConstraints(message, emptyFilters, now);
+    assert.equal(result.issue, null, message);
+    assert.equal(result.filters.dateFrom, '2026-09-08', message);
+    assert.equal(result.filters.dateTo, '2026-09-08', message);
+    assert.equal(result.filters[timeKey], '19:30', message);
+    const exclusiveKey =
+      timeKey === 'startTimeFrom'
+        ? 'startTimeFromExclusive'
+        : 'startTimeToExclusive';
+    assert.equal(result.filters[exclusiveKey], exclusive, message);
+  }
 });
 
 await test('unsupported city is detected unless it is explicitly negated', () => {

@@ -140,6 +140,31 @@ await test('alternatives exclude all sessions of the shown production', async ()
   );
   assert.deepEqual(result.recommendations, []);
 });
+await test('recommendations show distinct exact titles across venues without merging session offers', async () => {
+  const candidates = [
+    { ...event, id: 'edepsiz-one', title: 'Edepsiz', venue: 'Sahne Bir' },
+    {
+      ...event,
+      id: 'edepsiz-two',
+      title: 'Edepsiz',
+      venue: 'Sahne İki',
+      url: 'https://example.test/edepsiz-two',
+    },
+    { ...event, id: 'yunus', title: 'Yunus', venue: 'Sahne Üç' },
+  ];
+  const result = await recommend(validateInput({ message: 'Konser' }), {
+    ...deps,
+    candidates: async () => candidates,
+  });
+  assert.deepEqual(
+    result.recommendations.map(
+      ({ event: recommendation }) => recommendation.id,
+    ),
+    ['edepsiz-one', 'yunus'],
+  );
+  assert.equal(candidates[0].venue, 'Sahne Bir');
+  assert.equal(candidates[1].venue, 'Sahne İki');
+});
 await test('ambiguous constraints and unsupported cities never reach retrieval or AI', async () => {
   for (const [message, status] of [
     ['Toplam bütçem 800 TL', 'needs_input'],

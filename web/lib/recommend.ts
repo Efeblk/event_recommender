@@ -13,7 +13,12 @@ import {
   validateFilters,
 } from './search.ts';
 import { rankWithJev, type JevConfig, type JevRanking } from './jev.ts';
-import { fallbackEvents, searchContext, shortlistEvents } from './retrieval.ts';
+import {
+  diverseEvents,
+  fallbackEvents,
+  searchContext,
+  shortlistEvents,
+} from './retrieval.ts';
 import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
 import { semanticQuery, type SemanticRanking } from './hybrid.ts';
 import { mergeEventSessions } from './event-merge.ts';
@@ -98,7 +103,10 @@ export function selectJevEvents(
     )
     .sort((a, b) => b.score - a.score)
     .map(({ event }) => byId.get(event.id)!);
-  return uniqueEvents(supported, Math.max(0, Math.min(5, limit)));
+  return diverseEvents(
+    uniqueEvents(supported, supported.length),
+    Math.max(0, Math.min(5, limit)),
+  );
 }
 
 const basicNotice =

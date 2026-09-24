@@ -164,3 +164,26 @@ await test('Jev adapter consumes actual token usage and rejects oversized respon
     /too large/,
   );
 });
+
+await test('Jev deadline includes delayed response bodies and makes no retry', async () => {
+  let calls = 0;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode('{"answers":'));
+    },
+  });
+  await assert.rejects(
+    rankWithJev(
+      { apiKey: 'test-only', model: 'jev-1.13.0' },
+      input,
+      candidates,
+      (async () => {
+        calls++;
+        return new Response(body);
+      }) as typeof fetch,
+      30,
+    ),
+    { message: 'Jev request timed out.' },
+  );
+  assert.equal(calls, 1);
+});

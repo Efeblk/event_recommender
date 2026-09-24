@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { isAlternativesRequest } from '@/lib/intent';
 import {
   emptyFilters,
   type EventRecord,
@@ -334,7 +335,7 @@ export default function Home() {
     }
     const excludeIds =
       retryAttempt?.excludeIds ??
-      (alternatives
+      (alternatives || isAlternativesRequest(query)
         ? [
             ...new Set([
               ...excluded,
@@ -355,6 +356,13 @@ export default function Home() {
     };
     controller.current?.abort();
     const abort = new AbortController();
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      abort.abort(
+        new DOMException('Arama zaman aşımına uğradı.', 'TimeoutError'),
+      );
+    }, 40_000);
     controller.current = abort;
     searchBusy.current = true;
     setBusy(true);
@@ -392,6 +400,13 @@ export default function Home() {
         }),
       );
     } catch (reason) {
+      if (timedOut) {
+        setError(
+          'Arama 40 saniye içinde tamamlanamadı. Tekrar deneyebilirsin.',
+        );
+        setRetryAction({ kind: 'search', attempt });
+        return;
+      }
       if (reason instanceof Error && reason.name === 'AbortError') return;
       setError(
         reason instanceof Error
@@ -400,6 +415,7 @@ export default function Home() {
       );
       setRetryAction({ kind: 'search', attempt });
     } finally {
+      window.clearTimeout(timeout);
       if (controller.current === abort) {
         searchBusy.current = false;
         setBusy(false);

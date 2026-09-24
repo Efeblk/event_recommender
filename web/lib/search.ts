@@ -328,6 +328,21 @@ function parsedDistrict(q: string): {
   };
 }
 
+const localClock = '(?:[01]?\\d|2[0-3])(?:[:.]?[0-5]\\d)';
+
+function withoutRecognizedLocalTimes(q: string): string {
+  return [
+    new RegExp(
+      `\\b(?:saat\\s*)?${localClock}['’]?(?:dan|den|tan|ten)\\s+(?:sonra|once)\\b`,
+      'g',
+    ),
+    new RegExp(
+      `\\b(?:after|before|once|until|by|sonra|itibaren|from)\\s+(?:saat\\s*)?${localClock}\\b`,
+      'g',
+    ),
+  ].reduce((text, pattern) => text.replace(pattern, ' '), q);
+}
+
 function parseLocalTimes(q: string) {
   const result: Pick<
     Filters,
@@ -336,7 +351,6 @@ function parseLocalTimes(q: string) {
     | 'startTimeFromExclusive'
     | 'startTimeToExclusive'
   > = {};
-  const clock = '(?:[01]?\\d|2[0-3])(?:[:.]?[0-5]\\d)';
   const format = (raw: string) => {
     const digits = raw.replace('.', ':');
     if (digits.includes(':')) {
@@ -346,32 +360,37 @@ function parseLocalTimes(q: string) {
     return `${digits.slice(0, -2).padStart(2, '0')}:${digits.slice(-2)}`;
   };
   const from = q.match(
-    new RegExp(`\\b(after|sonra|itibaren|from)\\s+(?:saat\\s*)?(${clock})\\b`),
+    new RegExp(
+      `\\b(after|sonra|itibaren|from)\\s+(?:saat\\s*)?(${localClock})\\b`,
+    ),
   );
   const fromPrefix = q.match(
     new RegExp(
-      `\\b(?:saat\\s*)?(${clock})['’]?(?:dan|den|tan|ten)\\s+sonra\\b`,
+      `\\b(?:saat\\s*)?(${localClock})['’]?(?:dan|den|tan|ten)\\s+sonra\\b`,
     ),
   );
   const to = q.match(
-    new RegExp(`\\b(before|once|until|by)\\s+(?:saat\\s*)?(${clock})\\b`),
+    new RegExp(`\\b(before|once|until|by)\\s+(?:saat\\s*)?(${localClock})\\b`),
   );
   const toPrefix = q.match(
-    new RegExp(`\\b(?:saat\\s*)?(${clock})['’]?(?:dan|den|tan|ten)\\s+once\\b`),
+    new RegExp(
+      `\\b(?:saat\\s*)?(${localClock})['’]?(?:dan|den|tan|ten)\\s+once\\b`,
+    ),
   );
-  const fromMatch = from?.[2] ?? fromPrefix?.[1];
-  const toMatch = to?.[2] ?? toPrefix?.[1];
+  const fromUsesPrefix =
+    !!fromPrefix && (!from || fromPrefix.index! <= from.index!);
+  const toUsesPrefix = !!toPrefix && (!to || toPrefix.index! <= to.index!);
+  const fromMatch = fromUsesPrefix ? fromPrefix[1] : from?.[2];
+  const toMatch = toUsesPrefix ? toPrefix[1] : to?.[2];
   if (fromMatch) {
     result.startTimeFrom = format(fromMatch);
-    result.startTimeFromExclusive = /\b(?:after|sonra)\b/.test(
-      from?.[1] ?? q.slice(fromPrefix!.index),
-    );
+    result.startTimeFromExclusive =
+      fromUsesPrefix || /\b(?:after|sonra)\b/.test(from![1]);
   }
   if (toMatch) {
     result.startTimeTo = format(toMatch);
-    result.startTimeToExclusive = /\b(?:before|once)\b/.test(
-      to?.[1] ?? q.slice(toPrefix!.index),
-    );
+    result.startTimeToExclusive =
+      toUsesPrefix || /\b(?:before|once)\b/.test(to![1]);
   }
   return result;
 }
@@ -482,6 +501,7 @@ function unsupportedLocation(q: string) {
 }
 
 function dateIssue(q: string): ConstraintIssue | null {
+  q = withoutRecognizedLocalTimes(q);
   const iso = [...q.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map((m) => m[0]);
   if (iso.length)
     return iso.length <= 2 && iso.every(validDay) ? null : 'date_ambiguous';

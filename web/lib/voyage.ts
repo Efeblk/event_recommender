@@ -1,4 +1,5 @@
 import type { EventRecord } from './types.ts';
+import { withDeadline } from './deadline.ts';
 
 export interface VoyageEnv {
   VOYAGE_API_KEY?: string;
@@ -136,6 +137,7 @@ export async function embedWithVoyage(
   texts: string[],
   inputType: 'query' | 'document',
   fetcher: typeof fetch = fetch,
+  timeoutMs = 15000,
 ): Promise<number[][]> {
   if (!config.apiKey.trim()) throw new Error('VOYAGE_API_KEY is required.');
   if (!supportedModels.has(config.model))
@@ -147,35 +149,41 @@ export async function embedWithVoyage(
   if (texts.some((text) => !text.trim() || text.length > 10000))
     throw new Error('Voyage texts must contain 1–10,000 characters each.');
 
-  let response: Response;
-  try {
-    response = await fetcher(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${config.apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        input: texts,
-        model: config.model,
-        input_type: inputType,
-        truncation: false,
-        output_dimension: config.dimensions,
-        output_dtype: 'float',
-      }),
-      redirect: 'manual',
-      signal: AbortSignal.timeout(15000),
-    });
-  } catch {
-    throw new Error('Voyage request failed.');
-  }
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`Voyage request failed (HTTP ${response.status}).`);
-  }
-  return parseEmbeddings(
-    await readBoundedJson(response),
-    texts.length,
-    config.dimensions,
+  return withDeadline(
+    timeoutMs,
+    'Voyage request timed out.',
+    async (signal) => {
+      let response: Response;
+      try {
+        response = await fetcher(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${config.apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            input: texts,
+            model: config.model,
+            input_type: inputType,
+            truncation: false,
+            output_dimension: config.dimensions,
+            output_dtype: 'float',
+          }),
+          redirect: 'manual',
+          signal,
+        });
+      } catch {
+        throw new Error('Voyage request failed.');
+      }
+      if (!response.ok) {
+        await response.body?.cancel();
+        throw new Error(`Voyage request failed (HTTP ${response.status}).`);
+      }
+      return parseEmbeddings(
+        await readBoundedJson(response),
+        texts.length,
+        config.dimensions,
+      );
+    },
   );
 }
