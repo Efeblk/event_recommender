@@ -500,7 +500,7 @@ function unsupportedLocation(q: string) {
   });
 }
 
-function dateIssue(q: string): ConstraintIssue | null {
+function dateIssue(q: string, previous: Filters): ConstraintIssue | null {
   q = withoutRecognizedLocalTimes(q);
   const iso = [...q.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map((m) => m[0]);
   if (iso.length)
@@ -519,6 +519,11 @@ function dateIssue(q: string): ConstraintIssue | null {
     )
   )
     return 'date_ambiguous';
+  const sameDate = /\b(?:ayni (?:tarih(?:te)?|gun(?:de)?)|same (?:date|day))\b/g;
+  if (sameDate.test(q)) {
+    if (!previous.dateFrom && !previous.dateTo) return 'date_ambiguous';
+    q = q.replace(sameDate, ' ');
+  }
   const dateSalient =
     /\b(?:tarih|gun|hafta|haftasonu|ay|ayin|bugun|yarin|pazartesi|sali|carsamba|persembe|cuma|cumartesi|pazar)\b/.test(
       q,
@@ -654,7 +659,7 @@ export function interpretConstraints(
   let issue: ConstraintIssue | null = null;
   if (unsupportedLocation(q)) issue = 'unsupported_location';
   else if (budgetIssue(q)) issue = 'budget_ambiguous';
-  else if (dateIssue(q)) issue = 'date_ambiguous';
+  else if (dateIssue(q, previousFilters)) issue = 'date_ambiguous';
   else if (district.ambiguous) issue = 'constraint_ambiguous';
   else if (category.ambiguous) issue = 'constraint_ambiguous';
   if (issue) return { filters: previousFilters, issue };

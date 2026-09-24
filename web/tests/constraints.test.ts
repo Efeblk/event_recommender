@@ -477,3 +477,30 @@ await test('district parsing respects negation and clarifies multiple choices', 
   );
   assert.throws(() => parseFilters('Kadıköy veya Beşiktaş', emptyFilters, now));
 });
+
+await test('same-date follow-up preserves known date/time/district while updating budget', () => {
+  const previous = {
+    ...emptyFilters,
+    dateFrom: '2026-09-25',
+    dateTo: '2026-09-25',
+    district: 'Beyoglu',
+    startTimeFrom: '20:00',
+    startTimeFromExclusive: true,
+    maxPrice: 700,
+  };
+  const result = interpretConstraints(
+    'Aynı tarih, saat ve ilçede başka seçenekler. Bütçeyi 900 TL’ye çıkar.',
+    previous,
+    now,
+  );
+  assert.equal(result.issue, null);
+  assert.deepEqual(result.filters, { ...previous, maxPrice: 900 });
+  assert.equal(
+    interpretConstraints('Aynı tarihte olsun', emptyFilters, now).issue,
+    'date_ambiguous',
+  );
+  assert.equal(
+    interpretConstraints('Same date please', emptyFilters, now).issue,
+    'date_ambiguous',
+  );
+});
