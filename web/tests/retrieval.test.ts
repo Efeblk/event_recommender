@@ -123,6 +123,166 @@ await test('soft-negated rock cannot crowd alternatives out of the Jev shortlist
   );
 });
 
+await test('semantic calm-mood shortlist reserves diverse sourced formats without claiming quietness', () => {
+  const nightlife = Array.from({ length: 20 }, (_, index) =>
+    make(`nightlife-${index}`, {
+      title: `Gece Eğlencesi ${index}`,
+      description: 'Enerjik sahne gösterisi',
+    }),
+  );
+  const acoustic = make('calm-acoustic', {
+    title: 'Akustik Üçlü',
+    description: 'Akustik gitar ve kontrbas performansı',
+  });
+  const strings = make('calm-strings', {
+    title: 'Üç Viyolonsel',
+    description: 'Üç viyolonsel için hazırlanmış konser programı',
+  });
+  const candle = make('calm-candle', {
+    title: 'Mum Işığında Konser',
+    description: 'Binlerce mum ışığında canlı müzik programı',
+  });
+  const events = [...nightlife, acoustic, strings, candle];
+  const semantic = {
+    queryVector: [1, 0],
+    vectors: new Map(
+      events.map((event, index) => [
+        event.id,
+        index < nightlife.length ? [1, 0] : [0, 1],
+      ]),
+    ),
+  };
+  const result = shortlistEvents(
+    events,
+    'Çok yoruldum, sakin ama sıkıcı olmayan bir akşam istiyorum',
+    [],
+    16,
+    semantic,
+  );
+  const ids = new Set(result.map(({ id }) => id));
+  assert.equal(result.length, 16);
+  assert.equal(ids.has(acoustic.id), true);
+  assert.equal(ids.has(strings.id), true);
+  assert.equal(ids.has(candle.id), true);
+  assert.equal(strings.description.includes('sakin'), false);
+});
+
+await test('calm-format coverage does not activate for a rejected calm mood', () => {
+  const ordinary = Array.from({ length: 16 }, (_, index) =>
+    make(`ordinary-${index}`, { title: `Etkinlik ${index}` }),
+  );
+  const acoustic = make('unwanted-acoustic', {
+    description: 'Akustik gitar performansı',
+  });
+  const events = [...ordinary, acoustic];
+  const semantic = {
+    queryVector: [1, 0],
+    vectors: new Map(
+      events.map((event) => [
+        event.id,
+        event.id === acoustic.id ? [0, 1] : [1, 0],
+      ]),
+    ),
+  };
+  assert.equal(
+    shortlistEvents(
+      events,
+      'Sakin bir şey istemiyorum, enerjik olsun',
+      [],
+      16,
+      semantic,
+    ).some(({ id }) => id === acoustic.id),
+    false,
+  );
+});
+
+await test('calm mood uses reset-aware history and supports English phrasing', () => {
+  const ordinary = Array.from({ length: 16 }, (_, index) =>
+    make(`reset-ordinary-${index}`, { title: `Etkinlik ${index}` }),
+  );
+  const acoustic = make('reset-acoustic', {
+    description: 'Akustik gitar performansı',
+  });
+  const events = [...ordinary, acoustic];
+  const semantic = {
+    queryVector: [1, 0],
+    vectors: new Map(
+      events.map((event) => [
+        event.id,
+        event.id === acoustic.id ? [0, 1] : [1, 0],
+      ]),
+    ),
+  };
+  assert.equal(
+    shortlistEvents(
+      events,
+      'I am tired and want a relaxed evening',
+      [],
+      16,
+      semantic,
+    ).some(({ id }) => id === acoustic.id),
+    true,
+  );
+  assert.equal(
+    shortlistEvents(
+      events,
+      'Her kategori olur',
+      [{ role: 'user', content: 'Sakin bir akşam istiyorum' }],
+      16,
+      semantic,
+    ).some(({ id }) => id === acoustic.id),
+    false,
+  );
+  assert.equal(
+    shortlistEvents(
+      events,
+      'I do not want a calm evening',
+      [],
+      16,
+      semantic,
+    ).some(({ id }) => id === acoustic.id),
+    false,
+  );
+});
+
+await test('negated or incidental instruments are not calm-format evidence', () => {
+  const ordinary = Array.from({ length: 16 }, (_, index) =>
+    make(`format-ordinary-${index}`, { title: `Etkinlik ${index}` }),
+  );
+  const negatedAcoustic = make('negated-acoustic-format', {
+    description: 'Akustik değil, elektronik ve yüksek tempolu performans',
+  });
+  const biography = make('violin-biography', {
+    description: 'Sanatçı çocukluğunda keman eğitimi aldı; enerjik rock repertuvarıyla sahnede.',
+  });
+  const energeticStrings = make('energetic-rock-violin', {
+    description: 'Enerjik rock konserinde keman performansı ve heavy metal eserleri',
+  });
+  const events = [
+    ...ordinary,
+    negatedAcoustic,
+    biography,
+    energeticStrings,
+  ];
+  const semantic = {
+    queryVector: [1, 0],
+    vectors: new Map(
+      events.map((event) => [
+        event.id,
+        event.id.startsWith('format-ordinary') ? [1, 0] : [0, 1],
+      ]),
+    ),
+  };
+  const ids = new Set(
+    shortlistEvents(events, 'Sakin bir akşam istiyorum', [], 16, semantic).map(
+      ({ id }) => id,
+    ),
+  );
+  assert.equal(ids.has(negatedAcoustic.id), false);
+  assert.equal(ids.has(biography.id), false);
+  assert.equal(ids.has(energeticStrings.id), false);
+});
+
 await test('child-show negation excludes only events with explicit child evidence', () => {
   const children = Array.from({ length: 20 }, (_, index) =>
     make(`child-${index}`, {

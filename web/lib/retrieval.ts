@@ -196,6 +196,109 @@ function eventText(event: EventRecord) {
   );
 }
 
+function requestsCalmOptionalMood(message: string, history: Message[]) {
+  const turns = [
+    message,
+    ...history
+      .filter(({ role }) => role === 'user')
+      .toReversed()
+      .map(({ content }) => content),
+  ];
+  for (const turn of turns) {
+    const text = normalize(turn);
+    if (
+      /\b(?:sakin|huzurlu|dinlendirici|calm|relaxed|relaxing|quiet)\b[^.!?]{0,24}\b(?:istemiyorum|istemem|olmasin|degil|is not|isn't)\b/.test(
+        text,
+      ) ||
+      /\b(?:not|no|don't want|do not want)\s+(?:a\s+)?(?:calm|relaxed|relaxing|quiet)\b/.test(
+        text,
+      )
+    )
+      return false;
+    if (
+      /\b(?:sakin|huzurlu|dinlendirici|yoruldum|yorgunum|rahat(?:\s+bir)?\s+aksam|calm|relaxed|relaxing|tired|exhausted)\b/.test(
+        text,
+      )
+    )
+      return true;
+  }
+  return false;
+}
+
+/**
+ * These are sourced program/format signals, not claims that an event is quiet.
+ * They reserve a little shortlist coverage so Jev can judge a calm optional
+ * mood against the actual description instead of seeing only generic nightlife.
+ */
+function calmFormatTags(event: EventRecord) {
+  const title = normalize(event.title);
+  const description = normalize(event.description);
+  const text = `${title} ${description}`;
+  const tags: string[] = [];
+  const highEnergy =
+    /\b(?:yuksek sesli|enerjik\s+(?:rock|metal)|hard rock|heavy metal)\b/.test(
+      text,
+    );
+  if (
+    /\bakustik\b/.test(text) &&
+    !/\bakustik\b[^.!?]{0,20}\b(?:degil|olmayan|yok)\b/.test(text)
+  )
+    tags.push('acoustic');
+  const stringProgram =
+    /\b(?:viyolonsel|cello|yayli|keman|oda muzigi)\b[^.!?]{0,64}\b(?:konser|program|performans|resital|eser|muzik)\b/.test(
+      text,
+    ) ||
+    /\b(?:konser|program|performans|resital|eser|muzik)\b[^.!?]{0,64}\b(?:viyolonsel|cello|yayli|keman|oda muzigi)\b/.test(
+      text,
+    ) ||
+    /\b(?:viyolonsel|cello|yayli|keman|oda muzigi)\b/.test(title);
+  if (stringProgram && !highEnergy)
+    tags.push('chamber-strings');
+  if (!highEnergy && /\b(?:piyano resitali|klasik muzik|resital)\b/.test(text))
+    tags.push('recital-classical');
+  if (/\b(?:candle|mum isigi|mum isiginda)\b/.test(text))
+    tags.push('candle-format');
+  return tags;
+}
+
+function calmMoodShortlistCoverage(
+  ranked: EventRecord[],
+  message: string,
+  history: Message[],
+  limit: number,
+) {
+  if (!requestsCalmOptionalMood(message, history) || limit < 2) return null;
+  const requestedChildEvent = /\bcocuk(?:lar|lara|larin)?\b/.test(
+    normalize(message),
+  );
+  const seenTags = new Set<string>();
+  const supplements: EventRecord[] = [];
+  for (const event of ranked) {
+    if (!requestedChildEvent && hasChildAudienceEvidence(event)) continue;
+    const tag = calmFormatTags(event).find((item) => !seenTags.has(item));
+    if (!tag) continue;
+    seenTags.add(tag);
+    supplements.push(event);
+    if (supplements.length === Math.min(4, limit)) break;
+  }
+  if (!supplements.length) return null;
+  const supplementalIds = new Set(supplements.map(({ id }) => id));
+  const selected = ranked
+    .filter(({ id }) => !supplementalIds.has(id))
+    .slice(0, limit - supplements.length);
+  selected.push(...supplements);
+  const selectedIds = new Set(selected.map(({ id }) => id));
+  for (const event of ranked) {
+    if (selected.length === limit) break;
+    if (!selectedIds.has(event.id)) {
+      selected.push(event);
+      selectedIds.add(event.id);
+    }
+  }
+  // Coverage may change membership, never the underlying hybrid order.
+  return ranked.filter(({ id }) => selectedIds.has(id)).slice(0, limit);
+}
+
 function eligibleForContext(event: EventRecord, context: SearchContext) {
   const text = eventText(event);
   if (context.category && event.category !== context.category) return false;
@@ -261,9 +364,23 @@ export function shortlistEvents(
   semantic?: SemanticRanking,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  const { ranked } = rankedCandidates(events, message, history, semantic);
+  const { context, ranked } = rankedCandidates(
+    events,
+    message,
+    history,
+    semantic,
+  );
   const diverseRanked = diverseEvents(ranked, ranked.length);
-  if (semantic) return diverseRanked.slice(0, limit);
+  if (semantic)
+    return (
+      calmMoodShortlistCoverage(
+        diverseRanked,
+        message,
+        context.history,
+        limit,
+      ) ??
+      diverseRanked.slice(0, limit)
+    );
   const selected: EventRecord[] = [];
   const seenProductions = new Set<string>();
   const seenCategories = new Set<string>();
