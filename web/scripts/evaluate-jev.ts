@@ -2,7 +2,10 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { parseArgs, parseEnv } from 'node:util';
 import { buildJevRequest, rankWithJev, type JevRanking } from '../lib/jev.ts';
 import { interpretConstraints, isEligible } from '../lib/search.ts';
-import { MIN_JEV_SCORE, selectJevEvents } from '../lib/recommend.ts';
+import {
+  MIN_JEV_SUPPORT_PROBABILITY,
+  selectJevEvents,
+} from '../lib/recommend.ts';
 import { searchContext, shortlistEvents } from '../lib/retrieval.ts';
 import { deriveRequirements, meetsRequirements } from '../lib/requirements.ts';
 import { mergeEventSessions } from '../lib/event-merge.ts';
@@ -90,7 +93,13 @@ const positivePlan = plan.filter((item) => item.candidateRecall !== null);
 type CaseResult = ReturnType<typeof evaluateRecommendationList> & {
   id: string;
   model?: string;
-  ranking?: { id: string; score: number; confidence: number }[];
+  ranking?: {
+    id: string;
+    score: number;
+    confidence: number;
+    probabilities: readonly [number, number, number, number];
+    supportProbability: number;
+  }[];
   unknownCandidateScoreIds?: string[];
   staleScoreIds?: string[];
   latencyMs?: number;
@@ -122,7 +131,7 @@ function makeReport(
       mode === 'live-rescore'
         ? cases.filter((item) => item.candidates.length).length
         : 0,
-    minJevScore: MIN_JEV_SCORE,
+    minJevSupportProbability: MIN_JEV_SUPPORT_PROBABILITY,
     candidateRecall: positivePlan.length
       ? positivePlan.reduce(
           (sum, item) => sum + (item.candidateRecall ?? 0),
@@ -197,6 +206,18 @@ if (!values.live) {
         error:
           'Current shortlist contains candidates absent from the saved score snapshot; filtering replay is unknown.',
       };
+    if (
+      saved.ranking.some(
+        (item) => !item.probabilities || item.supportProbability === undefined,
+      )
+    )
+      return {
+        id: item.id,
+        ...evaluateRecommendationList(item, []),
+        ...coverage,
+        error:
+          'Replay snapshot predates Jev probability retention; current support-probability admission is unknown.',
+      };
     const byId = new Map(
       item.candidates.map((candidate) => [candidate.id, candidate]),
     );
@@ -205,10 +226,12 @@ if (!values.live) {
       usage: { inputTokens: 0, outputTokens: 0 },
       ranked: saved.ranking
         .filter(({ id }) => byId.has(id))
-        .map(({ id, score, confidence }) => ({
+        .map(({ id, score, confidence, probabilities, supportProbability }) => ({
           event: byId.get(id)!,
           score,
           confidence,
+          probabilities: probabilities!,
+          supportProbability: supportProbability!,
         })),
     };
     const acceptedIds = selectJevEvents(item.candidates, ranking).map(
@@ -219,7 +242,13 @@ if (!values.live) {
       model: snapshot.model,
       ...evaluateRecommendationList(item, acceptedIds),
       ...coverage,
-      ranking: saved.ranking,
+      ranking: saved.ranking.map((item) => ({
+        id: item.id,
+        score: item.score,
+        confidence: item.confidence,
+        probabilities: item.probabilities!,
+        supportProbability: item.supportProbability!,
+      })),
     };
   });
   const output = makeReport(results, 'saved-score-replay', snapshot.model);
@@ -280,11 +309,15 @@ if (!values.live) {
         ...evaluateRecommendationList(item, acceptedIds),
         latencyMs: Math.round(performance.now() - start),
         usage: ranking.usage,
-        ranking: ranking.ranked.map(({ event, score, confidence }) => ({
+        ranking: ranking.ranked.map(
+          ({ event, score, confidence, probabilities, supportProbability }) => ({
           id: event.id,
           score,
           confidence,
-        })),
+          probabilities,
+          supportProbability,
+        }),
+        ),
       });
     } catch (error) {
       results.push({

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   recommend,
+  selectJevEvents,
   validateInput,
   type Dependencies,
 } from '../lib/recommend.ts';
@@ -32,6 +33,91 @@ const deps: Dependencies = {
 };
 const request = validateInput({ message: 'Cumartesi 800 TL altında konser' });
 const config = jevConfigFrom({ TYPESAFE_API_KEY: 'test-only' })!;
+
+await test('Jev admission uses support probability while score only orders admitted events', () => {
+  const makeRanked = (
+    id: string,
+    score: number,
+    probabilities: readonly [number, number, number, number],
+  ) => ({
+    event: { ...event, id, title: id, url: `https://example.test/${id}` },
+    score,
+    confidence: 0.5,
+    probabilities,
+    supportProbability: probabilities[2] + probabilities[3],
+  });
+  const supportedLowMean = makeRanked('supported-low-mean', 1.98, [
+    0,
+    0.02,
+    0.98,
+    0,
+  ]);
+  const boundary = makeRanked('boundary', 1.4, [0, 0.3, 0.7, 0]);
+  const rejected49 = makeRanked('rejected-49', 1.49, [0, 0.51, 0.49, 0]);
+  const rejected66 = makeRanked('rejected-66', 1.66, [0, 0.34, 0.66, 0]);
+  const fake = makeRanked('fake', 3, [0, 0, 0, 1]);
+  const canonical = [
+    supportedLowMean.event,
+    boundary.event,
+    rejected49.event,
+    rejected66.event,
+  ];
+  const selected = selectJevEvents(canonical, {
+    ranked: [fake, boundary, supportedLowMean, rejected66, rejected49],
+    model: 'jev-test',
+    usage: { inputTokens: 0, outputTokens: 0 },
+  });
+  assert.deepEqual(
+    selected.map(({ id }) => id),
+    ['supported-low-mean', 'boundary'],
+  );
+
+  const malformed = {
+    ...supportedLowMean,
+    supportProbability: Number.NaN,
+  };
+  assert.deepEqual(
+    selectJevEvents(canonical, {
+      ranked: [malformed],
+      model: 'jev-test',
+      usage: { inputTokens: 0, outputTokens: 0 },
+    }),
+    [],
+  );
+  const inconsistent = {
+    ...supportedLowMean,
+    supportProbability: 0.7,
+  };
+  const invalidProbabilities = {
+    ...supportedLowMean,
+    probabilities: [0, 0, 0.8, 0.8] as const,
+    supportProbability: 1,
+  };
+  const invalidScore = { ...supportedLowMean, score: Number.NaN };
+  for (const invalid of [
+    inconsistent,
+    invalidProbabilities,
+    invalidScore,
+  ])
+    assert.deepEqual(
+      selectJevEvents(canonical, {
+        ranked: [invalid],
+        model: 'jev-test',
+        usage: { inputTokens: 0, outputTokens: 0 },
+      }),
+      [],
+    );
+  const missing = { ...supportedLowMean } as Partial<typeof supportedLowMean>;
+  delete missing.supportProbability;
+  assert.deepEqual(
+    selectJevEvents(canonical, {
+      ranked: [missing] as never,
+      model: 'jev-test',
+      usage: { inputTokens: 0, outputTokens: 0 },
+    }),
+    [],
+  );
+});
 
 function assertRecommendedEvent(actual: EventRecord, expected: EventRecord) {
   const sourceFields = (record: EventRecord) => {
@@ -451,13 +537,27 @@ await test('ranking cannot substitute invented IDs, URLs or prices', async () =>
       model: 'jev-1.13.0',
       usage: { inputTokens: 0, outputTokens: 0 },
       ranked: [
-        { event: { ...event, id: 'invented' }, score: 3, confidence: 1 },
+        {
+          event: { ...event, id: 'invented' },
+          score: 3,
+          confidence: 1,
+          probabilities: [0, 0, 0, 1],
+          supportProbability: 1,
+        },
         {
           event: { ...event, price: 1, url: 'https://evil.test' },
           score: 3,
           confidence: 1,
+          probabilities: [0, 0, 0, 1],
+          supportProbability: 1,
         },
-        { event, score: 3, confidence: 1 },
+        {
+          event,
+          score: 3,
+          confidence: 1,
+          probabilities: [0, 0, 0, 1],
+          supportProbability: 1,
+        },
       ],
     }),
   });
@@ -678,6 +778,8 @@ await test('same performance reaches Jev once with both provider offers and chea
             event,
             score: 3,
             confidence: 1,
+            probabilities: [0, 0, 0, 1] as const,
+            supportProbability: 1,
           })),
           model: 'test',
           usage: { inputTokens: 0, outputTokens: 0 },
@@ -779,6 +881,8 @@ await test('mandatory jazz evidence gates Jev and provider-failure fallback alik
             event,
             score: 3,
             confidence: 1,
+            probabilities: [0, 0, 0, 1] as const,
+            supportProbability: 1,
           })),
           model: config.model,
           usage: { inputTokens: 1, outputTokens: 1 },

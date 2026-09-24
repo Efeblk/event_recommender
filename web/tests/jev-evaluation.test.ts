@@ -119,6 +119,24 @@ await test('replay snapshots reject duplicate and malformed saved scores', () =>
   };
   delete missingScore.cases[0].ranking[0].score;
   assert.throws(() => validateReplaySnapshot(missingScore), /score/i);
+
+  const withProbabilities = validSnapshot();
+  Object.assign(withProbabilities.cases[0].ranking[0], {
+    probabilities: [0, 0.1, 0.7, 0.2],
+    supportProbability: 0.9,
+  });
+  assert.deepEqual(
+    validateReplaySnapshot(withProbabilities).cases[0].ranking[0]
+      .probabilities,
+    [0, 0.1, 0.7, 0.2],
+  );
+  Object.assign(withProbabilities.cases[0].ranking[0], {
+    supportProbability: 0.8,
+  });
+  assert.throws(
+    () => validateReplaySnapshot(withProbabilities),
+    /probabilities/i,
+  );
 });
 
 await test('evaluation fingerprint tracks scored inputs but excludes labels and policy', () => {

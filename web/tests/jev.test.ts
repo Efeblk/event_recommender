@@ -71,6 +71,10 @@ await test('Jev can reorder only supplied events and preserves authoritative eve
     ['electronic', 'acoustic'],
   );
   assert.strictEqual(r.ranked[0].event, candidates[1]);
+  assert.deepEqual(r.ranked[0].probabilities, [0, 0, 0, 1]);
+  assert.equal(r.ranked[0].supportProbability, 1);
+  assert.deepEqual(r.ranked[1].probabilities, [0, 1, 0, 0]);
+  assert.equal(r.ranked[1].supportProbability, 0);
   assert.equal(r.usage.inputTokens, 1500);
 });
 await test('Jev rejects missing answers and malformed probability/score outputs', () => {

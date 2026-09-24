@@ -197,11 +197,15 @@ if (values.live) {
       currency: event.currency,
     }));
     const ranking = await rankWithJev(config, input, candidates);
-    evidence.jevRanking = ranking.ranked.map(({ event, score, confidence }) => ({
-      id: event.id,
-      score,
-      confidence,
-    }));
+    evidence.jevRanking = ranking.ranked.map(
+      ({ event, score, confidence, probabilities, supportProbability }) => ({
+        id: event.id,
+        score,
+        confidence,
+        probabilities,
+        supportProbability,
+      }),
+    );
     evidence.jevModel = ranking.model;
     evidence.jevUsage = ranking.usage;
     return ranking;

@@ -25,7 +25,13 @@ export interface JevInput {
   requirements?: Requirement[];
 }
 export interface JevRanking {
-  ranked: { event: EventRecord; score: number; confidence: number }[];
+  ranked: {
+    event: EventRecord;
+    score: number;
+    confidence: number;
+    probabilities: readonly [number, number, number, number];
+    supportProbability: number;
+  }[];
   model: string;
   usage: { inputTokens: number; outputTokens: number };
 }
@@ -122,7 +128,7 @@ export function parseJevRanking(
       const probabilities = record(answer.probabilities);
       const values = criteria.map((_, level) =>
         number(probabilities[String(level)], 0, 1),
-      );
+      ) as [number, number, number, number];
       if (Math.abs(values.reduce((sum, p) => sum + p, 0) - 1) > 0.02)
         throw new Error('Invalid Jev probability distribution.');
       const score = number(answer.score, 0, criteria.length - 1);
@@ -136,6 +142,8 @@ export function parseJevRanking(
         event,
         score,
         confidence: number(answer.confidence, 0, 1),
+        probabilities: values,
+        supportProbability: values[2] + values[3],
       };
     })
     .sort((a, b) => b.score - a.score);

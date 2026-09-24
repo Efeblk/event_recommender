@@ -1,0 +1,31 @@
+{
+  "referenceDate": "2026-09-24",
+  "timeZone": "Europe/Istanbul",
+  "note": "Frozen before live probability-admission precision checks; existing evidence requirements must still hold.",
+  "cases": [
+    {
+      "id": "ordinary_family",
+      "visitor": 20,
+      "message": "Annemle neşeli bir akşam geçirmek istiyoruz. Ailece izlenebilecek bir komedi gösterisi öner; kişi başı en fazla 900 TL, tarih fark etmez.",
+      "expectation": "Source-supported family suitability; <=900. Generic comedy alone insufficient."
+    },
+    {
+      "id": "strict_content",
+      "visitor": 21,
+      "message": "Komedi olsun, kişi başı en fazla 900 TL. Küfür ve cinsel içerik olmasın; emin olmadıklarını önerme.",
+      "expectation": "Both explicit content absences supported, otherwise empty."
+    },
+    {
+      "id": "mandatory_accessibility",
+      "visitor": 22,
+      "message": "Basamaksız giriş şart. Cuma günü bir caz konseri olsun; kişi başı en fazla 1000 TL.",
+      "expectation": "Positive jazz and step-free evidence required. Unknown access must remain empty."
+    },
+    {
+      "id": "mandatory_quiet",
+      "visitor": 23,
+      "message": "Kesinlikle sessiz bir ortam şart, yüksek ses ve kalabalık istemiyorum. Kişi başı 900 TL.",
+      "expectation": "Mandatory quiet/no crowd requires source evidence, cannot be substituted by acoustic format."
+    }
+  ]
+}

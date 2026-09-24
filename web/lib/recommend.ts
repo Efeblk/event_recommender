@@ -83,7 +83,7 @@ export interface Dependencies {
 
 // Initial product policy, not an empirically calibrated quality claim.
 // Level 2 requires source support; a valid no-match remains empty.
-export const MIN_JEV_SCORE = 2;
+export const MIN_JEV_SUPPORT_PROBABILITY = 0.7;
 
 // Shared with the evaluation harness so it measures exactly what users see.
 // Only canonical candidates may become cards, even if a ranker supplies others.
@@ -95,11 +95,33 @@ export function selectJevEvents(
   const byId = new Map(candidates.map((event) => [event.id, event]));
   const supported = ranking.ranked
     .filter(
-      ({ event, score }) =>
-        byId.has(event.id) &&
-        Number.isFinite(score) &&
-        score >= MIN_JEV_SCORE &&
-        score <= 3,
+      ({ event, score, probabilities, supportProbability }) => {
+        if (
+          !byId.has(event.id) ||
+          !Number.isFinite(score) ||
+          score < 0 ||
+          score > 3 ||
+          !Array.isArray(probabilities) ||
+          probabilities.length !== 4 ||
+          !probabilities.every(
+            (value) =>
+              typeof value === 'number' &&
+              Number.isFinite(value) &&
+              value >= 0 &&
+              value <= 1,
+          ) ||
+          Math.abs(probabilities.reduce((sum, value) => sum + value, 0) - 1) >
+            0.02
+        )
+          return false;
+        const derivedSupport = probabilities[2] + probabilities[3];
+        return (
+          Number.isFinite(supportProbability) &&
+          supportProbability >= MIN_JEV_SUPPORT_PROBABILITY &&
+          supportProbability <= 1 &&
+          Math.abs(supportProbability - derivedSupport) <= 1e-9
+        );
+      },
     )
     .sort((a, b) => b.score - a.score)
     .map(({ event }) => byId.get(event.id)!);
