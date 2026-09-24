@@ -107,6 +107,62 @@ await test('ordinary child exclusion rejects only positive child evidence', () =
   );
 });
 
+await test('family-friendly requests require explicit suitability evidence', () => {
+  const requirements = deriveRequirements(
+    'Ailece izlenebilecek bir etkinlik istiyorum',
+    [],
+  );
+  assert.deepEqual(requirements, [
+    {
+      kind: 'audience',
+      value: 'family_friendly',
+      policy: 'require_support',
+    },
+  ]);
+  for (const description of [
+    'Türk ahlak yapısına uygun, ailece keyifle izlenebilecek gösteri.',
+    'Ailenizle, arkadaşlarınızla ya da tek başınıza katılabileceğiniz etkinlik.',
+    'A family-friendly comedy suitable for the whole family.',
+  ])
+    assert.equal(meetsRequirements(event(description), requirements), true);
+  assert.equal(
+    checkRequirements(
+      event('Aile meselelerini anlatan popüler bir komedi.'),
+      requirements,
+    )[0].status,
+    'unknown',
+  );
+  assert.equal(
+    checkRequirements(event('Yalnızca yetişkinlere özel.'), requirements)[0]
+      .status,
+    'contradicted',
+  );
+  for (const description of [
+    'Family-friendly comedy. Adults only.',
+    'Ailece keyifle izlenebilecek. 18+.',
+    'Aileye uygun gösteri. Yaş sınırı: 18+ ',
+  ])
+    assert.equal(
+      checkRequirements(event(description), requirements)[0].status,
+      'contradicted',
+      description,
+    );
+  assert.deepEqual(
+    deriveRequirements('Annemle komediye gitmek istiyorum', []),
+    [],
+  );
+  assert.deepEqual(
+    deriveRequirements('Family-friendly olmasın, yetişkin gösterisi olsun', []),
+    [],
+  );
+  assert.deepEqual(
+    deriveRequirements('Family-friendly olmasın', [
+      { role: 'user', content: 'Family-friendly comedy' },
+    ]),
+    [{ kind: 'genre', value: 'comedy', policy: 'require_support' }],
+  );
+});
+
 await test('strict content constraints require exact positive absence evidence', () => {
   const requirements = deriveRequirements(
     'No swearing or sexual humour; omit uncertain matches',

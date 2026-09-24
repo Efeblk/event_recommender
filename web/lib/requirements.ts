@@ -71,6 +71,12 @@ const terms: Record<string, Term> = {
     negative:
       /\b(?:adults? only|yetiskin(?:lere)? ozel|cocuk(?:lar)? (?:icin )?(?:degil|uygun degil))\b/,
   },
+  family_friendly: {
+    positive:
+      /\b(?:family[ -]?friendly|suitable for (?:the whole )?famil(?:y|ies)|all[ -]?ages|aile(?:ler|ye)? uygun|ailece(?: keyifle)? izlen(?:ebilecek|ebilir)|ailenizle[^.!?]{0,50}katilabileceginiz|ailelerin birlikte[^.!?]{0,80}cocuklar[^.!?]{0,80}yetiskinler)\b/,
+    negative:
+      /(?:\b(?:not family[ -]?friendly|adults? only|18 yas ve uzeri|yetiskin(?:lere)? ozel|aile(?:ler|ye)? uygun degil|ailece izlenemez)\b|\b18\s*\+(?!\w))/,
+  },
   swearing: {
     positive:
       /\b(?:swear(?:ing)?|profanity|explicit language|curse words?|kufur(?:lu)?|argo)\b/,
@@ -276,6 +282,25 @@ export function deriveRequirements(
         policy: 'exclude_positive_evidence',
       });
 
+    const familySuitability = text.match(
+      /\b(?:family[ -]?friendly|suitable for (?:the whole )?famil(?:y|ies)|all[ -]?ages|aile(?:ler|ye)? uygun|ailece(?: keyifle)? izlen(?:ebilecek|ebilir)|ailemle izleyebilecegim)\b/,
+    );
+    if (familySuitability) {
+      const negated = isNegated(
+        text,
+        familySuitability.index!,
+        familySuitability[0].length,
+      );
+      if (negated)
+        removeRequiredValues(requirements, 'audience', ['family_friendly']);
+      else
+        addIndependentRequirement(requirements, {
+          kind: 'audience',
+          value: 'family_friendly',
+          policy: 'require_support',
+        });
+    }
+
     const sharedContentProhibition =
       /\b(?:swearing|profanity|explicit language|kufur|argo)\b[^.!?]{0,50}\b(?:sexual (?:content|humou?r)|sex jokes?|cinsel (?:icerik|mizah|espri)|cinsellik)\b[^.!?]{0,24}(?:\b(?:olmasin|istemiyorum|istemem|yok)\b|;|$)/.test(
         text,
@@ -423,7 +448,8 @@ export function checkRequirements(
           (!(
             requirement.policy === 'require_support' &&
             (requirement.kind === 'genre' ||
-              requirement.kind === 'accessibility')
+              requirement.kind === 'accessibility' ||
+              requirement.kind === 'audience')
           ) ||
             negativeEvidence.length === 0),
         negative: negativeEvidence.length > 0,

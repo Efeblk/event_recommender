@@ -790,6 +790,47 @@ await test('mandatory jazz evidence gates Jev and provider-failure fallback alik
   }
 });
 
+await test('family suitability evidence gates provider-failure fallback', async () => {
+  const suitable = {
+    ...event,
+    id: 'family-supported',
+    title: 'Fani But Funny',
+    category: 'Stand-up',
+    description: 'Türk ahlak yapısına uygun, ailece keyifle izlenebilecek.',
+    url: event.url + '-family-supported',
+  };
+  const generic = {
+    ...event,
+    id: 'family-unknown',
+    title: 'Aile Hikayeleri',
+    category: 'Stand-up',
+    description: 'Aile meselelerini anlatan eğlenceli bir komedi.',
+    url: event.url + '-family-unknown',
+  };
+  const result = await recommend(
+    validateInput({ message: 'Ailece izlenebilecek bir komedi istiyorum' }),
+    {
+      ...deps,
+      config,
+      candidates: async () => [generic, suitable],
+      rank: async (_config, request, candidates) => {
+        assert.deepEqual(
+          request.requirements?.map((requirement) => requirement.value),
+          ['comedy', 'family_friendly'],
+        );
+        assert.deepEqual(
+          candidates.map((candidate) => candidate.id),
+          [suitable.id],
+        );
+        throw new Error('Provider offline');
+      },
+    },
+  );
+  assert.equal(result.mode, 'filters');
+  assert.equal(result.recommendations.length, 1);
+  assertRecommendedEvent(result.recommendations[0].event, suitable);
+});
+
 await test('strict content uncertainty produces an evidence notice without paid calls', async () => {
   const result = await recommend(
     validateInput({
