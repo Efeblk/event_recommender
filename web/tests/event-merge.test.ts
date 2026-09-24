@@ -228,6 +228,65 @@ await test('reviewed show aliases merge only at the same venue and session', () 
   );
 });
 
+await test('reviewed Suç ve Ceza suffix alias merges exact catalog sessions only', () => {
+  const biletix = event({
+    id: '98dd52290e64683e89e14c45',
+    title: 'Suç Ve Ceza',
+    description: 'Suç Ve Ceza, sizlerle...',
+    startsAt: '2026-09-24T14:10:00.000Z',
+    venue: 'Taksim İstiklal Sahne',
+    district: 'BEYOĞLU',
+    price: 252,
+    source: 'biletix',
+    url: 'https://www.biletix.com/etkinlik/5R188/ISTANBUL/tr',
+  });
+  const bubilet = event({
+    id: '7ab5ed5f8635e313f404c0e7',
+    title: 'Suç ve Ceza Oyunu',
+    description: 'Suç ve Ceza',
+    startsAt: '2026-09-24T14:10:00.000Z',
+    venue: 'Taksim İstiklal Sahne',
+    district: '',
+    price: 200,
+    source: 'bubilet',
+    url: 'https://www.bubilet.com.tr/istanbul/etkinlik/suc-ve-ceza-',
+  });
+
+  const mergedResult = mergeEventSessions([biletix, bubilet]);
+  const [merged] = mergedResult;
+  assert.equal(merged.offers?.length, 2);
+  assert.equal(merged.price, 200);
+  assert.equal(merged.id.startsWith('session-'), true);
+  assert.ok(merged.canonicalProductionKey?.startsWith('production-'));
+  assert.ok(merged.canonicalShowKey?.startsWith('show-'));
+  assert.ok(merged.mergedIds?.includes(biletix.id));
+  assert.ok(merged.mergedIds?.includes(bubilet.id));
+  assert.deepEqual(mergeEventSessions([bubilet, biletix]), mergedResult);
+  assert.deepEqual(mergeEventSessions(mergedResult), mergedResult);
+
+  assert.equal(
+    mergeEventSessions([
+      biletix,
+      { ...bubilet, id: 'later', startsAt: '2026-09-27T15:15:00.000Z' },
+    ]).length,
+    2,
+  );
+  assert.equal(
+    mergeEventSessions([
+      biletix,
+      { ...bubilet, id: 'other-venue', venue: 'Bakırköy Butik Sahne' },
+    ]).length,
+    2,
+  );
+  assert.equal(
+    mergeEventSessions([
+      biletix,
+      { ...bubilet, id: 'adaptation', title: 'Suç ve Ceza: Başka Bir Oyun' },
+    ]).length,
+    2,
+  );
+});
+
 await test('reviewed Boğaziçi open-mic titles merge only at the same venue and session', () => {
   const biletinial = event({
     id: 'bogazici-biletinial',

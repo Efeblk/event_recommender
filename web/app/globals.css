@@ -74,6 +74,11 @@ a {
   color: inherit;
   text-decoration: none;
 }
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
 .site-shell {
   max-width: 1320px;
   margin: auto;
@@ -195,6 +200,11 @@ a {
   font-size: 16px;
   line-height: 1.6;
 }
+.chat-panel:focus-within {
+  border-color: var(--ring);
+  outline: 3px solid color-mix(in srgb, var(--ring) 42%, transparent);
+  outline-offset: 3px;
+}
 .chat-actions {
   display: flex;
   align-items: center;
@@ -209,8 +219,8 @@ a {
   line-height: 1.5;
 }
 .chat-actions button {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   flex: none;
 }
@@ -636,13 +646,52 @@ footer p {
     serif;
   color: #65736a;
 }
-footer small {
+footer .footer-notes {
   margin-left: auto;
+  max-width: 440px;
+}
+footer small {
+  display: block;
   color: #839087;
   font-size: 11px;
-  max-width: 360px;
   text-align: right;
   line-height: 1.5;
+}
+.privacy-details {
+  margin-top: 9px;
+  color: #65736a;
+  font-size: 12px;
+  text-align: right;
+}
+.privacy-details summary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.privacy-details summary:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.privacy-details div {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+}
+.privacy-details p {
+  margin: 0;
+  font:
+    12px/1.6 Arial,
+    Helvetica,
+    sans-serif;
+}
+.privacy-details p + p {
+  margin-top: 8px;
 }
 .sr-only {
   position: absolute;
@@ -739,9 +788,12 @@ footer small {
   footer p {
     margin: 8px 0;
   }
-  footer small {
+  footer .footer-notes {
     width: 100%;
     margin: 0;
+  }
+  footer small,
+  .privacy-details {
     text-align: left;
   }
 }

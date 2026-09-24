@@ -52,6 +52,7 @@ export function validateDeploymentConfig({
     ...(process.env.VOYAGE_MODEL ? ['VOYAGE_MODEL'] : []),
     ...(process.env.VOYAGE_DIMENSIONS ? ['VOYAGE_DIMENSIONS'] : []),
     ...(process.env.AI_DAILY_LIMIT ? ['AI_DAILY_LIMIT'] : []),
+    ...(process.env.WORKERS_PLAN ? ['WORKERS_PLAN'] : []),
   ];
   const multiline = checked.filter((name) => /[\r\n]/.test(process.env[name]));
   if (multiline.length)
@@ -65,6 +66,9 @@ export function validateDeploymentConfig({
     Number(dailyLimit) > 10000
   )
     throw new Error('AI_DAILY_LIMIT must be an integer from 1 to 10000.');
+  const workersPlan = process.env.WORKERS_PLAN || 'free';
+  if (!['free', 'paid'].includes(workersPlan))
+    throw new Error('WORKERS_PLAN must be free or paid.');
   const model = process.env.TYPESAFE_MODEL || 'jev-1.13.0';
   if (!/^jev-[a-z0-9.-]+$/.test(model))
     throw new Error('TYPESAFE_MODEL must be a valid Jev model name.');
@@ -119,6 +123,12 @@ export function validateDeploymentConfig({
     throw new Error(
       'A workers.dev CF_PUBLIC_URL must start with CF_WORKER_NAME.',
     );
+}
+
+export function workerCpuLimits(plan = process.env.WORKERS_PLAN || 'free') {
+  if (plan === 'free') return undefined;
+  if (plan === 'paid') return { cpu_ms: 30_000 };
+  throw new Error('WORKERS_PLAN must be free or paid.');
 }
 
 export function publicDeploymentVariables(environment) {
@@ -183,7 +193,9 @@ export async function generateDeploymentConfig(environment) {
   ];
   // Only public, explicitly selected variables belong in deploy artifacts.
   config.vars = publicDeploymentVariables(environment);
-  config.limits = { cpu_ms: 30_000 };
+  const limits = workerCpuLimits();
+  if (limits) config.limits = limits;
+  else delete config.limits;
   config.observability = {
     enabled: true,
     logs: { enabled: true, head_sampling_rate: 0.1, invocation_logs: false },

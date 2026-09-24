@@ -233,6 +233,7 @@ export default function Home() {
   const [excluded, setExcluded] = useState<string[]>([]);
   const [donationUrl, setDonationUrl] = useState<string | null>(null);
   const controller = useRef<AbortController | null>(null);
+  const searchGeneration = useRef(0);
   const searchBusy = useRef(false);
   const textarea = useRef<HTMLTextAreaElement | null>(null);
   const resultsRef = useRef<HTMLElement | null>(null);
@@ -356,6 +357,7 @@ export default function Home() {
       excludeIds: [...excludeIds],
     };
     controller.current?.abort();
+    const generation = ++searchGeneration.current;
     const abort = new AbortController();
     let timedOut = false;
     const timeout = window.setTimeout(() => {
@@ -383,6 +385,7 @@ export default function Home() {
       });
       const data = (await response.json()) as SearchResult & { error?: string };
       if (!response.ok) throw new Error(data.error || 'Arama tamamlanamadı.');
+      if (generation !== searchGeneration.current) return;
       setResult(data);
       setFilters(data.filters);
       const needsRevision =
@@ -394,13 +397,18 @@ export default function Home() {
       setLastRequest(query);
       setMessage(needsRevision ? query : '');
       setExcluded(excludeIds);
-      requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (generation !== searchGeneration.current) return;
+        const reduceMotion = window.matchMedia(
+          '(prefers-reduced-motion: reduce)',
+        ).matches;
         resultsRef.current?.scrollIntoView({
-          behavior: 'smooth',
+          behavior: reduceMotion ? 'auto' : 'smooth',
           block: 'start',
-        }),
-      );
+        });
+      });
     } catch (reason) {
+      if (generation !== searchGeneration.current) return;
       if (timedOut) {
         setError(
           'Arama 40 saniye içinde tamamlanamadı. Tekrar deneyebilirsin.',
@@ -417,7 +425,10 @@ export default function Home() {
       setRetryAction({ kind: 'search', attempt });
     } finally {
       window.clearTimeout(timeout);
-      if (controller.current === abort) {
+      if (
+        controller.current === abort &&
+        generation === searchGeneration.current
+      ) {
         searchBusy.current = false;
         setBusy(false);
       }
@@ -425,7 +436,9 @@ export default function Home() {
   }
 
   function reset() {
+    searchGeneration.current += 1;
     controller.current?.abort();
+    controller.current = null;
     setMessage('');
     setFilters({ ...emptyFilters });
     setHistory([]);
@@ -436,7 +449,10 @@ export default function Home() {
     searchBusy.current = false;
     setError('');
     setRetryAction(null);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const reduceMotion = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
   }
   const displayedEvents = result
     ? result.recommendations.map((item) => item.event)
@@ -776,10 +792,30 @@ export default function Home() {
           bi’ plan<span>✳</span>
         </div>
         <p>İstanbul’u yeniden keşfet.</p>
-        <small>
-          Fiyat ve uygunluk değişebilir. Son durumu etkinliğin bilet sayfasından
-          kontrol et.
-        </small>
+        <div className="footer-notes">
+          <small>
+            Fiyat ve uygunluk değişebilir. Son durumu etkinliğin bilet
+            sayfasından kontrol et.
+          </small>
+          <details className="privacy-details">
+            <summary>Veriler nasıl kullanılıyor?</summary>
+            <div>
+              <p>
+                Arama mesajın ve bu sekmedeki son kullanıcı mesajların, öneri
+                üretmek için AI araması etkin olduğunda Voyage AI ve TypeSafe
+                AI’a gönderilir. Etkinlik bilgileri de eşleştirme ve sıralama
+                için bu servislere gönderilebilir.
+              </p>
+              <p>
+                Bi’ Plan sohbet geçmişini sunucuda saklamaz; arayüzdeki kopya bu
+                sekmenin belleğinde tutulur ve sayfayı yenilediğinde silinir.
+                İstek sınırlandırması için ham IP adresi yerine türetilmiş bir
+                anahtar ve süre sonu bilgisi saklanır. Süresi geçen sayaçlar
+                sonraki istekler sırasında temizlenir.
+              </p>
+            </div>
+          </details>
+        </div>
       </footer>
     </div>
   );

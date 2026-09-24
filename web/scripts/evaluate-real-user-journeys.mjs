@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
@@ -8,11 +8,14 @@ import { isAlternativesRequest } from '../lib/intent.ts';
 
 const execFileAsync = promisify(execFile);
 const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const fixturePath = resolve(
+const repoRoot = resolve(webRoot, '..');
+const defaultFixturePath = resolve(
   webRoot,
   'evals/cases/2026-09-24-real-user-journeys.json',
 );
-const maxHttpRequests = 16;
+const casesRoot = resolve(webRoot, 'evals/cases');
+const defaultMaxHttpRequests = 16;
+const customMaxHttpRequests = 24;
 const requestSpacingMs = 25_000;
 const requestTimeoutMs = 45_000;
 
@@ -20,21 +23,28 @@ function usage() {
   return [
     'Usage:',
     '  node scripts/evaluate-real-user-journeys.mjs',
-    '  node scripts/evaluate-real-user-journeys.mjs --live --out <report.json> [--origin http://127.0.0.1:3001]',
+    '  node scripts/evaluate-real-user-journeys.mjs [--cases web/evals/cases/file.json]',
+    '  node scripts/evaluate-real-user-journeys.mjs --live --out <report.json> [--cases web/evals/cases/file.json] [--origin http://127.0.0.1:3001]',
   ].join('\n');
 }
 
 function parseArgs(argv) {
-  const options = { live: false, origin: 'http://127.0.0.1:3001', out: null };
+  const options = {
+    live: false,
+    origin: 'http://127.0.0.1:3001',
+    out: null,
+    cases: null,
+  };
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index];
     if (argument === '--live') options.live = true;
-    else if (argument === '--out' || argument === '--origin') {
+    else if (['--out', '--origin', '--cases'].includes(argument)) {
       const value = argv[++index];
       if (!value || value.startsWith('--'))
         throw new Error(`Missing value for ${argument}.`);
       if (argument === '--out') options.out = value;
-      else options.origin = value;
+      else if (argument === '--origin') options.origin = value;
+      else options.cases = value;
     } else if (argument === '--help' || argument === '-h') {
       console.log(usage());
       process.exit(0);
@@ -57,6 +67,16 @@ function parseArgs(argv) {
       '--origin must be an HTTP origin on localhost or 127.0.0.1.',
     );
   options.origin = origin.origin;
+  if (options.cases) {
+    if (options.cases.startsWith('/') || !options.cases.endsWith('.json'))
+      throw new Error(
+        '--cases must be a repo-relative JSON file under evals/cases.',
+      );
+    const resolvedCases = resolve(repoRoot, options.cases);
+    if (!resolvedCases.startsWith(`${casesRoot}${sep}`))
+      throw new Error('--cases must stay under evals/cases.');
+    options.cases = resolvedCases;
+  }
   return options;
 }
 
@@ -67,6 +87,10 @@ function sleep(milliseconds) {
 }
 
 const options = parseArgs(process.argv.slice(2));
+const fixturePath = options.cases ?? defaultFixturePath;
+const maxHttpRequests = options.cases
+  ? customMaxHttpRequests
+  : defaultMaxHttpRequests;
 const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
 if (!Array.isArray(fixture.cases) || fixture.cases.length > maxHttpRequests)
   throw new Error(`Fixture must contain at most ${maxHttpRequests} cases.`);
@@ -77,15 +101,22 @@ const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
 const codeRevision = stdout.trim();
 if (!/^[0-9a-f]{40}$/.test(codeRevision))
   throw new Error('Could not resolve the current Git revision.');
+const { stdout: statusOutput } = await execFileAsync(
+  'git',
+  ['status', '--porcelain'],
+  { cwd: webRoot },
+);
+const dirtyWorktree = statusOutput.length > 0;
 
 if (!options.live) {
   console.log(
     JSON.stringify(
       {
         mode: 'dry-run',
-        fixture: fixturePath,
+        fixture: relative(repoRoot, fixturePath),
         origin: options.origin,
         codeRevision,
+        dirtyWorktree,
         cases: fixture.cases.length,
         maxHttpRequests,
         automaticRetries: 0,
@@ -102,7 +133,9 @@ if (!options.live) {
 const outputPath = resolve(process.cwd(), options.out);
 const report = {
   ...fixture,
+  fixture: relative(repoRoot, fixturePath),
   codeRevision,
+  dirtyWorktree,
   startedAt: new Date().toISOString(),
   maxHttpRequests,
   automaticRetries: 0,
@@ -146,7 +179,13 @@ for (const [caseIndex, journeyCase] of fixture.cases.entries()) {
   const result = {
     id: journeyCase.id,
     input,
-    syntheticLoopbackVisitor: `127.0.1.${journeyCase.visitor}`,
+    syntheticLoopbackVisitor: `127.0.1.${
+      Number.isInteger(journeyCase.visitor) &&
+      journeyCase.visitor >= 1 &&
+      journeyCase.visitor <= 254
+        ? journeyCase.visitor
+        : caseIndex + 1
+    }`,
   };
   const start = performance.now();
   try {

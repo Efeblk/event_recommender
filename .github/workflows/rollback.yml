@@ -58,15 +58,18 @@ jobs:
       - name: Roll back Worker code
         working-directory: web
         run: npx wrangler rollback "$VERSION_ID" --name "$CF_WORKER_NAME" --message "${{ inputs.environment }} manual rollback" --yes
-      - name: Check liveness
+      - name: Verify active version and check liveness
+        working-directory: web
         run: |
           for attempt in {1..24}; do
-            echo "Checking rollback liveness (attempt $attempt/24)."
-            if curl --silent --show-error --fail --max-time 15 --output health.json "$CF_PUBLIC_URL/api/health" && \
+            echo "Checking rollback identity and liveness (attempt $attempt/24)."
+            if npx wrangler deployments status --name "$CF_WORKER_NAME" --json > deployment-status.json && \
+              node scripts/verify-rollback.mjs deployment-status.json "$VERSION_ID" && \
+              curl --silent --show-error --fail --max-time 15 --output health.json "$CF_PUBLIC_URL/api/health" && \
               node -e "const fs=require('fs'); const body=JSON.parse(fs.readFileSync('health.json')); if(body.status!=='ok'||body.deployment?.environment!==process.env.DEPLOY_TARGET) process.exit(1)"; then
               exit 0
             fi
             sleep 5
           done
-          echo "Rollback liveness did not identify the selected environment." >&2
+          echo "Rollback did not activate the requested version with matching environment liveness." >&2
           exit 1

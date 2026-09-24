@@ -49,6 +49,7 @@ const TITLE_ALIASES = [
   ],
   ['Gökhan Ünver Stand Up', "Gökhan Ünver 'Çok Tanıdık'"],
   ['Operadaki Hayalet', 'Operadaki Hayalet Tiyatro Oyunu'],
+  ['Suç ve Ceza', 'Suç ve Ceza Oyunu'],
   [
     'Kadıköy Stand-up Gecesi',
     'Kadıköy Stand Up Gecesi Cuma 20:00',

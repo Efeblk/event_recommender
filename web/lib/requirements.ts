@@ -40,6 +40,23 @@ const terms: Record<string, Term> = {
     positive: /\brock\b/,
     negative: /\b(?:not|no|without)\s+rock\b|\brock\s+(?:degil(?:dir)?|yok)\b/,
   },
+  electronic: {
+    positive:
+      /\b(?:electronic music|elektronik muzik|techno|house music|house muzik)\b/,
+    negative:
+      /\b(?:not|no|without)\s+(?:electronic music|techno)|\belektronik muzik\s+(?:degil|yok)\b/,
+  },
+  rap: {
+    positive: /\b(?:rap|hip[ -]?hop)\b/,
+    negative:
+      /\b(?:not|no|without)\s+(?:rap|hip[ -]?hop)\b|\brap\s+(?:degil|yok)\b/,
+  },
+  alcohol_free: {
+    positive:
+      /\b(?:alcohol[ -]free (?:venue|event|setting)|no alcohol (?:is )?(?:served|sold|permitted)|alkolsuz (?:mekan|etkinlik|ortam)|alkol (?:servisi|satisi) (?:yok|yapilmaz)|alkol yasak)\b/,
+    negative:
+      /\b(?:alcohol (?:is )?(?:served|sold)|alkollu (?:mekan|etkinlik)|alkol (?:servisi|satisi) (?:var|yapilir))\b/,
+  },
   classical: {
     positive: /\b(?:classical|klasik\s+(?:muzik|muzig|repertuvar)[a-z]*)\b/,
     negative:
@@ -91,9 +108,9 @@ const terms: Record<string, Term> = {
   },
   step_free: {
     positive:
-      /\b(?:step[ -]?free|barrier[ -]?free|wheelchair accessible|basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi)\b/,
+      /\b(?:step[ -]?free|barrier[ -]?free|wheelchair access(?:ible)?|basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi)\b/,
     negative:
-      /\b(?:not|isn't|is not)\s+(?:step[ -]?free|wheelchair accessible)|\b(?:basamaksiz|engelsiz erisim)\s+(?:degil(?:dir)?|yok)\b/,
+      /\b(?:not|isn't|is not)\s+(?:step[ -]?free|wheelchair access(?:ible)?)|\b(?:basamaksiz|engelsiz erisim)\s+(?:degil(?:dir)?|yok)\b/,
   },
   accessible_toilet: {
     positive:
@@ -128,6 +145,8 @@ const genreEntries: Array<[string, RegExp]> = [
   ['jazz', /\b(?:jazz|caz)\b/],
   ['blues', /\bblues\b/],
   ['rock', /\brock\b/],
+  ['electronic', /\b(?:electronic music|elektronik muzik|techno)\b/],
+  ['rap', /\b(?:rap|hip[ -]?hop)\b/],
   ['classical', /\b(?:classical|klasik)\b/],
   ['comedy', /\b(?:comedy|komedi|stand[ -]?up)\b/],
   ['drama', /\b(?:drama|dramatic|dramatik|dram(?:dir)?)\b/],
@@ -528,7 +547,7 @@ export function deriveRequirements(
       ]);
     if (
       !stepFreeWaived &&
-      /\b(?:step[ -]?free|basamaksiz|engelsiz erisim|wheelchair accessible)\b/.test(
+      /\b(?:step[ -]?free|basamaksiz|engelsiz erisim|wheelchair access(?:ible)?)\b/.test(
         text,
       )
     )
@@ -554,6 +573,19 @@ export function deriveRequirements(
         policy: 'require_support',
       });
     }
+
+    const alcoholWaived =
+      /\b(?:alkolsuz|alcohol[ -]free)\b[^.!?;]{0,36}\b(?:sart(?:ini)? kaldir|sart degil|not required|not necessary)\b/.test(
+        text,
+      );
+    if (alcoholWaived)
+      removeRequiredValues(requirements, 'activity', ['alcohol_free']);
+    else if (/\b(?:alkolsuz|alcohol[ -]free|no alcohol)\b/.test(text))
+      addIndependentRequirement(requirements, {
+        kind: 'activity',
+        value: 'alcohol_free',
+        policy: 'require_support',
+      });
 
     const explicitlyMandatory =
       /\b(?:must|has to|only|strictly|mutlaka|sart|olmak zorunda)\b/.test(text);
@@ -712,7 +744,11 @@ export function checkRequirements(
         evidence,
       };
     }
-    if (requirement.value === 'romantic' || requirement.value === 'uncrowded') {
+    if (
+      requirement.value === 'romantic' ||
+      requirement.value === 'uncrowded' ||
+      requirement.value === 'alcohol_free'
+    ) {
       return {
         requirement,
         status: findings.some((item) => item.negative)

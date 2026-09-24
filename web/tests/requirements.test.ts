@@ -718,3 +718,79 @@ await test('classical music evidence excludes generic classic-concert wording', 
     true,
   );
 });
+
+await test('alcohol-free venue conditions require source proof and can be waived', () => {
+  const request = 'Alkolsüz mekân kesin şart. Bir konser öner.';
+  const requirements = deriveRequirements(request, []);
+  assert.ok(requirements.some((r) => r.value === 'alcohol_free'));
+  assert.equal(
+    meetsRequirements(
+      event('Akustik konser ve alkolsüz kokteyl seçenekleri.'),
+      requirements,
+    ),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Alkolsüz mekan. Alkol servisi yapılmaz.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(event('Alkolsüz mekan. Alkol satışı var.'), requirements),
+    false,
+  );
+  assert.deepEqual(
+    deriveRequirements('Alkolsüz olma şartını kaldır; konser kalsın.', [
+      { role: 'user', content: request },
+    ]),
+    [],
+  );
+});
+
+await test('electronic and rap are independent source-evidence genres', () => {
+  const requirements = deriveRequirements(
+    'Rap hariç elektronik müzik olsun.',
+    [],
+  );
+  assert.deepEqual(requirements, [
+    { kind: 'genre', value: 'electronic', policy: 'require_support' },
+    { kind: 'genre', value: 'rap', policy: 'exclude_positive_evidence' },
+  ]);
+  assert.equal(
+    meetsRequirements(
+      event('Elektronik müzik ve techno gecesi.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(event('Elektronik müzik ve rap gecesi.'), requirements),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(event('Eğlenceli bir gece.'), requirements),
+    false,
+  );
+});
+
+await test('wheelchair access wording requires evidence and rejects explicit denial', () => {
+  const requirements = deriveRequirements(
+    'Wheelchair access is mandatory.',
+    [],
+  );
+  assert.ok(requirements.some((r) => r.kind === 'accessibility'));
+  assert.equal(
+    meetsRequirements(event('A theatre performance.'), requirements),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(event('Wheelchair access available.'), requirements),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(event('Not wheelchair accessible.'), requirements),
+    false,
+  );
+});

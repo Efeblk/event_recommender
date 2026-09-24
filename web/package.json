@@ -24,8 +24,9 @@
     "deploy:config": "node scripts/deploy-config.mjs",
     "deploy:prepare": "node scripts/deploy.mjs prepare",
     "deploy:dry-run": "node scripts/deploy.mjs dry-run",
-    "test:deploy-config": "node --test deploy/config.test.mjs",
-    "deploy:run": "node scripts/deploy.mjs deploy"
+    "test:deploy-config": "node --test deploy/*.test.mjs",
+    "deploy:run": "node scripts/deploy.mjs deploy",
+    "test:browser": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
@@ -41,9 +42,10 @@
     "vinext": "1.0.0-beta.9"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.54.4",
-    "@cloudflare/workers-types": "5.20260903.1",
+    "@cloudflare/vite-plugin": "1.58.0",
+    "@cloudflare/workers-types": "5.20260924.1",
     "@openai/sites-vite-plugin": "0.2.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",
@@ -57,7 +59,7 @@
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
     "vite": "8.2.2",
-    "wrangler": "4.129.0"
+    "wrangler": "4.137.0"
   },
   "type": "module"
 }

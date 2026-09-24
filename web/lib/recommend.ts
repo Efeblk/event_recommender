@@ -90,39 +90,37 @@ export const MIN_JEV_SUPPORT_PROBABILITY = 0.7;
 export function selectJevEvents(
   candidates: EventRecord[],
   ranking: JevRanking,
-  limit = 5,
+  limit = 2,
 ): EventRecord[] {
   const byId = new Map(candidates.map((event) => [event.id, event]));
   const supported = ranking.ranked
-    .filter(
-      ({ event, score, probabilities, supportProbability }) => {
-        if (
-          !byId.has(event.id) ||
-          !Number.isFinite(score) ||
-          score < 0 ||
-          score > 3 ||
-          !Array.isArray(probabilities) ||
-          probabilities.length !== 4 ||
-          !probabilities.every(
-            (value) =>
-              typeof value === 'number' &&
-              Number.isFinite(value) &&
-              value >= 0 &&
-              value <= 1,
-          ) ||
-          Math.abs(probabilities.reduce((sum, value) => sum + value, 0) - 1) >
-            0.02
-        )
-          return false;
-        const derivedSupport = probabilities[2] + probabilities[3];
-        return (
-          Number.isFinite(supportProbability) &&
-          supportProbability >= MIN_JEV_SUPPORT_PROBABILITY &&
-          supportProbability <= 1 &&
-          Math.abs(supportProbability - derivedSupport) <= 1e-9
-        );
-      },
-    )
+    .filter(({ event, score, probabilities, supportProbability }) => {
+      if (
+        !byId.has(event.id) ||
+        !Number.isFinite(score) ||
+        score < 0 ||
+        score > 3 ||
+        !Array.isArray(probabilities) ||
+        probabilities.length !== 4 ||
+        !probabilities.every(
+          (value) =>
+            typeof value === 'number' &&
+            Number.isFinite(value) &&
+            value >= 0 &&
+            value <= 1,
+        ) ||
+        Math.abs(probabilities.reduce((sum, value) => sum + value, 0) - 1) >
+          0.02
+      )
+        return false;
+      const derivedSupport = probabilities[2] + probabilities[3];
+      return (
+        Number.isFinite(supportProbability) &&
+        supportProbability >= MIN_JEV_SUPPORT_PROBABILITY &&
+        supportProbability <= 1 &&
+        Math.abs(supportProbability - derivedSupport) <= 1e-9
+      );
+    })
     .sort((a, b) => b.score - a.score)
     .map(({ event }) => byId.get(event.id)!);
   return diverseEvents(
@@ -247,7 +245,7 @@ export async function recommend(
     events,
     input.message,
     input.history,
-    5,
+    2,
     semantic,
   ).map((event) => ({ event }));
   if (deps.config) {

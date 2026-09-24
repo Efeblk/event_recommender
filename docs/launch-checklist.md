@@ -10,7 +10,18 @@ This checklist records gates, not a claim that the application is deployed. The 
 6. **Recovery and load:** validate a known-good Worker rollback, a D1 backup/restore exercise in staging, R2 checkpoint recovery, provider failure fallback and a representative short burst of concurrent recommendation requests. Expired rate-limit entries are cleaned in bounded batches; monitor D1 usage. Keep Vinext pinned and retest upgrades.
 7. **Limited beta:** deploy the same verified revision to production, run a fresh collection/checkpoint, require readiness, and invite the first 20–50 testers. Add concise privacy/data-use and source/price notices before accepting public chats. Donations and ads remain placeholders until destinations/providers are chosen. Broader promotion follows observed operation and user feedback.
 
-Cloudflare's paid Worker allowance was the proposed $5/month hosting baseline, with a separate initial $5–10 AI budget. These are planning allowances, not a guaranteed total or permission to purchase a plan. The deployment scripts do not change billing subscriptions. R2/account activation, provider access and domain availability depend on the account.
+Start staging with `WORKERS_PLAN=free`, which omits the paid CPU allowance. This
+is a setup and measurement profile, not evidence that the production-sized
+catalog or semantic search fits the Free plan. Promote on Free only after the
+full catalog, concurrent request, collection and monitoring gates pass within
+its CPU and subrequest limits; otherwise choose the paid Worker allowance. A
+separate initial $5–10 AI budget was proposed only if live AI is enabled. These
+are planning allowances, not permission to purchase a plan. The deployment
+scripts do not change billing subscriptions. R2 remains required for durable
+collection checkpoints; replacing it with D1 would require chunking and
+transactional recovery work rather than a configuration-only fallback. R2
+account activation, provider access and domain availability depend on the
+account.
 
 ## Evidence
 

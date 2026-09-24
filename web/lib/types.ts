@@ -39,6 +39,9 @@ export interface Filters {
   dateFrom: string | null;
   dateTo: string | null;
   maxPrice: number | null;
+  /** Budget-basis metadata used to recompute a per-person ceiling on follow-up. */
+  partySize?: number;
+  totalBudget?: number;
   category: Category | null;
   excludedCategories?: Category[];
   /** Exact Istanbul district constraint, compared accent/case-insensitively. */

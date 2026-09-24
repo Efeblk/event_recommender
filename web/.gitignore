@@ -44,3 +44,7 @@ next-env.d.ts
 # Keep application source despite the parent Python project's lib/ ignore rule.
 !/lib/
 !/lib/**
+
+# browser test artifacts
+/test-results/
+/playwright-report/

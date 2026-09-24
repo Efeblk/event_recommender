@@ -22,6 +22,7 @@ GitHub environment (`staging` or `production`), define these variables:
 | `VOYAGE_MODEL`          | Optional Voyage model; defaults to `voyage-4-large`           |
 | `VOYAGE_DIMENSIONS`     | Voyage vector size: 256, 512, 1024, or 2048; defaults to 1024 |
 | `AI_DAILY_LIMIT`        | Shared recommendation-request cap (1–10000); defaults to 100  |
+| `WORKERS_PLAN`          | `free` (default) or `paid`; controls the Worker CPU allowance |
 
 Add `CLOUDFLARE_API_TOKEN` and `SYNC_TOKEN` as environment secrets. Add
 `TYPESAFE_API_KEY` as an optional environment secret to enable Jev ranking, and
@@ -108,9 +109,57 @@ accepted merely because it returns HTTP 200.
 The workflow then reports `/api/ready` separately. A fresh environment can be
 live while returning `checkpoint_missing`; this is an expected bootstrap state,
 so deployment succeeds with a warning. Bootstrap the collection checkpoint and
-require `/api/ready` to return `ready: true` before public release. Runtime limits
-Worker CPU to 30 seconds; this configurable CPU allowance requires the Workers
-Paid plan discussed in the launch plan. No script purchases or upgrades a plan.
+require `/api/ready` to return `ready: true` before public release.
+`WORKERS_PLAN=free` omits a custom CPU allowance and can validate account setup
+and a small staging deployment without purchasing Workers Paid. It does not
+prove this application's full catalog search will fit the Free plan's CPU and
+subrequest limits. The semantic path scans and parses a large vector set, and
+the deterministic path can scan thousands of event rows; measure both against a
+production-sized catalog before relying on Free. Set `WORKERS_PLAN=paid` only
+after deciding to upgrade; it configures a 30-second CPU allowance. No script
+purchases or upgrades a plan.
+For a provider-free local diagnostic using the current catalog and existing
+read-only local Voyage cache, run:
+
+```sh
+cd web
+node --experimental-strip-types scripts/benchmark-recommendation.mjs > /tmp/biplan-recommendation-benchmark.json
+```
+
+The script performs one warmup and three runs each at concurrency 1, 4 and 8.
+It makes no provider calls or cache writes. Its Node CPU, wall-time and process
+memory figures are directional evidence only; they exclude real D1 latency and
+do not establish Cloudflare Worker capacity.
+
+The 2026-09-24 local baseline used 2,909 source rows and 1,309 cached document
+vectors (2,077 eligible event IDs shared those document vectors). After removing
+unneeded date, time and district derivation for unconstrained requests, median
+CPU fell from about 768 to 308 ms per request at concurrency 1, 964 to 319 ms at
+concurrency 4, and 903 to 338 ms at concurrency 8. The largest observed process
+RSS fell from about 974 MB to 549 MB. Both runs made zero network calls and zero
+cache writes. Hardware, Node, workerd and D1 differ, so these numbers are not
+billing estimates, but they remain strong evidence that the current full
+semantic path should not be assumed to fit a 10 ms Free Worker CPU allowance.
+Preserve the Free profile for small staging checks and measure a compiled Worker
+before any production claim.
+
+The compiled keyless path has a separate isolated smoke benchmark:
+
+```sh
+cd web
+npm run build
+node scripts/benchmark-worker.mjs > /tmp/biplan-worker-benchmark.json
+```
+
+It runs the production bundle in Wrangler's local workerd harness with a fresh
+temporary D1/R2 state, then makes three batches each at concurrency 1, 4 and 8.
+Provider keys are blank, so it measures the deterministic full-catalog path and
+makes no paid calls. Recommendation rate-limit writes affect only the temporary
+database. Host-process memory includes the harness and is not isolate memory.
+The semantic path cannot be measured this way without either changing the
+production provider endpoint or adding a supported outbound-service test hook;
+the Node benchmark above remains the current provider-free semantic diagnostic.
+
 Observability samples operational logs at 10%, disables
 automatic invocation logs, and does not enable traces; application code must not
 log request, chat, token, or event payloads.
@@ -124,7 +173,8 @@ Worker version ID printed by Wrangler.
 Use `npx wrangler versions list --name <worker>` to identify a previously
 healthy version. Run **Roll back web Worker**, select the environment, and enter
 that canonical version UUID. The workflow validates that the Worker name belongs
-only to the selected environment, rolls back Worker code non-interactively, and
+only to the selected environment, rolls back Worker code non-interactively,
+verifies that Cloudflare routes 100% of traffic to the requested version, and
 checks that post-rollback liveness identifies the selected environment. It does
 not require the unhealthy Worker to answer before starting recovery.
 

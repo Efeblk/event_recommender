@@ -46,12 +46,11 @@ await test('Jev admission uses support probability while score only orders admit
     probabilities,
     supportProbability: probabilities[2] + probabilities[3],
   });
-  const supportedLowMean = makeRanked('supported-low-mean', 1.98, [
-    0,
-    0.02,
-    0.98,
-    0,
-  ]);
+  const supportedLowMean = makeRanked(
+    'supported-low-mean',
+    1.98,
+    [0, 0.02, 0.98, 0],
+  );
   const boundary = makeRanked('boundary', 1.4, [0, 0.3, 0.7, 0]);
   const rejected49 = makeRanked('rejected-49', 1.49, [0, 0.51, 0.49, 0]);
   const rejected66 = makeRanked('rejected-66', 1.66, [0, 0.34, 0.66, 0]);
@@ -94,11 +93,7 @@ await test('Jev admission uses support probability while score only orders admit
     supportProbability: 1,
   };
   const invalidScore = { ...supportedLowMean, score: Number.NaN };
-  for (const invalid of [
-    inconsistent,
-    invalidProbabilities,
-    invalidScore,
-  ])
+  for (const invalid of [inconsistent, invalidProbabilities, invalidScore])
     assert.deepEqual(
       selectJevEvents(canonical, {
         ranked: [invalid],
@@ -356,7 +351,7 @@ await test('one bounded Jev request ranks text candidates and preserves their fa
     }),
   });
   assert.equal(calls, 1);
-  assert.equal(result.recommendations.length, 5);
+  assert.equal(result.recommendations.length, 2);
   assert.equal(result.recommendations[0].event.id, '1');
   assertRecommendedEvent(result.recommendations[0].event, events[1]);
 });
@@ -462,6 +457,10 @@ await test('switching from concerts to a serious play removes stale model contex
   assertRecommendedEvent(result.recommendations[0].event, drama);
 });
 await test('category follow-ups use the same vocabulary for database filters and the shortlist', async () => {
+  const electronic = {
+    ...event,
+    description: 'Techno ve elektronik müzik konseri.',
+  };
   const comedy = {
     ...drama,
     id: 'comedy',
@@ -471,8 +470,8 @@ await test('category follow-ups use the same vocabulary for database filters and
     url: 'https://example.test/comedy',
   };
   for (const [message, expected] of [
-    ['Techno istiyorum', event],
-    ['Elektronik olsun', event],
+    ['Techno istiyorum', electronic],
+    ['Elektronik olsun', electronic],
     ['Stand-up olsun', comedy],
   ] as const) {
     let calls = 0;
@@ -487,7 +486,7 @@ await test('category follow-ups use the same vocabulary for database filters and
         config,
         candidates: async (filters) => {
           assert.equal(filters.category, expected.category);
-          return [event, comedy, drama].filter(
+          return [electronic, comedy, drama].filter(
             (candidate) => candidate.category === filters.category,
           );
         },

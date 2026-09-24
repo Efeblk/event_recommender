@@ -27,11 +27,11 @@ export function isAlternativesRequest(message: string): boolean {
 // "Oyun" is too broad on its own (games, music and idioms). Treat it as
 // theatre only when the surrounding request supplies stage/adult-drama context.
 const theatrePlay =
-  /\b(?:ciddi|dramatik|yetiskin(?:ler|lere)?(?:\s+(?:uygun|yonelik))?|sahne(?:de|ye)?|perde)\b[^.!?\n]{0,48}\boyun(?:u|lar|lari)?\b|\boyun(?:u|lar|lari)?\b[^.!?\n]{0,48}\b(?:ciddi|dramatik|yetiskin(?:ler|lere)?(?:\s+(?:uygun|yonelik))?|sahne(?:de|ye)?|perde)\b/;
+  /\b(?:ciddi|dramatik|yetiskin(?:ler|lere)?(?:\s+(?:uygun|yonelik))?|sahne(?:de|ye)?|perde|bilet|izle(?:mek|yelim)?|seyret(?:mek|yelim)?)\b[^.!?\n]{0,48}\boyun(?:u|lar|lari)?\b|\boyun(?:u|lar|lari)?\b[^.!?\n]{0,48}\b(?:ciddi|dramatik|yetiskin(?:ler|lere)?(?:\s+(?:uygun|yonelik))?|sahne(?:de|ye)?|perde|bilet|izle(?:mek|yelim)?|seyret(?:mek|yelim)?)\b/;
 const tabletopGame =
   /\b(?:kutu|masa|kart|video|bilgisayar|konsol)\s+oyun(?:u|lari?)?\b/;
 export const CATEGORY_NEGATION =
-  '(?:istemiyorum|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disinda|yerine)';
+  '(?:istemiyorum|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disinda|yerine|bosver)';
 
 const categoryPatterns: Array<[Category, RegExp]> = [
   [

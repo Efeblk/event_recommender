@@ -42,6 +42,7 @@ jobs:
       VOYAGE_MODEL: ${{ vars.VOYAGE_MODEL }}
       VOYAGE_DIMENSIONS: ${{ vars.VOYAGE_DIMENSIONS }}
       AI_DAILY_LIMIT: ${{ vars.AI_DAILY_LIMIT }}
+      WORKERS_PLAN: ${{ vars.WORKERS_PLAN }}
     steps:
       - uses: actions/checkout@v4
         with:

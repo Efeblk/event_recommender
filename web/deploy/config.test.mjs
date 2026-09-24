@@ -6,6 +6,7 @@ import {
   publicDeploymentVariables,
   validateDeploymentConfig,
   deploymentMatches,
+  workerCpuLimits,
 } from '../scripts/deploy-config.mjs';
 
 const names = [
@@ -25,6 +26,7 @@ const names = [
   'VOYAGE_MODEL',
   'VOYAGE_DIMENSIONS',
   'AI_DAILY_LIMIT',
+  'WORKERS_PLAN',
 ];
 let saved;
 
@@ -214,4 +216,20 @@ await test('rejects invalid public provider settings', () => {
     () => validateDeploymentConfig({ environment: 'staging' }),
     /VOYAGE_DIMENSIONS/,
   );
+});
+
+await test('defaults to a free Worker profile and opts into paid CPU explicitly', () => {
+  delete process.env.WORKERS_PLAN;
+  assert.doesNotThrow(() =>
+    validateDeploymentConfig({ environment: 'staging' }),
+  );
+  assert.equal(workerCpuLimits(), undefined);
+  process.env.WORKERS_PLAN = 'paid';
+  assert.deepEqual(workerCpuLimits(), { cpu_ms: 30_000 });
+  process.env.WORKERS_PLAN = 'enterprise';
+  assert.throws(
+    () => validateDeploymentConfig({ environment: 'staging' }),
+    /WORKERS_PLAN/,
+  );
+  assert.throws(() => workerCpuLimits(), /WORKERS_PLAN/);
 });

@@ -45,6 +45,12 @@ jobs:
       - run: npm run build
       - name: Verify built Worker and local D1 without API keys
         run: npm run test:smoke
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Verify desktop and mobile browser flows without API calls
+        env:
+          BIPLAN_BROWSER_START: '1'
+        run: npx playwright test
       - name: Verify standalone Cloudflare staging build without deploying
         env:
           DEPLOY_TARGET: staging
