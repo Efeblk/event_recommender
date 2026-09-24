@@ -27,6 +27,18 @@ const VENUE_ALIASES = [
 // Reviewed against repeated matching source schedules (September 2026 catalog).
 // These are literal show aliases, never a general performer/suffix heuristic.
 const TITLE_ALIASES = [
+  ['STAND UP GECESİ Taksim- Pera- Beyoğlu', 'Beyoğlu- Taksim- Stand Up Gecesi'],
+  [
+    'Stand up Taksim / Beyoğlu Gecesi | İnfiniti Sahne',
+    'Stand Up Taksim / Beyoğlu Gecesi - Cuma 20:30',
+    'Stand Up Taksim - Beyoğlu Gecesi - Cuma 20:30',
+    'Stand Up Taksim / Beyoğlu Gecesi - Cuma 22:30',
+    'Stand Up Taksim - Beyoğlu Gecesi - Cuma 22:30',
+    'Stand Up Taksim / Beyoğlu Gecesi - Cumartesi 19:00',
+    'Stand Up Taksim / Beyoğlu Gecesi - Cumartesi 20:30',
+    'Stand Up Taksim / Beyoğlu Gecesi - Pazar 19:00',
+    'Stand Up Taksim / Beyoğlu Gecesi - Pazar 20:30',
+  ],
   [
     'Boğaziçi Komedi Kulübü: Kadıköy Açık Mikrofon Stand-up Gecesi',
     'Boğaziçi Komedi Kulübü - Kadıköy Açık Mikrofon Stand-up',

@@ -268,6 +268,109 @@ await test('reviewed Boğaziçi open-mic titles merge only at the same venue and
   );
 });
 
+await test('reviewed Taksim show schedule aliases merge exact sessions and share one show identity', () => {
+  const generic = 'Stand up Taksim / Beyoğlu Gecesi | İnfiniti Sahne';
+  const friday = '2026-09-25T17:30:00.000Z';
+  const sundayEarly = '2026-09-27T16:00:00.000Z';
+  const sundayLate = '2026-09-27T17:30:00.000Z';
+  const records = [
+    event({ id: 'fri-generic', title: generic, startsAt: friday }),
+    event({
+      id: 'fri-bubilet',
+      title: 'Stand Up Taksim / Beyoğlu Gecesi - Cuma 20:30',
+      startsAt: friday,
+      source: 'bubilet',
+    }),
+    event({
+      id: 'fri-biletix',
+      title: 'Stand Up Taksim - Beyoğlu Gecesi - Cuma 20:30',
+      startsAt: friday,
+      source: 'biletix',
+    }),
+    event({ id: 'sun-early-generic', title: generic, startsAt: sundayEarly }),
+    event({
+      id: 'sun-early-bubilet',
+      title: 'Stand Up Taksim / Beyoğlu Gecesi - Pazar 19:00',
+      startsAt: sundayEarly,
+      source: 'bubilet',
+    }),
+    event({ id: 'sun-late-generic', title: generic, startsAt: sundayLate }),
+    event({
+      id: 'sun-late-bubilet',
+      title: 'Stand Up Taksim / Beyoğlu Gecesi - Pazar 20:30',
+      startsAt: sundayLate,
+      source: 'bubilet',
+    }),
+    event({
+      id: 'baris-duo',
+      title: 'Stand up - Barış Balkır ve Zafer Erbil İkili',
+      startsAt: sundayEarly,
+    }),
+  ].map((item) => ({ ...item, venue: 'İnfiniti Sahne' }));
+  const merged = mergeEventSessions(records);
+  assert.equal(merged.length, 4);
+  assert.deepEqual(
+    merged
+      .filter((item) => item.title !== records.at(-1)!.title)
+      .map((item) => item.offers?.length)
+      .sort((a, b) => (a ?? 0) - (b ?? 0)),
+    [2, 2, 3],
+  );
+  assert.equal(
+    new Set(
+      merged
+        .filter((item) => item.title !== records.at(-1)!.title)
+        .map((item) => item.canonicalShowKey),
+    ).size,
+    1,
+  );
+  assert.notEqual(
+    merged.find((item) => item.title === records.at(-1)!.title)
+      ?.canonicalShowKey,
+    merged.find((item) => item.title !== records.at(-1)!.title)
+      ?.canonicalShowKey,
+  );
+});
+
+await test('reviewed Efsahne titles merge offers and retain a separate show identity', () => {
+  const biletinial = event({
+    id: 'efsahne-biletinial',
+    title: 'STAND UP GECESİ Taksim- Pera- Beyoğlu',
+    venue: 'Efsahne Beyoğlu',
+    startsAt: '2026-09-25T17:30:00.000Z',
+    price: 250,
+    source: 'biletinial',
+  });
+  const bubilet = event({
+    id: 'efsahne-bubilet',
+    title: 'Beyoğlu- Taksim- Stand Up Gecesi',
+    venue: 'Efsahne Beyoğlu',
+    startsAt: '2026-09-25T17:30:00.000Z',
+    price: 300,
+    source: 'bubilet',
+  });
+  const later = event({
+    ...bubilet,
+    id: 'efsahne-later',
+    startsAt: '2026-10-02T17:30:00.000Z',
+  });
+  const infiniti = event({
+    id: 'infiniti',
+    title: 'Stand up Taksim / Beyoğlu Gecesi | İnfiniti Sahne',
+    venue: 'İnfiniti Sahne',
+    startsAt: '2026-09-25T17:30:00.000Z',
+  });
+  const merged = mergeEventSessions([biletinial, bubilet, later, infiniti]);
+  assert.equal(merged.length, 3);
+  const exact = merged.find((item) => item.mergedIds?.includes(biletinial.id))!;
+  const laterSession = merged.find((item) => item.id === later.id)!;
+  const infinitiSession = merged.find((item) => item.id === infiniti.id)!;
+  assert.equal(exact.offers?.length, 2);
+  assert.equal(exact.price, 250);
+  assert.equal(exact.canonicalShowKey, laterSession.canonicalShowKey);
+  assert.notEqual(exact.canonicalShowKey, infinitiSession.canonicalShowKey);
+});
+
 await test('fills a missing address only from consistent exact-session source facts', () => {
   const primary = event({ address: '' });
   const secondary = event({
