@@ -21,7 +21,7 @@ Jev admission now uses probability mass on supported rubric levels 2 and 3 (>=0.
 
 ## Final validation
 
-209 unit/regression tests, typecheck, lint, production build and compiled Worker/D1/R2 smoke checks pass. The stalled-body Voyage adapter test also passes. One smoke invocation ran before the build artifact existed and exited without a provider call; it was rerun successfully after the build completed.
+212 unit/regression tests, typecheck, lint, production build and compiled Worker/D1/R2 smoke checks pass. The stalled-body Voyage adapter test also passes. One smoke invocation ran before the build artifact existed and exited without a provider call; it was rerun successfully after the build completed.
 
 The [probability diagnostic](../evals/reports/2026-09-24-real-user-mood-probability.json), runtime `141d955`, records 89% supported probability for Okan Reis and 90% for the cello program. Both become the first two suggestions. Three lower-ranked suggestions support entertainment more clearly than calmness; ranking is useful but imperfect. Twelve of sixteen candidates clear the admission boundary, including weaker fits, so this trace does not establish calibrated precision.
 
@@ -33,7 +33,15 @@ One final request (`later_and_raise`) explicitly reported unavailable semantic r
 
 The drama results include three clearly supported plays and one mixed dramatic/humorous performance; the latter is less cleanly aligned with “not comedy.” The mood request has two leading format-backed matches and three weaker entertainment choices. Both previously empty flows are useful now, but ranking refinement remains warranted.
 
-This task preserved **52 API requests across baseline, intermediate, final and precision runs**, plus **three direct ranking diagnostics** (each one query embedding and one Jev call). No failed baseline was overwritten.
+This task preserved **54 API requests across baseline, intermediate, final and precision runs**, plus **three direct ranking diagnostics** (each one query embedding and one Jev call), and the 12-call fictional Jev fixture refresh described below. No failed baseline was overwritten.
+
+## CI replay follow-up
+
+CI initially rejected its historical score-only snapshot because the new admission rule requires actual probability distributions. The [fresh fictional-catalog evaluation](../evals/reports/2026-09-24-probability-fixture-live.json) used 12 serial Jev calls without retries and initially passed 11/12 cases. It exposed one additional false positive: an acoustic event was admitted for an explicitly guaranteed romantic, uncrowded setting.
+
+Explicit romantic-setting and uncrowded requirements now need source evidence. A romantic comedy/story, acoustic format or candlelight alone is insufficient; explicit contradictions win. Topic-scoped follow-up waivers remove these requirements when the user relaxes them. The original failed provider response remains in the new replay snapshot; applying the corrected deterministic gates passes all 12 replay cases with zero provider calls. Old score-only snapshots remain intact and report current-policy admission as unknown.
+
+The [two final focused API requests](../evals/reports/2026-09-24-mandatory-experience.json), runtime `655d099`, pass: unsupported mandatory romance/uncrowded returns an explained empty; explicitly waiving both restores ordinary recommendations within the 900 TL budget. This adds two focused checks after the complete 20-case run; the 20 earlier cases were not all rerun on this last revision. The 212-test suite, typecheck, lint, build and compiled smoke tests were rerun successfully.
 
 ## Provenance and limits
 
