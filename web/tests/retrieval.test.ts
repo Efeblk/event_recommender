@@ -253,17 +253,14 @@ await test('negated or incidental instruments are not calm-format evidence', () 
     description: 'Akustik değil, elektronik ve yüksek tempolu performans',
   });
   const biography = make('violin-biography', {
-    description: 'Sanatçı çocukluğunda keman eğitimi aldı; enerjik rock repertuvarıyla sahnede.',
+    description:
+      'Sanatçı çocukluğunda keman eğitimi aldı; enerjik rock repertuvarıyla sahnede.',
   });
   const energeticStrings = make('energetic-rock-violin', {
-    description: 'Enerjik rock konserinde keman performansı ve heavy metal eserleri',
+    description:
+      'Enerjik rock konserinde keman performansı ve heavy metal eserleri',
   });
-  const events = [
-    ...ordinary,
-    negatedAcoustic,
-    biography,
-    energeticStrings,
-  ];
+  const events = [...ordinary, negatedAcoustic, biography, energeticStrings];
   const semantic = {
     queryVector: [1, 0],
     vectors: new Map(
@@ -470,6 +467,43 @@ await test('an explicit category switch drops conflicting hidden history', () =>
   assert.equal(context.reset, true);
   assert.deepEqual(context.history, []);
   assert.equal(context.query.includes('rock'), false);
+});
+
+await test('a category switch remains the history boundary on the next follow-up', () => {
+  const history: Message[] = [
+    {
+      role: 'user',
+      content: 'Friday in Beyoglu, stand-up under 500 TRY per person please.',
+    },
+    {
+      role: 'user',
+      content:
+        'Actually theatre instead, no stand-up. Anywhere in Istanbul, no budget limit.',
+    },
+  ];
+  const message = 'Any date is fine now. Something dramatic, not comedy.';
+  const context = searchContext(message, history);
+  assert.deepEqual(context.history, [history[1]]);
+  assert.equal(context.query.includes('Friday in Beyoglu'), false);
+  assert.equal(context.query.includes('Actually theatre instead'), true);
+  assert.equal(context.category, 'Tiyatro');
+  assert.deepEqual(
+    new Set(context.rejectedTerms),
+    new Set(['stand-up', 'comedy']),
+  );
+
+  const dramatic = make('dramatic', {
+    category: 'Tiyatro',
+    description: 'Yetişkinlere yönelik dramatik bir sahne oyunu.',
+  });
+  const comedy = make('comedy-play', {
+    category: 'Tiyatro',
+    description: 'A laughter-filled comedy play.',
+  });
+  assert.deepEqual(
+    shortlistEvents([comedy, dramatic], message, history).map(({ id }) => id),
+    ['dramatic'],
+  );
 });
 
 await test('a current positive preference overrides an older soft rejection', () => {

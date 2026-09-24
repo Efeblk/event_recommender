@@ -54,6 +54,7 @@ const rejectionTerms = [
   'rock',
   'jazz',
   'caz',
+  'comedy',
   'komedi',
   'konser',
   'tiyatro',
@@ -69,13 +70,19 @@ function explicitRejections(message: string) {
   const rejected = new Set<string>();
   for (const term of rejectionTerms) {
     const escaped = escapeRegExp(term);
-    const pattern = new RegExp(
+    const suffixPattern = new RegExp(
       `\\b${escaped}\\b\\s+(?:istemiyorum|istemem|olmasin|degil|haric|disinda|yerine)\\b`,
       'g',
     );
-    if (pattern.test(remaining)) {
+    const prefixPattern = new RegExp(
+      `\\b(?:no|not|without|excluding?)\\s+(?:any\\s+)?${escaped}\\b`,
+      'g',
+    );
+    if (suffixPattern.test(remaining) || prefixPattern.test(remaining)) {
       rejected.add(term.startsWith('cocuk ') ? 'cocuk' : term);
-      remaining = remaining.replace(pattern, ' ');
+      remaining = remaining
+        .replace(suffixPattern, ' ')
+        .replace(prefixPattern, ' ');
     }
   }
   return rejected;
@@ -110,10 +117,24 @@ export function searchContext(
             (isFullPreferenceReset(allRecent[latestReset].content) ? 0 : 1),
         )
       : allRecent;
+  let latestCategorySwitch = -1;
+  let previousCategories: Category[] = [];
+  for (const [index, turn] of recent.entries()) {
+    const categories = positiveCategories(turn.content);
+    if (!categories.length) continue;
+    if (
+      previousCategories.length &&
+      categories.every((category) => !previousCategories.includes(category))
+    )
+      latestCategorySwitch = index;
+    previousCategories = categories;
+  }
+  const persistentRecent =
+    latestCategorySwitch >= 0 ? recent.slice(latestCategorySwitch) : recent;
   const reset = isPreferenceReset(message);
   const currentCategories = positiveCategories(message);
   const latestCategories =
-    recent
+    persistentRecent
       .toReversed()
       .map(({ content }) => positiveCategories(content))
       .find((categories) => categories.length > 0) ?? [];
@@ -121,13 +142,14 @@ export function searchContext(
     currentCategories.length > 0 &&
     latestCategories.length > 0 &&
     currentCategories.every((category) => !latestCategories.includes(category));
-  const relevantHistory = reset || categorySwitch ? [] : recent;
+  const relevantHistory = reset || categorySwitch ? [] : persistentRecent;
 
   const rejected = new Set<string>();
   for (const item of relevantHistory) {
     for (const term of explicitRejections(item.content)) rejected.add(term);
   }
-  for (const term of explicitRejections(message)) rejected.add(term);
+  const currentRejected = explicitRejections(message);
+  for (const term of currentRejected) rejected.add(term);
   const currentPositive = positiveCategoryText(normalize(message));
   const categoryRejections: Record<string, Category> = {
     konser: 'Konser',
@@ -137,6 +159,7 @@ export function searchContext(
     'stand up': 'Stand-up',
   };
   for (const term of rejected) {
+    if (currentRejected.has(term)) continue;
     if (
       categoryRejections[term] &&
       currentCategories.includes(categoryRejections[term])
@@ -252,8 +275,7 @@ function calmFormatTags(event: EventRecord) {
       text,
     ) ||
     /\b(?:viyolonsel|cello|yayli|keman|oda muzigi)\b/.test(title);
-  if (stringProgram && !highEnergy)
-    tags.push('chamber-strings');
+  if (stringProgram && !highEnergy) tags.push('chamber-strings');
   if (!highEnergy && /\b(?:piyano resitali|klasik muzik|resital)\b/.test(text))
     tags.push('recital-classical');
   if (/\b(?:candle|mum isigi|mum isiginda)\b/.test(text))
@@ -378,8 +400,7 @@ export function shortlistEvents(
         message,
         context.history,
         limit,
-      ) ??
-      diverseRanked.slice(0, limit)
+      ) ?? diverseRanked.slice(0, limit)
     );
   const selected: EventRecord[] = [];
   const seenProductions = new Set<string>();

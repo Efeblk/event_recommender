@@ -476,6 +476,40 @@ await test('fresh coordinated English exclusion leaves only the requested classi
   );
 });
 
+await test('dramatic requests require explicit drama evidence without matching dramaturgy', () => {
+  const requirements = deriveRequirements(
+    'Something dramatic, not comedy.',
+    [],
+  );
+  assert.deepEqual(requirements, [
+    { kind: 'genre', value: 'drama', policy: 'require_support' },
+    {
+      kind: 'genre',
+      value: 'comedy',
+      policy: 'exclude_positive_evidence',
+    },
+  ]);
+  assert.equal(
+    meetsRequirements(
+      event('Yetişkinlere yönelik dramatik bir sahne oyunu.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Dramaturg söyleşisi ve komedi gösterisi.'),
+      requirements,
+    ),
+    false,
+  );
+  assert.equal(
+    checkRequirements(event('Bir dramaturg ile söyleşi.'), requirements)[0]
+      .status,
+    'unknown',
+  );
+});
+
 await test('strict uncertainty recognizes Turkish inflections in both orders', () => {
   for (const phrase of [
     'emin olmadıklarını önerme',
