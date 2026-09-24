@@ -431,6 +431,121 @@ await test('mood remains soft unless explicitly mandatory', () => {
   ]);
 });
 
+await test('mandatory romance and crowd level require explicit source evidence', () => {
+  const requirements = deriveRequirements(
+    'Kesin romantik ve kalabalık olmayan bir yer istiyorum.',
+    [],
+  );
+  assert.deepEqual(requirements, [
+    { kind: 'activity', value: 'romantic', policy: 'require_support' },
+    { kind: 'activity', value: 'uncrowded', policy: 'require_support' },
+  ]);
+  assert.equal(
+    meetsRequirements(
+      event('Romantik ve kalabalık olmayan bir akşam deneyimi.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Akustik gitar ve mum ışığında bir performans.'),
+      requirements,
+    ),
+    false,
+  );
+  assert.deepEqual(
+    checkRequirements(
+      event('Akustik gitar ve mum ışığında bir performans.'),
+      requirements,
+    ).map((check) => check.status),
+    ['unknown', 'unknown'],
+  );
+
+  const english = deriveRequirements('It must be romantic and uncrowded.', []);
+  assert.deepEqual(english, requirements);
+  assert.deepEqual(
+    deriveRequirements('A guaranteed romantic place that is not crowded.', []),
+    requirements,
+  );
+  assert.deepEqual(deriveRequirements('Romantik şart', []), [
+    { kind: 'activity', value: 'romantic', policy: 'require_support' },
+  ]);
+  assert.deepEqual(deriveRequirements('Romantic atmosphere required', []), [
+    { kind: 'activity', value: 'romantic', policy: 'require_support' },
+  ]);
+  assert.deepEqual(
+    deriveRequirements('Partnerimle sakin, romantik bir akşam istiyorum', []),
+    [],
+  );
+  assert.equal(
+    checkRequirements(event('Ödüllü bir romantik komedi.'), requirements)[0]
+      .status,
+    'unknown',
+  );
+  assert.equal(
+    checkRequirements(
+      event('Romantik bir aşk hikâyesini anlatan oyun.'),
+      requirements,
+    )[0].status,
+    'unknown',
+  );
+});
+
+await test('explicit romance and crowd contradictions take priority', () => {
+  const requirements = deriveRequirements(
+    'Definitely romantic and uncrowded.',
+    [],
+  );
+  assert.deepEqual(
+    checkRequirements(
+      event('Romantic atmosphere, but it is not romantic. Uncrowded.'),
+      requirements,
+    ).map((check) => check.status),
+    ['contradicted', 'supported'],
+  );
+  assert.deepEqual(
+    checkRequirements(
+      event('Romantic atmosphere. Uncrowded earlier, but crowded now.'),
+      requirements,
+    ).map((check) => check.status),
+    ['supported', 'contradicted'],
+  );
+});
+
+await test('experience waivers remove only the scoped mandatory condition', () => {
+  const history: Message[] = [
+    {
+      role: 'user',
+      content: 'Kesin romantik ve kalabalık olmayan bir yer istiyorum.',
+    },
+  ];
+  assert.deepEqual(deriveRequirements('Romantik olması şart değil', history), [
+    { kind: 'activity', value: 'uncrowded', policy: 'require_support' },
+  ]);
+  assert.deepEqual(deriveRequirements('Uncrowded is not required', history), [
+    { kind: 'activity', value: 'romantic', policy: 'require_support' },
+  ]);
+  assert.deepEqual(
+    deriveRequirements(
+      'Romantik olması şart değil, kalabalık da sorun değil. Kişi başı 900 TL olsun.',
+      history,
+    ),
+    [],
+  );
+  assert.deepEqual(
+    deriveRequirements('Romantic is not required, crowds are fine.', history),
+    [],
+  );
+  assert.deepEqual(
+    deriveRequirements(
+      'Romantik olması şart değil ama kalabalık olmasın',
+      history,
+    ),
+    [{ kind: 'activity', value: 'uncrowded', policy: 'require_support' }],
+  );
+});
+
 await test('inflected source negation and contradictory genre titles cannot become evidence', () => {
   const noComedy = deriveRequirements('Komedi istemiyorum', []);
   assert.equal(

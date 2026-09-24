@@ -25,7 +25,7 @@ import {
 } from '../evals/jev-evaluation.ts';
 
 const DEFAULT_REPLAY = new URL(
-  '../evals/replays/2026-09-22-jev-1.13.0.json',
+  '../evals/replays/2026-09-24-jev-1.13.0-probabilities.json',
   import.meta.url,
 );
 const MAX_LIVE_CALLS = 12;

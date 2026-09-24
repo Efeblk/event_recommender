@@ -1,0 +1,557 @@
+{
+  "schemaVersion": 1,
+  "kind": "jev-offline-score-replay",
+  "capturedAt": "2026-09-24T08:11:31.408Z",
+  "model": "jev-1.13.0",
+  "fixtureData": "fictional",
+  "evaluationInputSha256": "62a230f98f3811bd97232a4cab1d0e2f8154f8cdd200daa0f9e49305e145824a",
+  "provenance": {
+    "source": "web/evals/reports/2026-09-24-probability-fixture-live.json",
+    "sourceSha256": "106229d1515666bbe4829a2f2e8b325fcc5656f66fb84658f50fe635de5d690e",
+    "codeRevision": "c1b659c",
+    "note": "Actual provider probabilities captured before explicit romantic/uncrowded evidence fix; failed case retained."
+  },
+  "note": "Saved actual fictional-catalog provider responses. Replay applies current deterministic gates; it does not make provider calls or claim current model quality.",
+  "cases": [
+    {
+      "id": "acoustic",
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.98,
+          "confidence": 0.98,
+          "probabilities": [
+            0,
+            0,
+            0.01,
+            0.99
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "unknown",
+          "score": 0.49,
+          "confidence": 0.51,
+          "probabilities": [
+            0.52,
+            0.48,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "rock",
+          "score": 0.24,
+          "confidence": 0.76,
+          "probabilities": [
+            0.77,
+            0.23,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "electronic",
+          "score": 0.01,
+          "confidence": 0.99,
+          "probabilities": [
+            1,
+            0,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "dance",
+      "ranking": [
+        {
+          "id": "electronic",
+          "score": 2.99,
+          "confidence": 0.99,
+          "probabilities": [
+            0,
+            0,
+            0.01,
+            0.99
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "rock",
+          "score": 0.93,
+          "confidence": 0.6,
+          "probabilities": [
+            0.24,
+            0.63,
+            0.09,
+            0.04
+          ],
+          "supportProbability": 0.13
+        },
+        {
+          "id": "unknown",
+          "score": 0.53,
+          "confidence": 0.52,
+          "probabilities": [
+            0.48,
+            0.52,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "acoustic",
+          "score": 0.02,
+          "confidence": 0.98,
+          "probabilities": [
+            0.98,
+            0.02,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "family",
+      "ranking": [
+        {
+          "id": "children",
+          "score": 2.97,
+          "confidence": 0.97,
+          "probabilities": [
+            0,
+            0,
+            0.02,
+            0.98
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "unknown",
+          "score": 0.57,
+          "confidence": 0.55,
+          "probabilities": [
+            0.44,
+            0.56,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "acoustic",
+          "score": 0.5,
+          "confidence": 0.5,
+          "probabilities": [
+            0.52,
+            0.46,
+            0.01,
+            0.01
+          ],
+          "supportProbability": 0.02
+        },
+        {
+          "id": "electronic",
+          "score": 0.06,
+          "confidence": 0.94,
+          "probabilities": [
+            0.96,
+            0.04,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "rock",
+          "score": 0.06,
+          "confidence": 0.94,
+          "probabilities": [
+            0.96,
+            0.04,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "comedy",
+          "score": 0.04,
+          "confidence": 0.96,
+          "probabilities": [
+            0.97,
+            0.03,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "drama",
+          "score": 0.04,
+          "confidence": 0.96,
+          "probabilities": [
+            0.97,
+            0.03,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "comedy",
+      "ranking": [
+        {
+          "id": "comedy",
+          "score": 2.86,
+          "confidence": 0.86,
+          "probabilities": [
+            0,
+            0,
+            0.13,
+            0.87
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "drama",
+      "ranking": [
+        {
+          "id": "drama",
+          "score": 2.93,
+          "confidence": 0.93,
+          "probabilities": [
+            0,
+            0,
+            0.06,
+            0.9400000000000001
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "rock",
+      "ranking": [
+        {
+          "id": "rock",
+          "score": 2.96,
+          "confidence": 0.96,
+          "probabilities": [
+            0,
+            0,
+            0.03,
+            0.97
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "seated",
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.97,
+          "confidence": 0.97,
+          "probabilities": [
+            0,
+            0,
+            0.03,
+            0.97
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "negation",
+      "ranking": [
+        {
+          "id": "drama",
+          "score": 2.79,
+          "confidence": 0.79,
+          "probabilities": [
+            0.03,
+            0.01,
+            0.12,
+            0.84
+          ],
+          "supportProbability": 0.96
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.72,
+          "confidence": 0.72,
+          "probabilities": [
+            0.04,
+            0.01,
+            0.11,
+            0.84
+          ],
+          "supportProbability": 0.95
+        },
+        {
+          "id": "unknown",
+          "score": 1.09,
+          "confidence": 0.72,
+          "probabilities": [
+            0.1,
+            0.75,
+            0.11,
+            0.04
+          ],
+          "supportProbability": 0.15
+        }
+      ]
+    },
+    {
+      "id": "followup",
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.85,
+          "confidence": 0.85,
+          "probabilities": [
+            0,
+            0,
+            0.14,
+            0.86
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "unknown",
+          "score": 0.58,
+          "confidence": 0.54,
+          "probabilities": [
+            0.44,
+            0.55,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "rock",
+          "score": 0.04,
+          "confidence": 0.96,
+          "probabilities": [
+            0.97,
+            0.03,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "electronic",
+          "score": 0.02,
+          "confidence": 0.98,
+          "probabilities": [
+            0.99,
+            0.01,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "unsupported-romance",
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 1.73,
+          "confidence": 0.6,
+          "probabilities": [
+            0.09,
+            0.17,
+            0.68,
+            0.06
+          ],
+          "supportProbability": 0.74
+        },
+        {
+          "id": "drama",
+          "score": 1,
+          "confidence": 0.56,
+          "probabilities": [
+            0.22,
+            0.58,
+            0.19,
+            0.01
+          ],
+          "supportProbability": 0.2
+        },
+        {
+          "id": "comedy",
+          "score": 0.62,
+          "confidence": 0.56,
+          "probabilities": [
+            0.41,
+            0.57,
+            0.02,
+            0
+          ],
+          "supportProbability": 0.02
+        },
+        {
+          "id": "unknown",
+          "score": 0.52,
+          "confidence": 0.49,
+          "probabilities": [
+            0.49,
+            0.5,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "children",
+          "score": 0.38,
+          "confidence": 0.62,
+          "probabilities": [
+            0.65,
+            0.34,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "rock",
+          "score": 0.26,
+          "confidence": 0.74,
+          "probabilities": [
+            0.75,
+            0.24,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "electronic",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.84,
+            0.15,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        }
+      ]
+    },
+    {
+      "id": "unsupported-access",
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 0.46,
+          "confidence": 0.54,
+          "probabilities": [
+            0.69,
+            0.21,
+            0.04,
+            0.06
+          ],
+          "supportProbability": 0.1
+        },
+        {
+          "id": "rock",
+          "score": 0.21,
+          "confidence": 0.79,
+          "probabilities": [
+            0.84,
+            0.15,
+            0,
+            0.01
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "drama",
+          "score": 0.18,
+          "confidence": 0.82,
+          "probabilities": [
+            0.86,
+            0.11,
+            0.01,
+            0.02
+          ],
+          "supportProbability": 0.03
+        },
+        {
+          "id": "comedy",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.87,
+            0.1,
+            0.01,
+            0.02
+          ],
+          "supportProbability": 0.03
+        },
+        {
+          "id": "children",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.86,
+            0.11,
+            0.01,
+            0.02
+          ],
+          "supportProbability": 0.03
+        },
+        {
+          "id": "unknown",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.87,
+            0.12,
+            0,
+            0.01
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "electronic",
+          "score": 0.13,
+          "confidence": 0.87,
+          "probabilities": [
+            0.9,
+            0.09,
+            0,
+            0.01
+          ],
+          "supportProbability": 0.01
+        }
+      ]
+    }
+  ]
+}

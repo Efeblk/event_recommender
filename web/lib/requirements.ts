@@ -110,6 +110,18 @@ const terms: Record<string, Term> = {
       /\b(?:seated|assigned seating|seats? provided|oturmalı|oturmali|numarali koltuk)\b/,
     negative: /\b(?:standing only|ayakta|oturmasiz)\b/,
   },
+  romantic: {
+    positive:
+      /\b(?:romantic|romantik)\b[^.!?]{0,36}\b(?:atmosphere|ambience|setting|evening|experience|place|venue|ortam|atmosfer|ambiyans|aksam|mekan|yer|deneyim)\b|\b(?:atmosphere|ambience|setting|evening|experience|place|venue|ortam|atmosfer|ambiyans|aksam|mekan|yer|deneyim)\b[^.!?]{0,36}\b(?:romantic|romantik)\b/,
+    negative:
+      /\b(?:not|isn't|is not)\s+romantic\b|\bromantik\s+(?:degil(?:dir)?|olmayan)\b/,
+  },
+  uncrowded: {
+    positive:
+      /\b(?:uncrowded|not crowded|isn't crowded|is not crowded|tenha|kalabalik (?:degil(?:dir)?|olmayan))\b/,
+    negative:
+      /(?<!not )(?<!isn't )(?<!is not )\bcrowded\b|\bkalabalik\b(?!\s+(?:degil(?:dir)?|olmayan))|\b(?:cok yogun|tiklim tiklim)\b/,
+  },
 };
 
 const genreEntries: Array<[string, RegExp]> = [
@@ -560,6 +572,52 @@ export function deriveRequirements(
         value: 'seated',
         policy: 'require_support',
       });
+
+    const mandatoryExperience =
+      /\b(?:kesin(?:likle)?|mutlaka|must|required|guaranteed|definitely|sart|olmak zorunda)\b/.test(
+        text,
+      );
+    if (
+      mandatoryExperience &&
+      /\b(?:romantic|romantik)\b/.test(text) &&
+      !/\b(?:not|isn't|is not)\s+romantic\b|\bromantik\s+(?:degil(?:dir)?|olmasin)\b/.test(
+        text,
+      )
+    )
+      addIndependentRequirement(requirements, {
+        kind: 'activity',
+        value: 'romantic',
+        policy: 'require_support',
+      });
+    if (
+      mandatoryExperience &&
+      /\b(?:uncrowded|not crowded|isn't crowded|is not crowded|tenha|kalabalik (?:degil|olmayan|olmasin))\b/.test(
+        text,
+      )
+    )
+      addIndependentRequirement(requirements, {
+        kind: 'activity',
+        value: 'uncrowded',
+        policy: 'require_support',
+      });
+
+    const experienceWaiverClauses = text.split(
+      /[,.!?;]|\b(?:ama|fakat|ancak|but)\b/,
+    );
+    const romanticWaived = experienceWaiverClauses.some((clause) =>
+      /\b(?:romantik(?: olmasi)?|romantic)\b[^.!?;]{0,24}\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary)\b/.test(
+        clause,
+      ),
+    );
+    const uncrowdedWaived = experienceWaiverClauses.some((clause) =>
+      /\b(?:uncrowded|not crowded|kalabalik olmamasi|kalabalik olmayan)\b[^.!?;]{0,24}\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary)\b|\bkalabalik(?: da)? sorun degil\b|\bcrowds? (?:are|is) fine\b/.test(
+        clause,
+      ),
+    );
+    if (romanticWaived)
+      removeRequiredValues(requirements, 'activity', ['romantic']);
+    if (uncrowdedWaived)
+      removeRequiredValues(requirements, 'activity', ['uncrowded']);
   }
   return requirements;
 }
@@ -649,6 +707,17 @@ export function checkRequirements(
         status: findings.some((item) => item.positive)
           ? 'contradicted'
           : findings.every((item) => item.negative)
+            ? 'supported'
+            : 'unknown',
+        evidence,
+      };
+    }
+    if (requirement.value === 'romantic' || requirement.value === 'uncrowded') {
+      return {
+        requirement,
+        status: findings.some((item) => item.negative)
+          ? 'contradicted'
+          : findings.some((item) => item.positive)
             ? 'supported'
             : 'unknown',
         evidence,
