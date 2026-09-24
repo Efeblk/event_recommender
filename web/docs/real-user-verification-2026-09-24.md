@@ -2,6 +2,11 @@
 
 Local testing only; no deployment. Synthetic Turkish and English conversations exercise the same history, filters and alternative exclusions sent by the website. These are API checks, not browser click-through or an unbiased accuracy benchmark.
 
+This records the earlier test rounds. Later browser coverage, dependency checks,
+performance measurements and release gates are tracked in the
+[release audit](../../docs/release-readiness-2026-09-24.md); the historical results
+and limitations below are retained as observed on their recorded revisions.
+
 ## Baseline and fixes
 
 The [16 frozen cases](../evals/cases/2026-09-24-real-user-journeys.json) cover informal spelling, date correction, time bounds, changed budgets, rejected suggestions, English preference removal, group size, conversation reset, mood, child age, free-only events, unsupported cities and contradictory constraints.

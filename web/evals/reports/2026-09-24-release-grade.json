@@ -1,0 +1,107 @@
+{
+  "status": "needs_review",
+  "fixtureCases": 20,
+  "reportResults": 20,
+  "nonemptyCases": 4,
+  "emptyCases": [
+    {
+      "id": "monday_uskudar_play",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    },
+    {
+      "id": "correct_to_besiktas",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    },
+    {
+      "id": "switch_to_standup",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    },
+    {
+      "id": "five_people_total",
+      "status": "empty",
+      "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz."
+    },
+    {
+      "id": "group_size_correction",
+      "status": "empty",
+      "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz."
+    },
+    {
+      "id": "english_weekend_jazz",
+      "status": "empty",
+      "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz."
+    },
+    {
+      "id": "weekend_sunday_only",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    },
+    {
+      "id": "mandatory_alcohol_free",
+      "status": "empty",
+      "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz."
+    },
+    {
+      "id": "wheelchair_missing_proof",
+      "status": "empty",
+      "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz."
+    },
+    {
+      "id": "next_wednesday",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    },
+    {
+      "id": "before_noon_boundary",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    },
+    {
+      "id": "electronic_not_rap",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    },
+    {
+      "id": "budget_typo_start",
+      "status": "empty",
+      "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz."
+    },
+    {
+      "id": "budget_typo_corrected",
+      "status": "empty",
+      "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz."
+    },
+    {
+      "id": "free_exact_not_unknown",
+      "status": "empty",
+      "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı."
+    }
+  ],
+  "relevanceUnresolved": [
+    {
+      "id": "waive_alcohol_free",
+      "cards": 2,
+      "note": "Hard constraints and explicit source-evidence requirements checked; comparative relevance and recall require review."
+    },
+    {
+      "id": "soft_cozy_mood",
+      "cards": 2,
+      "note": "Hard constraints and explicit source-evidence requirements checked; comparative relevance and recall require review."
+    },
+    {
+      "id": "provider_offer_merge",
+      "cards": 2,
+      "note": "Hard constraints and explicit source-evidence requirements checked; comparative relevance and recall require review."
+    },
+    {
+      "id": "untrusted_description_instruction",
+      "cards": 2,
+      "note": "Hard constraints and explicit source-evidence requirements checked; comparative relevance and recall require review."
+    }
+  ],
+  "hardConstraintFailures": [],
+  "note": "Empty cases are safe from false-positive cards but are not counted as relevance or recall passes."
+}
