@@ -57,3 +57,8 @@ These prompts informed the fixes, so their rerun is a regression check, not held
 - Safari browser check verified visible district/time chips, empty-state behavior and clearing all filters.
 
 Local `/api/health` succeeds. `/api/ready` still returns `503 checkpoint_stale` because the collection checkpoint is older than 24 hours; source rows remain eligible under their separate 72-hour freshness window. This work does not refresh the scraper checkpoint or publish the site.
+
+
+## September 24 follow-up
+
+The subsequent [verification and fixes](recommendation-verification-2026-09-24.md) refresh the catalog/checkpoint, complete the Voyage backfill, fix variety and additional provider aliases, strengthen fallback evidence checks, and add complete provider deadlines. The stale-readiness and variety findings above describe the earlier run; see the follow-up for current results and remaining verification limits.
