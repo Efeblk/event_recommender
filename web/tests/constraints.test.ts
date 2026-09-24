@@ -447,6 +447,32 @@ await test('English weekdays, exact district and strict local time are hard filt
     ),
     true,
   );
+  const conflicting = {
+    ...late,
+    district: 'Beyoğlu',
+    venue: 'Ada Bar Kadıköy',
+    address: 'Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul',
+  };
+  assert.equal(
+    isEligible(conflicting, { ...filters, district: 'Beyoglu' }, now),
+    false,
+  );
+  assert.equal(isEligible(conflicting, filters, now), false);
+  const addressOverridesVenueFallback = {
+    ...late,
+    district: '',
+    venue: 'Ada Bar Kadıköy',
+    address: 'Kadıköy Sokak 4, Şişli/İstanbul',
+  };
+  assert.equal(isEligible(addressOverridesVenueFallback, filters, now), false);
+  assert.equal(
+    isEligible(
+      addressOverridesVenueFallback,
+      { ...filters, district: 'Sisli' },
+      now,
+    ),
+    true,
+  );
   assert.equal(
     isEligible({ ...late, startsAt: '2026-09-12T17:30:00Z' }, filters, now),
     false,

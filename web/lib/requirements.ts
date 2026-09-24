@@ -41,7 +41,7 @@ const terms: Record<string, Term> = {
     negative: /\b(?:not|no|without)\s+rock\b|\brock\s+(?:degil(?:dir)?|yok)\b/,
   },
   classical: {
-    positive: /\b(?:classical|klasik)\b/,
+    positive: /\b(?:classical|klasik\s+(?:muzik|muzig|repertuvar)[a-z]*)\b/,
     negative:
       /\b(?:not|no|without)\s+classical\b|\bklasik\s+(?:degil(?:dir)?|yok)\b/,
   },

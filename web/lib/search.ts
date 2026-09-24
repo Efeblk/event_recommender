@@ -519,7 +519,8 @@ function dateIssue(q: string, previous: Filters): ConstraintIssue | null {
     )
   )
     return 'date_ambiguous';
-  const sameDate = /\b(?:ayni (?:tarih(?:te)?|gun(?:de)?)|same (?:date|day))\b/g;
+  const sameDate =
+    /\b(?:ayni (?:tarih(?:te)?|gun(?:de)?)|same (?:date|day))\b/g;
   if (sameDate.test(q)) {
     if (!previous.dateFrom && !previous.dateTo) return 'date_ambiguous';
     q = q.replace(sameDate, ' ');
@@ -713,12 +714,27 @@ export function isEligible(
   const hasSpecificDistrict = (
     ISTANBUL_DISTRICTS as readonly string[]
   ).includes(eventDistrict);
-  const locationEvidence = normalize(`${e.venue} ${e.address}`);
+  const normalizedAddress = normalize(e.address);
+  const addressDistricts = ISTANBUL_DISTRICTS.filter((district) =>
+    new RegExp(`\\b${district}\\b\\s*(?:(?:/|,)\\s*istanbul\\b|$)`).test(
+      normalizedAddress,
+    ),
+  );
+  const addressDistrict =
+    addressDistricts.length === 1 ? addressDistricts[0] : null;
+  const hasDistrictConflict =
+    hasSpecificDistrict &&
+    addressDistrict !== null &&
+    addressDistrict !== eventDistrict;
+  const venueEvidence = normalize(e.venue);
   const districtMatches =
     !requestedDistrict ||
-    eventDistrict === requestedDistrict ||
-    (!hasSpecificDistrict &&
-      new RegExp(`\\b${requestedDistrict}\\b`).test(locationEvidence));
+    (!hasDistrictConflict &&
+      (eventDistrict === requestedDistrict ||
+        (!hasSpecificDistrict &&
+          (addressDistrict
+            ? addressDistrict === requestedDistrict
+            : new RegExp(`\\b${requestedDistrict}\\b`).test(venueEvidence)))));
   const afterFrom =
     !f.startTimeFrom ||
     (f.startTimeFromExclusive

@@ -318,3 +318,31 @@ await test('pure comma-separated genre lists share negation but accessibility cl
     );
   }
 });
+
+await test('classical music evidence excludes generic classic-concert wording', () => {
+  const requirements = deriveRequirements(
+    'A classical concert, no jazz or rock',
+    [],
+  );
+  assert.equal(
+    meetsRequirements(
+      event(
+        'Klasik bir konser gecesinin ötesinde bir festival; pop ve elektronik müzik.',
+      ),
+      requirements,
+    ),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(event('Klasik müziğin seçkin eserleri.'), requirements),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(event('Klasik repertuvar eserleri.'), requirements),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(event('A classical music concert.'), requirements),
+    true,
+  );
+});
