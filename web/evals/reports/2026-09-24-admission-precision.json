@@ -1,0 +1,263 @@
+{
+  "referenceDate": "2026-09-24",
+  "timeZone": "Europe/Istanbul",
+  "note": "Frozen before live probability-admission precision checks; existing evidence requirements must still hold.",
+  "cases": [
+    {
+      "id": "ordinary_family",
+      "visitor": 20,
+      "message": "Annemle neşeli bir akşam geçirmek istiyoruz. Ailece izlenebilecek bir komedi gösterisi öner; kişi başı en fazla 900 TL, tarih fark etmez.",
+      "expectation": "Source-supported family suitability; <=900. Generic comedy alone insufficient."
+    },
+    {
+      "id": "strict_content",
+      "visitor": 21,
+      "message": "Komedi olsun, kişi başı en fazla 900 TL. Küfür ve cinsel içerik olmasın; emin olmadıklarını önerme.",
+      "expectation": "Both explicit content absences supported, otherwise empty."
+    },
+    {
+      "id": "mandatory_accessibility",
+      "visitor": 22,
+      "message": "Basamaksız giriş şart. Cuma günü bir caz konseri olsun; kişi başı en fazla 1000 TL.",
+      "expectation": "Positive jazz and step-free evidence required. Unknown access must remain empty."
+    },
+    {
+      "id": "mandatory_quiet",
+      "visitor": 23,
+      "message": "Kesinlikle sessiz bir ortam şart, yüksek ses ve kalabalık istemiyorum. Kişi başı 900 TL.",
+      "expectation": "Mandatory quiet/no crowd requires source evidence, cannot be substituted by acoustic format."
+    }
+  ],
+  "codeRevision": "141d955",
+  "startedAt": "2026-09-24T08:01:11.954Z",
+  "maxHttpRequests": 4,
+  "automaticRetries": 0,
+  "results": [
+    {
+      "id": "ordinary_family",
+      "input": {
+        "message": "Annemle neşeli bir akşam geçirmek istiyoruz. Ailece izlenebilecek bir komedi gösterisi öner; kişi başı en fazla 900 TL, tarih fark etmez.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.20",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "e43b6c0aa99178559a8c12c6",
+              "title": "Fani But Funny",
+              "description": "Fani But Funny Stand Up Gösterisi Biletleri ‘Fânî But Funny’ muhafazakar insanların günlük hayatlarında yaşadıkları ikilemleri, komik enstantaneleri mizahi bir üslup ile ele alan keyifli ve eğlenceli bir stand up şovudur. Türk ahlak yapısına uygun, ailece keyifle izlenebilecek bu gösteri Türkiye’de ve 8 farklı ülkede ses getiren performanslara imza atmış Bekir Develi tarafından sahnelenmektedir.",
+              "startsAt": "2026-10-09T17:30:00.000Z",
+              "checkedAt": "2026-09-24T06:27:07.829Z",
+              "venue": "Başakşehir Belediyesi Şehir Sanat Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 800,
+              "url": "https://biletinial.com/tr-tr/tiyatro/fani-but-funny",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/fani-but-funny-20241082163817ef8ceefa144f7d82b8abcbb0d5c64f.jpeg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "6463e52f720ed8bdd7c44d38",
+              "offers": [
+                {
+                  "id": "e43b6c0aa99178559a8c12c6",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/fani-but-funny",
+                  "price": 800,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:27:07.829Z",
+                  "category": "Tiyatro",
+                  "venue": "Başakşehir Belediyesi Şehir Sanat Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "e43b6c0aa99178559a8c12c6",
+                "session-56dad4e7e3afbc71ebce2b8d7c8fe32a"
+              ],
+              "canonicalProductionKey": "production-ef7745b4a519d233eca3728542633ceb",
+              "canonicalShowKey": "show-78eeb890fec578a17104a82f399ce2ad"
+            }
+          },
+          {
+            "event": {
+              "id": "5b8c9dc6e4ed182e3d6555e5",
+              "title": "STAND UP GECESİ - EXTRA - Taksim - Pera - Beyoğlu",
+              "description": "STAND UP GECESİ - EXTRA- Taksim- Pera- Beyoğlu Beyoğlu-Taksim Stand Up Gecesi'ne Davetlisiniz! Kahkahanın tavan yaptığı, unutulmaz bir akşam geçirmeye hazır mısınız? Beyoğlu-Taksim'in kalbinde, birbirinden yetenekli komedyenlerin sahne aldığı Stand Up Gecesi'nde siz de yerinizi alın! Mizahın ve eğlencenin bir araya geldiği bu özel gece için ekstra biletler şimdi satışta! Ailenizle, arkadaşlarınızla ya da tek başınıza katılabileceğiniz bu etkinlikte, Beyoğlu’ndagünlük hayatın stresinden uz",
+              "startsAt": "2026-09-26T17:30:00.000Z",
+              "checkedAt": "2026-09-24T06:33:17.419Z",
+              "venue": "Efsahne Beyoğlu",
+              "district": "İstanbul Avrupa",
+              "address": "Kuloğlu, Kuloğlu Mahallaesi, İstiklâl Caddesi, Sadri Alışık Sk. No:24 Kat:3, 34433 Beyoğlu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 250,
+              "url": "https://biletinial.com/tr-tr/tiyatro/stand-up-gecesi-extra-tiyatro-kiraz",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/stand-up-gecesi-extra-tiyatro-kiraz-202581415230468c88b8eaa64ee0babdb16a39be4a0f.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "c30c47e253e2e314b1a5c051",
+              "offers": [
+                {
+                  "id": "5b8c9dc6e4ed182e3d6555e5",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/stand-up-gecesi-extra-tiyatro-kiraz",
+                  "price": 250,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:17.419Z",
+                  "category": "Stand-up",
+                  "venue": "Efsahne Beyoğlu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "5b8c9dc6e4ed182e3d6555e5",
+                "session-e813592949743234e225e0e9353062d4"
+              ],
+              "canonicalProductionKey": "production-f90945ebe1b4516ae66e92c291444b71",
+              "canonicalShowKey": "show-fae7bd56409a5e2ec3c04d0a7bee120e"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 900,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 2
+      },
+      "durationMs": 2073,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Annemle neşeli bir akşam geçirmek istiyoruz. Ailece izlenebilecek bir komedi gösterisi öner; kişi başı en fazla 900 TL, tarih fark etmez."
+        }
+      ]
+    },
+    {
+      "id": "strict_content",
+      "input": {
+        "message": "Komedi olsun, kişi başı en fazla 900 TL. Küfür ve cinsel içerik olmasın; emin olmadıklarını önerme.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.21",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 900,
+          "category": null
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.",
+        "totalCandidates": 0
+      },
+      "durationMs": 1212,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Komedi olsun, kişi başı en fazla 900 TL. Küfür ve cinsel içerik olmasın; emin olmadıklarını önerme."
+        }
+      ]
+    },
+    {
+      "id": "mandatory_accessibility",
+      "input": {
+        "message": "Basamaksız giriş şart. Cuma günü bir caz konseri olsun; kişi başı en fazla 1000 TL.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.22",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-25",
+          "dateTo": "2026-09-25",
+          "maxPrice": 1000,
+          "category": "Konser"
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.",
+        "totalCandidates": 0
+      },
+      "durationMs": 250,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Basamaksız giriş şart. Cuma günü bir caz konseri olsun; kişi başı en fazla 1000 TL."
+        }
+      ]
+    },
+    {
+      "id": "mandatory_quiet",
+      "input": {
+        "message": "Kesinlikle sessiz bir ortam şart, yüksek ses ve kalabalık istemiyorum. Kişi başı 900 TL.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.23",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 900,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 10
+      },
+      "durationMs": 2452,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Kesinlikle sessiz bir ortam şart, yüksek ses ve kalabalık istemiyorum. Kişi başı 900 TL."
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-09-24T08:02:32.958Z"
+}
