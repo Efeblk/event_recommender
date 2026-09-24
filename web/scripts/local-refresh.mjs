@@ -15,10 +15,20 @@ const { values } = parseArgs({
   options: {
     collect: { type: 'boolean', default: false },
     index: { type: 'boolean', default: false },
+    'index-interval-ms': { type: 'string', default: '60000' },
     report: { type: 'string' },
     origin: { type: 'string', default: localOrigin },
   },
 });
+const indexIntervalMs = Number(values['index-interval-ms']);
+if (
+  !Number.isSafeInteger(indexIntervalMs) ||
+  indexIntervalMs < 0 ||
+  indexIntervalMs > 60000
+)
+  throw new Error(
+    '--index-interval-ms must be an integer from 0 through 60000.',
+  );
 const origin = new URL(values.origin);
 if (
   origin.protocol !== 'http:' ||
@@ -93,6 +103,8 @@ if (values.index) {
       '--live',
       '--origin',
       origin.origin,
+      '--interval-ms',
+      String(indexIntervalMs),
       '--allow-loopback-http',
     ],
     { ...process.env, BIPLAN_URL: origin.origin, SYNC_TOKEN: token },
