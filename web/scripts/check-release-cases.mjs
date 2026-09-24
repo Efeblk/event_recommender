@@ -65,8 +65,8 @@ function checkCase(testCase, state) {
     );
   if (expected.categories) {
     assert.deepEqual(
-      [...actualCategories(filters)].sort(),
-      [...expectedCategories(expected)].sort(),
+      [...actualCategories(filters)].sort((a, b) => a.localeCompare(b)),
+      [...expectedCategories(expected)].sort((a, b) => a.localeCompare(b)),
       'categories',
     );
   }
