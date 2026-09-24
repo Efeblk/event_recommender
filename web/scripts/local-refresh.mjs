@@ -41,6 +41,7 @@ const collectorRoot = join(projectRoot, 'collector');
 const report = resolve(
   values.report ?? join(collectorRoot, 'output/report.json'),
 );
+const canonicalSnapshot = join(projectRoot, 'web/data/events.json');
 const token = await ensureLocalToken();
 
 async function run(args, env = process.env) {
@@ -77,6 +78,9 @@ await run(
     join(collectorRoot, 'publish.mjs'),
     '--report',
     report,
+    '--checkpoint',
+    '--snapshot',
+    canonicalSnapshot,
     '--allow-loopback-http',
   ],
   { ...process.env, BIPLAN_URL: origin.origin, SYNC_TOKEN: token },
@@ -95,5 +99,5 @@ if (values.index) {
   );
 }
 console.log(
-  'Local D1 refresh completed. The running website now uses the imported catalog.',
+  'Local D1 refresh completed. The checkpoint and canonical snapshot now match the imported catalog.',
 );

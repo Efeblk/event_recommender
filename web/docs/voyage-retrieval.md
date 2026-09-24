@@ -27,6 +27,13 @@ npm run embeddings:index --prefix web -- --origin http://127.0.0.1:3001 --allow-
 npm run local:refresh --prefix web -- --collect --index
 ```
 
+Local refresh imports every validated batch, advances the collection checkpoint,
+reads the canonical catalog back from the running Worker, and atomically replaces
+`web/data/events.json` with that readback. The publication step replaces this
+snapshot only after verified readback; any failed import, checkpoint save, or
+readback makes the command fail. With `--collect`, collection first writes its
+own validated snapshot before publication starts.
+
 The script reads the local sync token only for a loopback destination. Remote use requires `BIPLAN_URL` and `SYNC_TOKEN`; the Voyage key stays on the server. GET `/api/admin/embeddings` reports eligible sessions, unique documents, indexed documents and pending documents. POST indexes at most 32 pending documents under a lease. Both require the sync token. The driver stops on failure without automatic retries and has a bounded batch count. `--interval-ms` accepts 0–60000 milliseconds and waits only between successful batches; use pacing that fits the [Voyage API rate limits](https://www.mongodb.com/docs/voyageai/api-reference/overview/) for the account tier. Scheduled collection can opt in through the `INDEX_EMBEDDINGS=true` GitHub environment variable; indexing occurs after the canonical collection checkpoint is saved.
 
 Document vectors live in a separate D1 table, keyed by the provider/model/dimension/text-profile identity and a SHA-256 content hash. Identical event text shares vectors across sessions. Title, category, venue and description are embedded; price, date, availability and checked-at timestamps stay structured. Freshness-only updates do not trigger re-embedding. Changed text or model settings create cache misses; incompatible vectors are never silently reused. Obsolete cached content is not retrieved but currently remains stored; cache pruning is future maintenance.
