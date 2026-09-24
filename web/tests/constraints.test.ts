@@ -59,6 +59,22 @@ await test('category reset clears exclusions and explicit choice overrides its o
   });
 });
 
+await test('full preference reset clears every prior hard filter', () => {
+  const previous = {
+    ...emptyFilters,
+    dateFrom: '2026-09-12',
+    dateTo: '2026-09-12',
+    maxPrice: 500,
+    category: 'Konser' as const,
+    district: 'Kadikoy',
+    startTimeFrom: '20:00',
+  };
+  assert.deepEqual(
+    interpretConstraints('Önceki koşulları unut', previous, now),
+    { filters: emptyFilters, issue: null },
+  );
+});
+
 await test('group totals are converted to per-person budget only with party size', () => {
   assert.deepEqual(
     interpretConstraints('İki kişi toplam 800 TL', emptyFilters, now),
@@ -195,6 +211,49 @@ await test('multiple monetary constraints are not silently guessed', () => {
   );
 });
 
+await test('natural budget changes clear, replace, and qualify free requests', () => {
+  const previous = { ...emptyFilters, maxPrice: 300 };
+  assert.deepEqual(
+    interpretConstraints('Bütçeyi boşver', previous, now).filters,
+    emptyFilters,
+  );
+  assert.equal(
+    interpretConstraints('Bütçe de 600 olsun', previous, now).filters.maxPrice,
+    600,
+  );
+  assert.equal(
+    interpretConstraints(
+      'Ücretsiz olması şart değil, 700 TL olabilir',
+      emptyFilters,
+      now,
+    ).filters.maxPrice,
+    700,
+  );
+  assert.equal(
+    interpretConstraints(
+      'Ücretsiz olması şart değil, iki kişiyiz bütçemiz 800 TL',
+      emptyFilters,
+      now,
+    ).issue,
+    'budget_ambiguous',
+  );
+  assert.deepEqual(
+    interpretConstraints('No budget limit', previous, now).filters,
+    emptyFilters,
+  );
+});
+
+await test('changed group size with the same unstated total asks for clarification', () => {
+  const previous = { ...emptyFilters, maxPrice: 600 };
+  const result = interpretConstraints(
+    'Üç kişi olduk, toplam bütçe aynı',
+    previous,
+    now,
+  );
+  assert.equal(result.issue, 'budget_ambiguous');
+  assert.deepEqual(result.filters, previous);
+});
+
 await test('salient unsupported dates request clarification', () => {
   assert.equal(
     interpretConstraints('Ayın ortasında konser', emptyFilters, now).issue,
@@ -218,7 +277,6 @@ await test('ambiguous date forms preserve the previous exact date', () => {
   };
   for (const message of [
     'gelecek hafta cuma',
-    'cuma değil cumartesi',
     '12.09.2026',
     '9.30 konser',
     '12 Eylül konser',
@@ -230,6 +288,48 @@ await test('ambiguous date forms preserve the previous exact date', () => {
   assert.equal(
     interpretConstraints('sakin bir akşam', emptyFilters, now).issue,
     null,
+  );
+});
+
+await test('a negated tomorrow yields to the positive replacement date', () => {
+  const previous = {
+    ...emptyFilters,
+    dateFrom: '2026-09-08',
+    dateTo: '2026-09-08',
+  };
+  assert.deepEqual(
+    interpretConstraints('Yarın değil, cumartesi olsun', previous, now),
+    {
+      filters: {
+        ...previous,
+        dateFrom: '2026-09-12',
+        dateTo: '2026-09-12',
+      },
+      issue: null,
+    },
+  );
+  assert.deepEqual(
+    interpretConstraints('Yarın değil, hafta sonu olsun', previous, now)
+      .filters,
+    { ...previous, dateFrom: '2026-09-12', dateTo: '2026-09-13' },
+  );
+  assert.equal(
+    interpretConstraints('Yarın değil', previous, now).issue,
+    'date_ambiguous',
+  );
+  assert.equal(
+    interpretConstraints('Cuma değil Cumartesi', previous, now).filters
+      .dateFrom,
+    '2026-09-12',
+  );
+  assert.equal(
+    interpretConstraints('Not Friday but Saturday', previous, now).filters
+      .dateFrom,
+    '2026-09-12',
+  );
+  assert.deepEqual(
+    interpretConstraints('Any date is fine', previous, now).filters,
+    emptyFilters,
   );
 });
 
@@ -256,6 +356,29 @@ await test('recognized before and after clocks are not mistaken for ambiguous da
         : 'startTimeToExclusive';
     assert.equal(result.filters[exclusiveKey], exclusive, message);
   }
+});
+
+await test('bare evening hours become strict 24-hour bounds', () => {
+  const result = interpretConstraints(
+    'Akşam 9dan sonra konser',
+    emptyFilters,
+    now,
+  );
+  assert.equal(result.issue, null);
+  assert.equal(result.filters.startTimeFrom, '21:00');
+  assert.equal(result.filters.startTimeFromExclusive, true);
+  assert.equal(
+    interpretConstraints('9dan sonra konser', emptyFilters, now).issue,
+    'constraint_ambiguous',
+  );
+
+  const contradictory = interpretConstraints(
+    '22:00dan sonra ama 21:00dan önce',
+    emptyFilters,
+    now,
+  );
+  assert.equal(contradictory.issue, 'constraint_ambiguous');
+  assert.deepEqual(contradictory.filters, emptyFilters);
 });
 
 await test('unsupported city is detected unless it is explicitly negated', () => {
@@ -350,6 +473,20 @@ await test('inflected Turkish and English group budgets share one basis policy',
       .maxPrice,
     750,
   );
+});
+
+await test('group pronouns convert explicit totals to per-person budgets', () => {
+  for (const [message, expected] of [
+    ['İkimiz için toplam1000TL', 500],
+    ['Üçümüz için toplam 1.200 TL', 400],
+    ['Dördümüz için toplam 2.000 TL', 500],
+    ['Both of us have 1000 TRY total', 500],
+    ['Two of us have 1000 TRY total', 500],
+  ] as const) {
+    const result = interpretConstraints(message, emptyFilters, now);
+    assert.equal(result.issue, null, message);
+    assert.equal(result.filters.maxPrice, expected, message);
+  }
 });
 
 await test('coordinated bilingual negations cannot become positive categories', () => {
@@ -502,6 +639,37 @@ await test('district parsing respects negation and clarifies multiple choices', 
     { filters: previous, issue: 'constraint_ambiguous' },
   );
   assert.throws(() => parseFilters('Kadıköy veya Beşiktaş', emptyFilters, now));
+});
+
+await test('district locatives switch cleanly and negative-only districts clarify', () => {
+  assert.equal(
+    interpretConstraints('Kadıköyde konser', emptyFilters, now).filters
+      .district,
+    'Kadikoy',
+  );
+  const previous = { ...emptyFilters, district: 'Kadikoy' };
+  assert.deepEqual(
+    interpretConstraints(
+      'Kadıköyde olmasın, Beşiktaş olsun',
+      previous,
+      now,
+    ),
+    {
+      filters: { ...emptyFilters, district: 'Besiktas' },
+      issue: null,
+    },
+  );
+  const negativeOnly = interpretConstraints(
+    'Kadıköy hariç herhangi bir yer',
+    previous,
+    now,
+  );
+  assert.equal(negativeOnly.issue, 'constraint_ambiguous');
+  assert.deepEqual(negativeOnly.filters, previous);
+  assert.deepEqual(
+    interpretConstraints('Anywhere in Istanbul', previous, now).filters,
+    emptyFilters,
+  );
 });
 
 await test('same-date follow-up preserves known date/time/district while updating budget', () => {

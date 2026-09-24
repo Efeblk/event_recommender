@@ -196,6 +196,173 @@ await test('Turkish coordinated content prohibitions and uncertainty policy are 
   assert.equal(requirements[0].policy, 'require_support');
 });
 
+await test('a bounded content waiver removes only the waived prohibition', () => {
+  const requirements = deriveRequirements(
+    'Küfür sorun değil ama cinsellik yine olmasın',
+    [
+      {
+        role: 'user',
+        content: 'Küfür ve cinsellik olmasın',
+      },
+    ],
+  );
+  assert.deepEqual(requirements, [
+    {
+      kind: 'content',
+      value: 'sexual_content',
+      policy: 'exclude_positive_evidence',
+    },
+  ]);
+  assert.equal(
+    meetsRequirements(
+      event('Küfürlü fakat cinsellik içermeyen gösteri.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(event('Cinsel mizah içeren gösteri.'), requirements),
+    false,
+  );
+});
+
+await test('a stated child age requires child suitability and explicit age coverage', () => {
+  const requirements = deriveRequirements(
+    '5 yaşındaki kızımla pazar günü bir etkinliğe gitmek istiyorum. İkimiz için toplam 1000 TL, çocuklara uygun olsun.',
+    [],
+  );
+  assert.deepEqual(requirements, [
+    {
+      kind: 'audience',
+      value: 'children',
+      policy: 'require_support',
+    },
+    { kind: 'audience', value: 'age:5', policy: 'require_support' },
+  ]);
+  assert.deepEqual(deriveRequirements('5 yaşındaki kızımla gideceğim', []), [
+    {
+      kind: 'audience',
+      value: 'children',
+      policy: 'require_support',
+    },
+    { kind: 'audience', value: 'age:5', policy: 'require_support' },
+  ]);
+
+  assert.equal(
+    meetsRequirements(
+      event('Çocuklara uygun gösteri. 4-8 yaş için.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('4–8 yaş çocuklar ve aileleri için kukla tiyatrosu.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Çocuklara uygun gösteri. 5 yaş ve üzeri.'),
+      requirements,
+    ),
+    true,
+  );
+  assert.equal(
+    meetsRequirements(event('Çocuklara uygun gösteri.'), requirements),
+    false,
+  );
+  assert.equal(
+    checkRequirements(event('Çocuklara uygun gösteri.'), requirements)[1]
+      .status,
+    'unknown',
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Çocuklara uygun gösteri. 6 yaş ve üzeri.'),
+      requirements,
+    ),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(event('Yetişkinlere özel stand-up. 18+.'), requirements),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Ailece izlenebilecek gösteri. 4-8 yaş.'),
+      requirements,
+    ),
+    false,
+  );
+});
+
+await test('age evidence ignores unrelated numbers and aggregates conflicting restrictions', () => {
+  const requirements = deriveRequirements(
+    '5 yaşındaki kızımla çocuklara uygun bir etkinlik istiyorum',
+    [],
+  );
+  for (const description of [
+    'Çocuklara uygun gösteri. Oyundaki karakter 5 yaşında.',
+    'Çocuklara uygun atölye. Eğitmenin 5+ years experience geçmişi var.',
+    'Çocuklara uygun gösteri. 5 yaş altı bilet ücretsizdir.',
+    'Çocuklara uygun gösteri. Salon 500 kişilik, yapım yılı 2025.',
+    'Çocuklara uygun gösteri. Toplam 20+ ödül kazandı.',
+    'Çocuklara uygun festivalde 5+ gösteri var.',
+    'Çocuklara uygun oyun, 4-8 yaş çocukların macerasını anlatıyor.',
+  ]) {
+    const checks = checkRequirements(event(description), requirements);
+    assert.equal(checks[1].status, 'unknown', description);
+  }
+  const storyOnly = checkRequirements(
+    event('4-8 yaş çocukların ve ailelerin macerasını anlatıyor.'),
+    requirements,
+  );
+  assert.deepEqual(
+    storyOnly.map((check) => check.status),
+    ['unknown', 'unknown'],
+  );
+
+  assert.equal(
+    checkRequirements(
+      event('Çocuklara uygun. 4-8 yaş için önerilir. Yaş sınırı: 18+.'),
+      requirements,
+    )[1].status,
+    'contradicted',
+  );
+  assert.equal(
+    checkRequirements(
+      event('Çocuklara uygun. 5 yaş için uygun değil.'),
+      requirements,
+    )[1].status,
+    'contradicted',
+  );
+  assert.equal(
+    checkRequirements(
+      event('Çocuklara uygun. 4-8 yaş için uygun değildir.'),
+      requirements,
+    )[1].status,
+    'contradicted',
+  );
+  assert.equal(
+    checkRequirements(
+      event('Çocuklara uygun. 6 yaş altı giremez.'),
+      requirements,
+    )[1].status,
+    'contradicted',
+  );
+  assert.equal(
+    checkRequirements(event('Çocuklara uygun. Yaş grubu 4-8.'), requirements)[1]
+      .status,
+    'supported',
+  );
+  assert.equal(
+    checkRequirements(event('Çocuklara uygun. 18+.'), requirements)[1].status,
+    'contradicted',
+  );
+});
+
 await test('venue names do not prove genre and family-friendly does not mean a child event', () => {
   const jazz = deriveRequirements('Jazz istiyorum', []);
   assert.equal(

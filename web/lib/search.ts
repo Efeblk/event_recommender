@@ -7,6 +7,7 @@ import {
 } from './types.ts';
 import {
   CATEGORY_NEGATION,
+  isFullPreferenceReset,
   positiveCategoryText,
   requestedCategories,
 } from './intent.ts';
@@ -183,10 +184,15 @@ function parseCategories(q: string, previous: Filters) {
 }
 
 function budgetIssue(q: string): ConstraintIssue | null {
-  if (
-    /butce.*(?:yok|sinir.*yok|kaldir)|fiyat.*(?:onemli degil|fark etmez)|butcesiz|ucretsiz|bedava/.test(
+  const freeWaived =
+    /(?:ucretsiz|bedava)[^.!?]{0,32}(?:sart degil|zorunlu degil|gerekli degil)/.test(
       q,
-    )
+    );
+  if (
+    /butce(?:yi)?.*(?:yok|sinir.*yok|kaldir|bosver)|fiyat.*(?:onemli degil|fark etmez)|(?:no budget limit|without a budget limit)|butcesiz/.test(
+      q,
+    ) ||
+    (!freeWaived && /ucretsiz|bedava/.test(q))
   )
     return null;
   if (/\bbutce(?:m|miz)?\s*-\s*\d/.test(q)) return 'budget_ambiguous';
@@ -201,6 +207,13 @@ function budgetIssue(q: string): ConstraintIssue | null {
     : bareBudget
       ? [bareBudget[1]]
       : [];
+  if (
+    !amounts.length &&
+    partySize(q) !== null &&
+    /\b(?:toplam(?=\b|\d)|toplamda\b|total\b|altogether\b)/.test(q) &&
+    /\b(?:ayni|same)\b/.test(q)
+  )
+    return 'budget_ambiguous';
   if (amounts.length > 1) return 'budget_ambiguous';
   if (!amounts.length) return null;
   const amount = Number(
@@ -215,7 +228,7 @@ function budgetIssue(q: string): ConstraintIssue | null {
   if (/-\s*\d[\d.]*(?:,\d{1,2})?\s*(?:tl|lira|₺)/.test(q))
     return 'budget_ambiguous';
   const total =
-    /\b(?:toplam|toplamda|butun grup|hepimiz icin|total|altogether|for (?:the )?(?:whole )?group)\b/.test(
+    /\b(?:toplam(?=\b|\d)|toplamda\b|butun grup\b|hepimiz icin\b|total\b|altogether\b|for (?:the )?(?:whole )?group\b)/.test(
       q,
     );
   const perPerson = /\b(?:kisi basi|per[ -]?person|each|per ticket)\b/.test(q);
@@ -227,6 +240,16 @@ function budgetIssue(q: string): ConstraintIssue | null {
 }
 
 function partySize(q: string): number | null {
+  const groupPronoun = q.match(/\b(ikimiz|ucumuz|dordumuz|both of us)\b/);
+  if (groupPronoun) {
+    const values: Record<string, number> = {
+      ikimiz: 2,
+      ucumuz: 3,
+      dordumuz: 4,
+      'both of us': 2,
+    };
+    return values[groupPronoun[1]] ?? null;
+  }
   const numeric = q.match(
     /\b([1-9]\d?)\s*(?:kisi(?:yiz|lik)?|people|persons?|of us)\b/,
   );
@@ -308,23 +331,36 @@ const displayDistrict = (district: string) =>
 function parsedDistrict(q: string): {
   district?: string;
   ambiguous: boolean;
+  negativeOnly: boolean;
 } {
+  let hasNegative = false;
   const positive = ISTANBUL_DISTRICTS.filter((name) => {
-    const matches = [...q.matchAll(new RegExp(`\\b${name}\\b`, 'g'))];
+    const matches = [
+      ...q.matchAll(
+        new RegExp(
+          `\\b${name}(?=\\b|['’]?(?:da|de|ta|te|dan|den|tan|ten)\\b)`,
+          'g',
+        ),
+      ),
+    ];
     return matches.some((match) => {
       const index = match.index ?? 0;
       const after = q.slice(
         index + match[0].length,
         index + match[0].length + 32,
       );
-      return !/^(?:['’]?[a-z]{0,8})?\s*(?:degil|haric|disinda|istemiyorum|istemem)\b/.test(
-        after,
-      );
+      const negated =
+        /^(?:['’]?[a-z]{0,8})?\s*(?:degil|olmasin|haric|disinda|istemiyorum|istemem)\b/.test(
+          after,
+        );
+      if (negated) hasNegative = true;
+      return !negated;
     });
   });
   return {
     district: positive.length === 1 ? displayDistrict(positive[0]) : undefined,
     ambiguous: positive.length > 1,
+    negativeOnly: hasNegative && positive.length === 0,
   };
 }
 
@@ -353,6 +389,7 @@ function parseLocalTimes(q: string) {
   > = {};
   const format = (raw: string) => {
     const digits = raw.replace('.', ':');
+    if (/^\d{1,2}$/.test(digits)) return `${digits.padStart(2, '0')}:00`;
     if (digits.includes(':')) {
       const [hour, minute] = digits.split(':');
       return `${hour.padStart(2, '0')}:${minute}`;
@@ -369,6 +406,9 @@ function parseLocalTimes(q: string) {
       `\\b(?:saat\\s*)?(${localClock})['’]?(?:dan|den|tan|ten)\\s+sonra\\b`,
     ),
   );
+  const eveningFromPrefix = q.match(
+    /\baksam\s+([1-9]|1[01])['’]?(?:dan|den|tan|ten)\s+sonra\b/,
+  );
   const to = q.match(
     new RegExp(`\\b(before|once|until|by)\\s+(?:saat\\s*)?(${localClock})\\b`),
   );
@@ -377,10 +417,16 @@ function parseLocalTimes(q: string) {
       `\\b(?:saat\\s*)?(${localClock})['’]?(?:dan|den|tan|ten)\\s+once\\b`,
     ),
   );
+  const chosenFromPrefix =
+    eveningFromPrefix && (!fromPrefix || eveningFromPrefix.index! <= fromPrefix.index!)
+      ? eveningFromPrefix
+      : fromPrefix;
   const fromUsesPrefix =
-    !!fromPrefix && (!from || fromPrefix.index! <= from.index!);
+    !!chosenFromPrefix && (!from || chosenFromPrefix.index! <= from.index!);
   const toUsesPrefix = !!toPrefix && (!to || toPrefix.index! <= to.index!);
-  const fromMatch = fromUsesPrefix ? fromPrefix[1] : from?.[2];
+  let fromMatch = fromUsesPrefix ? chosenFromPrefix![1] : from?.[2];
+  if (fromUsesPrefix && chosenFromPrefix === eveningFromPrefix)
+    fromMatch = String(Number(fromMatch) + 12);
   const toMatch = toUsesPrefix ? toPrefix[1] : to?.[2];
   if (fromMatch) {
     result.startTimeFrom = format(fromMatch);
@@ -500,8 +546,45 @@ function unsupportedLocation(q: string) {
   });
 }
 
+const recognizedDateToken =
+  '(?:yarin|tomorrow|bugun|today|tonight|pazartesi|monday|sali|tuesday|carsamba|wednesday|persembe|thursday|cuma|friday|cumartesi|saturday|pazar|sunday)';
+
+function maskNegatedRecognizedDates(q: string) {
+  let hadNegatedDate = false;
+  const mask = (_match: string) => {
+    hadNegatedDate = true;
+    return ' ';
+  };
+  const text = q
+    .replace(new RegExp(`\\bnot\\s+${recognizedDateToken}\\b`, 'g'), mask)
+    .replace(
+      new RegExp(`\\b${recognizedDateToken}\\s+(?:degil|not)\\b`, 'g'),
+      mask,
+    );
+  return { text, hadNegatedDate };
+}
+
+function hasRecognizedDate(q: string) {
+  return new RegExp(`\\b${recognizedDateToken}\\b`).test(q) ||
+    /hafta sonu|haftasonu|\\b(?:this )?weekend\\b/.test(q);
+}
+
+function hasAmbiguousBareHourBound(q: string) {
+  const matches = [
+    ...q.matchAll(
+      /\b(?:saat\s*)?(?:[1-9]|1[0-2])['’]?(?:dan|den|tan|ten)\s+(?:sonra|once)\b/g,
+    ),
+  ];
+  return matches.some((match) => {
+    const before = q.slice(Math.max(0, (match.index ?? 0) - 12), match.index);
+    return !/\baksam\s*$/.test(before);
+  });
+}
+
 function dateIssue(q: string, previous: Filters): ConstraintIssue | null {
   q = withoutRecognizedLocalTimes(q);
+  const negatedDates = maskNegatedRecognizedDates(q);
+  q = negatedDates.text;
   const iso = [...q.matchAll(/\b\d{4}-\d{2}-\d{2}\b/g)].map((m) => m[0]);
   if (iso.length)
     return iso.length <= 2 && iso.every(validDay) ? null : 'date_ambiguous';
@@ -513,11 +596,7 @@ function dateIssue(q: string, previous: Filters): ConstraintIssue | null {
   )
     return 'date_ambiguous';
   if (/\bgelecek hafta\b/.test(q)) return 'date_ambiguous';
-  if (
-    /\b(?:pazartesi|sali|carsamba|persembe|cuma|cumartesi|pazar)\s+(?:degil|haric)\b/.test(
-      q,
-    )
-  )
+  if (negatedDates.hadNegatedDate && !hasRecognizedDate(q))
     return 'date_ambiguous';
   const sameDate =
     /\b(?:ayni (?:tarih(?:te)?|gun(?:de)?)|same (?:date|day))\b/g;
@@ -530,7 +609,10 @@ function dateIssue(q: string, previous: Filters): ConstraintIssue | null {
       q,
     ) || /\bbu aksam\b/.test(q);
   if (!dateSalient) return null;
-  if (/tarih.*(?:fark etmez|kaldir)|herhangi bir gun/.test(q)) return null;
+  if (
+    /tarih.*(?:fark etmez|kaldir)|herhangi bir gun|any date (?:is )?fine/.test(q)
+  )
+    return null;
   const supported =
     /\b(?:bugun|bu aksam|yarin|hafta sonu|haftasonu|bu hafta|pazartesi|sali|carsamba|persembe|cuma|cumartesi|pazar)\b/.test(
       q,
@@ -543,10 +625,11 @@ export function parseFilters(
   now = new Date(),
 ): Filters {
   const q = normalize(message);
+  const positiveDateText = maskNegatedRecognizedDates(q).text;
   const f = { ...previous };
   const today = todayInIstanbul(now);
   if (
-    /butce.*(yok|sinir.*yok|kaldir)|fiyat.*(onemli degil|fark etmez)|butcesiz/.test(
+    /butce(?:yi)?.*(yok|sinir.*yok|kaldir|bosver)|fiyat.*(onemli degil|fark etmez)|no budget limit|without a budget limit|butcesiz/.test(
       q,
     )
   )
@@ -557,11 +640,13 @@ export function parseFilters(
       /(\d[\d.]*(?:,\d{1,2})?)\s*(?:tl|try|turkish liras?|₺|lira)/,
     );
     const money =
-      prefixedMoney || suffixedMoney || q.match(/butce(?:m|miz)?\s*(\d[\d.]*)/);
+      prefixedMoney ||
+      suffixedMoney ||
+      q.match(/butce(?:m|miz)?(?:\s+de)?\s*(\d[\d.]*)/);
     if (money) {
       let amount = Number(money[1].replaceAll('.', '').replace(',', '.'));
       if (
-        /\b(?:toplam|toplamda|butun grup|hepimiz icin|total|altogether|for (?:the )?(?:whole )?group)\b/.test(
+        /\b(?:toplam(?=\b|\d)|toplamda\b|butun grup\b|hepimiz icin\b|total\b|altogether\b|for (?:the )?(?:whole )?group\b)/.test(
           q,
         )
       ) {
@@ -570,7 +655,13 @@ export function parseFilters(
       }
       f.maxPrice = amount;
     }
-    if (/ucretsiz|bedava/.test(q)) f.maxPrice = 0;
+    if (
+      /ucretsiz|bedava/.test(q) &&
+      !/(?:ucretsiz|bedava)[^.!?]{0,32}(?:sart degil|zorunlu degil|gerekli degil)/.test(
+        q,
+      )
+    )
+      f.maxPrice = 0;
   }
   const parsedCategories = parseCategories(q, f);
   f.category = parsedCategories.category;
@@ -582,7 +673,7 @@ export function parseFilters(
   )
     delete f.categories;
   if (
-    /\b(?:konum|ilce|district|location).*(?:fark etmez|onemli degil|kaldir|anywhere)\b/.test(
+    /\b(?:konum|ilce|district|location).*(?:fark etmez|onemli degil|kaldir|anywhere)\b|\banywhere in istanbul\b/.test(
       q,
     )
   ) {
@@ -598,16 +689,20 @@ export function parseFilters(
     delete f.startTimeFromExclusive;
     delete f.startTimeToExclusive;
   } else Object.assign(f, parseLocalTimes(q));
-  if (/tarih.*(fark etmez|kaldir)|herhangi bir gun/.test(q)) {
+  if (
+    /tarih.*(fark etmez|kaldir)|herhangi bir gun|any date (?:is )?fine/.test(q)
+  ) {
     f.dateFrom = null;
     f.dateTo = null;
-  } else if (/\b(?:yarin|tomorrow)\b/.test(q)) {
+  } else if (/\b(?:yarin|tomorrow)\b/.test(positiveDateText)) {
     f.dateFrom = addDays(today, 1);
     f.dateTo = f.dateFrom;
-  } else if (/\b(?:bugun|bu aksam|today|tonight)\b/.test(q)) {
+  } else if (/\b(?:bugun|bu aksam|today|tonight)\b/.test(positiveDateText)) {
     f.dateFrom = today;
     f.dateTo = today;
-  } else if (/hafta sonu|haftasonu|\b(?:this )?weekend\b/.test(q)) {
+  } else if (
+    /hafta sonu|haftasonu|\b(?:this )?weekend\b/.test(positiveDateText)
+  ) {
     const day = new Date(today + 'T12:00:00Z').getUTCDay();
     const delta = day === 0 ? 0 : (6 - day + 7) % 7;
     f.dateFrom = addDays(today, delta);
@@ -635,7 +730,9 @@ export function parseFilters(
         '(?:cuma|friday)',
         '(?:cumartesi|saturday)',
       ];
-      const found = weekdays.findIndex((d) => new RegExp(`\\b${d}\\b`).test(q));
+      const found = weekdays.findIndex((d) =>
+        new RegExp(`\\b${d}\\b`).test(positiveDateText),
+      );
       if (found >= 0) {
         f.dateFrom = addDays(
           today,
@@ -654,21 +751,31 @@ export function interpretConstraints(
   now = new Date(),
 ): { filters: Filters; issue: ConstraintIssue | null } {
   const q = normalize(message);
-  const previousFilters = validateFilters(previous);
-  const category = parseCategories(q, previous);
+  const previousFilters = isFullPreferenceReset(message)
+    ? emptyFilters
+    : validateFilters(previous);
+  const category = parseCategories(q, previousFilters);
   const district = parsedDistrict(q);
   let issue: ConstraintIssue | null = null;
   if (unsupportedLocation(q)) issue = 'unsupported_location';
   else if (budgetIssue(q)) issue = 'budget_ambiguous';
+  else if (hasAmbiguousBareHourBound(q)) issue = 'constraint_ambiguous';
   else if (dateIssue(q, previousFilters)) issue = 'date_ambiguous';
+  else if (district.negativeOnly) issue = 'constraint_ambiguous';
   else if (district.ambiguous) issue = 'constraint_ambiguous';
   else if (category.ambiguous) issue = 'constraint_ambiguous';
   if (issue) return { filters: previousFilters, issue };
   try {
-    return {
-      filters: parseFilters(message, previousFilters, now),
-      issue: null,
-    };
+    const filters = parseFilters(message, previousFilters, now);
+    if (
+      filters.startTimeFrom &&
+      filters.startTimeTo &&
+      (filters.startTimeFrom > filters.startTimeTo ||
+        (filters.startTimeFrom === filters.startTimeTo &&
+          (filters.startTimeFromExclusive || filters.startTimeToExclusive)))
+    )
+      return { filters: previousFilters, issue: 'constraint_ambiguous' };
+    return { filters, issue: null };
   } catch {
     const dateLike =
       /\b(?:tarih|gun|hafta|ay|bugun|yarin|pazartesi|sali|carsamba|persembe|cuma|cumartesi|pazar)\b/.test(

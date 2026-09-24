@@ -7,6 +7,7 @@ import {
 } from './search.ts';
 import {
   isAlternativesRequest,
+  isFullPreferenceReset,
   positiveCategoryText,
   requestedCategories,
 } from './intent.ts';
@@ -86,8 +87,11 @@ function positiveCategories(message: string) {
 
 function isPreferenceReset(message: string) {
   const q = normalize(message);
-  return /\b(?:her (?:tur|kategori)|kategori(?:yi)? (?:kaldir|fark etmez|onemli degil)|bastan basla|tercihleri kaldir)\b/.test(
-    q,
+  return (
+    isFullPreferenceReset(message) ||
+    /\b(?:her (?:tur|kategori)|kategori(?:yi)? (?:kaldir|fark etmez|onemli degil)|bastan basla|tercihleri kaldir)\b/.test(
+      q,
+    )
   );
 }
 
@@ -100,7 +104,12 @@ export function searchContext(
     isPreferenceReset(content),
   );
   const recent =
-    latestReset >= 0 ? allRecent.slice(latestReset + 1) : allRecent;
+    latestReset >= 0
+      ? allRecent.slice(
+          latestReset +
+            (isFullPreferenceReset(allRecent[latestReset].content) ? 0 : 1),
+        )
+      : allRecent;
   const reset = isPreferenceReset(message);
   const currentCategories = positiveCategories(message);
   const latestCategories =
@@ -120,7 +129,21 @@ export function searchContext(
   }
   for (const term of explicitRejections(message)) rejected.add(term);
   const currentPositive = positiveCategoryText(normalize(message));
+  const categoryRejections: Record<string, Category> = {
+    konser: 'Konser',
+    muzik: 'Konser',
+    tiyatro: 'Tiyatro',
+    'stand-up': 'Stand-up',
+    'stand up': 'Stand-up',
+  };
   for (const term of rejected) {
+    if (
+      categoryRejections[term] &&
+      currentCategories.includes(categoryRejections[term])
+    ) {
+      rejected.delete(term);
+      continue;
+    }
     if (new RegExp(`\\b${escapeRegExp(term)}\\b`).test(currentPositive))
       rejected.delete(term);
   }

@@ -431,3 +431,67 @@ await test('reviewed Ada Bar schedule titles merge only at the same performance 
     2,
   );
 });
+
+await test('trailing stand-up format labels merge exact named sessions but preserve editions and times', () => {
+  const merged = mergeEventSessions([
+    event({ id: 'a', title: 'Alpay Erdem - Geçenlerde Stand Up' }),
+    event({
+      id: 'b',
+      title: 'Alpay Erdem - Geçenlerde',
+      source: 'bubilet',
+      url: 'https://bubilet.example/b',
+    }),
+    event({ id: 'c', title: 'Alpay Erdem - Başka Bir Gösteri Stand Up' }),
+    event({
+      id: 'd',
+      title: 'Alpay Erdem - Geçenlerde',
+      startsAt: '2026-10-11T17:00:00.000Z',
+    }),
+    event({ id: 'e', title: 'Yunus Emre Gündüz 4. Gösteri Stand-up' }),
+    event({ id: 'f', title: 'Yunus Emre Gündüz 5. Gösteri Stand-up' }),
+  ]);
+  assert.equal(merged.length, 5);
+  assert.equal(
+    merged.find((e) => e.mergedIds?.includes('a'))?.offers?.length,
+    2,
+  );
+  assert.notEqual(
+    merged.find((e) => e.mergedIds?.includes('e'))?.canonicalShowKey,
+    merged.find((e) => e.mergedIds?.includes('f'))?.canonicalShowKey,
+  );
+});
+
+await test('reviewed Comedy Lab and further Ada Bar schedules merge without absorbing open-mic shows', () => {
+  for (const [title, alias] of [
+    [
+      'Kadıköy Açık Mikrofon Stand-up - Comedy Lab',
+      'Kadıköy Açık Mikrofon Stand-up - Comedy Lab Istanbul',
+    ],
+    ['Kadıköy Stand-up Gecesi', 'Kadıköy Stand Up Gecesi Cuma 20:00'],
+    ['Kadıköy Stand-up Gecesi', 'Kadıköy Stand Up Gecesi Cuma 21:45'],
+    ['Kadıköy Stand-up Gecesi', 'Kadıköy Stand Up Gecesi Cumartesi 19:00'],
+    ['Kadıköy Stand-up Gecesi', 'Kadıköy Stand up Gecesi Pazar 19:00'],
+  ]) {
+    const result = mergeEventSessions([
+      event({ title }),
+      event({
+        id: 'b',
+        title: alias,
+        source: 'bubilet',
+        url: 'https://bubilet.example/b',
+      }),
+    ]);
+    assert.equal(result.length, 1, alias);
+    assert.equal(result[0].offers?.length, 2);
+  }
+  assert.equal(
+    mergeEventSessions([
+      event({ title: 'Kadıköy Stand-up Gecesi' }),
+      event({
+        id: 'b',
+        title: 'Kadıköy Stand up Gecesi Pazartesi Açık Mikrofon',
+      }),
+    ]).length,
+    2,
+  );
+});

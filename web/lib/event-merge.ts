@@ -27,6 +27,10 @@ const VENUE_ALIASES = [
 // Reviewed against repeated matching source schedules (September 2026 catalog).
 // These are literal show aliases, never a general performer/suffix heuristic.
 const TITLE_ALIASES = [
+  [
+    'Kadıköy Açık Mikrofon Stand-up - Comedy Lab',
+    'Kadıköy Açık Mikrofon Stand-up - Comedy Lab Istanbul',
+  ],
   ['STAND UP GECESİ Taksim- Pera- Beyoğlu', 'Beyoğlu- Taksim- Stand Up Gecesi'],
   [
     'Stand up Taksim / Beyoğlu Gecesi | İnfiniti Sahne',
@@ -47,6 +51,10 @@ const TITLE_ALIASES = [
   ['Operadaki Hayalet', 'Operadaki Hayalet Tiyatro Oyunu'],
   [
     'Kadıköy Stand-up Gecesi',
+    'Kadıköy Stand Up Gecesi Cuma 20:00',
+    'Kadıköy Stand Up Gecesi Cuma 21:45',
+    'Kadıköy Stand Up Gecesi Cumartesi 19:00',
+    'Kadıköy Stand up Gecesi Pazar 19:00',
     'Kadıköy Stand Up Gecesi Çarşamba 20:30',
     'Kadıköy Stand up Gecesi Cumartesi 21:45',
   ],
@@ -86,7 +94,13 @@ for (const aliases of TITLE_ALIASES) {
 /** Exact or explicitly reviewed show-title identity; never merges event facts. */
 export function canonicalShowTitle(title: string): string {
   const normalized = normalize(title);
-  return titleAliases.get(normalized) ?? normalized;
+  const canonical = titleAliases.get(normalized) ?? normalized;
+  // A trailing format label is not a show subtitle. Retain the complete named
+  // remainder, including edition numbers; never reduce a title to a performer.
+  const withoutFormat = canonical.replace(/\s+stand\s*up$/, '');
+  return withoutFormat !== canonical && withoutFormat.split(' ').length >= 2
+    ? withoutFormat
+    : canonical;
 }
 
 function venueKey(venue: string): string {

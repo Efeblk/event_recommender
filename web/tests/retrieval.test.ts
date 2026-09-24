@@ -398,3 +398,47 @@ await test('ranks every session before selecting the best representative of a pr
     ['late'],
   );
 });
+
+await test('casual alternatives wording excludes earlier suggestions without mistaking a district change', () => {
+  for (const message of [
+    'bunları beğenmedim, başka var mı?',
+    'Başka?',
+    'Anything else?',
+    'Something else please',
+  ]) {
+    assert.equal(isAlternativesRequest(message), true, message);
+  }
+  assert.equal(isAlternativesRequest('Başka bir semtte konser'), false);
+  assert.equal(isAlternativesRequest('Başka bir gün olsun'), false);
+});
+
+await test('full reset clears older intent but retains new preferences in that turn for follow-ups', () => {
+  const history = [
+    {
+      role: 'user' as const,
+      content: 'Pazar tiyatro veya stand-up, biraz gülelim.',
+    },
+  ];
+  const reset =
+    'Baştan başlayalım, önceki şartları unut. Cuma bir caz konseri istiyorum.';
+  assert.deepEqual(searchContext(reset, history).history, []);
+  const next = searchContext('Başka var mı?', [
+    ...history,
+    { role: 'user', content: reset },
+  ]);
+  assert.equal(next.query.includes('Pazar tiyatro'), false);
+  assert.equal(next.query.includes('caz konseri'), true);
+  assert.equal(next.category, 'Konser');
+});
+
+await test('positive inflected category clears stale category rejection without clearing genre exclusions', () => {
+  const context = searchContext('Konserde olabilir aslında', [
+    { role: 'user', content: 'Konser istemiyorum' },
+  ]);
+  assert.equal(context.category, 'Konser');
+  assert.equal(context.rejectedTerms.includes('konser'), false);
+  const genre = searchContext('Konser olabilir', [
+    { role: 'user', content: 'Rock istemiyorum' },
+  ]);
+  assert.equal(genre.rejectedTerms.includes('rock'), true);
+});

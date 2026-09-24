@@ -67,7 +67,7 @@ const terms: Record<string, Term> = {
   },
   children: {
     positive:
-      /\b(?:(?:for|aimed at)\s+(?:child(?:ren)?|kids?)|child(?:ren)?'?s\s+(?:event|show|theatre|theater)|kids?\s+(?:event|show)|cocuk(?:lar|lara|larin)?\s+(?:icin|oyunu|tiyatrosu)|cocuklara\s+yonelik|cocuk etkinligi)\b/,
+      /\b(?:(?:for|aimed at|suitable for)\s+(?:child(?:ren)?|kids?)|child(?:ren)?'?s\s+(?:event|show|theatre|theater)|kids?\s+(?:event|show)|cocuklar ve aileleri icin|cocuk(?:lar|lara|larin)?\s+(?:icin|oyunu|tiyatrosu|uygun)|cocuklara\s+(?:yonelik|uygun)|cocuk etkinligi)\b/,
     negative:
       /\b(?:adults? only|yetiskin(?:lere)? ozel|cocuk(?:lar)? (?:icin )?(?:degil|uygun degil))\b/,
   },
@@ -227,6 +227,117 @@ function strictContentRequested(text: string) {
   );
 }
 
+function requestedChildAge(text: string) {
+  const patterns = [
+    /\b(\d{1,2})\s*yas(?:inda|indaki)?\s+(?:kizim|oglum|cocugum|cocuk(?:la|larla)?)/,
+    /\b(?:my\s+)?(\d{1,2})[ -]year[ -]old\s+(?:child|daughter|son|kid)/,
+    /\b(?:child|daughter|son|kid)\s+(?:aged?|age)\s+(\d{1,2})\b/,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const age = Number(match[1]);
+      if (age >= 0 && age <= 17) return age;
+    }
+  }
+  return null;
+}
+
+function explicitAgeSuitability(text: string, requestedAge: number) {
+  const findings: RequirementStatus[] = [];
+  const negated = (index: number, length: number) => {
+    const before = text.slice(0, index);
+    const clauseStart = Math.max(
+      before.lastIndexOf('.'),
+      before.lastIndexOf('!'),
+      before.lastIndexOf('?'),
+      before.lastIndexOf(';'),
+    );
+    const after = text.slice(index + length);
+    const boundary = after.search(/[.!?;]/);
+    const clause = text.slice(
+      clauseStart + 1,
+      boundary < 0 ? text.length : index + length + boundary,
+    );
+    return /\b(?:uygun degil(?:dir)?|onerilmez|giremez|kabul edilmez|not suitable|not allowed)\b/.test(
+      clause,
+    );
+  };
+  const ranges = [
+    /\b(\d{1,2})\s*(?:-|–|—|ile)\s*(\d{1,2})\s*yas\s*(?:(?:cocuklar|grubu)\b[^.!?;]{0,30}\b(?:icin|uygun|onerilir)|(?:icin|uygun|onerilir)\b)/g,
+    /\byas\s+grubu\s*(\d{1,2})\s*(?:-|–|—|ile)\s*(\d{1,2})\b/g,
+    /\b(?:recommended\s+for\s+|for\s+(?:children|kids)\s+)?ages?\s*(\d{1,2})\s*(?:-|–|—|to)\s*(\d{1,2})\b/g,
+  ];
+  for (const pattern of ranges) {
+    for (const match of text.matchAll(pattern)) {
+      const low = Number(match[1]);
+      const high = Number(match[2]);
+      const included = low <= requestedAge && requestedAge <= high;
+      if (negated(match.index, match[0].length)) {
+        if (included) findings.push('contradicted');
+      } else {
+        findings.push(included ? 'supported' : 'contradicted');
+      }
+    }
+  }
+
+  const minimums = [
+    /\b(\d{1,2})\s*\+\s*yas\b/g,
+    /\byas\s+siniri\s*:?\s*(\d{1,2})\s*\+/g,
+    /\bages?\s*(\d{1,2})\s*\+/g,
+    /\b(\d{1,2})\s*yas\s+ve\s+uzeri\b/g,
+    /\b(?:ages?\s+)(\d{1,2})\s+(?:and\s+)?(?:up|over|older)\b/g,
+  ];
+  for (const pattern of minimums) {
+    for (const match of text.matchAll(pattern)) {
+      const included = requestedAge >= Number(match[1]);
+      if (negated(match.index, match[0].length)) {
+        if (included) findings.push('contradicted');
+      } else {
+        findings.push(included ? 'supported' : 'contradicted');
+      }
+    }
+  }
+
+  if (/\b18\s*\+/.test(text) && requestedAge < 18)
+    findings.push('contradicted');
+
+  const exactAges = [
+    /\b(\d{1,2})\s*yas\s+(?:grubu|icin)\b/g,
+    /\b(?:recommended\s+for|suitable\s+for)\s+(\d{1,2})[ -]year[ -]olds?\b/g,
+  ];
+  for (const pattern of exactAges) {
+    for (const match of text.matchAll(pattern)) {
+      if (
+        /\d\s*(?:-|–|—|ile)\s*$/.test(
+          text.slice(Math.max(0, match.index - 8), match.index),
+        )
+      )
+        continue;
+      const included = requestedAge === Number(match[1]);
+      if (negated(match.index, match[0].length)) {
+        if (included) findings.push('contradicted');
+      } else {
+        findings.push(included ? 'supported' : 'contradicted');
+      }
+    }
+  }
+
+  const excludedBelow = text.matchAll(
+    /\b(\d{1,2})\s*yas\s+alti\s+(?:giremez|kabul edilmez)\b/g,
+  );
+  for (const match of excludedBelow)
+    findings.push(
+      requestedAge < Number(match[1]) ? 'contradicted' : 'supported',
+    );
+
+  return findings.includes('contradicted')
+    ? 'contradicted'
+    : findings.includes('supported')
+      ? 'supported'
+      : 'unknown';
+}
+
 /** Derives only requirements that must be decided from source evidence. */
 export function deriveRequirements(
   message: string,
@@ -240,6 +351,7 @@ export function deriveRequirements(
 
   for (const raw of turns) {
     const text = normalize(raw);
+    const childAge = requestedChildAge(text);
     const genres = mentionedValues(text, genreEntries);
     const excludedGenres = genreEntries.flatMap(([value, pattern]) => {
       const match = pattern.exec(text);
@@ -301,6 +413,26 @@ export function deriveRequirements(
         });
     }
 
+    const childSuitability = text.match(
+      /\b(?:suitable for (?:children|kids?)|cocuk(?:lar|lara)?\s+(?:icin|uygun)|cocuklara\s+yonelik|cocuk etkinligi)\b/,
+    );
+    if (
+      childAge !== null ||
+      (childSuitability &&
+        !isNegated(text, childSuitability.index!, childSuitability[0].length))
+    )
+      addIndependentRequirement(requirements, {
+        kind: 'audience',
+        value: 'children',
+        policy: 'require_support',
+      });
+    if (childAge !== null)
+      addIndependentRequirement(requirements, {
+        kind: 'audience',
+        value: `age:${childAge}`,
+        policy: 'require_support',
+      });
+
     const sharedContentProhibition =
       /\b(?:swearing|profanity|explicit language|kufur|argo)\b[^.!?]{0,50}\b(?:sexual (?:content|humou?r)|sex jokes?|cinsel (?:icerik|mizah|espri)|cinsellik)\b[^.!?]{0,24}(?:\b(?:olmasin|istemiyorum|istemem|yok)\b|;|$)/.test(
         text,
@@ -340,6 +472,28 @@ export function deriveRequirements(
           ? 'require_support'
           : 'exclude_positive_evidence',
       });
+    }
+
+    const contentWaiverClauses = text.split(
+      /[,.!?;]|\b(?:ama|fakat|ancak|but)\b/,
+    );
+    const swearingWaived = contentWaiverClauses.some((clause) =>
+      /\b(?:swearing|profanity|kufur|argo)\b[^.!?;]{0,30}\b(?:sorun degil|olabilir|serbest|okay|ok|fine|allowed|doesn't matter|does not matter)\b/.test(
+        clause,
+      ),
+    );
+    const sexualContentWaived = contentWaiverClauses.some((clause) =>
+      /\b(?:sexual content|sexual humou?r|cinsel (?:icerik|mizah|espri)|cinsellik)\b[^.!?;]{0,30}\b(?:sorun degil|olabilir|serbest|okay|ok|fine|allowed|doesn't matter|does not matter)\b/.test(
+        clause,
+      ),
+    );
+    if (swearingWaived) {
+      removeRequiredValues(requirements, 'content', ['swearing']);
+      removeExcludedValues(requirements, 'content', ['swearing']);
+    }
+    if (sexualContentWaived) {
+      removeRequiredValues(requirements, 'content', ['sexual_content']);
+      removeExcludedValues(requirements, 'content', ['sexual_content']);
     }
 
     const waiverClauses = text.split(/[,.!?;]|\b(?:ama|fakat|ancak|but)\b/);
@@ -431,6 +585,24 @@ export function checkRequirements(
 ): RequirementCheck[] {
   return requirements.map((requirement) => {
     const text = evidenceText(event, requirement.kind);
+    if (
+      requirement.kind === 'audience' &&
+      requirement.value.startsWith('age:')
+    ) {
+      const requestedAge = Number(requirement.value.slice(4));
+      const status = explicitAgeSuitability(text, requestedAge);
+      return {
+        requirement,
+        status,
+        evidence:
+          status === 'unknown'
+            ? []
+            : text
+                .split(/(?<=[.!?])\s+/)
+                .filter((part) => /\b\d{1,2}\b/.test(part))
+                .slice(0, 3),
+      };
+    }
     const values = requirement.value.split('|');
     const findings = values.map((value) => {
       const term = terms[value];

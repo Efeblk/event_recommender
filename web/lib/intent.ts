@@ -1,5 +1,16 @@
 import type { Category } from './types.ts';
 
+export function isFullPreferenceReset(message: string): boolean {
+  const text = message
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i');
+  return /\b(?:bastan basla(?:yalim)?|onceki (?:sartlari|kosullari|tercihleri) unut|start (?:over|again)|forget (?:the )?(?:previous|earlier) (?:preferences|constraints|conditions))\b/.test(
+    text,
+  );
+}
+
 export function isAlternativesRequest(message: string): boolean {
   const normalized = message
     .toLocaleLowerCase('tr-TR')
@@ -8,7 +19,7 @@ export function isAlternativesRequest(message: string): boolean {
     .replace(/ı/g, 'i')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-  return /\b(?:other|different|more)\s+(?:options|events|suggestions|recommendations)\b|\b(?:show|suggest)\s+(?:me\s+)?alternatives\b|\b(?:baska|diger|alternatif)\b[^.!?\n]{0,32}\b(?:secenek|etkinlik|oneri|alternatif)(?:ler|leri)?\b/.test(
+  return /\b(?:baska var mi|baska oner(?:i|ir misin)?|baska goster|bunlari begenmedim|baska bir sey oner|something else|anything else)\b|^baska$|\b(?:other|different|more)\s+(?:options|events|suggestions|recommendations)\b|\b(?:show|suggest)\s+(?:me\s+)?alternatives\b|\b(?:baska|diger|alternatif)\b[^.!?\n]{0,32}\b(?:secenek|etkinlik|oneri|alternatif)(?:ler|leri)?\b/.test(
     normalized,
   );
 }
@@ -25,9 +36,12 @@ export const CATEGORY_NEGATION =
 const categoryPatterns: Array<[Category, RegExp]> = [
   [
     'Konser',
-    /\b(?:konser|concerts?|music|muzik|rock|caz|jazz|akustik|techno|elektronik)\b/,
+    /\b(?:konser(?:de|e|i|ler)?|concerts?|music|muzik|rock|caz|jazz|akustik|techno|elektronik)\b/,
   ],
-  ['Tiyatro', /\b(?:tiyatro|theatre|theater|sahne oyunu|comedy play)\b/],
+  [
+    'Tiyatro',
+    /\b(?:tiyatro(?:ya|da|yu|lar)?|theatre|theater|sahne oyunu|comedy play)\b/,
+  ],
   ['Stand-up', /\b(?:stand[ -]?up)\b/],
 ];
 
