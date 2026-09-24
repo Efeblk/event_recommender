@@ -228,6 +228,46 @@ await test('reviewed show aliases merge only at the same venue and session', () 
   );
 });
 
+await test('reviewed Boğaziçi open-mic titles merge only at the same venue and session', () => {
+  const biletinial = event({
+    id: 'bogazici-biletinial',
+    title: 'Boğaziçi Komedi Kulübü: Kadıköy Açık Mikrofon Stand-up Gecesi',
+    venue: 'Dunia Kadıköy',
+    startsAt: '2026-09-24T17:00:00Z',
+    source: 'biletinial',
+  });
+  const bubilet = event({
+    id: 'bogazici-bubilet',
+    title: 'Boğaziçi Komedi Kulübü - Kadıköy Açık Mikrofon Stand-up',
+    venue: 'Dunia Kadıköy',
+    startsAt: '2026-09-24T17:00:00Z',
+    source: 'bubilet',
+  });
+  const later = event({
+    ...bubilet,
+    id: 'bogazici-later',
+    startsAt: '2026-09-24T19:00:00Z',
+  });
+  const otherVenue = event({
+    ...bubilet,
+    id: 'bogazici-other-venue',
+    venue: 'Başka Sahne',
+  });
+  const merged = mergeEventSessions([biletinial, bubilet, later, otherVenue]);
+  assert.equal(merged.length, 3);
+  assert.deepEqual(
+    new Set(
+      merged.find((event) => event.mergedIds?.includes(biletinial.id))
+        ?.mergedIds,
+    ),
+    new Set([
+      biletinial.id,
+      bubilet.id,
+      merged.find((event) => event.mergedIds?.includes(biletinial.id))!.id,
+    ]),
+  );
+});
+
 await test('fills a missing address only from consistent exact-session source facts', () => {
   const primary = event({ address: '' });
   const secondary = event({

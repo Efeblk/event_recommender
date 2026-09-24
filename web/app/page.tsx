@@ -344,6 +344,7 @@ export default function Home() {
                 ...(event.canonicalProductionKey
                   ? [event.canonicalProductionKey]
                   : []),
+                ...(event.canonicalShowKey ? [event.canonicalShowKey] : []),
               ]) ?? []),
             ]),
           ].slice(-100)

@@ -12,7 +12,7 @@ import {
 } from './intent.ts';
 import type { Category } from './types.ts';
 import { hybridRank, type SemanticRanking } from './hybrid.ts';
-import { canonicalShowTitle } from './event-merge.ts';
+import { displayShowIdentity } from './event-merge.ts';
 
 export interface SearchContext {
   query: string;
@@ -24,16 +24,6 @@ export interface SearchContext {
 
 export { isAlternativesRequest };
 
-const genericShowTitles = new Set([
-  'etkinlik',
-  'konser',
-  'tiyatro',
-  'stand up',
-  'komedi',
-  'acik mikrofon',
-  'open mic',
-]);
-
 /**
  * Removes repeated cards for a clearly identical show title across venues or
  * sessions. This is presentation-only: session and provider records stay
@@ -43,11 +33,7 @@ export function diverseEvents(events: EventRecord[], limit = 5): EventRecord[] {
   const seen = new Set<string>();
   return events
     .filter((event) => {
-      const title = canonicalShowTitle(event.title);
-      const key =
-        title && !genericShowTitles.has(title)
-          ? `${normalize(event.city)}\u001f${event.category}\u001f${title}`
-          : productionIdentity(event);
+      const key = displayShowIdentity(event) ?? productionIdentity(event);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

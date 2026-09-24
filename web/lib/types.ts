@@ -32,6 +32,7 @@ export interface EventRecord {
   offers?: EventOffer[];
   mergedIds?: string[];
   canonicalProductionKey?: string;
+  canonicalShowKey?: string;
   checkedAt: string;
 }
 export interface Filters {

@@ -27,6 +27,10 @@ const VENUE_ALIASES = [
 // Reviewed against repeated matching source schedules (September 2026 catalog).
 // These are literal show aliases, never a general performer/suffix heuristic.
 const TITLE_ALIASES = [
+  [
+    'Boğaziçi Komedi Kulübü: Kadıköy Açık Mikrofon Stand-up Gecesi',
+    'Boğaziçi Komedi Kulübü - Kadıköy Açık Mikrofon Stand-up',
+  ],
   ['Gökhan Ünver Stand Up', "Gökhan Ünver 'Çok Tanıdık'"],
   ['Operadaki Hayalet', 'Operadaki Hayalet Tiyatro Oyunu'],
   [
@@ -78,7 +82,7 @@ function venueKey(venue: string): string {
   return venueAliases.get(normalized) ?? normalized;
 }
 
-function hash(kind: 'session' | 'production', value: string): string {
+function hash(kind: 'session' | 'production' | 'show', value: string): string {
   return `${kind}-${createHash('sha256').update(value).digest('hex').slice(0, 32)}`;
 }
 
@@ -266,6 +270,10 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
               [value.title, value.city, value.venue].join('\u001f'),
             )
           : undefined;
+      const showIdentity = displayShowIdentity(representative);
+      const canonicalShowKey = showIdentity
+        ? hash('show', showIdentity)
+        : undefined;
       return {
         ...representative,
         address,
@@ -278,7 +286,25 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
         offers,
         mergedIds: [...rawIds].sort(),
         ...(canonicalProductionKey ? { canonicalProductionKey } : {}),
+        ...(canonicalShowKey ? { canonicalShowKey } : {}),
       };
     })
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt) || eventOrder(a, b));
+}
+
+const GENERIC_SHOW_TITLES = new Set([
+  'etkinlik',
+  'konser',
+  'tiyatro',
+  'stand up',
+  'komedi',
+  'acik mikrofon',
+  'open mic',
+]);
+
+/** Stable display identity for clear show titles; generic listings stay distinct. */
+export function displayShowIdentity(event: EventRecord): string | undefined {
+  const title = canonicalShowTitle(event.title);
+  if (!title || GENERIC_SHOW_TITLES.has(title)) return undefined;
+  return [normalize(event.city), event.category, title].join('\u001f');
 }

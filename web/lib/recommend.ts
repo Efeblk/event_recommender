@@ -154,6 +154,7 @@ export async function recommend(
     excludedIds.has(event.id) ||
     (event.canonicalProductionKey &&
       excludedIds.has(event.canonicalProductionKey)) ||
+    (event.canonicalShowKey && excludedIds.has(event.canonicalShowKey)) ||
     event.mergedIds?.some((id) => excludedIds.has(id));
   const excludedProductions = new Set(
     events.filter(isExcluded).map(productionIdentity),

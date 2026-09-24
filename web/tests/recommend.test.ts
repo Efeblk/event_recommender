@@ -39,9 +39,13 @@ function assertRecommendedEvent(actual: EventRecord, expected: EventRecord) {
       Object.entries(record).filter(
         ([key, value]) =>
           value !== undefined &&
-          !['id', 'offers', 'mergedIds', 'canonicalProductionKey'].includes(
-            key,
-          ),
+          ![
+            'id',
+            'offers',
+            'mergedIds',
+            'canonicalProductionKey',
+            'canonicalShowKey',
+          ].includes(key),
       ),
     );
   };
@@ -139,6 +143,29 @@ await test('alternatives exclude all sessions of the shown production', async ()
     },
   );
   assert.deepEqual(result.recommendations, []);
+});
+await test('alternatives exclude the same clear show title at another venue', async () => {
+  const first = await recommend(validateInput({ message: 'Konser' }), {
+    ...deps,
+    candidates: async () => [
+      { ...event, id: 'first-venue', title: 'Edepsiz', venue: 'Sahne Bir' },
+    ],
+  });
+  const shown = first.recommendations[0].event;
+  assert.ok(shown.canonicalShowKey);
+  const alternatives = await recommend(
+    validateInput({
+      message: 'Başka seçenekler',
+      excludeIds: [shown.canonicalShowKey],
+    }),
+    {
+      ...deps,
+      candidates: async () => [
+        { ...event, id: 'other-venue', title: 'Edepsiz', venue: 'Sahne İki' },
+      ],
+    },
+  );
+  assert.deepEqual(alternatives.recommendations, []);
 });
 await test('recommendations show distinct exact titles across venues without merging session offers', async () => {
   const candidates = [
