@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "evidenceDateLocal": "2026-09-27",
+  "timeZone": "Europe/Istanbul",
+  "timestamps": "UTC",
+  "stagingOrigin": "https://biplan-staging.efeblk.workers.dev",
+  "runtimeRevision": "4de58c1d9a0dd499efa373a6092d0ec06e2bd6fd",
+  "candidateBaseRevision": "1c38912e896add8a6780fa561968c0915d579ca8",
+  "candidateDirty": true,
+  "deploymentRun": 36270539179,
+  "compiledArtifact": {
+    "id": 10915875895,
+    "verifiedFiles": 95,
+    "manifestSha256": "c8b72053b08336ff81bf14042872a74b925f3af7cb0d6338e943d2aa2c6657ab"
+  },
+  "bootstrapAttempts": [
+    {
+      "startedAt": "2026-09-26T20:57:19.532Z",
+      "finishedAt": "2026-09-26T20:59:36.691Z",
+      "originalCollectionRun": 36263215393,
+      "originalFinishedAt": "2026-09-26T19:04:22.191Z",
+      "deployedRevision": "4de58c1d9a0dd499efa373a6092d0ec06e2bd6fd",
+      "publisherCorrection": "Original deployed-revision publisher; 30-page batches.",
+      "passed": false,
+      "error": "Import returned HTTP 400; checkpoint was not advanced.",
+      "qualifiesForScheduledSoak": false,
+      "originalEvidenceSha256": "4fc9d95b1c44006a94b5c484e3c42f30dc85a4d1099113496ef24db2b5a95f3f"
+    },
+    {
+      "startedAt": "2026-09-26T21:03:48.819Z",
+      "finishedAt": "2026-09-26T21:04:08.499Z",
+      "originalCollectionRun": 36263215393,
+      "originalFinishedAt": "2026-09-26T19:04:22.191Z",
+      "deployedRevision": "4de58c1d9a0dd499efa373a6092d0ec06e2bd6fd",
+      "publisherCorrection": "Per-batch expiry recheck, collector tests39/39, dirty branch based on 1c38912",
+      "passed": false,
+      "error": "Import returned HTTP 503; checkpoint was not advanced.",
+      "qualifiesForScheduledSoak": false,
+      "originalEvidenceSha256": "db024ad72b2c9bc82c2e244d71bf0bb9215136e18e5ac3d17b16aff32c391727"
+    },
+    {
+      "startedAt": "2026-09-26T21:11:18.837Z",
+      "finishedAt": "2026-09-26T21:12:05.765Z",
+      "originalCollectionRun": 36263215393,
+      "originalFinishedAt": "2026-09-26T19:04:22.191Z",
+      "deployedRevision": "4de58c1d9a0dd499efa373a6092d0ec06e2bd6fd",
+      "publisherCorrection": "Per-batch expiry recheck and max3 whole source pages per request; collector tests40/40; dirty branch based on 1c38912",
+      "passed": false,
+      "error": "Import returned HTTP 500; checkpoint was not advanced.",
+      "qualifiesForScheduledSoak": false,
+      "originalEvidenceSha256": "b2c7545a9275b53b332c415519421f256ab62c99057e94cb683f362109f1d51e"
+    }
+  ],
+  "import500": {
+    "request": {
+      "startedAt": "2026-09-26T21:12:05.319Z",
+      "endedAt": "2026-09-26T21:12:05.763Z",
+      "httpStatus": 500,
+      "body": "empty",
+      "cfRay": "a41543c82e87b679-IST"
+    },
+    "metrics": {
+      "datetime": "2026-09-26T21:12:05Z",
+      "status": "success",
+      "errors": 0,
+      "requests": 1,
+      "cpuTimeMicroseconds": 7207,
+      "cpuTimeMs": 7.207,
+      "wallTimeMicroseconds": 428658,
+      "wallTimeMs": 428.658,
+      "memoryUsageBytes": 28627420,
+      "memoryUsageMiB": 27.30123519897461
+    },
+    "cause": "Unresolved application/internal response; platform metrics did not report resource termination."
+  },
+  "readOnlyCoverageCpuFailure": {
+    "capturedAt": "2026-09-26T21:15:59.118Z",
+    "request": {
+      "method": "GET",
+      "path": "/api/admin/embeddings",
+      "cfRay": "a41548d5d9ebb652",
+      "httpStatus": 503,
+      "eventTimestamp": 1790457332149
+    },
+    "worker": {
+      "scriptName": "biplan-staging",
+      "scriptVersionId": "db3282f2-6514-4a81-935b-229adb29d02d",
+      "outcome": "exceededCpu",
+      "cpuTimeMs": 10,
+      "wallTimeMs": 354
+    },
+    "exception": {
+      "name": "Error",
+      "message": "Worker exceeded CPU time limit.",
+      "timestamp": 1790457332492
+    }
+  },
+  "providerCallsInTheseStagingDiagnostics": {
+    "jev": 0,
+    "voyage": 0
+  },
+  "checkpointAdvanced": false,
+  "readiness": {
+    "status": 503,
+    "reason": "checkpoint_missing"
+  },
+  "monitoring": {
+    "setupRequestAcceptedAt": "2026-09-26T21:04:49.817Z",
+    "activationConfirmed": false,
+    "qualifyingSoakHours": 0
+  },
+  "limitation": "Rate-limit and publisher fixes are local candidate evidence, not a new deployed revision. A paid configuration was prepared only; no subscription changed. Original failure records were preserved.",
+  "privacy": "Only whitelisted diagnostic fields; no credentials, headers, email, IP or network metadata."
+}

@@ -1,9 +1,38 @@
 import { recommend, validateInput } from '@/lib/recommend';
-import { candidates, catalogStatus, rateLimit, runtime } from '@/lib/store';
+import {
+  aiDailyRateLimit,
+  candidates,
+  catalogStatus,
+  requestRateLimit,
+  runtime,
+  type RateLimitResult,
+} from '@/lib/store';
 import { jevConfigFrom } from '@/lib/jev';
 import { voyageConfigFrom } from '@/lib/voyage';
 import { voyageVectorsFor } from '@/lib/voyage-index';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
+function limited(result: RateLimitResult) {
+  const daily = result.scope === 'daily';
+  const wait = daily
+    ? `${Math.ceil(result.retryAfter / 60)} dakika`
+    : `${result.retryAfter} saniye`;
+  return Response.json(
+    {
+      error: daily
+        ? `Günlük öneri sınırına ulaşıldı. ${wait} sonra yeniden deneyebilirsin.`
+        : `Çok hızlı arama yapıldı. ${wait} sonra yeniden deneyebilirsin.`,
+      code: 'rate_limited',
+      retryAfter: result.retryAfter,
+    },
+    {
+      status: 429,
+      headers: {
+        'Cache-Control': 'no-store',
+        'Retry-After': String(result.retryAfter),
+      },
+    },
+  );
+}
 export async function POST(request: Request) {
   let input;
   try {
@@ -23,6 +52,11 @@ export async function POST(request: Request) {
     );
   }
   try {
+    const config = jevConfigFrom(runtime());
+    const embeddingConfig = voyageConfigFrom(runtime());
+    const paid = Boolean(config || embeddingConfig);
+    const requestLimit = await requestRateLimit(request, paid);
+    if (!requestLimit.allowed) return limited(requestLimit);
     const catalog = await catalogStatus();
     if (!catalogAllowsRecommendations(catalog.status))
       return Response.json(
@@ -42,16 +76,10 @@ export async function POST(request: Request) {
           },
         },
       );
-    const config = jevConfigFrom(runtime());
-    const embeddingConfig = voyageConfigFrom(runtime());
-    if (!(await rateLimit(request, Boolean(config || embeddingConfig))))
-      return Response.json(
-        {
-          error:
-            'Arama sınırına ulaşıldı. Bir süre sonra yeniden deneyebilirsin.',
-        },
-        { status: 429, headers: { 'Retry-After': '3600' } },
-      );
+    if (paid) {
+      const dailyLimit = await aiDailyRateLimit();
+      if (!dailyLimit.allowed) return limited(dailyLimit);
+    }
     return Response.json(
       await recommend(input, {
         candidates,

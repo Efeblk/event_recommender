@@ -54,7 +54,7 @@ If any step fails, preserve the artifact directory, isolated R2 drill object, an
 
 ## Bounded staging load
 
-Add `--load` only with `--execute`. The default makes seven genuine recommendation requests in concurrency batches 1, 2, and 4, with 25 seconds between batches. `--max-load-requests` may reduce this or raise it to at most 12. Requests use natural controlled concert-and-budget prompts, have a 45-second deadline, make no automatic retries, and keep the application's ordinary rate limits and configured AI path enabled.
+Add `--load` only with `--execute`. The default makes seven genuine recommendation requests in concurrency batches 1, 2, and 4, with 65 seconds between batches so each batch stays within the public five-per-minute user limit. `--max-load-requests` may reduce this or raise it to at most 12. Requests use natural controlled concert-and-budget prompts, have a 45-second deadline, make no automatic retries, and keep the application's ordinary rate limits and configured AI path enabled.
 
 ```powershell
 node scripts/staging-drill.mjs `

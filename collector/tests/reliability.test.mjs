@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { restoreCheckpoint } from "../checkpoint.mjs";
 import { checkReady } from "../monitor.mjs";
-import { prepareImportPages, publish } from "../publish.mjs";
+import { MAX_IMPORT_PAGES, prepareImportPages, publish } from "../publish.mjs";
 import { buildSoakEvidence } from "../soak-report.mjs";
 import { verifySoakEvidence } from "../soak-verify.mjs";
 
@@ -106,6 +106,79 @@ test("publisher omits only sessions that started after collection and reports th
       ],
     },
   ]);
+});
+
+test("publisher rechecks expiration immediately before each import request", async (t) => {
+  const bodies = [];
+  const remote = await fixture(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    bodies.push(JSON.parse(Buffer.concat(chunks)));
+    json(response, 200, { imported: 30 });
+  });
+  t.after(remote.close);
+  const pages = Array.from({ length: MAX_IMPORT_PAGES + 1 }, (_, index) => ({
+    url: `https://source.test/${index}`,
+    events: index === MAX_IMPORT_PAGES
+      ? [
+          { id: "expires-between-requests", startsAt: "2026-09-26T10:01:00.000Z" },
+          { id: "remains-future", startsAt: "2026-09-26T11:00:00.000Z" },
+        ]
+      : [{ id: `future-${index}`, startsAt: "2026-09-26T11:00:00.000Z" }],
+  }));
+  const times = ["2026-09-26T10:00:00.000Z", "2026-09-26T10:00:00.000Z", "2026-09-26T10:02:00.000Z"];
+  const result = await publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, summary: {}, pages },
+    allowLoopbackHttp: true,
+    now: () => new Date(times.shift()),
+  });
+  assert.equal(bodies.length, 2);
+  assert.deepEqual(bodies[1].pages[0].events.map((event) => event.id), ["remains-future"]);
+  assert.deepEqual(result.omittedExpired, { count: 1, ids: ["expires-between-requests"] });
+});
+
+test("publisher partitions large reports into at most three whole source pages per request", async (t) => {
+  const pageCounts = [];
+  const remote = await fixture(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    pageCounts.push(JSON.parse(Buffer.concat(chunks)).pages.length);
+    json(response, 200, { imported: 1 });
+  });
+  t.after(remote.close);
+  const pages = Array.from({ length: MAX_IMPORT_PAGES * 3 + 1 }, (_, index) => ({
+    url: `https://source.test/${index}`,
+    events: [{ id: String(index), startsAt: "2026-09-27T12:00:00.000Z" }],
+  }));
+  await publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, summary: {}, pages },
+    allowLoopbackHttp: true,
+    now: () => new Date("2026-09-27T10:00:00.000Z"),
+  });
+  assert.deepEqual(pageCounts, [MAX_IMPORT_PAGES, MAX_IMPORT_PAGES, MAX_IMPORT_PAGES, 1]);
+});
+
+test("publisher does not send or checkpoint when every session expires before the first request", async (t) => {
+  let requests = 0;
+  const remote = await fixture((request, response) => {
+    requests += 1;
+    json(response, 200, {});
+  });
+  t.after(remote.close);
+  const times = ["2026-09-26T10:00:00.000Z", "2026-09-26T10:02:00.000Z"];
+  await assert.rejects(publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, summary: {}, pages: [{ url: "https://source.test/a", events: [{ id: "expired", startsAt: "2026-09-26T10:01:00.000Z" }] }] },
+    checkpoint: true,
+    allowLoopbackHttp: true,
+    now: () => new Date(times.shift()),
+  }), /No future event sessions remain importable/);
+  assert.equal(requests, 0);
 });
 
 test("soak evidence flags selected sources with no retained events or refreshed pages", () => {

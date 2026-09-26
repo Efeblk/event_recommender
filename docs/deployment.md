@@ -94,6 +94,16 @@ The active recommendation route prefilters verified catalog facts in D1, then
 uses Voyage semantic retrieval when `VOYAGE_API_KEY` is configured and Jev
 ranking when `TYPESAFE_API_KEY` is configured. `AI_DAILY_LIMIT` is one shared
 request cap for the recommendation route whenever either provider is configured.
+AI-enabled public requests are also limited to five per client IP per minute and
+twenty per hour; keyless fallback search is limited to sixty per hour. The
+route trusts Cloudflare's `CF-Connecting-IP`, ignores forwarded client headers,
+and returns the actual failing bucket boundary in `Retry-After`.
+IP limits count valid API attempts, including catalog-unavailable requests, to
+bound database work during outages. The shared daily AI counter is consumed
+only after catalog readiness. Buckets are atomic individually and consumed
+sequentially; a later denial does not refund earlier buckets. `Retry-After`
+reports the first failing bucket, so another bucket may still deny a later
+attempt. Clients sharing a public IP share its allowance.
 Legacy `AI_*`, `OPENAI_*`, and `EMBEDDING_*` settings remain available only to
 opt-in admin or backward-compatibility tooling and do not enable recommendations.
 
