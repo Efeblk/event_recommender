@@ -70,6 +70,10 @@ jobs:
         env:
           LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}
         run: docker build --pull --platform linux/amd64 --tag "$LOCAL_IMAGE" .
+      - name: Smoke exact isolated container
+        env:
+          LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}
+        run: node scripts/smoke-container.mjs "$LOCAL_IMAGE"
       - name: Package image and provenance
         env:
           LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}

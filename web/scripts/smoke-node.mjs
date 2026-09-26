@@ -28,6 +28,7 @@ const child = spawn(process.execPath, ['server.js'], {
     PATH: process.env.PATH,
     SystemRoot: process.env.SystemRoot,
     NODE_ENV: 'production',
+    HOST: '127.0.0.1',
     HOSTNAME: '127.0.0.1',
     PORT: String(port),
     DEPLOYMENT_ENV: 'staging',

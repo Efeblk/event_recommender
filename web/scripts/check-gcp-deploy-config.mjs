@@ -39,6 +39,7 @@ for (const command of [
   'npm run test:smoke:node',
 ]) assert.match(prepare, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 assert.match(prepare, /docker build --pull --platform linux\/amd64/);
+assert.match(prepare, /docker build[\s\S]+smoke-container\.mjs "\$LOCAL_IMAGE"[\s\S]+docker save/);
 assert.match(prepare, /docker save .*gzip -n/);
 assert.match(prepare, /sourceTree/);
 assert.match(prepare, /lockfiles:/);

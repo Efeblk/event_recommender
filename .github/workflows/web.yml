@@ -96,6 +96,8 @@ jobs:
       - run: npm run test:smoke:node
       - name: Build the Linux container without credentials or deployment
         run: docker build --tag biplan-gcp-ci:${{ github.sha }} .
+      - name: Smoke the actual Linux image with networking disabled
+        run: node scripts/smoke-container.mjs biplan-gcp-ci:${{ github.sha }}
 
   terraform:
     runs-on: ubuntu-latest
