@@ -13,4 +13,4 @@ The workflow requests a short-lived Google identity token whose audience is `BIP
 
 Each manual run restores the canonical private checkpoint before collection, preserves source failures and quarantined records through the existing collector pipeline, imports the successful report, saves a checkpoint, reads it back, and uploads the same bounded evidence artifacts as the existing collector workflow. It does not call TypeSafe or Voyage and does not index embeddings. Embedding indexing remains a separate, explicitly authorized operation that should reuse existing vectors.
 
-Before enabling a schedule, verify the dedicated identity's least-privilege IAM binding, inspect the checkpoint readback and source-health artifacts, and complete the required unattended staging soak.
+Before enabling a schedule, verify the dedicated identity's least-privilege IAM binding and inspect the checkpoint readback and source-health artifacts from a successful manual run. After the schedule is authorized and enabled, collect at least 48 hours of unattended staging evidence before public release. The current manual workflow does not provide that evidence.
