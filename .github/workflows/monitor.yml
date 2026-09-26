@@ -1,7 +1,7 @@
 name: Monitor catalog readiness
 on:
   schedule:
-    - cron: '47 * * * *'
+    - cron: "47 * * * *"
   workflow_dispatch:
     inputs:
       environment:
@@ -12,11 +12,32 @@ on:
 permissions:
   contents: read
 jobs:
+  environments:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - id: select
+        env:
+          REQUESTED_ENVIRONMENT: ${{ inputs.environment }}
+          SCHEDULED_ENVIRONMENTS: ${{ vars.SCHEDULED_COLLECTION_ENVIRONMENTS || '["production"]' }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            matrix="$SCHEDULED_ENVIRONMENTS"
+          else
+            matrix=$(jq -cn --arg value "$REQUESTED_ENVIRONMENT" '[ $value ]')
+          fi
+          if ! jq -e 'type == "array" and length > 0 and all(. == "staging" or . == "production") and (unique | length) == length' <<<"$matrix" >/dev/null; then
+            echo "Monitor environments must be a unique JSON array containing only staging and production." >&2
+            exit 1
+          fi
+          echo "matrix=$(jq -c . <<<"$matrix")" >> "$GITHUB_OUTPUT"
   ready:
+    needs: environments
     strategy:
       fail-fast: false
       matrix:
-        environment: ${{ github.event_name == 'schedule' && fromJSON('["staging","production"]') || fromJSON(format('["{0}"]', inputs.environment)) }}
+        environment: ${{ fromJSON(needs.environments.outputs.matrix) }}
     environment: ${{ matrix.environment }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -24,26 +45,22 @@ jobs:
       BIPLAN_URL: ${{ vars.BIPLAN_URL }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version-file: web/.nvmrc
       - name: Check catalog readiness
         working-directory: collector
+        env:
+          TARGET_ENVIRONMENT: ${{ matrix.environment }}
         run: |
-          if [ -z "$BIPLAN_URL" ]; then
-            echo "BIPLAN_URL is missing in the ${{ matrix.environment }} GitHub environment." >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          if ! result=$(npm run --silent monitor 2>&1); then
-            {
-              echo "### ${{ matrix.environment }} readiness failed"
-              echo '```'
-              echo "$result"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-            exit 1
-          fi
-          {
-            echo "### ${{ matrix.environment }} readiness passed"
-            echo "$result"
-          } >> "$GITHUB_STEP_SUMMARY"
+          npm run --silent monitor -- --environment "$TARGET_ENVIRONMENT" --output output/readiness-monitor.json
+      - name: Save readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: readiness-${{ matrix.environment }}-${{ github.run_id }}
+          path: collector/output/readiness-monitor.json
+          if-no-files-found: warn
+          retention-days: 14

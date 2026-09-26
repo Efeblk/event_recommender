@@ -1,8 +1,9 @@
 import { recommend, validateInput } from '@/lib/recommend';
-import { candidates, rateLimit, runtime } from '@/lib/store';
+import { candidates, catalogStatus, rateLimit, runtime } from '@/lib/store';
 import { jevConfigFrom } from '@/lib/jev';
 import { voyageConfigFrom } from '@/lib/voyage';
 import { voyageVectorsFor } from '@/lib/voyage-index';
+import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
 export async function POST(request: Request) {
   let input;
   try {
@@ -22,6 +23,25 @@ export async function POST(request: Request) {
     );
   }
   try {
+    const catalog = await catalogStatus();
+    if (!catalogAllowsRecommendations(catalog.status))
+      return Response.json(
+        {
+          error:
+            catalog.status === 'stale'
+              ? 'Etkinlik kataloğu yenileniyor. Güncel olmayan sonuçları göstermiyoruz; lütfen biraz sonra yeniden dene.'
+              : 'Etkinlik kataloğu henüz hazır değil. Lütfen biraz sonra yeniden dene.',
+          code: 'catalog_unavailable',
+          catalog,
+        },
+        {
+          status: 503,
+          headers: {
+            'Cache-Control': 'no-store',
+            'Retry-After': '300',
+          },
+        },
+      );
     const config = jevConfigFrom(runtime());
     const embeddingConfig = voyageConfigFrom(runtime());
     if (!(await rateLimit(request, Boolean(config || embeddingConfig))))

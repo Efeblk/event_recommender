@@ -12,21 +12,155 @@ on:
         description: Full 40-character commit SHA to deploy
         required: true
         type: string
+      staging_run_id:
+        description: Required for production; successful staging run ID for this SHA
+        required: false
+        type: string
 
 permissions:
   contents: read
+  checks: read
+  actions: read
 
 env:
   DEPLOYMENT_SHA: ${{ inputs.commit_sha }}
+  STAGING_RUN_ID: ${{ inputs.staging_run_id }}
 
 concurrency:
   group: deploy-${{ inputs.environment }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment: ${{ inputs.environment }}
+  prepare:
+    if: inputs.environment == 'staging'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          persist-credentials: false
+      - name: Verify exact revision
+        env:
+          REQUESTED_SHA: ${{ inputs.commit_sha }}
+        run: |
+          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$REQUESTED_SHA"
+      - name: Require green core CI on the exact revision
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/commits/$DEPLOYMENT_SHA/check-runs?per_page=100" \
+            > exact-sha-checks.json
+          node scripts/deploy-gates.mjs checks exact-sha-checks.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            collector/package-lock.json
+      - name: Install exact locked dependencies
+        run: |
+          npm ci
+          npm ci --prefix ../collector
+      - name: Run release checks without provider calls
+        run: |
+          npm run test:deploy-config
+          npm test
+          npm run typecheck
+          npm run lint
+          npm test --prefix ../collector
+          node --experimental-strip-types scripts/check-release-cases.mjs
+          node --experimental-strip-types scripts/evaluate-jev.ts
+      - name: Build and verify standalone Cloudflare artifact
+        env:
+          DEPLOY_TARGET: staging
+          CLOUDFLARE_ACCOUNT_ID: 0123456789abcdef0123456789abcdef
+          CF_WORKER_NAME: biplan-staging-artifact
+          CF_D1_DATABASE_NAME: biplan-staging-artifact
+          CF_D1_DATABASE_ID: 00000000-0000-4000-8000-000000000001
+          CF_R2_BUCKET_NAME: biplan-staging-artifact-state
+          CF_PUBLIC_URL: https://biplan-staging-artifact.example.workers.dev
+          CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false"
+        run: |
+          npm run deploy:config -- --env staging --validate-only
+          npm run build
+          npm run test:smoke
+          npm run deploy:dry-run -- --env staging
+          rm dist/server/wrangler.staging.json
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify desktop and mobile browser flows
+        env:
+          BIPLAN_BROWSER_START: "1"
+        run: npx playwright test
+      - name: Create compiled manifest and provenance
+        run: node scripts/deploy-artifact.mjs create
+      - name: Upload immutable staging candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-worker-${{ inputs.commit_sha }}
+          path: |
+            web/dist
+            web/deploy-provenance
+          if-no-files-found: error
+          retention-days: 30
+
+  verify_staging:
+    if: inputs.environment == 'production'
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+      - name: Validate source staging run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [[ "$STAGING_RUN_ID" =~ ^[0-9]+$ ]]
+          curl --fail-with-body --silent --show-error \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/runs/$STAGING_RUN_ID" \
+            > staging-run.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: staging-release-${{ inputs.commit_sha }}
+          path: staging-evidence
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.staging_run_id }}
+      - name: Verify source evidence and live staging readiness
+        working-directory: web
+        env:
+          STAGING_URL: ${{ vars.CF_PUBLIC_URL }}
+        run: |
+          node scripts/deploy-gates.mjs source-run ../staging-run.json ../staging-evidence/staging-release.json
+          [[ "$STAGING_URL" =~ ^https://[^/]+/?$ ]]
+          STAGING_URL="${STAGING_URL%/}"
+          curl --fail-with-body --silent --show-error --max-time 15 "$STAGING_URL/api/health" > staging-health.json
+          curl --fail-with-body --silent --show-error --max-time 15 "$STAGING_URL/api/ready" > staging-ready.json
+          node scripts/deploy-gates.mjs staging staging-health.json staging-ready.json
+
+  deploy:
+    if: always() && ((inputs.environment == 'staging' && needs.prepare.result == 'success') || (inputs.environment == 'production' && needs.verify_staging.result == 'success'))
+    needs: [prepare, verify_staging]
+    environment: ${{ format('{0}-deploy', inputs.environment) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: web
@@ -48,59 +182,69 @@ jobs:
         with:
           ref: ${{ inputs.commit_sha }}
           persist-credentials: false
-      - name: Verify exact revision
-        env:
-          REQUESTED_SHA: ${{ inputs.commit_sha }}
-        run: |
-          [[ "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$REQUESTED_SHA"
       - uses: actions/setup-node@v4
         with:
           node-version-file: web/.nvmrc
           cache: npm
-          cache-dependency-path: |
-            web/package-lock.json
-            collector/package-lock.json
-      - name: Install exact locked dependencies
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Download current staging candidate
+        if: inputs.environment == 'staging'
+        uses: actions/download-artifact@v4
+        with:
+          name: web-worker-${{ inputs.commit_sha }}
+          path: web
+      - name: Download promoted staging artifact
+        if: inputs.environment == 'production'
+        uses: actions/download-artifact@v4
+        with:
+          name: web-worker-${{ inputs.commit_sha }}
+          path: web
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.staging_run_id }}
+      - name: Download promoted staging evidence
+        if: inputs.environment == 'production'
+        uses: actions/download-artifact@v4
+        with:
+          name: staging-release-${{ inputs.commit_sha }}
+          path: promotion-evidence
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.staging_run_id }}
+      - name: Verify downloaded compiled artifact
         run: |
-          npm ci
-          npm ci --prefix ../collector
-      - name: Validate exact-SHA source and configuration
+          if [ "$DEPLOY_TARGET" = production ]; then
+            node scripts/deploy-artifact.mjs verify ../promotion-evidence/staging-release.json
+          else
+            node scripts/deploy-artifact.mjs verify
+          fi
+      - name: Validate protected target and dry-run target-specific config
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
         run: |
           npm run deploy:config -- --env "$DEPLOY_TARGET" --validate-only --require-secrets
-          npm run test:deploy-config
-          npm test
-          npm run typecheck
-          npm run lint
-          npm test --prefix ../collector
-      - name: Build and verify Worker
-        run: |
-          npm run build
-          npm run test:smoke
           npm run deploy:dry-run -- --env "$DEPLOY_TARGET"
-      - name: Record build provenance
-        env:
-          REQUESTED_SHA: ${{ inputs.commit_sha }}
-        run: |
-          mkdir -p deploy-provenance
-          find dist -type f -print0 | sort -z | xargs -0 sha256sum > deploy-provenance/SHA256SUMS
-          node -e "require('fs').writeFileSync('deploy-provenance/provenance.json', JSON.stringify({commit:process.env.REQUESTED_SHA, environment:process.env.DEPLOY_TARGET, node:process.version, generatedAt:new Date().toISOString()}, null, 2)+'\n')"
-      - name: Upload reviewable Worker artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-worker-${{ inputs.environment }}-${{ inputs.commit_sha }}
-          path: |
-            web/dist
-            web/deploy-provenance
-          if-no-files-found: error
-          retention-days: 30
-      - name: Apply migrations, deploy, check liveness, and report readiness
+      - name: Apply migrations, deploy verified artifact, and check health
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
           VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
         run: npm run deploy:run -- --env "$DEPLOY_TARGET"
+      - name: Record successful staging deployment
+        if: inputs.environment == 'staging'
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: node -e "const fs=require('fs'),crypto=require('crypto');const manifest=fs.readFileSync('deploy-provenance/compiled-sha256.json');fs.mkdirSync('staging-release',{recursive:true});fs.writeFileSync('staging-release/staging-release.json',JSON.stringify({environment:'staging',revision:process.env.DEPLOYMENT_SHA,runId:Number(process.env.RUN_ID),manifestSha256:crypto.createHash('sha256').update(manifest).digest('hex')},null,2)+'\n')"
+      - name: Upload successful staging evidence
+        if: inputs.environment == 'staging'
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-release-${{ inputs.commit_sha }}
+          path: web/staging-release/staging-release.json
+          if-no-files-found: error
+          retention-days: 30

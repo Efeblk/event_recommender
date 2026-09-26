@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { isAlternativesRequest } from '@/lib/intent';
+import { groupFilterCount, groupFilterLabels } from '@/lib/ui-filters';
 import {
   emptyFilters,
   type EventRecord,
@@ -101,6 +102,7 @@ function EventCard({ event }: { event: EventRecord }) {
           <Image
             unoptimized
             fill
+            referrerPolicy="no-referrer"
             sizes="(max-width: 700px) 32vw, (max-width: 1100px) 25vw, 260px"
             src={event.imageUrl}
             alt={`${event.title} afişi`}
@@ -248,7 +250,8 @@ export default function Home() {
       filters.startTimeTo,
     ].filter((value) => value != null).length +
     (filters.categories?.length ? 1 : 0) +
-    (filters.excludedCategories?.length ?? 0);
+    (filters.excludedCategories?.length ?? 0) +
+    groupFilterCount(filters);
   const hasFilters = activeFilterCount > 0;
   const catalogLabel = useMemo(() => {
     if (catalog?.status === 'stale') return 'Katalog yenilenmeyi bekliyor';
@@ -570,6 +573,11 @@ export default function Home() {
                 {!!filters.categories?.length && (
                   <span>{filters.categories.join(' veya ')}</span>
                 )}
+                {groupFilterLabels(filters, (value) =>
+                  formatMoney(value),
+                ).map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
                 {filters.district && <span>{filters.district}</span>}
                 {filters.startTimeFrom && (
                   <span>
@@ -812,6 +820,12 @@ export default function Home() {
                 İstek sınırlandırması için ham IP adresi yerine türetilmiş bir
                 anahtar ve süre sonu bilgisi saklanır. Süresi geçen sayaçlar
                 sonraki istekler sırasında temizlenir.
+              </p>
+              <p>
+                Etkinlik afişleri bilet sağlayıcılarının veya görsel dağıtım
+                servislerinin adreslerinden yüklenebilir. Tarayıcın bu görselleri
+                getirirken ilgili üçüncü tarafla doğrudan bağlantı kurar; Bi’ Plan
+                sayfa adresini bu görsel istekleriyle göndermez.
               </p>
             </div>
           </details>

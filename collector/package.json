@@ -9,7 +9,8 @@
     "publish:local": "node publish.mjs --allow-loopback-http",
     "checkpoint:restore": "node checkpoint.mjs",
     "monitor": "node monitor.mjs",
-    "soak:report": "node soak-report.mjs"
+    "soak:report": "node soak-report.mjs",
+    "soak:verify": "node soak-verify.mjs"
   },
   "dependencies": {
     "@crawlee/basic": "3.18.1",
