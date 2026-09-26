@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const workflow = await readFile(
+const workflow = (await readFile(
   resolve(import.meta.dirname, '../../.github/workflows/gcp-staging.yml'),
   'utf8',
-);
+)).replaceAll('\r\n', '\n');
 
 assert.match(workflow, /^\s{2}workflow_dispatch:/m);
 assert.doesNotMatch(workflow, /^\s{2}(push|pull_request|schedule):/m);

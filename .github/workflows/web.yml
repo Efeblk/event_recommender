@@ -46,6 +46,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run test:deploy-config
+      - run: npm run test:deploy:gcp
       - name: Check frozen conversational release constraints without API calls
         run: node --experimental-strip-types scripts/check-release-cases.mjs
       - name: Replay Jev scores and check every recommendation without API calls
