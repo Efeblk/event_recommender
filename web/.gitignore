@@ -34,10 +34,13 @@ yarn-error.log*
 .vercel
 next-env.d.ts
 /dist/
+/dist-node/
 /.wrangler/
 /outputs/
 /work/
 /deploy-provenance/
+/gcp-candidate/
+/gcp-roundtrip/
 
 !.env.example
 *.tsbuildinfo

@@ -8,7 +8,9 @@
   "scripts": {
     "dev": "vinext dev",
     "build": "vinext build",
+    "build:node": "node scripts/build-node.mjs",
     "start": "wrangler dev --config dist/server/wrangler.json",
+    "start:node": "node dist-node/server.js",
     "lint": "oxlint",
     "format": "oxfmt",
     "db:generate": "drizzle-kit generate",
@@ -26,10 +28,14 @@
     "deploy:dry-run": "node scripts/deploy.mjs dry-run",
     "test:deploy-config": "node --test deploy/*.test.mjs",
     "deploy:run": "node scripts/deploy.mjs deploy",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:smoke:node": "node scripts/smoke-node.mjs",
+    "test:deploy:gcp": "node scripts/check-gcp-deploy-config.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
+    "@google-cloud/firestore": "9.2.0",
+    "@google-cloud/storage": "8.2.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "drizzle-orm": "0.45.2",
@@ -61,5 +67,8 @@
     "vite": "8.2.2",
     "wrangler": "4.137.0"
   },
-  "type": "module"
+  "type": "module",
+  "imports": {
+    "#biplan/store": "./lib/store.cloudflare.ts"
+  }
 }

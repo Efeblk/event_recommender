@@ -16,7 +16,7 @@ These are model-selection defaults for sessions and delegated tasks. This file d
 ## Product and architecture
 
 - Bi’ Plan recommends Istanbul events from multiple ticket providers. Keep the interface simple: a hero with a chat input, event cards, support section, and reserved advertising areas. Donation and ad integrations remain placeholders until destinations/providers are chosen.
-- `collector/` owns collection and publishing; `web/` owns the application, recommendation pipeline, and Cloudflare integration. Use Node from `web/.nvmrc` (both packages require Node >=22.13).
+- `collector/` owns collection and publishing; `web/` owns the application, recommendation pipeline, and cloud storage/runtime adapters. Use Node from `web/.nvmrc` (both packages require Node >=22.13).
 - Retrieve across the full eligible catalog using Voyage embeddings and lexical signals before shortlisting up to 16 distinct candidates for TypeSafe Jev. The shortlist is not the database search limit. The default response shows up to two supported results, with alternatives available.
 - Preserve Turkish and English constraints through follow-ups, corrections, resets, and group-budget changes. Hard constraints and mandatory source-evidence checks apply to both AI recommendations and fallback search. Unknown price, accessibility, or venue policy is not positive evidence.
 - Merge provider offers conservatively: require matching session time and venue plus a supported title identity. Preserve source links, prices, and raw IDs; do not merge different sessions or adaptations merely because titles resemble each other.
@@ -26,6 +26,7 @@ These are model-selection defaults for sessions and delegated tasks. This file d
 
 - Prefer the T3Code integrated browser for UI checks. If its automation host is unavailable, report that limitation and use headless Playwright when possible; avoid native desktop control unless necessary.
 - Run checks appropriate to changed paths. Web checks include `npm test`, `npm run typecheck`, and `npm run lint` from `web/`; collector checks use `npm test` from `collector/`. Deployment changes also need `npm run test:deploy-config` from `web/`.
+- GCP changes also require `npm run test:deploy:gcp`, `npm run build:node`, and `npm run test:smoke:node`; verify the Linux Docker image in CI. `dist-node` is isolated from the Cloudflare build.
 - Build before compiled smoke or browser checks: from `web/`, run `npm run build`, then `npm run test:smoke` and, when relevant, `BIPLAN_BROWSER_START=1 npm run test:browser`. The isolated browser suite mocks provider calls. Do not run competing builds against the same output directory.
 - `web/scripts/check-release-cases.mjs` checks the frozen conversational fixture offline. Its relative dates use the fixture's reference date; do not blindly reuse old dated fixtures for a new live run against today's catalog.
 - For live evaluation, use existing authorization and a bounded call budget; otherwise prepare offline checks first. Keep request pacing, application rate limits, and no automatic retries. Reuse cached document embeddings rather than paying to recreate unchanged vectors.
@@ -36,7 +37,7 @@ These are model-selection defaults for sessions and delegated tasks. This file d
 ## Deployment and cost
 
 - Follow the user's free-first preference for development and staging. `WORKERS_PLAN=free` is the default; only select a paid profile when measured needs justify it and existing user authorization covers the change. Preparing a profile does not activate a subscription.
-- The current cloud architecture uses Workers for the app, D1 for structured data, and private R2 storage for collection checkpoints and recovery. R2 activation is separate from Workers Paid. Verify account state when needed rather than assuming an earlier activation or permission failure still applies.
+- GCP is the selected target: Cloud Run for the Node app, Firestore for coordination and rate limits, private Cloud Storage for catalog/checkpoint/vector snapshots, and Secret Manager. The existing Workers/D1/R2 deployment remains a fallback. Follow `docs/gcp-deployment.md`; do not assume local migration tests establish GCP deployment, IAM, latency or capacity. Keep exact embedding profiles and cached vectors during migration.
 - Keep staging and production resources separate; do not reuse unrelated account resources. Keep credentials in ignored local settings such as `web/.dev.vars` or protected deployment secrets. Never print, commit, or request secrets in chat.
 - Preparing the project for publication is not itself authorization to publish publicly or purchase a plan. Continue already-authorized local work, tests, and PR work without asking for permission again.
 - When pushing or updating a PR, check CI on the exact latest revision and address failures. Do not describe a previous green revision as verification of later changes.

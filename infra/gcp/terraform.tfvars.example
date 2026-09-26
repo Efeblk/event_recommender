@@ -1,0 +1,13 @@
+# Copy to ignored terraform.tfvars only after choosing the dedicated project.
+project_id                          = "replace-with-dedicated-project"
+dedicated_billing_project_confirmed = false
+region                              = "us-central1"
+
+# Default trust is refs/heads/master. An initial branch deployment needs an explicit,
+# reviewed override here and matching GitHub environment deployment restrictions.
+github_allowed_branch = "master"
+
+# Optional alert only; no spending cap or billing association is created.
+# budget_billing_account = "XXXXXX-XXXXXX-XXXXXX"
+# budget_amount_usd      = 5
+# budget_notification_channels = ["projects/PROJECT/notificationChannels/NUMBER"]

@@ -1,13 +1,12 @@
-import { sites } from '@openai/sites-vite-plugin';
 import tailwindcss from '@tailwindcss/postcss';
 import vinext from 'vinext';
-import { defineConfig } from 'vite';
-import hostingConfig from './.openai/hosting.json' with { type: 'json' };
+import { defineConfig, type UserConfig } from 'vite';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID =
   '00000000-0000-4000-8000-000000000000';
 
-const { d1, r2 } = hostingConfig;
 const deployTarget = process.env.DEPLOY_TARGET;
 
 function requiredDeploymentValue(name: string) {
@@ -19,8 +18,13 @@ function requiredDeploymentValue(name: string) {
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
 
-const bindingConfig = deployTarget
-  ? {
+function cloudflareBindingConfig(hostingConfig: {
+  d1?: string | null;
+  r2?: string | null;
+}) {
+  const { d1, r2 } = hostingConfig;
+  return deployTarget
+    ? {
       name: requiredDeploymentValue('CF_WORKER_NAME'),
       main: 'vinext/server/fetch-handler',
       compatibility_flags: ['nodejs_compat'],
@@ -39,7 +43,7 @@ const bindingConfig = deployTarget
         },
       ],
     }
-  : {
+    : {
       main: 'vinext/server/fetch-handler',
       compatibility_flags: ['nodejs_compat'],
       d1_databases: d1
@@ -61,8 +65,25 @@ const bindingConfig = deployTarget
         },
       ],
     };
+}
 
-export default defineConfig(async () => {
+export default defineConfig(async (): Promise<UserConfig> => {
+  if (process.env.BIPLAN_RUNTIME === 'node') {
+    return {
+      css: { postcss: { plugins: [tailwindcss()] } },
+      plugins: vinext(),
+      resolve: {
+        alias: {
+          '#biplan/store': fileURLToPath(
+            new URL('./lib/store.node.ts', import.meta.url),
+          ),
+          'cloudflare:workers': fileURLToPath(
+            new URL('./lib/runtime-env.node.ts', import.meta.url),
+          ),
+        },
+      },
+    };
+  }
   // Keep Wrangler and Miniflare state project-local. These are non-secret tool
   // settings; application environment belongs in ignored `.env*` files.
   process.env.WRANGLER_WRITE_LOGS ??= 'false';
@@ -71,18 +92,32 @@ export default defineConfig(async () => {
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.
   const { cloudflare } = await import('@cloudflare/vite-plugin');
+  const { sites } = await import('@openai/sites-vite-plugin');
+  const hostingConfig = JSON.parse(
+    readFileSync(
+      fileURLToPath(new URL('./.openai/hosting.json', import.meta.url)),
+      'utf8',
+    ),
+  ) as { d1?: string | null; r2?: string | null };
 
   return {
     css: { postcss: { plugins: [tailwindcss()] } },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
+    resolve: {
+      alias: {
+        '#biplan/store': fileURLToPath(
+          new URL('./lib/store.cloudflare.ts', import.meta.url),
+        ),
+      },
+    },
     plugins: [
       vinext(),
       ...(deployTarget ? [] : [sites()]),
       cloudflare({
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
-        config: bindingConfig,
+        config: cloudflareBindingConfig(hostingConfig),
       }),
     ],
   };

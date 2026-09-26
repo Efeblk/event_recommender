@@ -1,0 +1,104 @@
+name: Collect GCP staging event data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: gcp-event-collection-staging
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    environment: gcp-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      BIPLAN_URL: ${{ vars.BIPLAN_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: collector/package-lock.json
+
+      - name: Validate private staging destination
+        shell: bash
+        env:
+          COLLECTOR_SERVICE_ACCOUNT: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          for name in BIPLAN_URL COLLECTOR_SERVICE_ACCOUNT WORKLOAD_IDENTITY_PROVIDER SYNC_TOKEN; do
+            test -n "${!name}" || { echo "Missing required gcp-staging collector setting: $name" >&2; exit 1; }
+          done
+          case "$BIPLAN_URL" in https://*.run.app) ;; *) echo "BIPLAN_URL must be a direct HTTPS Cloud Run URL." >&2; exit 1;; esac
+          node -e "const u=new URL(process.env.BIPLAN_URL);if(u.origin!==process.env.BIPLAN_URL)throw new Error('BIPLAN_URL must be the exact Cloud Run origin without a path, query, or trailing slash.')"
+
+      - id: auth_restore
+        name: Authenticate collector for checkpoint restore
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ vars.BIPLAN_URL }}
+          id_token_include_email: true
+
+      - run: npm ci --prefix collector
+      - run: npm test --prefix collector
+
+      - name: Restore durable checkpoint
+        working-directory: collector
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_restore.outputs.id_token }}
+        run: npm run checkpoint:restore -- --output state/events.json --fallback ../web/data/events.json
+
+      - name: Collect public listings including later pages
+        run: npm run collect --prefix collector -- --limit 100 --discovery-pages 20 --snapshot state/events.json
+
+      - id: auth_publish
+        name: Refresh collector identity for publication
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ vars.BIPLAN_URL }}
+          id_token_include_email: true
+
+      - name: Import, checkpoint, and read back canonical state
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_publish.outputs.id_token }}
+        run: npm run publish --prefix collector -- --checkpoint --snapshot state/events.json --receipt output/publication.json
+
+      - name: Record published run evidence
+        working-directory: collector
+        env:
+          COLLECTION_ENVIRONMENT: staging
+        run: npm run soak:report -- --publication output/publication.json
+
+      - name: Save normalized data, source health, and run evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcp-event-data-staging-${{ github.run_id }}
+          path: |
+            collector/output/events.json
+            collector/output/report.json
+            collector/output/soak-evidence.json
+            collector/output/publication.json
+            collector/state/events.json
+          if-no-files-found: warn
+          retention-days: 14
