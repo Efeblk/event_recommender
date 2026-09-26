@@ -35,6 +35,8 @@ Bu işlem liste sayfalarını ve bilinen etkinlik detaylarını yeniden kontrol 
 
 `local:refresh`, sunucunun hazır olmasını bekleyip doğrulanmış raporu korumalı import endpoint'ine gönderir. Başarılı import anında aramaya yansır; veri için yeniden başlatma gerekmez. Kod veya sağlayıcı ayarı değiştiğinde `local:start` komutunu yeniden çalıştır. HMR geliştirme modu ayrıca `npm run local:start -- --dev` ile açılır. Kayıtlar `.wrangler/` altındaki yerel SQLite/D1 içinde yeniden başlatmalar arasında korunur.
 
+Windows'ta PowerShell ile bağımlılıkları kurmak, yerel ayar dosyasını güvenle oluşturmak ve uygulamayı çalıştırmak için [Windows hızlı başlangıç rehberini](docs/windows.md) kullan.
+
 ## Şu an ne çalışıyor?
 
 - Biletinial, Bubilet ve Biletix’ten doğrulanmış İstanbul konser, tiyatro ve stand-up seansları; afiş, mekân, başlangıç fiyatı, açıklama ve kaynak bağlantısı.
