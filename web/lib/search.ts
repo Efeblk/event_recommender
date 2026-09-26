@@ -5,6 +5,7 @@ import {
   type Filters,
   type Category,
 } from './types.ts';
+import { hasSupportedEventFormat } from './event-format.ts';
 import {
   CATEGORY_NEGATION,
   isFullPreferenceReset,
@@ -990,7 +991,8 @@ export function isEligible(
     checked < now.getTime() - 72 * 3600000 ||
     checked > now.getTime() + 300000 ||
     e.city !== 'İstanbul' ||
-    e.availability !== 'available'
+    e.availability !== 'available' ||
+    !hasSupportedEventFormat(e)
   )
     return false;
   if (

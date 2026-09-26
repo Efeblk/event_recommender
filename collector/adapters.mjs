@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { flightObjects } from "./flight.mjs";
 import { jsonLd, parseEvents } from "../web/lib/source.ts";
+import { hasSupportedEventFormat } from "../web/lib/event-format.ts";
 
 export const sources = {
   biletinial: {
@@ -72,6 +73,11 @@ function categoryOf(text) {
   if (/konser|müzik|music/i.test(text)) return "Konser";
   return null;
 }
+export function categorySupportedByEvent(category, title, description) {
+  return category && hasSupportedEventFormat({ title: clean(title), description: clean(description) })
+    ? category
+    : null;
+}
 export async function extract($, source, url, fallbackCategory, now = new Date()) {
   const html = $.html();
   if (source === "biletix") return extractBiletix($, url, now);
@@ -94,7 +100,11 @@ export async function extract($, source, url, fallbackCategory, now = new Date()
   // An Event schema alone is insufficient evidence that a page is now empty.
   // Preserve old rows when a redesign drops essential fields or all rows are rejected.
   if (!events.length) throw new Error("no_verified_sessions");
-  return events.map((event) => ({ ...event, source, sourceVersion: "3", extraction: "json-ld" }));
+  const supported = events.filter((event) =>
+    categorySupportedByEvent(category, event.title, event.description),
+  );
+  if (!supported.length) throw new Error("unsupported_category");
+  return supported.map((event) => ({ ...event, source, sourceVersion: "3", extraction: "json-ld" }));
 }
 function extractBiletix($, url, now) {
   let state;
@@ -113,8 +123,13 @@ function extractBiletix($, url, now) {
   const performances = responses.find((r) => r.u.includes(`/getPerformanceList/${code}/`))?.b?.data;
   if (!detail || !Array.isArray(performances) || !performances.length)
     throw new Error("schema_missing");
-  const category = categoryOf(
+  const sourceCategory = categoryOf(
     `${detail.subCategory ?? ""} ${detail.eventCategoryCode === "MUSIC" ? "music" : ""}`,
+  );
+  const category = categorySupportedByEvent(
+    sourceCategory,
+    detail.eventName,
+    detail.eventDescription,
   );
   if (!category) throw new Error("unsupported_category");
   const image = $('meta[property="og:image"]').attr("content") ?? "";
@@ -183,6 +198,8 @@ function extractBubilet($, url, category, nodes, now) {
   if (props.calendarBased !== false) throw new Error("calendar_requires_expansion");
   const base = nodes.find((n) => n["@type"] === "Event" && typeof n.name === "string");
   if (!base) throw new Error("schema_missing");
+  category = categorySupportedByEvent(category, base.name, base.description);
+  if (!category) throw new Error("unsupported_category");
   const groups = new Map();
   for (const row of props.eventSessions) {
     if (row.cityId !== 34 || row.hideSession === true) continue;

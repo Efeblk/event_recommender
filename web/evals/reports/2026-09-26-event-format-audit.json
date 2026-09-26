@@ -1,0 +1,1035 @@
+{
+  "schemaVersion": 1,
+  "kind": "offline-event-format-catalog-audit",
+  "scope": "Current checked-in catalog only; this is not a live-provider or end-to-end recommendation quality evaluation.",
+  "referenceNow": "2026-09-26T19:55:00.000Z",
+  "sourceRevision": {
+    "head": "d19232b1a7b8891600897c859a63f58e748a0685",
+    "dirty": true,
+    "gitStatus": [
+      " M collector/adapters.mjs",
+      " M collector/tests/pipeline.test.mjs",
+      " M web/lib/search.ts",
+      " M web/tests/search.test.ts",
+      "?? web/lib/event-format.ts",
+      "?? web/output-format-audit.json"
+    ],
+    "workingTreeDiffGitHash": "eaf3a11d64fe2250fc0076dfafdc8f4c2768c3b6"
+  },
+  "inputs": {
+    "catalog": "web/data/events.json",
+    "catalogSha256": "b113f03b6fd33b5ed4b1767f1edf467b43df202cfcc9a656322649dfe61e1bc2",
+    "guard": "web/lib/event-format.ts",
+    "guardSha256": "746e24a1b9b176b246aeea0a144d1fd8590d3735d8111135b024202764b7d335"
+  },
+  "method": {
+    "rowFilter": "availability === 'available' && startsAt >= referenceNow && hasSupportedEventFormat(event) === false",
+    "productionIdentity": "canonicalProductionKey || productionKey || url",
+    "judgmentBasis": "Manual review of every distinct rejected production title and description in the checked-in catalog."
+  },
+  "totals": {
+    "catalogRows": 4076,
+    "rejectedFutureAvailableRows": 160,
+    "distinctRejectedProductions": 36,
+    "correctExclusions": 36,
+    "falseExclusions": 0,
+    "explicitWorkshops": 35,
+    "explicitTalkPanels": 1
+  },
+  "counterexamples": [],
+  "homepageExposureCheck": {
+    "note": "Earliest distinct future/available identities before applying the format guard; ordering is diagnostic and does not assert the final homepage ranking.",
+    "earliestDistinct": [
+      {
+        "startsAt": "2026-09-26T20:00:00.000Z",
+        "title": "Edepsiz Komedi",
+        "rejectedByGuard": false
+      },
+      {
+        "startsAt": "2026-09-26T20:00:00.000Z",
+        "title": "Edepsiz Komedi",
+        "rejectedByGuard": false
+      },
+      {
+        "startsAt": "2026-09-26T20:00:00.000Z",
+        "title": "Edepsiz Komedi",
+        "rejectedByGuard": false
+      },
+      {
+        "startsAt": "2026-09-26T20:45:00.000Z",
+        "title": "The Sisters 90's 2000's Pop Gecesi",
+        "rejectedByGuard": false
+      },
+      {
+        "startsAt": "2026-09-26T20:59:00.000Z",
+        "title": "The Sisters 90s 2000s Pop Gecesi",
+        "rejectedByGuard": false
+      },
+      {
+        "startsAt": "2026-09-27T09:00:00.000Z",
+        "title": "Lego ve Resimle Geleceği Tasarlıyorum Yaş Grubu: 4-7",
+        "rejectedByGuard": true
+      },
+      {
+        "startsAt": "2026-09-27T09:00:00.000Z",
+        "title": "Miles: Bir Caz İkonunun Anatomisi - Hakan Rauf Tüfekçi, Atilla Ayginin, Eray Düzgünsoy, Hakan Atala",
+        "rejectedByGuard": true
+      },
+      {
+        "startsAt": "2026-09-27T09:00:00.000Z",
+        "title": "Çizgi Roman Atölyesi",
+        "rejectedByGuard": true
+      },
+      {
+        "startsAt": "2026-09-27T10:00:00.000Z",
+        "title": "Paw Patrol Görev Zamanı",
+        "rejectedByGuard": false
+      },
+      {
+        "startsAt": "2026-09-27T10:00:00.000Z",
+        "title": "Hayal Oyunum / Yaratıcı Drama",
+        "rejectedByGuard": true
+      }
+    ],
+    "overlookedUnsupportedAmongEarliest": [
+      {
+        "startsAt": "2026-09-27T09:00:00.000Z",
+        "title": "Lego ve Resimle Geleceği Tasarlıyorum Yaş Grubu: 4-7",
+        "rejectedByGuard": true
+      },
+      {
+        "startsAt": "2026-09-27T09:00:00.000Z",
+        "title": "Miles: Bir Caz İkonunun Anatomisi - Hakan Rauf Tüfekçi, Atilla Ayginin, Eray Düzgünsoy, Hakan Atala",
+        "rejectedByGuard": true
+      },
+      {
+        "startsAt": "2026-09-27T09:00:00.000Z",
+        "title": "Çizgi Roman Atölyesi",
+        "rejectedByGuard": true
+      },
+      {
+        "startsAt": "2026-09-27T10:00:00.000Z",
+        "title": "Hayal Oyunum / Yaratıcı Drama",
+        "rejectedByGuard": true
+      }
+    ]
+  },
+  "cases": [
+    {
+      "case": 1,
+      "productionIdentity": "56b0540a9399362038680dc9",
+      "rowCount": 6,
+      "title": "Hikaye Anlatıcılığı Ve Kukla Atölyesi Yaş Grubu:7-11",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T13:00:00.000Z",
+        "2026-10-10T13:00:00.000Z",
+        "2026-10-17T09:00:00.000Z",
+        "2026-10-24T11:00:00.000Z",
+        "2026-10-28T09:00:00.000Z",
+        "2026-10-31T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/hikaye-anlaticiligi-ve-kukla-atolyesi-yas-grubu-7-11-akm"
+      ],
+      "evidenceExcerpt": "Hikaye Anlatıcılığı Ve Kukla Atölyesi Yaş Grubu:7-11 Çocukların hayal gücü, yaratıcılık ve ifade becerilerini geliştirmeyi amaçlayan interaktif bir sanat etkinliğidir. Atölye kapsamında çocuklar; hikâye kurma, karakter oluşturma ve kukla oynatımı süreçlerine aktif olarak katılırlar. Etkinlik sürecinde çocuklar kendi kuklalarını tasarlayarak karakterlerine duygu ve kimlik kazandırır, ardından oluşturdukları hikâyeleri",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 2,
+      "productionIdentity": "500272384314d6df6ee7390b",
+      "rowCount": 7,
+      "title": "Anime Karakter Çizim Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T10:00:00.000Z",
+        "2026-10-03T09:00:00.000Z",
+        "2026-10-10T09:00:00.000Z",
+        "2026-10-17T09:00:00.000Z",
+        "2026-10-24T09:00:00.000Z",
+        "2026-10-24T13:00:00.000Z",
+        "2026-10-31T09:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/anime-karakter-cizim-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Anime Karakter Çizim Atölyesi Bu atölyede çocuklar, anime çizim stilinin temel özelliklerini öğrenerek kendi özgün karakterlerini tasarlar. Yüz ifadeleri, göz yapısı, saç formu ve duruş gibi öğeler üzerinden karakter oluşturmayı deneyimler; çizimlerini adım adım geliştirirler. Atölye sürecinde çocuklar yalnızca bir karakter çizmekle kalmaz, aynı zamanda karakterlerinin kişiliğini, duygularını ve hikâyesini kurgular. ",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 3,
+      "productionIdentity": "2b5c2a7f9e5f7cba168e270c",
+      "rowCount": 5,
+      "title": "Çizgi Roman Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T09:00:00.000Z",
+        "2026-10-10T11:00:00.000Z",
+        "2026-10-17T11:00:00.000Z",
+        "2026-10-24T12:00:00.000Z",
+        "2026-10-31T11:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/cizgi-roman-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Çizgi Roman Atölyesi Bu atölyede çocuklara başlangıcı verilen bir hikâye sunulur. Çocuklar, hikâyenin devamını ve sonunu kendi hayal güçleriyle yazar, ardından yazdıkları metni 6 karelik çizimlerle görselleştirir. Yazı ve resim birlikte ilerleyen bu süreçte çocuklar; olay örgüsü kurmayı, karakterleri geliştirmeyi ve bir hikâyeyi görsel anlatımla desteklemeyi deneyimler. Atölye, çocukların hem anlatma hem de çizerek i",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 4,
+      "productionIdentity": "dd634a214826ee86ce93c861",
+      "rowCount": 2,
+      "title": "Sesim Benim Enstürmanım / Ebeveyn Katılımlı Atölye 6-9",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T12:00:00.000Z",
+        "2026-10-03T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/sesim-benim-ensturmanim-ebeveyn-katilimli-atolye-6-9-akm"
+      ],
+      "evidenceExcerpt": "Sesim Benim Enstürmanım / Ebeveyn Katılımlı Atölye Atölye Amacı 6-9 yaş grubu çocukların en doğal enstrümanları olan seslerini ve bedenlerini yaratıcı drama, ritim ve oyun yoluyla keşfetmelerini sağlamak; aynı zamanda ebeveynleriyle birlikte katıldıkları bu süreçte güvenli bağ kurma, ortak üretim ve eğlenceli kaliteli zaman paylaşımını desteklemektir. Atölye Kazanımları • Ses ve Ritim Farkındalığı: Sesinin tonunu, yü",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 5,
+      "productionIdentity": "1650c3159aa5cee5cc50605d",
+      "rowCount": 5,
+      "title": "Minik Yogiler / Yoga Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-10T10:00:00.000Z",
+        "2026-10-17T11:00:00.000Z",
+        "2026-10-24T14:00:00.000Z",
+        "2026-10-25T14:00:00.000Z",
+        "2026-10-31T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/minik-yogiler-yoga-atolyesi-7-11-akm"
+      ],
+      "evidenceExcerpt": "Minik Yogiler / Yoga Atölyesi Bu atölyede Çocuk Yogası Eğitmeni eşliğinde hem eğlenceli hem de dinlendirici bir Yoga Atölyesi yapılacaktır. 🔹 İÇERİK • Eğlenceli hikayeler ve oyunlar eşliğinde yoga duruşlarını (asanaları) öğreniyor ve canlandırıyoruz. • Doğru nefes alma tekniklerini ve beden farkındalığını küçük yaşta deneyimliyoruz. • Hayal gücünü geliştiren rehberli meditasyonlar ve gevşeme egzersizleri ile zihnimi",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 6,
+      "productionIdentity": "abbdd1b8a14182d0694763eb",
+      "rowCount": 5,
+      "title": "Minik Kuğular Bale Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T13:00:00.000Z",
+        "2026-10-04T13:00:00.000Z",
+        "2026-10-11T13:00:00.000Z",
+        "2026-10-18T13:00:00.000Z",
+        "2026-10-25T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/kucuk-kugular-bale-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Minik Kuğular Bale Atölyesi Bale atölyeleri aracılığıyla geleceğin sanatçıları, sanatseverleri olacak çocuklarımıza dans ve ritim hissini yaşatılarak müzik kulaklarının gelişmesine, vücutlarının düzgün, dengeli ve kuvvetli gelişiminin sağlanmasına, canlandırılan masal ve hikayeler ışığında hayal güçlerinin artmasına, bale figürlerinin sağladığı düzen ve ölçüyle el-kol-bacak koordinasyonunun gelişmesine, öz",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 7,
+      "productionIdentity": "a70255606d30309ffbf78180",
+      "rowCount": 4,
+      "title": "Kil ile Figür Yapımı Atölyesi Yaş Grubu: 6-12",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-10T14:00:00.000Z",
+        "2026-10-11T09:00:00.000Z",
+        "2026-10-14T09:00:00.000Z",
+        "2026-10-28T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/kil-atolyesi-yas-grubu-6-12-akm"
+      ],
+      "evidenceExcerpt": "Kil ile Figür Yapımı Atölyesi Atölye teması : Kil yapımı atölyesi Hayal gücümüzü kullanarak obje ve figürler tasarlama, Süs objeleri yapımı, üç boyutlu meyve şekilleri yapımı • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 6-12 yaş aralığı için uygun olup, 6 yaşını doldurmamış ve 12 yaşından büyük çocuklar etkinliğe alınmayacaktır. • Etkinlikte belirtilen yaş aralığında yaşı uygun olmayan misafirlerimiz e",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 8,
+      "productionIdentity": "6906b2dabe38a00bc3d9aedd",
+      "rowCount": 7,
+      "title": "Ebru Atölyesi Yaş Grubu: 4-6",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkeziㅤ"
+      ],
+      "sessionStarts": [
+        "2026-09-30T12:00:00.000Z",
+        "2026-10-10T12:00:00.000Z",
+        "2026-10-14T11:00:00.000Z",
+        "2026-10-17T12:00:00.000Z",
+        "2026-10-24T11:00:00.000Z",
+        "2026-10-28T11:00:00.000Z",
+        "2026-10-31T11:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/ebru-atolyesi-yas-grubu-4-6-km"
+      ],
+      "evidenceExcerpt": "Ebru Atölyesi Bu atölyede çocuklar, Ebru Sanatının geleneksel tekniklerini deneyimlerken aynı zamanda yaratıcı düşünme becerilerini geliştirir. Katılım sağlayan her çocuk kendi desenini planlar, suyun hareketine yön verir ve eseri kâğıda aktararak sanatsal üretimini tamamlar. Etkinlik İçeriği: • Ebru sanatının kısa tanıtımı ve kültürel hikâyesi • Boya hazırlığı ve kontrolü • Fırça teknikleri ve su yüzeyinde desen olu",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 9,
+      "productionIdentity": "9e685149dee211e907491781",
+      "rowCount": 1,
+      "title": "Renkli Hisler Yaratıcı Drama Atölyesi Yaş Grubu: 7-11",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/renkli-hisler-yaratici-drama-atolyesi-yas-grubu-7-11-akm"
+      ],
+      "evidenceExcerpt": "Renkli Hisler Yaratıcı Drama Atölyesi Oyuncu Gamze Dar ile Yaratıcı Drama Atölyemizde çocuklar farklı renkleri ve bu renklere bağlı duyguları yaratıcı drama ile keşfediyorlar. Renklerle ilgili küçük oyunlar ve canlandırmalar yaparak duygusal farkındalık kazanıyorlar. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 7-11 yaş aralığı için uygun olup, 7 yaşını doldurmamış ve 11 yaşından büyük çocuklar etkinli",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 10,
+      "productionIdentity": "d627ca1021b31d19641cf335",
+      "rowCount": 7,
+      "title": "Heykel Yapımı Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T09:00:00.000Z",
+        "2026-10-04T13:00:00.000Z",
+        "2026-10-07T10:00:00.000Z",
+        "2026-10-10T12:00:00.000Z",
+        "2026-10-11T10:00:00.000Z",
+        "2026-10-14T10:00:00.000Z",
+        "2026-10-25T09:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/heykel-yapimi-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Heykel Yapımı Atölyesi Heykel atölyesi kapsamında çocuklar; temel şekillendirme ve üç boyutlu tasarım tekniklerini öğrenerek kendi heykellerini üretirler. Atölye sürecinde yaratıcılık, hayal gücü ve el becerileri desteklenir. Katılımcılar; kil, geri dönüşüm malzemeleri veya farklı dokularla çalışarak form, denge ve hacim kavramlarını deneyimlerler. Sürecin sonunda çocuklar kendi özgün heykellerini tamamlayarak kısa b",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 11,
+      "productionIdentity": "fb55dab2ba22e1e2fedc4410",
+      "rowCount": 3,
+      "title": "Oyun ve Ritim Atölyesi: Müziğin Kalbine Yolculuk Yaş Grubu: 4-6",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T12:00:00.000Z",
+        "2026-10-04T13:00:00.000Z",
+        "2026-10-18T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/oyun-ve-ritim-atolyesi-muzigin-kalbine-yolculuk-yas-grubu-4-6-akm"
+      ],
+      "evidenceExcerpt": "Oyun ve Ritim Atölyesi: Müziğin Kalbine Yolculuk Müziğin renkli dünyasına adım atıyoruz! Bu atölyede çocuklarımız sadece dinleyici değil, müziğin bizzat yaratıcısı oluyorlar. Hikayelerle ve oyunlarla harmanladığımız atölyemizde; beden perküsyonuyla ritim tutmayı öğreniyor, şarkılarla sesimizi keşfediyoruz. Hareketten başlayıp çalgılara uzanan bu keyifli yolculukta en önemli kuralımız: Özgür olmak! Hem ritim tutup hem",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 12,
+      "productionIdentity": "117fee70fe95f966b8ed03b3",
+      "rowCount": 6,
+      "title": "Hikaye Anlatıcılığı Ve Kukla Atölyesi Yaş Grubu:4-6",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T14:00:00.000Z",
+        "2026-10-10T14:00:00.000Z",
+        "2026-10-17T10:00:00.000Z",
+        "2026-10-24T12:00:00.000Z",
+        "2026-10-28T10:00:00.000Z",
+        "2026-10-31T14:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/hikaye-anlaticiligi-ve-kukla-atolyesi-yas-grubu-4-6-akm"
+      ],
+      "evidenceExcerpt": "Hikaye Anlatıcılığı Ve Kukla Atölyesi Çocukların hayal gücü, yaratıcılık ve ifade becerilerini geliştirmeyi amaçlayan interaktif bir sanat etkinliğidir. Atölye kapsamında çocuklar; hikâye kurma, karakter oluşturma ve kukla oynatımı süreçlerine aktif olarak katılırlar. Etkinlik sürecinde çocuklar kendi kuklalarını tasarlayarak karakterlerine duygu ve kimlik kazandırır, ardından oluşturdukları hikâyeleri drama ve canla",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 13,
+      "productionIdentity": "1f8d37f365d59de3c550a8e7",
+      "rowCount": 8,
+      "title": "Piyano İle Tanışıyorum Yaş Grubu: 4-6",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T13:00:00.000Z",
+        "2026-10-03T14:00:00.000Z",
+        "2026-10-10T10:00:00.000Z",
+        "2026-10-10T11:00:00.000Z",
+        "2026-10-24T09:00:00.000Z",
+        "2026-10-24T10:00:00.000Z",
+        "2026-10-31T12:00:00.000Z",
+        "2026-10-31T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/piyano-ile-tanisiyorum-akm"
+      ],
+      "evidenceExcerpt": "Piyano İle Tanışıyorum Atölyesi Bu atölyede çocukların müzikle tanışması, piyanoyu eğlenceli ve keşif odaklı bir şekilde öğrenmesi hedeflenmektedir. Workshop İçeriği; * Piyanoyu tanıma ve tuşları keşfetme * Doğru oturuş ve el yerleşimini oyunlarla öğrenme * Ritim duygusunu geliştiren eğlenceli egzersizler * Nota kavramına basit ve görsel giriş * Klavyede kolay melodiler çalma * Dikkat ve dinleme becerilerini destekle",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 14,
+      "productionIdentity": "3fa7005a1764784b377292b3",
+      "rowCount": 2,
+      "title": "Hayal Oyunum / Yaratıcı Drama",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T10:00:00.000Z",
+        "2026-09-30T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/hayal-oyunum-akm"
+      ],
+      "evidenceExcerpt": "Hayal Oyunum / Yaratıcı Drama Atölyesi Kazanım - Amaç : Hayal gücü, duygu farkındalığı ve doğaçlama (yaratıcı ifade) becerisini geliştirmek. İçerik : Çocuklar görünmeyen hayali nesneleri gerçekmiş gibi canlandırır, ardından bu nesnelere duygular ekleyerek doğaçlama bir oyuna dönüştürürler. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 6-9 yaş aralığı için uygun olup, 6 yaşını doldurmamış ve 9 yaşından b",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 15,
+      "productionIdentity": "e667f11c96c540b8d235eb25",
+      "rowCount": 6,
+      "title": "Yaratıcı Yazarlık Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkeziㅤ"
+      ],
+      "sessionStarts": [
+        "2026-09-27T11:00:00.000Z",
+        "2026-10-03T10:00:00.000Z",
+        "2026-10-10T10:00:00.000Z",
+        "2026-10-17T10:00:00.000Z",
+        "2026-10-24T10:00:00.000Z",
+        "2026-10-31T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/yaratici-yazarlik-atolyesi-7-11-yas-akm"
+      ],
+      "evidenceExcerpt": "Yaratıcı Yazarlık Atölyesi Eğitim Etkinliği Eğitmen: Hande Nur Ün Atölye İçeriği: Katılımcılar, yaratıcı drama tekniği ve hayal gücünü birleştirerek kendilerini ifade etmeyi öğrenirler. Özgün hikayeler oluşturma becerilerini geliştirirlerken yazı yazma yetileri üzerine çalışmış olurlar. Bu atölye, çocukların yaratıcılıklarını ortaya çıkararak, kendilerini ve duygularını daha iyi ifade etmelerine, hayal güçlerini geli",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 16,
+      "productionIdentity": "c3525f73709c38ee44433bcc",
+      "rowCount": 2,
+      "title": "Çaça Dans Atölyesi: Latin Ritimleri Yaş Grubu: 4-7",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T11:00:00.000Z",
+        "2026-10-31T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/caca-dans-atolyesi-latin-ritimleri-yas-grubu-4-6-akm"
+      ],
+      "evidenceExcerpt": "Çaça Dans Atölyesi: Latin Ritimleri Küba’nın enerjik ve neşeli dansı Çaça, çocukların ritim duygusunu, denge ve koordinasyon becerilerini eğlenceli bir şekilde geliştirmesini sağlar. Bu atölyede çocuklar, canlı Latin müzikleri eşliğinde temel çaça adımlarını öğrenir, ritme uygun beden hareketleriyle eğlenir ve kendilerini özgürce ifade ederler. Etkinlik İçeriği: • Ritim oyunları ve ısınma çalışmaları • Temel Çaça adı",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 17,
+      "productionIdentity": "94fece8703b5ca2c73e75ef3",
+      "rowCount": 5,
+      "title": "Lego ve Resimle Geleceği Tasarlıyorum Yaş Grubu: 4-7",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T09:00:00.000Z",
+        "2026-09-30T09:00:00.000Z",
+        "2026-10-04T12:00:00.000Z",
+        "2026-10-07T10:00:00.000Z",
+        "2026-10-25T14:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/lego-ve-resimle-gelecegi-tasarliyorum-yas-grubu-4-7-akm"
+      ],
+      "evidenceExcerpt": "Lego ve Resimle Geleceği Tasarlıyorum Atölyesi Bu atölyede çocuklar, eğitmenin yazarı olduğu “Güzel Düşün, Güzellikler Yayılsın” adlı hikâyeden yola çıkarak hayal güçlerini sanatla ifade eder. Hikâyeyi dinledikten sonra karakterleri ve sahneleri lego ile üç boyutlu olarak inşa eder, ardından resim çalışmalarıyla hikâyeyi kendi yorumlarıyla yeniden anlatırlar. Atölye, çocukların yalnızca dinleyen değil; üreten, düşüne",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 18,
+      "productionIdentity": "add8c03d8786a1d291c33282",
+      "rowCount": 6,
+      "title": "Suluboya İle Gölge Çalışması Atölyesi Yaş Grubu:6-9",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-07T12:00:00.000Z",
+        "2026-10-11T12:00:00.000Z",
+        "2026-10-14T13:00:00.000Z",
+        "2026-10-17T12:00:00.000Z",
+        "2026-10-18T14:00:00.000Z",
+        "2026-10-21T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/suluboya-ile-golge-calismasi-atolyesi-yas-grubu-6-9-akm"
+      ],
+      "evidenceExcerpt": "Suluboya İle Gölge Çalışması Atölyesi Atölyenin Amacı Bu atölyenin temel amacı, 6-9 yaş grubundaki çocukların kontrast (zıtlık), siluet (gölge figür) ve renk geçişleri (tonlama) kavramlarını görsel sanatlar yoluyla keşfetmelerini sağlamaktır. Çocuklar, arka planda halkanın merkezinden dışa doğru açılan veya koyulaşan canlı renk tonlarını kullanırken; ön planda tek renk siyah siluetler oluşturarak negatif-pozitif alan",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 19,
+      "productionIdentity": "d144447e57c08c723a0cddfe",
+      "rowCount": 9,
+      "title": "Ebru Atölyesi Yaş Grubu:7-11",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-30T11:00:00.000Z",
+        "2026-10-03T11:00:00.000Z",
+        "2026-10-03T12:00:00.000Z",
+        "2026-10-10T11:00:00.000Z",
+        "2026-10-14T12:00:00.000Z",
+        "2026-10-17T13:00:00.000Z",
+        "2026-10-24T12:00:00.000Z",
+        "2026-10-28T12:00:00.000Z",
+        "2026-10-31T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/ebru-atolyesi-yas-grubu-7-11-akm"
+      ],
+      "evidenceExcerpt": "Ebru Atölyesi Bu atölyede çocuklar, Ebru Sanatının geleneksel tekniklerini deneyimlerken aynı zamanda yaratıcı düşünme becerilerini geliştirir. Katılım sağlayan her çocuk kendi desenini planlar, suyun hareketine yön verir ve eseri kâğıda aktararak sanatsal üretimini tamamlar. Etkinlik İçeriği: • Ebru sanatının kısa tanıtımı ve kültürel hikâyesi • Boya hazırlığı ve kontrolü • Fırça teknikleri ve su yüzeyinde desen olu",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 20,
+      "productionIdentity": "7061e10d2dbbc01b57d9ffeb",
+      "rowCount": 10,
+      "title": "Heykel Yapım Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T10:00:00.000Z",
+        "2026-10-04T14:00:00.000Z",
+        "2026-10-07T11:00:00.000Z",
+        "2026-10-10T13:00:00.000Z",
+        "2026-10-11T11:00:00.000Z",
+        "2026-10-14T11:00:00.000Z",
+        "2026-10-17T11:00:00.000Z",
+        "2026-10-18T13:00:00.000Z",
+        "2026-10-21T11:00:00.000Z",
+        "2026-10-25T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/heykel-yapim-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Heykel Yapım Atölyesi Heykel atölyesi kapsamında çocuklar; temel şekillendirme ve üç boyutlu tasarım tekniklerini öğrenerek kendi heykellerini üretirler. Atölye sürecinde yaratıcılık, hayal gücü ve el becerileri desteklenir. Katılımcılar; kil, geri dönüşüm malzemeleri veya farklı dokularla çalışarak form, denge ve hacim kavramlarını deneyimlerler. Sürecin sonunda çocuklar kendi özgün heykellerini tamamlayarak kısa bi",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 21,
+      "productionIdentity": "b3d2712db9097154e147b953",
+      "rowCount": 5,
+      "title": "Çocuklar İçin Yaratıcı Dans Atölyesi Yaş Grubu: 4-6",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T11:00:00.000Z",
+        "2026-10-04T12:00:00.000Z",
+        "2026-10-11T12:00:00.000Z",
+        "2026-10-18T12:00:00.000Z",
+        "2026-10-25T11:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/cocuklar-icin-yaratici-dans-yas-grubu-4-6-akm"
+      ],
+      "evidenceExcerpt": "Çocuklar İçin Yaratıcı Dans Atölyesi Çocukların sevdiği güncel şarkılar eşliğinde senkronize hareket edilir. Hareket kombinasyonları ve dans cümleleri oluşturulur. Bu atölye çocukların beden koordinasyona katkı sağlar, ritim kulaklarını geliştirir. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 4-6 yaş aralığı için uygun olup, 4 yaşını doldurmamış ve 6 yaşından büyük çocuklar etkinliğe alınmayacaktır. • ",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 22,
+      "productionIdentity": "405b550bcfbe6422098d8243",
+      "rowCount": 10,
+      "title": "Köpük Baskı Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-04T09:00:00.000Z",
+        "2026-10-04T10:00:00.000Z",
+        "2026-10-11T09:00:00.000Z",
+        "2026-10-11T10:00:00.000Z",
+        "2026-10-18T09:00:00.000Z",
+        "2026-10-18T10:00:00.000Z",
+        "2026-10-21T10:00:00.000Z",
+        "2026-10-21T11:00:00.000Z",
+        "2026-10-24T10:00:00.000Z",
+        "2026-10-24T11:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/kopuk-baski-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Köpük Baskı Atölyesi Bu atölyede çocuklar, köpük baskı tekniğini kullanarak kendi özgün desen ve kompozisyonlarını oluşturacaklardır. Öncelikle köpük yüzeylere kalem yardımıyla çeşitli çizimler yapılacak, ardından bu yüzeyler boyanarak kâğıda baskı alınacaktır. Her baskıda farklı dokular ve sürpriz desenler ortaya çıkarak çocukların yaratıcılıklarını keşfetmeleri desteklenecektir. Atölye süresince katılımcılar baskı ",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 23,
+      "productionIdentity": "68c186ee1c99068c6b9b1ab4",
+      "rowCount": 5,
+      "title": "Çocuklar İçin Dans Atölyesi Yaş Grubu: 7-11",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T12:00:00.000Z",
+        "2026-10-04T11:00:00.000Z",
+        "2026-10-11T11:00:00.000Z",
+        "2026-10-18T11:00:00.000Z",
+        "2026-10-25T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/cocuklar-icin-dans-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Çocuklar İçin Dans Atölyesi Çocukların sevdiği güncel şarkılar eşliğinde senkronize hareket edilir. Hareket kombinasyonları ve dans cümleleri oluşturulur. Bu atölye çocukların beden koordinasyona katkı sağlar, ritim kulaklarını geliştirir. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 7-11 yaş aralığı için uygun olup, 7 yaşını doldurmamış ve 11 yaşından büyük çocuklar etkinliğe alınmayacaktır. • Etkinli",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 24,
+      "productionIdentity": "f6acd251dab9c841872838a6",
+      "rowCount": 4,
+      "title": "Benim Manzaram / Dokulu Tuval Çalışması Yaş Grubu:5-9",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-04T10:00:00.000Z",
+        "2026-10-11T11:00:00.000Z",
+        "2026-10-18T11:00:00.000Z",
+        "2026-10-25T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/benim-manzaram-dokulu-tuval-calismasi-yas-grubu-5-9-akm"
+      ],
+      "evidenceExcerpt": "Benim Manzaram / Dokulu Tuval Çalışması Atölyesi Benim Manzaram Dokulu Tuval Çalışması, 5-9 yaş arası çocukların dokunma duyularını harekete geçirirken doğa algılarını ve ince motor becerilerini geliştiren harika bir duyusal sanat atölyesidir. Çocuk dostu ve güvenli malzemelerin kullanılacağı etkinlikte minikler; tıraş köpüğü, pamuk, kil ve gerçek deniz kumu gibi farklı materyallerle tuvallerine 3 boyutlu bir doğa ma",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 25,
+      "productionIdentity": "533a4c7e0b11eec8abc01904",
+      "rowCount": 1,
+      "title": "Miles: Bir Caz İkonunun Anatomisi - Hakan Rauf Tüfekçi, Atilla Ayginin, Eray Düzgünsoy, Hakan Atala",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletix"
+      ],
+      "venues": [
+        "Komünite"
+      ],
+      "sessionStarts": [
+        "2026-09-27T09:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://www.biletix.com/etkinlik/5ACFY/ISTANBUL/tr"
+      ],
+      "evidenceExcerpt": "Bu keyifli söyleşi, doğumunun 100. yılında, caz tarihinin belki de üzerine en çok konuşulan isimlerinden Miles Davis’i; yaşamının en keskin virajları, efsanevi kayıtları, az bilinen ve pek konuşulmayan yönleri, korkuları, sahne kıyafetleri ve insan ilişkileri üzerinden ele alıyor. 27 Eylül’de Komünite’de gerçekleşecek ve gerçek bir caz efsanesi olan Miles Davis’in etrafındaki bazı sis perdelerini aralamayı amaçlayan ",
+      "judgment": "correct_exclusion_explicit_talk_panel",
+      "rationale": "Description explicitly calls the listing a söyleşi and identifies a moderator and panelists; it is not a live concert despite provider category Konser."
+    },
+    {
+      "case": 26,
+      "productionIdentity": "9b8c8a9e41c0c185c3ad2729",
+      "rowCount": 2,
+      "title": "Buluşum Senin Elinde Yaratıcı Drama Atölyesi",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T11:00:00.000Z",
+        "2026-10-17T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/bulusum-senin-elinde-yaratici-drama-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Buluşum Senin Elinde Yaratıcı Drama Atölyesi Oyuncu Gamze Dar ile Yaratıcı Drama Atölyemizde dört kişilik gruplar halinde çocuklar yaratıcı drama ile bir icat hikayesi canlandırıyorlar. İkisi anlatırken, diğer ikisi onların hareketlerini yönlendiriyor ve birlikte yaratıcı bir buluş sahnesi ortaya çıkıyor. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 7-11 yaş aralığı için uygun olup, 7 yaşını doldurmamı",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 27,
+      "productionIdentity": "e308cc1226573ab01e1fdc44",
+      "rowCount": 2,
+      "title": "Çaça Dans Atölyesi:Latin Ritimleri Yaş Grubu: 7-11",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T12:00:00.000Z",
+        "2026-10-31T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/caca-dans-atolyesi-latin-ritimleri-yas-grubu-7-11-akm"
+      ],
+      "evidenceExcerpt": "Çaça Dans Atölyesi:Latin Ritimleri Küba’nın enerjik ve neşeli dansı Çaça, çocukların ritim duygusunu, denge ve koordinasyon becerilerini eğlenceli bir şekilde geliştirmesini sağlar. Bu atölyede çocuklar, canlı Latin müzikleri eşliğinde temel çaça adımlarını öğrenir, ritme uygun beden hareketleriyle eğlenir ve kendilerini özgürce ifade ederler. Etkinlik İçeriği: • Ritim oyunları ve ısınma çalışmaları • Temel Çaça adım",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 28,
+      "productionIdentity": "7eb47c5dbedf7f2b0e32a41a",
+      "rowCount": 5,
+      "title": "Sesimi ve Müzik Yeteneğimi Keşfediyorum 7-12",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T11:00:00.000Z",
+        "2026-10-03T09:00:00.000Z",
+        "2026-10-04T10:00:00.000Z",
+        "2026-10-11T13:00:00.000Z",
+        "2026-10-18T09:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/sesimi-ve-muzik-yetenegimi-kesfediyorum-7-12-akm"
+      ],
+      "evidenceExcerpt": "Sesimi ve Müzik Yeteneğimi Keşfediyorum Atölyesi Atölye de çocuklarımız doğru ve güzel şarkı söyleme tekniklerini öğrenerek kendi seslerini keşfederken, ritim, duyum, nefes, heyecan kontrolü ve odaklanmalarını da geliştirecekler. Ayrıca doğru konuşma tekniklerini öğrenirken diksiyon eğitimiyle ilk kez tanışacaklar. Şarkı söylemenin aslında müzikli konuşma olduğunu, doğru yerden konuşmanın ne kadar önemli olduğunu ilk",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 29,
+      "productionIdentity": "7927cebe811881b705eb3cfc",
+      "rowCount": 2,
+      "title": "Ebeveyn-Çocuk Ritim ve Dans Atölyesi Yaş Grubu: 3-5",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T14:00:00.000Z",
+        "2026-10-25T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/ebeveyn-cocuk-ritim-ve-dans-atolyesi-yas-grubu-3-5-akm"
+      ],
+      "evidenceExcerpt": "Ebeveyn-Çocuk Ritim ve Dans Atölyesi Yaratıcı dans atölyesi, çocukların sevdiği güncel müzikler eşliğinde basit hareket kombinasyonları ve dans cümlelerini doğaçlama ve hayal güçleri ile birleştirerek, sanat ve eğlence yolu ile zihinsel ve fiziksel gelişimlerini destekleyen bir atölyedir.. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 3-5 yaş aralığı için uygun olup, 3 yaşını doldurmamış ve 5 yaşından b",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 30,
+      "productionIdentity": "794e8d6c7d1d8e4316b424b2",
+      "rowCount": 1,
+      "title": "Hayalin Ritmi / Yaratıcı Drama",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-04T11:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/hayalin-ritmi-yaratici-drama-3-5-akm"
+      ],
+      "evidenceExcerpt": "Hayalin Ritmi / Yaratıcı Drama Atölyesi Kazanım - Amaç : Hayal gücü, duygu farkındalığı ve doğaçlama (yaratıcı ifade) becerisini geliştirmek. İçerik : Çocuklar görünmeyen hayali nesneleri gerçekmiş gibi canlandırır, ardından bu nesnelere duygular ekleyerek doğaçlama bir oyuna dönüştürürler. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 3-5 yaş aralığı için uygun olup, 3 yaşını doldurmamış ve 5yaşından b",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 31,
+      "productionIdentity": "ee90b2cff1b8bb6e5f14ed2f",
+      "rowCount": 5,
+      "title": "Cam Boncuk Atölyesi 9-12",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-11T13:00:00.000Z",
+        "2026-10-18T11:00:00.000Z",
+        "2026-10-18T12:00:00.000Z",
+        "2026-10-25T11:00:00.000Z",
+        "2026-10-25T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/cam-boncuk-atolyesi-9-12-akm"
+      ],
+      "evidenceExcerpt": "Cam Boncuk Atölyesi Bu atölyede Kültürel Miras Taşıyıcısı Cam Sanatçısı Furkan Kurt eşliğinde Cam Boncuk atölyesi yapılacaktır. İÇERİK -Rengarenk cam çubukları alevde yumuşatıp şekil vererek cam boncuklar yapıyoruz. -Noktalamalar, çizgiler ve cam partikülleri kullanarak doğaçlama desenler oluştururken akışkan cama nasıl şekil verildiğini deneyimliyoruz. -Yaptığımız cam boncukları kolye, bileklik, çanta süsü vb. akses",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 32,
+      "productionIdentity": "870e598b22517b3df4894944",
+      "rowCount": 4,
+      "title": "Sihirli Fanus Atölyesi Yaş Grubu: 5-9",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-04T09:00:00.000Z",
+        "2026-10-11T10:00:00.000Z",
+        "2026-10-18T10:00:00.000Z",
+        "2026-10-21T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/sihirli-fanus-atolyesi-yas-grubu-5-9-akm"
+      ],
+      "evidenceExcerpt": "Sihirli Fanus Atölyesi Sihirli Hayal Fanusu Atölyesi’nin temel amacı; 4-7 yaş grubundaki çocukların iç dünyalarını, hayallerini ve duygularını somut bir nesne (fanus) üzerinden dışa vurmalarını sağlamaktır. Güvenli ve dokunsal malzemelerle kurgulanan bu süreçte; çocukların yaratıcı düşünme becerilerini tetiklemek, el-göz koordinasyonlarını güçlendirmek ve topluluk önünde kendi hikayelerini anlatarak özgüvenli bireyle",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 33,
+      "productionIdentity": "4d31320e4773352022a22c63",
+      "rowCount": 3,
+      "title": "Yaratıcı Müzik: Ritim, Ses ve Hareket",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-09-27T13:00:00.000Z",
+        "2026-10-04T12:00:00.000Z",
+        "2026-10-18T13:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/yaratici-muzik-ritim-ses-ve-hareket-akm"
+      ],
+      "evidenceExcerpt": "Yaratıcı Müzik: Ritim ve Ses Hareket Atölyesi Ritim, ses ve hareket... Bu atölyede çocuklar müziği pasif bir dinleyici olarak değil, sürecin aktif bir parçası olarak deneyimliyor. Beden perküsyonundan ritim çalgılarına uzanan çalışmalarımızda; hazır kalıplar yerine doğaçlama oyunlarla ilerliyoruz. Atölye sürecinde çocuklar bedenlerinden ve çalgılardan yararlanarak kendi ritimlerini oluşturma fırsatı buluyorlar. Çocuk",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 34,
+      "productionIdentity": "9d2cc29ce7afe85681c5c468",
+      "rowCount": 3,
+      "title": "Sesimi ve Müzik Yeteneğimi Keşfediyorum 6-9",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-04T11:00:00.000Z",
+        "2026-10-11T14:00:00.000Z",
+        "2026-10-18T10:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/sesimi-ve-muzik-yetenegimi-kesfediyorum-6-9-akm"
+      ],
+      "evidenceExcerpt": "Sesimi ve Müzik Yeteneğimi Keşfediyorum Atölyesi Atölye de çocuklarımız doğru ve güzel şarkı söyleme tekniklerini öğrenerek kendi seslerini keşfederken, ritim, duyum, nefes, heyecan kontrolü ve odaklanmalarını da geliştirecekler. Ayrıca doğru konuşma tekniklerini öğrenirken diksiyon eğitimiyle ilk kez tanışacaklar. Şarkı söylemenin aslında müzikli konuşma olduğunu, doğru yerden konuşmanın ne kadar önemli olduğunu ilk",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 35,
+      "productionIdentity": "f74916060324d77539d9a756",
+      "rowCount": 1,
+      "title": "Yaratıcı Drama Atölyesi: Meraklı Ayıcık Yaş Grubu: 4-7",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-17T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/merakli-ayicik-yaratici-drama-atolyesi-4-7-yas-akm"
+      ],
+      "evidenceExcerpt": "Yaratıcı Drama Atölyesi: Meraklı Ayıcık Oyuncu Gamze Dar ile Yaratıcı Drama Atölyemizde çocuklar farklı renkleri ve bu renklere bağlı duyguları yaratıcı drama ile keşfediyorlar. Renklerle ilgili küçük oyunlar ve canlandırmalar yaparak duygusal farkındalık kazanıyorlar. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 4-7 yaş aralığı için uygun olup, 4 yaşını doldurmamış ve 7 yaşından büyük çocuklar etkinli",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    },
+    {
+      "case": 36,
+      "productionIdentity": "31b1b57ad0d1458e27a99e85",
+      "rowCount": 1,
+      "title": "Yaratıcı Drama Atölyesi: Pazar Duyumcuları",
+      "providerCategory": "Konser",
+      "sources": [
+        "biletinial"
+      ],
+      "venues": [
+        "AKM Çocuk Sanat Merkezi"
+      ],
+      "sessionStarts": [
+        "2026-10-03T12:00:00.000Z"
+      ],
+      "sourceUrls": [
+        "https://biletinial.com/tr-tr/muzik/pazar-duyumculari-yaratici-drama-atolyesi-akm"
+      ],
+      "evidenceExcerpt": "Yaratıcı Drama Atölyesi: Pazar Duyumcuları Oyuncu Gamze Dar ile gerçekleşecek bu atölyede çocuklar pazarda bir duyu keşif yolculuğuna çıkarak kokuları, tatları ve sesleri birlikte deneyimleyip yaratıcı drama ile eğlenceli bir keşif yapıyorlar. • Etkinlik öncesi kimlik kontrolü yapılmaktadır. • Etkinlik 4-6 yaş aralığı için uygun olup, 4 yaşını doldurmamış ve 6 yaşından büyük çocuklar etkinliğe alınmayacaktır. • Etkin",
+      "judgment": "correct_exclusion_explicit_workshop",
+      "rationale": "Title or leading description explicitly identifies a participatory atölye/workshop; it is not a supported concert, theatre performance, or stand-up show."
+    }
+  ]
+}

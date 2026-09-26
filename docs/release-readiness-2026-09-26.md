@@ -16,8 +16,8 @@ by the release workflow before any candidate is deployed.
 
 | Check | Observed result |
 | --- | --- |
-| Web unit tests on Node 22.23.3 | 239 passed |
-| Collector tests on Node 22.23.3 | 35 passed |
+| Web unit tests on Node 22.23.3 | 240 passed |
+| Collector tests on Node 22.23.3 | 37 passed |
 | Deployment, artifact, promotion, rollback, and drill tests | 27 passed |
 | Typecheck and lint | Passed |
 | Normal and standalone Cloudflare builds | Passed on Windows |
@@ -68,6 +68,19 @@ paced 60 seconds apart with no retries. It embedded 590 new documents and reused
 1,052 existing document vectors, ending at 1,642/1,642 eligible unique documents
 with zero pending. This is local cache coverage, not staging index evidence.
 
+A final homepage review found workshops and a jazz discussion labelled as
+concerts by broad provider music categories. Shared detail-evidence checks now
+exclude explicit unsupported formats in both collection and runtime eligibility,
+including previously cached records. The raw catalog remains unchanged. The
+[offline format audit](../web/evals/reports/2026-09-26-event-format-audit.md)
+reviewed all 160 excluded sessions across 36 productions: 35 workshops and one
+talk/panel, with no false exclusion found in that fixed-time catalog review.
+The [final guard comparison](../web/evals/reports/2026-09-26-event-format-final-guard-comparison.json)
+preserves the original audit and records one additional explicit art talk caught
+by Turkish inflection handling, bringing the final exclusion set to 161 sessions
+across 37 productions. Its title and description explicitly identify a moderated
+art discussion. Tests also preserve genuine performances with ambiguous titles.
+
 ## Cloud and automation state
 
 - Cloudflare browser/Wrangler OAuth works on this Windows PC. The dedicated
@@ -87,6 +100,13 @@ with zero pending. This is local cache coverage, not staging index evidence.
 - The earlier [readiness monitor run](https://github.com/Efeblk/event_recommender/actions/runs/36265877841)
   failed: staging had no Worker and production had no configured URL. The failure
   remains recorded. No 48-hour observation window has started.
+- Private staging preparation copied only the local `voyage_embeddings` cache
+  into staging D1: 1,718 cached vectors, including historical entries that may
+  later be reused. Full sorted content-hash readback matched all rows
+  (`7df1befd720a7336422147aaf589bd682f0d1dde531080b21101536a5e9df1a8`).
+  No request-limit/user state was copied, no additional provider calls were
+  made, and no Worker was published. The SQL export and readback evidence remain
+  in ignored `web/work/`; this preparation does not replace a remote recovery drill.
 
 Deployment builds once, preserves a compiled SHA-256 manifest, and verifies it
 before remote mutations. Production promotes the exact successful staging

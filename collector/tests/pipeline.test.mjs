@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { load } from "cheerio";
-import { detailUrl, discover, extract } from "../adapters.mjs";
+import { categorySupportedByEvent, detailUrl, discover, extract } from "../adapters.mjs";
 import { validateEvent, reconcile, publicationGate, productionKey } from "../pipeline.mjs";
 const now = new Date("2026-09-09T09:00:00Z");
 const bubilet = JSON.parse(
@@ -19,6 +19,41 @@ const wrap = (value, state = sessions) =>
     `<script type="application/ld+json">${JSON.stringify(value)}</script>` +
       `<script>self.__next_f.push([1,${JSON.stringify("1:" + JSON.stringify(state) + "\n")}])</script>`,
   );
+
+await test("explicit workshop and talk evidence overrides a provider music category", () => {
+  assert.equal(
+    categorySupportedByEvent(
+      "Konser",
+      "Lego ve Resimle Geleceği Tasarlıyorum Yaş Grubu: 4-7",
+      "Lego ve Resimle Geleceği Tasarlıyorum Atölyesi Bu atölyede çocuklar üretir.",
+    ),
+    null,
+  );
+  assert.equal(
+    categorySupportedByEvent(
+      "Konser",
+      "Miles: Bir Caz İkonunun Anatomisi",
+      "Bu keyifli söyleşi Miles Davis'i ele alıyor. Moderatör ve panelistler katılıyor.",
+    ),
+    null,
+  );
+  assert.equal(
+    categorySupportedByEvent(
+      "Konser",
+      "Yaz Konseri",
+      "Sanatçıların canlı performansı Harbiye sahnesinde gerçekleşir.",
+    ),
+    "Konser",
+  );
+  assert.equal(
+    categorySupportedByEvent("Konser", "Atölye Konseri", "Canlı konser bu akşam sahnelenir."),
+    "Konser",
+  );
+  assert.equal(
+    categorySupportedByEvent("Konser", "Konser Atölyesi", "Bu atölyede ritim öğrenilir."),
+    null,
+  );
+});
 const url = "https://www.bubilet.com.tr/istanbul/etkinlik/sebnem-ferah";
 
 await test("real Bubilet schema yields all three individual sessions, not aggregate price/date", async () => {
@@ -48,6 +83,25 @@ await test("Biletix embedded state groups ticket types and converts kurus to TRY
   assert.equal(events[0].price, 520);
   assert.equal(events[0].availability, "available");
   assert.equal(events[0].startsAt, "2026-09-18T18:00:00.000Z");
+});
+await test("Biletix MUSIC detail is rejected when its event evidence says talk", async () => {
+  const state = structuredClone(biletix);
+  const detail = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find((data) => data && !Array.isArray(data) && data.eventCode === "5JBD4");
+  detail.eventName = "Miles: Bir Caz İkonunun Anatomisi";
+  detail.eventDescription = "Bu keyifli söyleşi Miles Davis'i ele alıyor. Moderatör ve panelistler katılıyor.";
+  detail.eventCategoryCode = "MUSIC";
+  await assert.rejects(
+    extract(
+      load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
+      "biletix",
+      "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      null,
+      now,
+    ),
+    /unsupported_category/,
+  );
 });
 await test("Biletix unknown or inactive statuses are never offered as on sale", async () => {
   const state = structuredClone(biletix);

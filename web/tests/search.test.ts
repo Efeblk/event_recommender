@@ -104,6 +104,73 @@ await test('event hard constraints reject stale, past, cancelled and sold-out da
       false,
     );
 });
+await test('explicit workshop and talk evidence cannot pass as a concert', () => {
+  for (const mismatch of [
+    {
+      title: 'Çizgi Roman Atölyesi',
+      description: 'Bu atölyede çocuklar hikâyelerini görselleştirir.',
+    },
+    {
+      title: 'Miles: Bir Caz İkonunun Anatomisi',
+      description: 'Bu keyifli söyleşi Miles Davis’i ele alıyor. Moderatör ve panelistler katılıyor.',
+    },
+    {
+      title: 'Seramik Deneyimi',
+      description: 'Bu atölyede çocuklar kil ile üretir.',
+    },
+  ])
+    for (const filters of [emptyFilters, { ...emptyFilters, category: 'Konser' as const }])
+      assert.equal(isEligible({ ...event, ...mismatch }, filters, now), false);
+  assert.equal(
+    isEligible(
+      {
+        ...event,
+        title: 'Yaz Konseri',
+        description: 'Canlı performans Harbiye sahnesinde gerçekleşir.',
+      },
+      { ...emptyFilters, category: 'Konser' },
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    isEligible(
+      {
+        ...event,
+        title: 'Atölye Konseri',
+        description: 'Canlı konser, yeni besteleri seyirciyle buluşturuyor.',
+      },
+      emptyFilters,
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    isEligible(
+      {
+        ...event,
+        title: 'Konser Atölyesi',
+        description: 'Bu atölyede katılımcılar temel ritim tekniklerini öğrenir.',
+      },
+      emptyFilters,
+      now,
+    ),
+    false,
+  );
+  assert.equal(
+    isEligible(
+      {
+        ...event,
+        category: 'Tiyatro',
+        title: 'Ayrılık Çeşmesi',
+        description: "Ayrılık Çeşmesi Tiyatro Oyunu, bir yazarlık atölyesinin üretimlerindendir.",
+      },
+      { ...emptyFilters, category: 'Tiyatro' },
+      now,
+    ),
+    true,
+  );
+});
 await test('unknown price never passes a budget; free events do', () => {
   assert.equal(
     isEligible(
