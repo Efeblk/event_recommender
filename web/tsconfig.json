@@ -41,6 +41,7 @@
     "node_modules",
     "work",
     "dist",
+    "dist-node",
     ".wrangler",
     "deploy-provenance",
     "outputs"

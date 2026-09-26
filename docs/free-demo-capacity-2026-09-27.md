@@ -1,5 +1,7 @@
 # Free demo capacity evidence — 2026-09-27
 
+> Follow-up: the user selected GCP after this evaluation. See [GCP deployment](gcp-deployment.md). Measurements below remain historical evidence, not validation of the new target.
+
 This record captures the bounded staging evidence collected while evaluating whether the demo can remain on Cloudflare's Free profile. It does not replace the launch gates in [deployment.md](deployment.md) or [launch-checklist.md](launch-checklist.md). The machine-readable companion is [2026-09-27-free-capacity.json](../web/evals/reports/2026-09-27-free-capacity.json).
 
 ## Verified behavior

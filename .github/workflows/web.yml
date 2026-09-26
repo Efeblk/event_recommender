@@ -76,3 +76,40 @@ jobs:
           npm run build
           npm run test:smoke
           npm run deploy:dry-run -- --env staging
+
+  gcp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run test:deploy:gcp
+      - run: npm run build:node
+      - run: npm run test:smoke:node
+      - name: Build the Linux container without credentials or deployment
+        run: docker build --tag biplan-gcp-ci:${{ github.sha }} .
+
+  terraform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra/gcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.16.4
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+      - name: Verify private staging plans without Google credentials
+        run: terraform test
