@@ -5,6 +5,12 @@ import { mergeEventSessions } from './event-merge.ts';
 import { isEligible } from './search.ts';
 import { embeddingText } from './ai.ts';
 import {
+  consumeBuckets,
+  requestLimitBuckets,
+  type LimitConsumer,
+} from './rate-limit.ts';
+export type { RateLimitResult } from './rate-limit.ts';
+import {
   embeddingCacheKey,
   validVector,
   type EmbeddingConfig,
@@ -277,24 +283,31 @@ export async function digest(text: string) {
     .map((n) => n.toString(16).padStart(2, '0'))
     .join('');
 }
-export async function rateLimit(request: Request, paid: boolean) {
-  const now = Date.now(),
-    hour = Math.floor(now / 3600000),
-    day = Math.floor(now / 86400000);
+export async function requestRateLimit(
+  request: Request,
+  paid: boolean,
+  now = Date.now(),
+  consume: LimitConsumer = consumeLimit,
+) {
   const ip = await digest(request.headers.get('cf-connecting-ip') || 'local');
-  if (
-    !(await consumeLimit(
-      `ip:${ip}:${hour}`,
-      paid ? 20 : 120,
-      (hour + 1) * 3600000,
-    ))
-  )
-    return false;
-  const configured = Number(runtime().AI_DAILY_LIMIT || 100);
+  return consumeBuckets(requestLimitBuckets(ip, paid, now), now, consume);
+}
+
+export async function aiDailyRateLimit(
+  now = Date.now(),
+  configuredValue = runtime().AI_DAILY_LIMIT,
+  consume: LimitConsumer = consumeLimit,
+) {
+  const day = Math.floor(now / 86400000);
+  const configured = Number(configuredValue || 100);
   const cap = Number.isFinite(configured)
     ? Math.max(1, Math.min(10000, configured))
     : 100;
-  return !paid || (await consumeLimit(`ai:${day}`, cap, (day + 1) * 86400000));
+  return consumeBuckets(
+    [{ key: `ai:${day}`, limit: cap, expiresAt: (day + 1) * 86400000, scope: 'daily' }],
+    now,
+    consume,
+  );
 }
 export async function vectorsFor(
   events: EventRecord[],

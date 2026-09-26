@@ -231,6 +231,7 @@ export default function Home() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [rateLimited, setRateLimited] = useState(false);
   const [retryAction, setRetryAction] = useState<RetryAction>(null);
   const [excluded, setExcluded] = useState<string[]>([]);
   const [donationUrl, setDonationUrl] = useState<string | null>(null);
@@ -373,6 +374,7 @@ export default function Home() {
     searchBusy.current = true;
     setBusy(true);
     setError('');
+    setRateLimited(false);
     setRetryAction(null);
     try {
       const response = await fetch('/api/recommend', {
@@ -387,8 +389,14 @@ export default function Home() {
         }),
       });
       const data = (await response.json()) as SearchResult & { error?: string };
-      if (!response.ok) throw new Error(data.error || 'Arama tamamlanamadı.');
       if (generation !== searchGeneration.current) return;
+      if (response.status === 429) {
+        setError(data.error || 'Arama sınırına ulaşıldı. Lütfen daha sonra yeniden dene.');
+        setRateLimited(true);
+        setRetryAction(null);
+        return;
+      }
+      if (!response.ok) throw new Error(data.error || 'Arama tamamlanamadı.');
       setResult(data);
       setFilters(data.filters);
       const needsRevision =
@@ -451,6 +459,7 @@ export default function Home() {
     setBusy(false);
     searchBusy.current = false;
     setError('');
+    setRateLimited(false);
     setRetryAction(null);
     const reduceMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
@@ -611,17 +620,19 @@ export default function Home() {
         {error && (
           <div className="error-banner" role="alert">
             <span>{error}</span>
-            <Button
-              variant="ghost"
-              disabled={busy || initialLoading}
-              onClick={() => {
-                if (retryAction?.kind === 'search')
-                  void search('', false, retryAction.attempt);
-                else void loadEvents();
-              }}
-            >
-              Yeniden dene
-            </Button>
+            {!rateLimited && (
+              <Button
+                variant="ghost"
+                disabled={busy || initialLoading}
+                onClick={() => {
+                  if (retryAction?.kind === 'search')
+                    void search('', false, retryAction.attempt);
+                  else void loadEvents();
+                }}
+              >
+                Yeniden dene
+              </Button>
+            )}
           </div>
         )}
         {catalog?.status === 'stale' && (

@@ -30,6 +30,6 @@ account.
 - `collector/output/soak-evidence.json`: generated evidence for one real run; never a substitute for elapsed observation.
 - `web/scripts/evaluate-jev.ts`: dry run by default; `--live` explicitly sends up to 12 evaluation calls and records returned token usage/latency.
 - GitHub deployment artifacts: exact SHA, build hashes, non-secret configuration and provenance.
-- [September 26 readiness record](release-readiness-2026-09-26.md): current local evidence and outstanding cloud gates. Historical observations do not replace rechecking the candidate revision.
+- [September 27 readiness record](release-readiness-2026-09-27.md): deployed staging identity, confirmed CPU failure, local rate-limit checks and outstanding cloud gates. Historical observations do not replace rechecking the candidate revision.
 
 Do not mark cloud deployment, the 48-hour observation, live AI quality, restore drills or tester acceptance complete until each has its own recorded evidence.

@@ -57,7 +57,7 @@ Yerelde sync için `SYNC_TOKEN` yeterlidir. Sahibe özel Sites yayınına dışa
 ## Maliyet ve hata davranışı
 
 - Normal öneri: en fazla iki sohbet çağrısı (isteği anlama ve aday seçimi), indeks hazırsa bir sorgu embedding çağrısı. Netleştirme veya eşleşme olmaması halinde ikinci sohbet çağrısı yapılmaz.
-- IP başına saatte 20, uygulama genelinde varsayılan günde 100 AI öneri isteği; `AI_DAILY_LIMIT` istek sayısıdır, dolar limiti değildir. Sync embedding çağrıları bu sayaçtan ayrıdır.
+- AI açıkken IP başına dakikada 5 ve saatte 20; AI kapalı temel aramada saatte 60; uygulama genelinde varsayılan günde 100 AI öneri isteği. `AI_DAILY_LIMIT` istek sayısıdır, dolar limiti değildir. IP sınırı katalog kontrolünden önce, günlük AI sınırı yalnızca hazır katalogdan sonra uygulanır. Sync embedding çağrıları bu sayaçtan ayrıdır.
 - Her dış istek 25 saniye ile sınırlıdır. 429, zaman aşımı, yarım/bozuk yanıt ve şema hatası ücretli tekrar denenmez. Sohbet hatasında açıklamalı filtreli arama; embedding hatasında kelime sıralaması ve AI seçimi kullanılır.
 - Yanıt boyutları sınırlıdır; sağlayıcının ham hata gövdesi kullanıcıya aktarılmaz. Olay adı, tarih, fiyat ve URL daima yerel aday kaydından gelir.
 - Sahte HTTP yanıtlarıyla adaptör sözleşmeleri ve hata yolları test edilir. Gerçek sağlayıcıya ücretli çağrı yapılmadı; fiyat, gecikme ve öneri kalitesi ölçülmedi.

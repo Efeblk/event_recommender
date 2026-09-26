@@ -256,6 +256,9 @@ test.describe('browser contracts', () => {
       }),
     );
     await page.goto('/');
+    // The textarea is present in the server-rendered shell before React can
+    // handle its key events. The mocked catalog card appears after hydration.
+    await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
     const textarea = page.getByLabel('Planını anlat');
     await textarea.fill('Bir konser bul');
     await textarea.press('Enter');
@@ -304,6 +307,7 @@ test.describe('browser contracts', () => {
     await expect(page.getByRole('alert')).toContainText(
       'Arama sınırına ulaşıldı.',
     );
+    await expect(page.getByRole('button', { name: 'Yeniden dene' })).toHaveCount(0);
     expect(unhandled).toEqual([]);
   });
 

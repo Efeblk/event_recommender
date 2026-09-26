@@ -351,7 +351,7 @@ async function runLoad(plan) {
   let batchNumber = 0;
   for (const concurrency of [1, 2, 4, 4, 4]) {
     if (!remaining) break;
-    if (batchNumber) await sleep(25_000);
+    if (batchNumber) await sleep(65_000);
     const size = Math.min(concurrency, remaining);
     const batch = await Promise.all(
       Array.from({ length: size }, async (_, index) => {

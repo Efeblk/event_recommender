@@ -4,6 +4,10 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { atomicJson, endpointFor, requestJson, validateCollection } from "./remote.mjs";
 
+// Keep source-page work below the Free D1 per-invocation query budget while
+// reserving room for lock handling and current-seed database initialization.
+export const MAX_IMPORT_PAGES = 3;
+
 export function prepareImportPages(pages, now = new Date()) {
   const cutoff = now.getTime();
   const omittedExpiredIds = [];
@@ -19,31 +23,43 @@ export function prepareImportPages(pages, now = new Date()) {
   return { pages: prepared, omittedExpiredIds };
 }
 
-export async function publish({ origin, token, report, checkpoint = false, snapshot, allowLoopbackHttp = false }) {
+export async function publish({ origin, token, report, checkpoint = false, snapshot, allowLoopbackHttp = false, now = () => new Date() }) {
   const importEndpoint = endpointFor(origin, "/api/admin/import", allowLoopbackHttp);
   if (report.schemaVersion !== 1 || report.summary?.blocked || !report.pages?.length)
     throw new Error("Only a validated, successful collection can be imported.");
-  const prepared = prepareImportPages(report.pages);
+  const prepared = prepareImportPages(report.pages, now());
   if (!prepared.pages.length)
     throw new Error("No future event sessions remain importable; checkpoint was not advanced.");
-  let batch = [], bytes = 0, imported = 0;
+  let batch = [], bytes = 0, imported = 0, sentBatches = 0, omittedCount = 0;
+  const omittedIds = [];
+  function recordOmissions(ids) {
+    omittedCount += ids.length;
+    omittedIds.push(...ids.slice(0, Math.max(0, 100 - omittedIds.length)));
+  }
+  recordOmissions(prepared.omittedExpiredIds);
   async function send() {
     if (!batch.length) return;
-    const { response, result } = await requestJson(importEndpoint, { token, method: "POST", body: { schemaVersion: 1, pages: batch } });
-    if (!response.ok) throw new Error(`Import returned HTTP ${response.status}; checkpoint was not advanced.`);
-    imported += Number(result?.imported ?? 0);
+    const current = prepareImportPages(batch, now());
+    recordOmissions(current.omittedExpiredIds);
     batch = [];
     bytes = 0;
+    if (!current.pages.length) return;
+    const { response, result } = await requestJson(importEndpoint, { token, method: "POST", body: { schemaVersion: 1, pages: current.pages } });
+    if (!response.ok) throw new Error(`Import returned HTTP ${response.status}; checkpoint was not advanced.`);
+    imported += Number(result?.imported ?? 0);
+    sentBatches += 1;
   }
   for (const minimal of prepared.pages) {
     const size = Buffer.byteLength(JSON.stringify(minimal));
     if (size > 3_500_000) throw new Error("A source page exceeds the import limit.");
-    if (batch.length >= 30 || bytes + size > 3_500_000) await send();
+    if (batch.length >= MAX_IMPORT_PAGES || bytes + size > 3_500_000) await send();
     batch.push(minimal);
     bytes += size;
   }
   await send();
-  const omission = { count: prepared.omittedExpiredIds.length, ids: prepared.omittedExpiredIds.slice(0, 100) };
+  if (!sentBatches)
+    throw new Error("No future event sessions remain importable; checkpoint was not advanced.");
+  const omission = { count: omittedCount, ids: omittedIds };
   if (!checkpoint) return { imported, checkpointed: false, omittedExpired: omission };
 
   const collectionEndpoint = endpointFor(origin, "/api/admin/collection", allowLoopbackHttp);

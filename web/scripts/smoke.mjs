@@ -16,6 +16,23 @@ process.env.WRANGLER_SEND_METRICS = 'false';
 process.env.CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV = 'false';
 process.env.WRANGLER_LOG_PATH = join(temp, 'logs');
 const { createTestHarness } = await import('wrangler');
+const nativeFetch = globalThis.fetch;
+let typeSafeTransports = 0;
+// createTestHarness implements workerd outboundService by calling Node's
+// globalThis.fetch. The positive control below proves this hook sees Jev traffic.
+globalThis.fetch = (input, init) => {
+  const url =
+    input instanceof URL
+      ? input.href
+      : typeof input === 'string'
+        ? input
+        : input.url;
+  if (url === 'https://api.typesafe.ai/v1/systemone') {
+    typeSafeTransports++;
+    return Promise.resolve(new Response(null, { status: 503 }));
+  }
+  return nativeFetch(input, init);
+};
 let server;
 try {
   config.main = resolve(build, config.main);
@@ -129,6 +146,73 @@ try {
   assert.equal(unavailableBody.code, 'catalog_unavailable');
   assert.equal(unavailableBody.catalog.status, 'stale');
   assert.match(unavailableBody.error, /yenileniyor|yeniden dene/);
+  // The user burst limiter runs before catalog work, trusts only Cloudflare's
+  // client header, and cannot reach a provider while the catalog is stale.
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: {
+              ...configuredWorker.secrets,
+              TYPESAFE_API_KEY: 'unused-rate-limit-smoke-key',
+            },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
+  const limitedRequest = (ip, forwarded = '198.51.100.200') =>
+    worker.fetch('/api/recommend', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'cf-connecting-ip': ip,
+        'x-forwarded-for': forwarded,
+      },
+      body: JSON.stringify({ message: '1000 TL altında konser' }),
+    });
+  const untilNextMinute = 60000 - (Date.now() % 60000);
+  if (untilNextMinute < 5000)
+    await new Promise((resolve) => setTimeout(resolve, untilNextMinute + 50));
+  const burstResponses = await Promise.all(
+    Array.from({ length: 6 }, (_, index) =>
+      limitedRequest('192.0.2.10', `198.51.100.${200 + index}`),
+    ),
+  );
+  assert.deepEqual(
+    burstResponses.map(({ status }) => status).sort((a, b) => a - b),
+    [429, 503, 503, 503, 503, 503],
+  );
+  const burstLimited = burstResponses.find(({ status }) => status === 429);
+  assert.ok(burstLimited);
+  assert.equal(burstLimited.status, 429);
+  assert.equal(burstLimited.headers.get('cache-control'), 'no-store');
+  assert.ok(Number(burstLimited.headers.get('retry-after')) <= 60);
+  const burstBody = await burstLimited.json();
+  assert.equal(burstBody.code, 'rate_limited');
+  assert.equal(burstBody.retryAfter, Number(burstLimited.headers.get('retry-after')));
+  assert.equal((await limitedRequest('192.0.2.11')).status, 503);
+  const limitRows = await env.DB.prepare(
+    "SELECT key,count FROM request_limits WHERE key LIKE 'ip-minute:%'",
+  ).all();
+  assert.deepEqual(limitRows.results.map(({ count }) => count).sort(), [1, 5]);
+  await env.DB.prepare('DELETE FROM request_limits').run();
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: { ...configuredWorker.secrets, TYPESAFE_API_KEY: '' },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
   const invalid = await request('/api/recommend', { message: '' });
   assert.equal(invalid.status, 400);
   await invalid.arrayBuffer();
@@ -185,6 +269,65 @@ try {
   const readyEvents = await request('/api/events');
   assert.equal(readyEvents.status, 200);
   assert.deepEqual((await readyEvents.json()).catalog, readyCatalog);
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: {
+              ...configuredWorker.secrets,
+              TYPESAFE_API_KEY: 'unused-daily-limit-smoke-key',
+              AI_DAILY_LIMIT: '1',
+            },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
+  const providerControl = await limitedRequest('192.0.2.19');
+  assert.equal(providerControl.status, 200);
+  await providerControl.arrayBuffer();
+  assert.equal(typeSafeTransports, 1);
+  typeSafeTransports = 0;
+  await env.DB.prepare('DELETE FROM request_limits').run();
+  const day = Math.floor(Date.now() / 86400000);
+  await env.DB.prepare(
+    'INSERT INTO request_limits(key,count,expires_at) VALUES(?,?,?)',
+  )
+    .bind(`ai:${day}`, 1, (day + 1) * 86400000)
+    .run();
+  const dailyLimited = await limitedRequest('192.0.2.20');
+  assert.equal(dailyLimited.status, 429);
+  const dailyBody = await dailyLimited.json();
+  assert.equal(dailyBody.code, 'rate_limited');
+  assert.ok(typeof dailyBody.error === 'string' && dailyBody.error.length > 0);
+  assert.equal(dailyBody.error.includes('Yarın'), false);
+  assert.equal(
+    dailyBody.retryAfter,
+    Number(dailyLimited.headers.get('retry-after')),
+  );
+  assert.ok(dailyBody.retryAfter > 0 && dailyBody.retryAfter <= 86400);
+  assert.equal(typeSafeTransports, 0);
+  await env.DB.prepare('DELETE FROM request_limits').run();
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: {
+              ...configuredWorker.secrets,
+              TYPESAFE_API_KEY: '',
+              AI_DAILY_LIMIT: '100',
+            },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
   const search = await request('/api/recommend', {
     message: '1000 TL altında konser',
   });
@@ -792,6 +935,7 @@ try {
   try {
     await server?.close();
   } finally {
+    globalThis.fetch = nativeFetch;
     await rm(temp, { recursive: true, force: true, maxRetries: 3 });
   }
 }
