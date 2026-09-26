@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "kind": "offline-vinext-node-standalone-compatibility-spike",
+  "generatedAt": "2026-09-26T22:14:13.884Z",
+  "source": {
+    "revision": "7c9d22755d563bf38b3544a227ad6b581f8a9f4f",
+    "copyPolicy": "tracked web files excluding node_modules, work, generated outputs, and .env files",
+    "sourceHashManifest": "source-hash-manifest.json",
+    "observedGitStatusPaths": [
+      "docs/free-demo-capacity-2026-09-27.md",
+      "docs/hosting-options-2026-09-27.md",
+      "web/evals/reports/2026-09-27-free-capacity.json",
+      "web/lib/jev.ts",
+      "web/lib/requirements.ts",
+      "web/lib/retrieval.ts",
+      "web/lib/search.ts",
+      "web/tsconfig.json"
+    ],
+    "gitStatusNote": "Observed repository status at corrected report generation; paths are not assertions that their content was included in the earlier scratch build. Use the scratch hash manifest for actual build input provenance."
+  },
+  "runtime": {
+    "node": "v22.23.3",
+    "vinext": "1.0.0-beta.9",
+    "vite": "8.2.2"
+  },
+  "scratch": {
+    "nodeModules": "junction to existing repository web/node_modules",
+    "viteConfigSha256": "673ee5e3fd16f62c949686df318a985e0fbb04670ddbce11675f80c8db9a84ab",
+    "envShimSha256": "9ef43bd4b57800b177a54ef59899dfe9685c0950d09932358cd9aebfdaae34ab"
+  },
+  "build": {
+    "command": "NODE_PATH=<existing vinext nested node_modules> node@22 node node_modules/vinext/dist/cli.js build",
+    "status": "passed",
+    "output": "dist/standalone/server.js",
+    "files": 2676,
+    "bytes": 41384357,
+    "firstAttempt": {
+      "status": "failed",
+      "reason": "Vinext standalone packager could not resolve its nested ipaddr.js dependency through the scratch node_modules junction.",
+      "remediation": "NODE_PATH pointed only to the existing vinext nested node_modules; no package was installed or changed.",
+      "log": "build.log"
+    },
+    "successfulLog": "build-node-path.log"
+  },
+  "serve": {
+    "command": "HOST=127.0.0.1 PORT=43127 DEPLOYMENT_ENV=node-scratch DEPLOYMENT_SHA=local-compatibility-spike node@22 node dist/standalone/server.js",
+    "loopbackOnly": true,
+    "routes": {
+      "/": {
+        "status": 200,
+        "contentType": "text/html; charset=utf-8",
+        "bytes": 17505,
+        "title": "Bi’ Plan — İstanbul’da sana göre bir şey var"
+      },
+      "/api/site": {
+        "status": 200,
+        "body": {
+          "donationUrl": null
+        }
+      },
+      "/api/health": {
+        "status": 503,
+        "body": {
+          "status": "unavailable"
+        }
+      },
+      "/api/events": {
+        "status": 503,
+        "reason": "DB adapter absent"
+      },
+      "/api/ready": {
+        "status": 503,
+        "body": {
+          "ready": false,
+          "reasons": [
+            "collection_state_unavailable"
+          ]
+        }
+      }
+    }
+  },
+  "conclusion": "The tracked UI and Vinext route bundle can build and start as a Node standalone server suitable for a container entrypoint. Storage-backed application behavior is not portable until D1 and R2 adapters are implemented.",
+  "limitations": [
+    "This is local framework compatibility evidence, not Cloud Run deployment, performance, billing, or production-readiness evidence.",
+    "No D1-compatible database adapter, R2-compatible checkpoint adapter, cloud secrets, provider calls, catalog, or recommendation request was exercised.",
+    "Cloud Run can use a remote SQLite-compatible service such as Turso or another database; this spike does not select or validate a database product.",
+    "No cloud API, network dependency installation, Docker daemon, or global configuration was used."
+  ],
+  "approximateLocalEvidenceWindow": {
+    "firstBuildLogCreatedAt": "2026-09-26T22:06:59.304Z",
+    "firstBuildLogLastWrittenAt": "2026-09-26T22:08:29.389Z",
+    "successfulBuildLogCreatedAt": "2026-09-26T22:08:57.562Z",
+    "successfulBuildLogLastWrittenAt": "2026-09-26T22:10:50.978Z",
+    "standaloneEntryLastWrittenAt": "2026-09-26T22:10:50.977Z",
+    "note": "Filesystem timestamps bound local artifact creation only; they are not exact request timestamps."
+  },
+  "correction": {
+    "reason": "The preserved original report mislabeled an Istanbul wall-clock value as UTC.",
+    "preservedOriginal": "evidence-original-invalid-timestamp.json",
+    "correctedReportGeneratedAtSource": "new Date().toISOString()"
+  }
+}

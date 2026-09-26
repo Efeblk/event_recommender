@@ -41,7 +41,12 @@ const criteria = [
   'All mandatory requirements are supported. The description provides a specific activity or format that fits the main requested experience; a broad promise of entertainment alone is insufficient for a specific mood. Literal mood words are unnecessary when the format supports that fit.',
   'The description directly supports the requested experience without a stated contradiction.',
 ];
-export function buildJevRequest(
+const istanbulDateTime = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Europe/Istanbul',
+  dateStyle: 'short',
+  timeStyle: 'short',
+});
+function createJevRequest(
   model: string,
   input: JevInput,
   events: EventRecord[],
@@ -72,11 +77,7 @@ export function buildJevRequest(
         venue: event.venue.slice(0, 200),
         district: event.district.slice(0, 100),
         startsAt: event.startsAt,
-        startsAtLocal: new Intl.DateTimeFormat('sv-SE', {
-          timeZone: 'Europe/Istanbul',
-          dateStyle: 'short',
-          timeStyle: 'short',
-        }).format(new Date(event.startsAt)),
+        startsAtLocal: istanbulDateTime.format(new Date(event.startsAt)),
         requirementEvidence: checkRequirements(event, input.requirements ?? []),
         price: event.price,
         currency: event.currency,
@@ -93,9 +94,17 @@ export function buildJevRequest(
       ]),
     ),
   };
-  if (new TextEncoder().encode(JSON.stringify(body)).length > 100000)
+  const serialized = JSON.stringify(body);
+  if (new TextEncoder().encode(serialized).length > 100000)
     throw new Error('Jev input is too large.');
-  return body;
+  return { body, serialized };
+}
+export function buildJevRequest(
+  model: string,
+  input: JevInput,
+  events: EventRecord[],
+) {
+  return createJevRequest(model, input, events).body;
 }
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -167,13 +176,14 @@ export async function rankWithJev(
   if (!config.apiKey.trim())
     throw new Error('TYPESAFE_API_KEY is required for Jev.');
   return withDeadline(timeoutMs, 'Jev request timed out.', async (signal) => {
+    const { serialized } = createJevRequest(config.model, input, events);
     const response = await fetcher('https://api.typesafe.ai/v1/systemone', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${config.apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(buildJevRequest(config.model, input, events)),
+      body: serialized,
       redirect: 'manual',
       signal,
     });
