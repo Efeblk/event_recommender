@@ -18,7 +18,11 @@ async function files(directory, base = directory) {
     if (entry.isDirectory()) result.push(...(await files(path, base)));
     else if (entry.isFile()) result.push(relative(base, path).replaceAll('\\', '/'));
   }
-  return result.sort((a, b) => a.localeCompare(b));
+  return result.sort(codeUnitCompare);
+}
+
+function codeUnitCompare(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 async function digest(path) {
@@ -47,7 +51,15 @@ function safeManifest(manifest) {
 
 export function verifyManifestEntries(expected, actual) {
   if (!safeManifest(expected)) throw new Error('Deployment manifest contains an unsafe or invalid entry.');
-  if (JSON.stringify(actual) !== JSON.stringify(expected))
+  const expectedNames = Object.keys(expected).sort(codeUnitCompare);
+  const actualNames = Object.keys(actual).sort(codeUnitCompare);
+  if (
+    expectedNames.length !== actualNames.length ||
+    expectedNames.some(
+      (name, index) =>
+        name !== actualNames[index] || expected[name] !== actual[name],
+    )
+  )
     throw new Error('Compiled deployment artifact does not match its SHA-256 manifest.');
 }
 

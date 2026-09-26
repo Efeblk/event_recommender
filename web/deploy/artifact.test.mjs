@@ -11,6 +11,15 @@ await test('accepts an exact compiled manifest', () => {
   );
 });
 
+await test('accepts identical entries in a different insertion order', () => {
+  assert.doesNotThrow(() =>
+    verifyManifestEntries(
+      { 'server/index.js': hashA, 'client/.vite/manifest.json': hashB },
+      { 'client/.vite/manifest.json': hashB, 'server/index.js': hashA },
+    ),
+  );
+});
+
 await test('rejects tampered, missing, and extra compiled files', () => {
   assert.throws(() =>
     verifyManifestEntries({ 'server/index.js': hashA }, { 'server/index.js': hashB }),
@@ -31,4 +40,13 @@ await test('rejects unsafe and malformed manifest paths', () => {
     assert.throws(() => verifyManifestEntries({ [name]: hashA }, { [name]: hashA }), /unsafe/);
   assert.throws(() => verifyManifestEntries({}, {}), /unsafe/);
   assert.throws(() => verifyManifestEntries({ 'server/index.js': 'short' }, { 'server/index.js': 'short' }), /unsafe/);
+});
+
+await test('preserves path case when comparing manifests', () => {
+  assert.throws(() =>
+    verifyManifestEntries(
+      { 'Server/index.js': hashA },
+      { 'server/index.js': hashA },
+    ),
+  );
 });

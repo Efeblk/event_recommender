@@ -1,0 +1,17 @@
+{
+  "recordedAt": "2026-09-26T20:19:29.967Z",
+  "runId": 36268756246,
+  "revision": "358d14519214a3785b3d60276684e1da8246ac07",
+  "passed": false,
+  "expectedFiles": 95,
+  "actualFiles": 92,
+  "missing": [
+    "client/.assetsignore",
+    "client/.vite/manifest.json",
+    "server/.vite/manifest.json"
+  ],
+  "changedFiles": [],
+  "extraFiles": [],
+  "cause": "actions/upload-artifact default excludes hidden files",
+  "workerPublished": false
+}

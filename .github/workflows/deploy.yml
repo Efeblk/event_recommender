@@ -111,7 +111,18 @@ jobs:
             web/dist
             web/deploy-provenance
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 30
+      - name: Download uploaded candidate for round-trip verification
+        uses: actions/download-artifact@v4
+        with:
+          name: web-worker-${{ inputs.commit_sha }}
+          path: web/work/deploy-roundtrip
+      - name: Verify uploaded candidate round trip
+        run: |
+          mkdir -p work/deploy-roundtrip/scripts
+          cp scripts/deploy-artifact.mjs work/deploy-roundtrip/scripts/deploy-artifact.mjs
+          node work/deploy-roundtrip/scripts/deploy-artifact.mjs verify
 
   verify_staging:
     if: inputs.environment == 'production'

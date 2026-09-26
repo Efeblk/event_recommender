@@ -18,7 +18,7 @@ by the release workflow before any candidate is deployed.
 | --- | --- |
 | Web unit tests on Node 22.23.3 | 240 passed |
 | Collector tests on Node 22.23.3 | 37 passed |
-| Deployment, artifact, promotion, rollback, and drill tests | 27 passed |
+| Deployment, artifact, promotion, rollback, and drill tests | 29 passed |
 | Typecheck and lint | Passed |
 | Normal and standalone Cloudflare builds | Passed on Windows |
 | Compiled D1/R2 and Voyage workerd smoke checks | Passed for both build paths |
@@ -114,6 +114,15 @@ artifact. Collection and monitor evidence record the actual deployed revision,
 GitHub run, and schedule event; manually dispatched or artifact-only results
 cannot satisfy unattended observation. Deployment credentials are restricted to
 the steps that need them, outside dependency installation and artifact upload.
+
+Independent download verification of preparation run `36268756246` found only
+92 of 95 manifest-listed files: GitHub's default artifact upload omitted three
+hidden build files. The [failed verification](../web/evals/reports/2026-09-26-deployment-artifact-roundtrip-failure.json)
+is preserved, and that run was cancelled before its protected deployment job.
+The corrected release path includes hidden compiled files and verifies the
+uploaded/downloaded artifact before offering it for deployment approval. Manifest
+comparison also checks exact paths and hashes independently of locale-dependent
+file ordering.
 
 ## Remaining release gates
 
