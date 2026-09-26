@@ -47,6 +47,44 @@ await test('requested jazz needs actual jazz source evidence', () => {
   );
 });
 
+await test('Turkish wheelchair access is mandatory source evidence, including explicit denials and waivers', () => {
+  const message =
+    'Tekerlekli sandalye erişimi kesin şart. Bilgi yoksa gösterme.';
+  const requirements = deriveRequirements(message, []);
+  assert.deepEqual(requirements, [
+    { kind: 'accessibility', value: 'step_free', policy: 'require_support' },
+  ]);
+  assert.equal(
+    meetsRequirements(event('Bir tiyatro oyunu.'), requirements),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Tekerlekli sandalye erişimi mevcuttur.'),
+      requirements,
+    ),
+    true,
+  );
+  for (const denial of [
+    'yok',
+    'bulunmuyor',
+    'bulunmamaktadır',
+    'sağlanmıyor',
+  ]) {
+    const checks = checkRequirements(
+      event(`Tekerlekli sandalye erişimi ${denial}.`),
+      requirements,
+    );
+    assert.equal(checks[0].status, 'contradicted', denial);
+  }
+  assert.deepEqual(
+    deriveRequirements('Tekerlekli sandalye erişimi şart değil.', [
+      { role: 'user', content: message },
+    ]),
+    [],
+  );
+});
+
 await test('same-kind follow-up replaces genre and explicit alternatives use OR', () => {
   const history: Message[] = [
     { role: 'user', content: 'Weekend stand-up' },

@@ -6,7 +6,9 @@ import { join } from "node:path";
 import test from "node:test";
 import { restoreCheckpoint } from "../checkpoint.mjs";
 import { checkReady } from "../monitor.mjs";
-import { publish } from "../publish.mjs";
+import { prepareImportPages, publish } from "../publish.mjs";
+import { buildSoakEvidence } from "../soak-report.mjs";
+import { verifySoakEvidence } from "../soak-verify.mjs";
 
 async function fixture(handler) {
   const server = createServer(handler);
@@ -60,6 +62,7 @@ test("checkpoint publish reads canonical state back to disk", async (t) => {
   let checkpointBody;
   const remote = await fixture(async (request, response) => {
     calls.push(`${request.method} ${request.url}`);
+    if (request.url === "/api/health") return json(response, 200, { status: "ok", deployment: { environment: "staging", revision: "a".repeat(40) } });
     if (request.url === "/api/admin/import") return json(response, 200, { imported: 1, skipped: 0 });
     if (request.method === "POST") {
       const chunks = [];
@@ -71,13 +74,109 @@ test("checkpoint publish reads canonical state back to disk", async (t) => {
   });
   t.after(remote.close);
   const dir = await mkdtemp(join(tmpdir(), "publish-")), snapshot = join(dir, "events.json");
-  const report = { schemaVersion: 1, finishedAt: canonical.report.finishedAt, summary: { events: 1, sources: { biletix: 1, bubilet: 2 } }, pages: [{ source: "biletix", url: "https://source.test/a", events: [{ id: "submitted" }] }] };
+  const report = { schemaVersion: 1, finishedAt: canonical.report.finishedAt, summary: { events: 1, sources: { biletix: 1, bubilet: 0 } }, pages: [{ source: "biletix", url: "https://source.test/a", events: [{ id: "submitted" }] }] };
   const result = await publish({ origin: remote.origin, token: "secret", report, checkpoint: true, snapshot, allowLoopbackHttp: true });
   assert.equal(result.checkpointed, true);
   assert.deepEqual(JSON.parse(await readFile(snapshot)), canonical.events);
-  assert.deepEqual(calls, ["POST /api/admin/import", "POST /api/admin/collection", "GET /api/admin/collection"]);
+  assert.deepEqual(calls, ["POST /api/admin/import", "POST /api/admin/collection", "GET /api/admin/collection", "GET /api/health"]);
   assert.deepEqual(checkpointBody.report.summary.missingSources, ["bubilet"]);
   assert.deepEqual(checkpointBody.report.summary.sourceHealth.refreshedPages, { biletix: 1, bubilet: 0 });
+});
+
+test("publisher omits only sessions that started after collection and reports them", () => {
+  const pages = [
+    {
+      url: "https://source.test/a",
+      events: [
+        { id: "past", startsAt: "2026-09-26T09:59:59.000Z" },
+        { id: "future", startsAt: "2026-09-26T10:00:01.000Z" },
+        { id: "invalid-date", startsAt: "invalid" },
+      ],
+    },
+    { url: "https://source.test/empty", events: [{ id: "past-only", startsAt: "2026-09-25T10:00:00.000Z" }] },
+  ];
+  const prepared = prepareImportPages(pages, new Date("2026-09-26T10:00:00.000Z"));
+  assert.deepEqual(prepared.omittedExpiredIds, ["past", "past-only"]);
+  assert.deepEqual(prepared.pages, [
+    {
+      url: "https://source.test/a",
+      events: [
+        { id: "future", startsAt: "2026-09-26T10:00:01.000Z" },
+        { id: "invalid-date", startsAt: "invalid" },
+      ],
+    },
+  ]);
+});
+
+test("soak evidence flags selected sources with no retained events or refreshed pages", () => {
+  const evidence = buildSoakEvidence(
+    {
+      startedAt: "2026-09-26T00:00:00.000Z",
+      finishedAt: "2026-09-26T00:01:00.000Z",
+      summary: { sources: { biletix: 1, bubilet: 0, biletinial: 2 } },
+      pages: [
+        { source: "biletix" },
+        { source: "biletinial" },
+      ],
+    },
+    [
+      { source: "biletix" },
+      { source: "biletinial" },
+    ],
+    new Date("2026-09-26T00:02:00.000Z"),
+  );
+  assert.deepEqual(evidence.sourceHealth.refreshedPages, {
+    biletix: 1,
+    bubilet: 0,
+    biletinial: 1,
+  });
+  assert.deepEqual(evidence.sourceHealth.missingSources, ["bubilet"]);
+  assert.equal(evidence.observation.includes("does not claim"), true);
+});
+
+test("48-hour soak verification requires overlapping healthy unique workflow evidence", () => {
+  const revision = "b".repeat(40);
+  const provenance = (id) => ({ githubRunId: String(id), githubRunAttempt: "1", githubEventName: "schedule" });
+  const collections = Array.from({ length: 5 }, (_, index) => ({
+    schemaVersion: 2, kind: "collection-run", environment: "staging", revision,
+    provenance: provenance(100 + index),
+    publication: { artifactOnly: false, canonicalReadback: true },
+    run: { finishedAt: new Date(Date.UTC(2026, 8, 24, index * 12)).toISOString() },
+    sourceHealth: { refreshedPages: { biletinial: 1, bubilet: 1, biletix: 1 }, missingSources: [] },
+  }));
+  const monitors = Array.from({ length: 49 }, (_, index) => ({
+    schemaVersion: 1, kind: "readiness-monitor", environment: "staging", revision,
+    provenance: provenance(1000 + index), ready: true, reasons: [],
+    recordedAt: new Date(Date.UTC(2026, 8, 24, index)).toISOString(),
+  }));
+  const pass = verifySoakEvidence({ collections, monitors, environment: "staging", revision });
+  assert.equal(pass.status, "pass");
+  assert.equal(pass.overlap.spanHours, 48);
+
+  const broken = structuredClone(monitors);
+  broken[24].ready = false;
+  broken[24].reasons = ["checkpoint_stale"];
+  broken[25].recordedAt = broken[23].recordedAt;
+  broken[25].provenance = broken[24].provenance;
+  const fail = verifySoakEvidence({ collections: collections.slice(0, 4), monitors: broken, environment: "staging", revision });
+  assert.equal(fail.status, "fail");
+  assert.equal(fail.reasons.includes("healthy_overlap_under_48h"), true);
+  assert.equal(fail.reasons.includes("monitor_run_provenance_reused"), true);
+  assert.equal(fail.reasons.some((reason) => reason.includes("not_ready:checkpoint_stale")), true);
+
+  const manual = structuredClone(collections);
+  manual[0].provenance.githubEventName = "workflow_dispatch";
+  const manualFail = verifySoakEvidence({ collections: manual, monitors, environment: "staging", revision });
+  assert.equal(manualFail.status, "fail");
+  assert.equal(manualFail.reasons.includes("collection[0]:not_scheduled"), true);
+
+  const invalidRefreshCounts = [undefined, "1", Number.NaN, Number.POSITIVE_INFINITY, 1.5, 0];
+  for (const count of invalidRefreshCounts) {
+    const unhealthy = structuredClone(collections);
+    unhealthy[0].sourceHealth.refreshedPages.biletix = count;
+    const unhealthyResult = verifySoakEvidence({ collections: unhealthy, monitors, environment: "staging", revision });
+    assert.equal(unhealthyResult.reasons.includes("collection[0]:source_unhealthy:biletix"), true);
+  }
 });
 
 test("a partial import failure never advances the checkpoint", async (t) => {

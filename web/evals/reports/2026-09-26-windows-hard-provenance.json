@@ -1,0 +1,48 @@
+{
+  "recordedAt": "2026-09-26T18:42:10.853Z",
+  "revision": "ea8da5a9a16bfe81bd753b60aa8acba5b2229eab",
+  "node": "v24.11.1",
+  "platform": "win32",
+  "sourceChanges": {
+    "web/lib/event-merge.ts": "3f661d25c8e41351dd057c7959d057934cbf51b1cdb44518beed231c69c0a326",
+    "web/lib/intent.ts": "c70cb7a9587e90b3a927ef15de759ca5890b295cf2b5ea6315994e993b7bd7df",
+    "web/lib/requirements.ts": "ddb31d7b77d195552c06240ffbe29473f19f88c9c03ebb3aee51c89755562f27",
+    "web/lib/retrieval.ts": "bb7f49b6a89eb49fc18f6e09d436352988879cd9d1e6933f644b629e23b0a0fa",
+    "web/lib/search.ts": "b0220515571c6ab496b2b22c8977c730287dccde56843affc9dca9f7902bcf57",
+    "web/tests/constraints.test.ts": "11f4ac799e5e3abb7e7fb49aaa3ae44bfc5c6ead655243e794608ce38385bf3b",
+    "web/tests/event-merge.test.ts": "f232359e04f6a1d488cec9c77fd4336a727b6eed486b59310740088d3c3a6384",
+    "web/tests/recommend.test.ts": "bd2c82d20e60808fd1261dbe0ac0824009893a0108e22d4c364ad2cf8abe1f4d",
+    "web/tests/requirements.test.ts": "0600f880be52a622f76514c6ac6ddfd57da316f27d05dbecf01f6992681ebde8",
+    "web/tests/retrieval.test.ts": "fe16f6be9bae2a0d211810cef1cfcc1c382d86da2cf37ec56193919f7df6c111"
+  },
+  "snapshotSha256": "be72ae93298d5129732259e1d15e65ba3af2bb3ce22d7bae57d08cc821566b16",
+  "baseline": {
+    "requests": 20,
+    "successfulJevResponses": 11,
+    "httpFailures": 0,
+    "providerCalls": "HTTP harness does not expose exact provider transport counts. At most one Voyage query and one Jev request per HTTP request. No document embedding calls or automatic retries."
+  },
+  "traceCalls": {
+    "voyageQuery": 2,
+    "jev": 2
+  },
+  "limits": "App hourly/daily limits left enabled. Baseline and regression use separate synthetic local visitors; provider requests paced 25 seconds apart. Direct diagnostic traces cap each provider at one call.",
+  "validation": {
+    "webUnit": 236,
+    "collectorUnit": 32,
+    "typecheck": "pass",
+    "lint": "pass",
+    "build": "pass",
+    "browser": {
+      "passed": 11,
+      "skipped": 1
+    },
+    "frozenParser": 20,
+    "savedJevReplay": 12
+  },
+  "limitations": [
+    "Local Windows verification, not Cloudflare staging capacity or readiness.",
+    "Source evidence is the checked-in collected snapshot; ticket pages were not all re-fetched.",
+    "Raw successful Jev bodies captured for two diagnostic traces only; HTTP application responses retained for all baseline/regression cases."
+  ]
+}

@@ -1,6 +1,7 @@
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import {
   deploymentEnvironment,
@@ -9,11 +10,18 @@ import {
   generateDeploymentConfig,
   validateDeploymentConfig,
 } from './deploy-config.mjs';
+import {
+  assertSecretsAbsent,
+  verifyDeploymentEvidence,
+} from './deploy-artifact.mjs';
 
 const args = process.argv.slice(2);
 const command = args[0];
 const environment = deploymentEnvironment(args);
 const dryRun = command === 'dry-run';
+const wranglerCli = fileURLToPath(
+  new URL('../node_modules/wrangler/bin/wrangler.js', import.meta.url),
+);
 if (!['prepare', 'dry-run', 'deploy'].includes(command))
   throw new Error(
     'Usage: deploy.mjs <prepare|dry-run|deploy> --env <staging|production>',
@@ -23,13 +31,17 @@ validateDeploymentConfig({
   requireSecrets: command === 'deploy',
   requireRevision: command === 'deploy',
 });
+if (command === 'deploy')
+  await verifyDeploymentEvidence({ allowGeneratedConfig: true });
 const config = await generateDeploymentConfig(environment);
-await run('wrangler', ['deploy', '--config', config, '--dry-run']);
+await run(process.execPath, [wranglerCli, 'deploy', '--config', config, '--dry-run']);
 if (command === 'prepare' || dryRun) process.exit(0);
 
 const secretDir = await mkdtemp(join(tmpdir(), 'biplan-deploy-'));
 const secretFile = join(secretDir, 'secrets.env');
 try {
+  await verifyDeploymentEvidence({ allowGeneratedConfig: true });
+  await assertSecretsAbsent(Object.values(deploymentSecrets()));
   await writeFile(
     secretFile,
     JSON.stringify(deploymentSecrets()),
@@ -37,7 +49,7 @@ try {
       mode: 0o600,
     },
   );
-  await run('wrangler', [
+  await run(process.execPath, [wranglerCli,
     'd1',
     'migrations',
     'apply',
@@ -46,7 +58,7 @@ try {
     '--config',
     config,
   ]);
-  await run('wrangler', [
+  await run(process.execPath, [wranglerCli,
     'deploy',
     '--config',
     config,

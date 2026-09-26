@@ -1,0 +1,1560 @@
+{
+  "referenceDate": "2026-09-26",
+  "timeZone": "Europe/Istanbul",
+  "note": "Fresh Windows live hard-test cases frozen before baseline; one local synthetic visitor, at most20 HTTP requests with 25second spacing and no retries. Expected behavior manually reviewed against current catalog; originals retained.",
+  "cases": [
+    {
+      "id": "jazz_start",
+      "message": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL.",
+      "expectation": "Oct3 only, Kadikoy, concert, jazz source evidence, <=1200; negated this weekend ignored.",
+      "visitor": 1
+    },
+    {
+      "id": "jazz_alternatives",
+      "parent": "jazz_start",
+      "message": "Başka seçenekler göster, aynı sanatçı veya gösteri tekrar etmesin.",
+      "expectation": "Retain Oct3/Kadikoy/jazz/budget; no previous production.",
+      "visitor": 1
+    },
+    {
+      "id": "genre_correction",
+      "parent": "jazz_start",
+      "message": "Cazdan vazgeçtim, rock olsun. Mekân ve tarih fark etmez; 1200 TL sınırı kalsın.",
+      "expectation": "Remove jazz/date/district, require rock, <=1200.",
+      "visitor": 1
+    },
+    {
+      "id": "group_comedy",
+      "message": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz.",
+      "expectation": "Oct4 theatre OR stand-up, comedy, max600/person, party3 total1800.",
+      "visitor": 1
+    },
+    {
+      "id": "group_four",
+      "parent": "group_comedy",
+      "message": "Bir arkadaş daha geliyor, artık 4 kişiyiz. Toplam para aynı.",
+      "expectation": "Party4 total1800 max450; retain Oct4/categories/comedy.",
+      "visitor": 1
+    },
+    {
+      "id": "group_clear_budget",
+      "parent": "group_four",
+      "message": "Para sınırını kaldır, diğer koşullar aynı.",
+      "expectation": "Clear maxPrice and totalBudget; retain party/date/categories/comedy.",
+      "visitor": 1
+    },
+    {
+      "id": "english_classical",
+      "message": "Classical music in Istanbul on October 10, under 1500 TRY per person. No children's shows.",
+      "expectation": "Oct10 concert classical evidence, <=1500, no child shows.",
+      "visitor": 1
+    },
+    {
+      "id": "english_reset",
+      "parent": "english_classical",
+      "message": "Start over. I want stand-up in Beyoglu on October 2 under 600 TRY.",
+      "expectation": "Reset old classical/child/date/budget; Oct2 Beyoglu standup <=600.",
+      "visitor": 1
+    },
+    {
+      "id": "quiet_mood",
+      "message": "Kafam çok dolu; sakinleşebileceğim, gürültülü olmayan bir akşam arıyorum. Kişi başı en çok 1000 TL, tarih fark etmez.",
+      "expectation": "Soft calm preference; avoid loud electronic/rock parties; <=1000; no fabricated quietness.",
+      "visitor": 1
+    },
+    {
+      "id": "dance_mood",
+      "message": "Arkadaşlarla dans edip enerjimizi atmak istiyoruz. Elektronik müzik olsun, rap istemiyoruz. Bütçe kişi başı 1500 TL.",
+      "expectation": "Positive electronic/dance evidence, exclude rap, max1500, concert.",
+      "visitor": 1
+    },
+    {
+      "id": "child_age",
+      "message": "8 yaşındaki oğlumla çocuk tiyatrosuna gidelim. İkimiz için toplam 900 TL, 4 Ekim Pazar.",
+      "expectation": "Oct4 theatre, positive age8 child suitability, max450 for party2.",
+      "visitor": 1
+    },
+    {
+      "id": "accessibility",
+      "message": "Tekerlekli sandalye erişimi kesin şart. 3 Ekim'de 1000 TL altında tiyatro öner; erişim bilgisi yoksa gösterme.",
+      "expectation": "Oct3 theatre<=1000 and explicit wheelchair evidence; empty acceptable if unknown.",
+      "visitor": 1
+    },
+    {
+      "id": "late_boundary",
+      "message": "2 Ekim Cuma, saat 21:00'den sonra ama 23:00'ten önce başlayan stand-up olsun. Bütçe 750 TL.",
+      "expectation": "Oct2 standup<=750, STRICT21<start<23.",
+      "visitor": 1
+    },
+    {
+      "id": "contradiction",
+      "message": "3 Ekim'de akşam 22:00'den sonra ve 20:00'den önce bir konser arıyorum.",
+      "expectation": "Needs_input for impossible time intersection; no events.",
+      "visitor": 1
+    },
+    {
+      "id": "unsupported",
+      "message": "Yarın Ankara'da 700 TL altı konser öner.",
+      "expectation": "Unsupported_location, no Istanbul substitutes.",
+      "visitor": 1
+    },
+    {
+      "id": "free_negated",
+      "message": "Ücretsiz olması gerekmiyor. 9 Ekim Cuma en fazla 800 TL'ye caz konseri istiyorum.",
+      "expectation": "Oct9 jazz concert<=800, do not set zero budget.",
+      "visitor": 1
+    },
+    {
+      "id": "exact_artist",
+      "message": "Redd konserine gitmek istiyorum. Başka sanatçı istemiyorum, tarih ve bütçe fark etmez.",
+      "expectation": "Only Redd artist concerts, any date/budget; known catalog contains Redd.",
+      "visitor": 1
+    },
+    {
+      "id": "no_match",
+      "message": "Uzay istasyonunda yerçekimsiz bale gösterisi arıyorum, başka bir şey istemiyorum.",
+      "expectation": "No unsupported event; empty appropriate, broad dance/theatre not substitute.",
+      "visitor": 1
+    },
+    {
+      "id": "date_correction",
+      "message": "Yarın değil, pazartesi Beşiktaş'ta bir komedi oyunu istiyorum. Kişi başı 700 TL.",
+      "expectation": "Sep28 Monday, Besiktas theatre comedy<=700; not Sep27.",
+      "visitor": 1
+    },
+    {
+      "id": "budget_correction",
+      "parent": "date_correction",
+      "message": "700 yanlış oldu, 1700 TL demek istedim. Diğerleri aynı.",
+      "expectation": "Sep28/Besiktas/comedy/theatre kept, max1700 not700.",
+      "visitor": 1
+    }
+  ],
+  "fixture": "web\\evals\\cases\\2026-09-26-windows-hard.json",
+  "codeRevision": "ea8da5a9a16bfe81bd753b60aa8acba5b2229eab",
+  "dirtyWorktree": true,
+  "startedAt": "2026-09-26T18:27:28.448Z",
+  "maxHttpRequests": 24,
+  "automaticRetries": 0,
+  "origin": "http://127.0.0.1:3001",
+  "results": [
+    {
+      "id": "jazz_start",
+      "input": {
+        "message": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-26",
+          "dateTo": "2026-09-27",
+          "maxPrice": 1200,
+          "category": "Konser",
+          "district": "Kadikoy"
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.",
+        "totalCandidates": 0
+      },
+      "durationMs": 61,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL."
+        }
+      ]
+    },
+    {
+      "id": "jazz_alternatives",
+      "input": {
+        "message": "Başka seçenekler göster, aynı sanatçı veya gösteri tekrar etmesin.",
+        "history": [
+          {
+            "role": "user",
+            "content": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-09-26",
+          "dateTo": "2026-09-27",
+          "maxPrice": 1200,
+          "category": "Konser",
+          "district": "Kadikoy"
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-26",
+          "dateTo": "2026-09-27",
+          "maxPrice": 1200,
+          "category": "Konser",
+          "district": "Kadikoy"
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.",
+        "totalCandidates": 0
+      },
+      "durationMs": 28,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL."
+        },
+        {
+          "role": "user",
+          "content": "Başka seçenekler göster, aynı sanatçı veya gösteri tekrar etmesin."
+        }
+      ]
+    },
+    {
+      "id": "genre_correction",
+      "input": {
+        "message": "Cazdan vazgeçtim, rock olsun. Mekân ve tarih fark etmez; 1200 TL sınırı kalsın.",
+        "history": [
+          {
+            "role": "user",
+            "content": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-09-26",
+          "dateTo": "2026-09-27",
+          "maxPrice": 1200,
+          "category": "Konser",
+          "district": "Kadikoy"
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "4ba1d49d6334da6dbe2e0957",
+              "title": "Arctic Monkeys Tribute",
+              "description": "Arctic Monkeys Tribute Band Konseri Arctic Monkeys Tribute sahnelerde... Türkiye’nin ilk ve tek Arctic Monkeys Tribute grubu kısa bir aradan sonra dinleyici kitlesiyle tekrardan buluşuyor. Tüm albümlerin arasından “Do I Wanna Know?”, “R U Mine?”, “When The Sun Goes Down”, “Brianstorm”, “Crying Lightning”, “Four Out of Five” gibi parçaları icra ederek dinleyicileriyle buluşturan ekip, grubun severlerine retrospektif bir şölen vaadediyor. Süregelen yıllar boyunca; İngiliz rock kültürünün",
+              "startsAt": "2026-10-10T19:00:00.000Z",
+              "checkedAt": "2026-09-24T06:31:34.422Z",
+              "venue": "The Wall Saloon & Performance",
+              "district": "İstanbul Anadolu",
+              "address": "Validei Atik, Neşet Ömer Sk. 5-7/A, 34710 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 450,
+              "url": "https://biletinial.com/tr-tr/muzik/arctic-monkeys-tribute-if",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/arctic-monkeys-tribute-2022513112427.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "cc4c86a3a01c041aec47764c",
+              "offers": [
+                {
+                  "id": "4ba1d49d6334da6dbe2e0957",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/muzik/arctic-monkeys-tribute-if",
+                  "price": 450,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:31:34.422Z",
+                  "category": "Konser",
+                  "venue": "The Wall Saloon & Performance",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "4ba1d49d6334da6dbe2e0957",
+                "session-2fe7d0900c3fff7f6418d15ff186dcff"
+              ],
+              "canonicalProductionKey": "production-3c97ee8a3864afbce3c3d33f4654bf65",
+              "canonicalShowKey": "show-e3cf70f6af530683acba43ff5901577c"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 1200,
+          "category": "Konser",
+          "district": "Kadikoy"
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 1
+      },
+      "durationMs": 1552,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL."
+        },
+        {
+          "role": "user",
+          "content": "Cazdan vazgeçtim, rock olsun. Mekân ve tarih fark etmez; 1200 TL sınırı kalsın."
+        }
+      ]
+    },
+    {
+      "id": "group_comedy",
+      "input": {
+        "message": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-55a5804c6df02e1dc6a23c105430618f",
+              "title": "Kadıköy Açık Mikrofon Stand-up - Comedy Lab",
+              "description": "Kadıköy Açık Mikrofon Stand-up Gösterisi Comedy Lab Istanbul, açık mikrofon stand-up komedi gösterileriyle her Pazar 20:00'da Vohu Cafe Kadıköy sahnesinde! İster seyirci ol, ister sahneye çık! Herkesin 5 dakika sahneye çıkıp yeni şakalarını deneyebildiği Açık Mikrofon, her hafta farklı komedyenlerin sunumuyla Vohu Cafe'de! * Sahne almak için gösteri başlangıcında sunucuya isminizi yazdırmanız yeterli. Gösteri 18 yaş üzeri seyirci kitlesine yöneliktir.",
+              "startsAt": "2026-10-04T17:00:00.000Z",
+              "checkedAt": "2026-09-24T06:40:05.106Z",
+              "venue": "Vohu Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Kırtasiyeci Sk. n0:2 a, 34740 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-acik-mikrofon-stand-up-comedy-lab-20268491629d68f553631d4a2fb7027e628778961f.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "628185a9ab6e813a9cd0775f",
+              "offers": [
+                {
+                  "id": "b42d0b8a3148ba1cd30eab35",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:40:05.106Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "263889bd18ffd81c6205609f",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-acik-mikrofon-stand-up-comedy-lab",
+                  "price": 224,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:23.468Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "263889bd18ffd81c6205609f",
+                "b42d0b8a3148ba1cd30eab35",
+                "session-55a5804c6df02e1dc6a23c105430618f"
+              ],
+              "canonicalProductionKey": "production-3aa5ab803297643c4d61a93f70938c28",
+              "canonicalShowKey": "show-3b4bc93e10420cedafd9de3005110f44"
+            }
+          },
+          {
+            "event": {
+              "id": "f257541e049ae41cff40ca24",
+              "title": "Kadıköy Stand up Gecesi Pazar 19:00",
+              "description": "Kadıköy Stand up Gecesi Pazar 19:00",
+              "startsAt": "2026-10-04T16:00:00.000Z",
+              "checkedAt": "2026-09-24T06:39:36.175Z",
+              "venue": "Ada Bar",
+              "district": "",
+              "address": "Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-pazar-19-00",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/kadikoy-stand-up-gecesi-pazar-19-00-20260521125352407-662ef776f0d0.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "5ff295ffaf5648ed7ae4ece1",
+              "offers": [
+                {
+                  "id": "f257541e049ae41cff40ca24",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-pazar-19-00",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:36.175Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "f257541e049ae41cff40ca24",
+                "session-0d3d73611776c39e05bcde683971113e"
+              ],
+              "canonicalProductionKey": "production-0c765ec61c808930e6cc1f718b01f8a8",
+              "canonicalShowKey": "show-9b8e66802472cbce3e85b5cd725f8868"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 600,
+          "category": null,
+          "partySize": 3,
+          "totalBudget": 1800,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 11
+      },
+      "durationMs": 1252,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+        }
+      ]
+    },
+    {
+      "id": "group_four",
+      "input": {
+        "message": "Bir arkadaş daha geliyor, artık 4 kişiyiz. Toplam para aynı.",
+        "history": [
+          {
+            "role": "user",
+            "content": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 600,
+          "category": null,
+          "partySize": 3,
+          "totalBudget": 1800,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-55a5804c6df02e1dc6a23c105430618f",
+              "title": "Kadıköy Açık Mikrofon Stand-up - Comedy Lab",
+              "description": "Kadıköy Açık Mikrofon Stand-up Gösterisi Comedy Lab Istanbul, açık mikrofon stand-up komedi gösterileriyle her Pazar 20:00'da Vohu Cafe Kadıköy sahnesinde! İster seyirci ol, ister sahneye çık! Herkesin 5 dakika sahneye çıkıp yeni şakalarını deneyebildiği Açık Mikrofon, her hafta farklı komedyenlerin sunumuyla Vohu Cafe'de! * Sahne almak için gösteri başlangıcında sunucuya isminizi yazdırmanız yeterli. Gösteri 18 yaş üzeri seyirci kitlesine yöneliktir.",
+              "startsAt": "2026-10-04T17:00:00.000Z",
+              "checkedAt": "2026-09-24T06:40:05.106Z",
+              "venue": "Vohu Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Kırtasiyeci Sk. n0:2 a, 34740 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-acik-mikrofon-stand-up-comedy-lab-20268491629d68f553631d4a2fb7027e628778961f.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "628185a9ab6e813a9cd0775f",
+              "offers": [
+                {
+                  "id": "b42d0b8a3148ba1cd30eab35",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:40:05.106Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "263889bd18ffd81c6205609f",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-acik-mikrofon-stand-up-comedy-lab",
+                  "price": 224,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:23.468Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "263889bd18ffd81c6205609f",
+                "b42d0b8a3148ba1cd30eab35",
+                "session-55a5804c6df02e1dc6a23c105430618f"
+              ],
+              "canonicalProductionKey": "production-3aa5ab803297643c4d61a93f70938c28",
+              "canonicalShowKey": "show-3b4bc93e10420cedafd9de3005110f44"
+            }
+          },
+          {
+            "event": {
+              "id": "02735a9823b52e934d822c88",
+              "title": "Furkan Bozdağ Stand Up “Kaset”",
+              "description": "Furkan Bozdağ Stand Up “Kaset”",
+              "startsAt": "2026-10-04T17:30:00.000Z",
+              "checkedAt": "2026-09-24T06:39:41.190Z",
+              "venue": "Ada Bar",
+              "district": "",
+              "address": "Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/furkan-bozdag-stand-up-kaset",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/furkan-bozdag-stand-up-kaset-20260814105128647-f3c7ce863478.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "8ba24300b16b1b0604dbd37e",
+              "offers": [
+                {
+                  "id": "02735a9823b52e934d822c88",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/furkan-bozdag-stand-up-kaset",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:41.190Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "02735a9823b52e934d822c88",
+                "session-c962f9659dfd09b6e27ffda4bc2dbc11"
+              ],
+              "canonicalProductionKey": "production-1e9820ca9f52aaaca9f58b26b7262f8f",
+              "canonicalShowKey": "show-e720dc880182e87ffd6ecf3f68c963b6"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 450,
+          "category": null,
+          "partySize": 4,
+          "totalBudget": 1800,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 8
+      },
+      "durationMs": 963,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+        },
+        {
+          "role": "user",
+          "content": "Bir arkadaş daha geliyor, artık 4 kişiyiz. Toplam para aynı."
+        }
+      ]
+    },
+    {
+      "id": "group_clear_budget",
+      "input": {
+        "message": "Para sınırını kaldır, diğer koşullar aynı.",
+        "history": [
+          {
+            "role": "user",
+            "content": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+          },
+          {
+            "role": "user",
+            "content": "Bir arkadaş daha geliyor, artık 4 kişiyiz. Toplam para aynı."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 450,
+          "category": null,
+          "partySize": 4,
+          "totalBudget": 1800,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-55a5804c6df02e1dc6a23c105430618f",
+              "title": "Kadıköy Açık Mikrofon Stand-up - Comedy Lab",
+              "description": "Kadıköy Açık Mikrofon Stand-up Gösterisi Comedy Lab Istanbul, açık mikrofon stand-up komedi gösterileriyle her Pazar 20:00'da Vohu Cafe Kadıköy sahnesinde! İster seyirci ol, ister sahneye çık! Herkesin 5 dakika sahneye çıkıp yeni şakalarını deneyebildiği Açık Mikrofon, her hafta farklı komedyenlerin sunumuyla Vohu Cafe'de! * Sahne almak için gösteri başlangıcında sunucuya isminizi yazdırmanız yeterli. Gösteri 18 yaş üzeri seyirci kitlesine yöneliktir.",
+              "startsAt": "2026-10-04T17:00:00.000Z",
+              "checkedAt": "2026-09-24T06:40:05.106Z",
+              "venue": "Vohu Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Kırtasiyeci Sk. n0:2 a, 34740 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-acik-mikrofon-stand-up-comedy-lab-20268491629d68f553631d4a2fb7027e628778961f.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "628185a9ab6e813a9cd0775f",
+              "offers": [
+                {
+                  "id": "b42d0b8a3148ba1cd30eab35",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:40:05.106Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "263889bd18ffd81c6205609f",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-acik-mikrofon-stand-up-comedy-lab",
+                  "price": 224,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:23.468Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "263889bd18ffd81c6205609f",
+                "b42d0b8a3148ba1cd30eab35",
+                "session-55a5804c6df02e1dc6a23c105430618f"
+              ],
+              "canonicalProductionKey": "production-3aa5ab803297643c4d61a93f70938c28",
+              "canonicalShowKey": "show-3b4bc93e10420cedafd9de3005110f44"
+            }
+          },
+          {
+            "event": {
+              "id": "02735a9823b52e934d822c88",
+              "title": "Furkan Bozdağ Stand Up “Kaset”",
+              "description": "Furkan Bozdağ Stand Up “Kaset”",
+              "startsAt": "2026-10-04T17:30:00.000Z",
+              "checkedAt": "2026-09-24T06:39:41.190Z",
+              "venue": "Ada Bar",
+              "district": "",
+              "address": "Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/furkan-bozdag-stand-up-kaset",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/furkan-bozdag-stand-up-kaset-20260814105128647-f3c7ce863478.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "8ba24300b16b1b0604dbd37e",
+              "offers": [
+                {
+                  "id": "02735a9823b52e934d822c88",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/furkan-bozdag-stand-up-kaset",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:41.190Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "02735a9823b52e934d822c88",
+                "session-c962f9659dfd09b6e27ffda4bc2dbc11"
+              ],
+              "canonicalProductionKey": "production-1e9820ca9f52aaaca9f58b26b7262f8f",
+              "canonicalShowKey": "show-e720dc880182e87ffd6ecf3f68c963b6"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 450,
+          "category": null,
+          "partySize": 4,
+          "totalBudget": 1800,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 8
+      },
+      "durationMs": 1325,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+        },
+        {
+          "role": "user",
+          "content": "Bir arkadaş daha geliyor, artık 4 kişiyiz. Toplam para aynı."
+        },
+        {
+          "role": "user",
+          "content": "Para sınırını kaldır, diğer koşullar aynı."
+        }
+      ]
+    },
+    {
+      "id": "english_classical",
+      "input": {
+        "message": "Classical music in Istanbul on October 10, under 1500 TRY per person. No children's shows.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-10-10",
+          "dateTo": "2026-10-10",
+          "maxPrice": 1500,
+          "category": "Konser"
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.",
+        "totalCandidates": 0
+      },
+      "durationMs": 34,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Classical music in Istanbul on October 10, under 1500 TRY per person. No children's shows."
+        }
+      ]
+    },
+    {
+      "id": "english_reset",
+      "input": {
+        "message": "Start over. I want stand-up in Beyoglu on October 2 under 600 TRY.",
+        "history": [
+          {
+            "role": "user",
+            "content": "Classical music in Istanbul on October 10, under 1500 TRY per person. No children's shows."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-10",
+          "dateTo": "2026-10-10",
+          "maxPrice": 1500,
+          "category": "Konser"
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "0e5529a81243ce5a5f1c67e7",
+              "title": "Beyoğlu- Taksim- Stand Up Gecesi",
+              "description": "Beyoğlu- Taksim- Stand Up Gecesi",
+              "startsAt": "2026-10-02T17:30:00.000Z",
+              "checkedAt": "2026-09-24T06:39:48.119Z",
+              "venue": "Efsahne Beyoğlu",
+              "district": "",
+              "address": "Kuloğlu Mahallaesi, İstiklâl Caddesi, Sadri Alışık Sk. No:24 Kat:3, 34433 Beyoğlu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 250,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/beyoglu-taksim-stand-up-gecesi",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/beyoglu-taksim-stand-up-gecesi-44523.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "0d65a6c29e77238e239ea440",
+              "offers": [
+                {
+                  "id": "0e5529a81243ce5a5f1c67e7",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/beyoglu-taksim-stand-up-gecesi",
+                  "price": 250,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:48.119Z",
+                  "category": "Stand-up",
+                  "venue": "Efsahne Beyoğlu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "0e5529a81243ce5a5f1c67e7",
+                "session-d55f98e1870dc14a7d0faef8e2cee67f"
+              ],
+              "canonicalProductionKey": "production-0b724c18ec117e2ac12a70c6a1e42ee3",
+              "canonicalShowKey": "show-501f0f46c0b089a067705327171fcd0e"
+            }
+          },
+          {
+            "event": {
+              "id": "4ca0731f6e2f7bc59c1cf2e7",
+              "title": "Beyoğlu- Taksim Stand Up - Haydaaa Mehmet Mayda",
+              "description": "Beyoğlu- Taksim Stand Up - Haydaaa Mehmet Mayda",
+              "startsAt": "2026-10-02T16:00:00.000Z",
+              "checkedAt": "2026-09-24T06:39:25.919Z",
+              "venue": "Efsahne Beyoğlu",
+              "district": "",
+              "address": "Kuloğlu Mahallaesi, İstiklâl Caddesi, Sadri Alışık Sk. No:24 Kat:3, 34433 Beyoğlu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/haydaaa-mehmet-mayda",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/haydaaa-mehmet-mayda-84268.jpeg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "9517058f5ff0fafbc0054cf8",
+              "offers": [
+                {
+                  "id": "4ca0731f6e2f7bc59c1cf2e7",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/haydaaa-mehmet-mayda",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:25.919Z",
+                  "category": "Stand-up",
+                  "venue": "Efsahne Beyoğlu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "4ca0731f6e2f7bc59c1cf2e7",
+                "session-8592212b123dc5715eb58c90ce6bb9f9"
+              ],
+              "canonicalProductionKey": "production-ad27787954a5355d808d7079bf7340cf",
+              "canonicalShowKey": "show-06859fb29be6076b7660b49aba247d04"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-02",
+          "dateTo": "2026-10-02",
+          "maxPrice": 600,
+          "category": "Stand-up",
+          "district": "Beyoglu"
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 4
+      },
+      "durationMs": 906,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Classical music in Istanbul on October 10, under 1500 TRY per person. No children's shows."
+        },
+        {
+          "role": "user",
+          "content": "Start over. I want stand-up in Beyoglu on October 2 under 600 TRY."
+        }
+      ]
+    },
+    {
+      "id": "quiet_mood",
+      "input": {
+        "message": "Kafam çok dolu; sakinleşebileceğim, gürültülü olmayan bir akşam arıyorum. Kişi başı en çok 1000 TL, tarih fark etmez.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 1000,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 1457
+      },
+      "durationMs": 1511,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Kafam çok dolu; sakinleşebileceğim, gürültülü olmayan bir akşam arıyorum. Kişi başı en çok 1000 TL, tarih fark etmez."
+        }
+      ]
+    },
+    {
+      "id": "dance_mood",
+      "input": {
+        "message": "Arkadaşlarla dans edip enerjimizi atmak istiyoruz. Elektronik müzik olsun, rap istemiyoruz. Bütçe kişi başı 1500 TL.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "fe0f1495cb49e5dee0f66a92",
+              "title": "Machine Girl, Öncesi: DJ S1S0",
+              "description": "Machine Girl, Öncesi: DJ S1S0 Konseri Elektronik müzik ve punk estetiğini özgün bir şekilde harmanlayan Machine Girl, Blind organizasyonuyla 11 Kasım akşamı IF Performance Hall Beşiktaş sahnesinde. Katartik, öngörülemez performansları ve türden bağımsız kataloglarıyla ünlenen projenin heyecan verici, organik takipçileri sonik maksimalizm ve animasyon/B-korku görsel yetenekleri sayesinde gelişti. Son yıllarda hem underground müzik sahnesinin hem de global arenanın en dikkat çekici isimle",
+              "startsAt": "2026-11-11T16:30:00.000Z",
+              "checkedAt": "2026-09-24T06:32:26.446Z",
+              "venue": "IF Performance Hall Beşiktaş",
+              "district": "İstanbul Avrupa",
+              "address": "Cihannüma, Hasfırın Cd. No:26, 34353 Beşiktaş/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 750,
+              "url": "https://biletinial.com/tr-tr/muzik/100-muzik-sunar-machine-girl",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/100-muzik-sunar-machine-girl-20265299121286c6c2d737346dda48b973d5b8f999e.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "6e2efdb64bbbf2fde3fc8b92",
+              "offers": [
+                {
+                  "id": "fe0f1495cb49e5dee0f66a92",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/muzik/100-muzik-sunar-machine-girl",
+                  "price": 750,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:32:26.446Z",
+                  "category": "Konser",
+                  "venue": "IF Performance Hall Beşiktaş",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "fe0f1495cb49e5dee0f66a92",
+                "session-fef0d6b37b7a9117e9b42e1b8b3f2efc"
+              ],
+              "canonicalProductionKey": "production-5b1f1780f3e74da9dd81ecdee040a905",
+              "canonicalShowKey": "show-df7a25ae5a2307db412af3ad45bb4416"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 1500,
+          "category": "Konser"
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 4
+      },
+      "durationMs": 1241,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Arkadaşlarla dans edip enerjimizi atmak istiyoruz. Elektronik müzik olsun, rap istemiyoruz. Bütçe kişi başı 1500 TL."
+        }
+      ]
+    },
+    {
+      "id": "child_age",
+      "input": {
+        "message": "8 yaşındaki oğlumla çocuk tiyatrosuna gidelim. İkimiz için toplam 900 TL, 4 Ekim Pazar.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 450,
+          "category": null,
+          "partySize": 2,
+          "totalBudget": 900
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.",
+        "totalCandidates": 0
+      },
+      "durationMs": 23,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "8 yaşındaki oğlumla çocuk tiyatrosuna gidelim. İkimiz için toplam 900 TL, 4 Ekim Pazar."
+        }
+      ]
+    },
+    {
+      "id": "accessibility",
+      "input": {
+        "message": "Tekerlekli sandalye erişimi kesin şart. 3 Ekim'de 1000 TL altında tiyatro öner; erişim bilgisi yoksa gösterme.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-10-03",
+          "dateTo": "2026-10-03",
+          "maxPrice": 1000,
+          "category": "Tiyatro"
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 27
+      },
+      "durationMs": 1044,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Tekerlekli sandalye erişimi kesin şart. 3 Ekim'de 1000 TL altında tiyatro öner; erişim bilgisi yoksa gösterme."
+        }
+      ]
+    },
+    {
+      "id": "late_boundary",
+      "input": {
+        "message": "2 Ekim Cuma, saat 21:00'den sonra ama 23:00'ten önce başlayan stand-up olsun. Bütçe 750 TL.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-6242360816b325d5388b84deb8c83f7f",
+              "title": "Stand up Taksim / Beyoğlu Gecesi | İnfiniti Sahne",
+              "description": "Stand up Taksim / Beyoğlu Gecesi Stand Up Gösterisi Beyoğlu Hâlâ Eski Beyoğlu! Türkiye’nin en iyi komedyenleri İnfiniti Sahne’de buluşuyor! Her Cuma, Cumartesi ve Pazar gecesi, üç komedyen ve enerjisi yüksek bir sunucu ile kahkahaya doymaya hazır olun! Şehrin kalbinde, Beyoğlu’nun o unutulmaz ruhunu yeniden yaşayın. Haftanın stresini bir kenara bırakın, gülmeye ve keyifli bir geceye hazır olun. Kahkahaya doymak isteyenleri bekliyoruz. İnfiniti Sahne – Beyoğlu Her Cuma, Cumartesi v",
+              "startsAt": "2026-10-02T19:30:00.000Z",
+              "checkedAt": "2026-09-24T06:33:12.579Z",
+              "venue": "İnfiniti Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "Şahkulu Mahallesi Kumbaracı Yokuşu Sokak No:57 Kat:2, 34421 BEYOĞLU / İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 350,
+              "url": "https://biletinial.com/tr-tr/tiyatro/stand-up-taksim-beyoglu-gecesi-infiniti",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/stand-up-taksim-beyoglu-gecesi-infiniti-sahne-2026331123118cbcb0a6ca9314b62b9da8c0c8b8529f9.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "81aa2ce0002b9fccc8b38248",
+              "offers": [
+                {
+                  "id": "47a0c7b975e7837a678f607e",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/stand-up-taksim-beyoglu-gecesi-infiniti",
+                  "price": 350,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:12.579Z",
+                  "category": "Stand-up",
+                  "venue": "İnfiniti Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "838a6ed2089065273c96c68f",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5MTDP/ISTANBUL/tr",
+                  "price": 350,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:41:38.490Z",
+                  "category": "Stand-up",
+                  "venue": "İnfiniti Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "b26c9f41d9376bd9427020e2",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up-taksim-beyoglu-gecesi-cuma-",
+                  "price": 400,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:52.927Z",
+                  "category": "Stand-up",
+                  "venue": "İnfiniti Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "47a0c7b975e7837a678f607e",
+                "838a6ed2089065273c96c68f",
+                "b26c9f41d9376bd9427020e2",
+                "session-6242360816b325d5388b84deb8c83f7f"
+              ],
+              "canonicalProductionKey": "production-c8d6f00ddc22906d90d8fb81ce338f28",
+              "canonicalShowKey": "show-85990e5dfaf695357bb943deba23de9e"
+            }
+          },
+          {
+            "event": {
+              "id": "session-5f7670e5760469f87262caf57a5ac23b",
+              "title": "Kadıköy Stand-up Gecesi",
+              "description": "Kadıköy Stand-up Gecesi Her Çarşamba, Cuma, Cumartesi gecesi; üç komedyen ve enerjisi yüksek bir sunucu sahne'de, siz ise bol kahkaha ve keyif dolu anların tadını çıkarıyorsunuz. Eğer siz de iş çıkışı stresinizi atıp, kahkahalarla dolu bir gece yaşamak istiyorsanız Kadıköy Ada Bar’da buluşalım!",
+              "startsAt": "2026-10-02T18:45:00.000Z",
+              "checkedAt": "2026-09-24T06:39:02.955Z",
+              "venue": "Ada Bar Kadıköy",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-cuma-21-45-",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-stand-up-gecesi-202593192347677c834b676c4e96873f397029a050a4.jpeg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "49de4723893020145e585b97",
+              "offers": [
+                {
+                  "id": "2b4b54c832b9bef6743987ff",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-cuma-21-45-",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:02.955Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar",
+                  "availability": "available"
+                },
+                {
+                  "id": "44a4e74aea83b788ce008e84",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesii",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:26:01.134Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar Kadıköy",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "2b4b54c832b9bef6743987ff",
+                "44a4e74aea83b788ce008e84",
+                "session-5f7670e5760469f87262caf57a5ac23b"
+              ],
+              "canonicalProductionKey": "production-0c765ec61c808930e6cc1f718b01f8a8",
+              "canonicalShowKey": "show-9b8e66802472cbce3e85b5cd725f8868"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-02",
+          "dateTo": "2026-10-02",
+          "maxPrice": 750,
+          "category": "Stand-up",
+          "startTimeFrom": "21:00",
+          "startTimeTo": "23:00",
+          "startTimeFromExclusive": true,
+          "startTimeToExclusive": true
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 3
+      },
+      "durationMs": 1301,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "2 Ekim Cuma, saat 21:00'den sonra ama 23:00'ten önce başlayan stand-up olsun. Bütçe 750 TL."
+        }
+      ]
+    },
+    {
+      "id": "contradiction",
+      "input": {
+        "message": "3 Ekim'de akşam 22:00'den sonra ve 20:00'den önce bir konser arıyorum.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "filters",
+        "status": "needs_input",
+        "notice": "Koşulları ayrı ve açık biçimde belirt. Örneğin: cumartesi, kişi başı 800 TL, konser hariç.",
+        "totalCandidates": 0
+      },
+      "durationMs": 13,
+      "nextHistory": []
+    },
+    {
+      "id": "unsupported",
+      "input": {
+        "message": "Yarın Ankara'da 700 TL altı konser öner.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "filters",
+        "status": "unsupported_location",
+        "notice": "Şu an yalnızca İstanbul etkinlikleri var. İstanbul için bir arama yapabilirsin.",
+        "totalCandidates": 0
+      },
+      "durationMs": 13,
+      "nextHistory": []
+    },
+    {
+      "id": "free_negated",
+      "input": {
+        "message": "Ücretsiz olması gerekmiyor. 9 Ekim Cuma en fazla 800 TL'ye caz konseri istiyorum.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-10-09",
+          "dateTo": "2026-10-09",
+          "maxPrice": 0,
+          "category": "Konser"
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı.",
+        "totalCandidates": 0
+      },
+      "durationMs": 21,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Ücretsiz olması gerekmiyor. 9 Ekim Cuma en fazla 800 TL'ye caz konseri istiyorum."
+        }
+      ]
+    },
+    {
+      "id": "exact_artist",
+      "input": {
+        "message": "Redd konserine gitmek istiyorum. Başka sanatçı istemiyorum, tarih ve bütçe fark etmez.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "a52a2b8295857fe494b910b3",
+              "title": "Redd Konseri",
+              "description": "Redd Konseri",
+              "startsAt": "2026-10-03T18:00:00.000Z",
+              "checkedAt": "2026-09-24T06:37:33.383Z",
+              "venue": "JJ Arena",
+              "district": "",
+              "address": "Watergarden AVM - Barbaros Mah. Kızılbegonya Sok. No: 10, 34746 Ataşehir/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 3420,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/redd-konseri-",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/redd-konseri--33325.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "825c2191d11c1624923c0b35",
+              "offers": [
+                {
+                  "id": "a52a2b8295857fe494b910b3",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/redd-konseri-",
+                  "price": 3420,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:37:33.383Z",
+                  "category": "Konser",
+                  "venue": "JJ Arena",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "a52a2b8295857fe494b910b3",
+                "session-ac821f2240073aa93e913c67b5166beb"
+              ],
+              "canonicalProductionKey": "production-85282889ab2aeab9d61ab7e1025d1a30",
+              "canonicalShowKey": "show-a7f52f8293d048e6e2cec9ec1a6c0630"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 2123
+      },
+      "durationMs": 1946,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Redd konserine gitmek istiyorum. Başka sanatçı istemiyorum, tarih ve bütçe fark etmez."
+        }
+      ]
+    },
+    {
+      "id": "no_match",
+      "input": {
+        "message": "Uzay istasyonunda yerçekimsiz bale gösterisi arıyorum, başka bir şey istemiyorum.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 2123
+      },
+      "durationMs": 1612,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Uzay istasyonunda yerçekimsiz bale gösterisi arıyorum, başka bir şey istemiyorum."
+        }
+      ]
+    },
+    {
+      "id": "date_correction",
+      "input": {
+        "message": "Yarın değil, pazartesi Beşiktaş'ta bir komedi oyunu istiyorum. Kişi başı 700 TL.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-28",
+          "dateTo": "2026-09-28",
+          "maxPrice": 700,
+          "category": "Tiyatro",
+          "district": "Besiktas"
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı.",
+        "totalCandidates": 0
+      },
+      "durationMs": 24,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Yarın değil, pazartesi Beşiktaş'ta bir komedi oyunu istiyorum. Kişi başı 700 TL."
+        }
+      ]
+    },
+    {
+      "id": "budget_correction",
+      "input": {
+        "message": "700 yanlış oldu, 1700 TL demek istedim. Diğerleri aynı.",
+        "history": [
+          {
+            "role": "user",
+            "content": "Yarın değil, pazartesi Beşiktaş'ta bir komedi oyunu istiyorum. Kişi başı 700 TL."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-09-28",
+          "dateTo": "2026-09-28",
+          "maxPrice": 700,
+          "category": "Tiyatro",
+          "district": "Besiktas"
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.1",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-28",
+          "dateTo": "2026-09-28",
+          "maxPrice": 1700,
+          "category": "Tiyatro",
+          "district": "Besiktas"
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Bu koşullara uyan güncel bir etkinlik bulunamadı.",
+        "totalCandidates": 0
+      },
+      "durationMs": 21,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Yarın değil, pazartesi Beşiktaş'ta bir komedi oyunu istiyorum. Kişi başı 700 TL."
+        },
+        {
+          "role": "user",
+          "content": "700 yanlış oldu, 1700 TL demek istedim. Diğerleri aynı."
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-09-26T18:35:38.490Z"
+}

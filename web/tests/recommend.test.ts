@@ -34,6 +34,27 @@ const deps: Dependencies = {
 const request = validateInput({ message: 'Cumartesi 800 TL altında konser' });
 const config = jevConfigFrom({ TYPESAFE_API_KEY: 'test-only' })!;
 
+await test('Turkish wheelchair requirements reject unknown access before AI and in keyless fallback', async () => {
+  const input = validateInput({
+    message: 'Tekerlekli sandalye erişimi kesin şart, konser öner.',
+  });
+  for (const activeConfig of [null, config]) {
+    let calls = 0;
+    const result = await recommend(input, {
+      ...deps,
+      config: activeConfig,
+      rank: async () => {
+        calls++;
+        throw new Error('Provider unavailable');
+      },
+    });
+    assert.equal(result.status, 'empty');
+    assert.equal(result.recommendations.length, 0);
+    assert.equal(calls, 0);
+    assert.match(result.notice ?? '', /doğrulayamadık/);
+  }
+});
+
 await test('Jev admission uses support probability while score only orders admitted events', () => {
   const makeRanked = (
     id: string,

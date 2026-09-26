@@ -2,13 +2,15 @@
 
 The web application deploys as a Cloudflare Worker with D1 (`DB`) and R2
 (`COLLECTION_STATE`) bindings. Staging and production use separate Cloudflare
-resources and separate protected GitHub environments. Deployment is manual;
+resources. GitHub `staging`/`production` environments provide unattended runtime
+configuration; separate `staging-deploy`/`production-deploy` environments require
+reviewer approval for publication and rollback. Deployment is manual;
 pushes and pull requests never publish the Worker.
 
 ## One-time setup
 
 Create a Worker, D1 database, and R2 bucket for each environment. In the matching
-GitHub environment (`staging` or `production`), define these variables:
+deployment environment (`staging-deploy` or `production-deploy`), define these variables:
 
 | Name                    | Value                                                         |
 | ----------------------- | ------------------------------------------------------------- |
@@ -24,15 +26,22 @@ GitHub environment (`staging` or `production`), define these variables:
 | `AI_DAILY_LIMIT`        | Shared recommendation-request cap (1–10000); defaults to 100  |
 | `WORKERS_PLAN`          | `free` (default) or `paid`; controls the Worker CPU allowance |
 
-Add `CLOUDFLARE_API_TOKEN` and `SYNC_TOKEN` as environment secrets. Add
-`TYPESAFE_API_KEY` as an optional environment secret to enable Jev ranking, and
-`VOYAGE_API_KEY` as an optional environment secret to enable semantic queries.
-Without either provider the Worker uses the deterministic recommendation fallback. The API
+Add `CLOUDFLARE_API_TOKEN` and `SYNC_TOKEN` as deployment-environment secrets. The intended
+AI product also requires `TYPESAFE_API_KEY` for Jev ranking and `VOYAGE_API_KEY`
+for semantic retrieval. Omitting provider keys selects a limited deterministic
+fallback suitable for offline development and failure handling; it does not
+verify the intended AI experience. Browser/Wrangler OAuth authenticates only the
+developer PC; unattended GitHub Actions require the API token. The API
 token needs the least privileges sufficient to deploy Workers, apply D1
-migrations, and bind/read/write the selected R2 bucket. Protect production with
-required reviewers. Keep credentials in environment secrets. Resource IDs are
+migrations, and bind/read/write the selected R2 bucket. Protect both deployment
+environments with required reviewers. Keep credentials in environment secrets. Resource IDs are
 non-secret but are supplied as environment variables so each deployment is explicit.
-Set `BIPLAN_URL` to the same origin as `CF_PUBLIC_URL` for collection and monitoring.
+In the matching runtime environment (`staging` or `production`), set
+`BIPLAN_URL` and `CF_PUBLIC_URL` to the same origin and configure its `SYNC_TOKEN`
+secret for collection. `CF_PUBLIC_URL` also supplies the live staging promotion
+check. Keep the runtime environments free of required-reviewer gates so scheduled
+collection and monitoring can run unattended. They do not need the Cloudflare
+deployment API token or provider keys; indexing invokes the authenticated Worker.
 For a `workers.dev` origin, its hostname must begin with the exact Worker name.
 
 ## Validate locally
@@ -46,27 +55,40 @@ npm run deploy:config -- --env staging
 npm run deploy:dry-run -- --env staging
 ```
 
+For PowerShell setup and equivalent commands, see [Windows development](windows.md).
+
 These commands create `dist/server/wrangler.staging.json` beside the built
 artifact so Wrangler's relative entry-point and asset paths remain valid. The
 generated file is ignored local state and contains non-secret account resource IDs,
-the Jev and Voyage models, Voyage dimensions, and the daily limit. It is included in the deployment artifact,
-never with API keys or the sync secret.
+the Jev and Voyage models, Voyage dimensions, and the daily limit. Target-specific
+configuration is generated after compiled-artifact verification and is excluded
+from the immutable compiled manifest. It never contains API keys or the sync secret.
 Dry-run compiles and validates without contacting the
 deployment API. `npm run local:start` remains the persistent local D1 path, and
 ordinary Vite development retains the optional Sites preview integration.
 
 ## Deploy
 
-Run **Deploy web Worker** in GitHub Actions. Select `staging` or `production`
-and paste the full 40-character commit SHA. The workflow checks out and verifies
-that exact SHA, validates deployment guards, and runs the web tests, typecheck,
-lint, collector tests, production build, built-Worker smoke test, and Wrangler
-dry-run. It uploads the built Worker plus a SHA-256 manifest and provenance JSON
-for review before the first remote mutation. It then applies pending forward-only
-D1 migrations and deploys the Worker with the strict `SYNC_TOKEN` secret and the
-optional Jev and Voyage keys. Provider secrets are supplied only to the actual
-deployment step through a protected temporary secrets file, never to build,
-validation, dry-run, provenance, or artifact-upload steps.
+Run **Deploy web Worker** in GitHub Actions, select `staging`, and supply the full
+40-character commit SHA. The preparation job requires successful core CI on that
+exact revision, runs offline release checks, builds once, and checks the compiled
+Worker, browser flows, and Wrangler dry-run. It has no deployment environment or
+provider secrets. The compiled bytes, SHA-256 manifest, and tool/lockfile
+provenance are uploaded for review before the deployment job can mutate remote state.
+
+The deployment job downloads and verifies that artifact, generates the target's
+binding configuration, checks that no configured secret is embedded in compiled
+files, applies pending forward-only D1 migrations, and deploys. Secrets are
+available only in target validation/deployment steps; the deployment command
+passes Worker secrets through a protected temporary file and removes it afterward.
+
+For production, also supply `staging_run_id` from a successful staging deployment
+of this SHA. The workflow verifies the source run and its recorded manifest
+digest, requires live staging health to identify the exact revision and readiness,
+and downloads that run's compiled artifact. Production performs no build. See
+[artifact integrity](deployment-artifacts.md) for the complete verification path.
+The workflow does not itself establish 48-hour observation, recovery, AI quality,
+capacity, or publication authorization; complete the [launch checklist](launch-checklist.md).
 
 The active recommendation route prefilters verified catalog facts in D1, then
 uses Voyage semantic retrieval when `VOYAGE_API_KEY` is configured and Jev
@@ -101,6 +123,17 @@ npm run embeddings:index -- --live --origin http://127.0.0.1:3001 --allow-loopba
 For collection automation, set the optional protected-environment variable
 `INDEX_EMBEDDINGS=true`. Leave it unset until Voyage credentials and the target
 catalog are ready. Indexing calls do not consume the recommendation request cap.
+Automated indexing is bounded to 20 batches with 60 seconds between batches and
+no retries. An incomplete index at the ceiling fails the run; inspect coverage
+and preserve the failure before authorizing more calls. Existing document vectors
+are reused when their content/model identity is unchanged.
+
+Collection and hourly monitoring share the repository variable
+`SCHEDULED_COLLECTION_ENVIRONMENTS`, a JSON array of selected environments.
+After staging is ready, set it to `["staging"]` for unattended observation.
+Both workflows default to `["production"]` when it is unset. Manual bootstrap
+runs remain diagnostic evidence; only actual scheduled records can satisfy the
+[48-hour soak verifier](soak-verification.md).
 
 After propagation, `/api/health` must pass the two-minute liveness retry window.
 Its deployment environment and exact 40-character commit revision must match the
@@ -164,18 +197,20 @@ Observability samples operational logs at 10%, disables
 automatic invocation logs, and does not enable traces; application code must not
 log request, chat, token, or event payloads.
 
-Promote by deploying the same commit SHA to staging first, checking the site and
-admin import/sync path, then dispatching production. Record the successful
-Worker version ID printed by Wrangler.
+Promote only after the staging release gates pass, using the same SHA and its
+successful staging run ID. Record the successful Worker version ID printed by
+Wrangler and its commit SHA for rollback.
 
 ## Rollback
 
 Use `npx wrangler versions list --name <worker>` to identify a previously
 healthy version. Run **Roll back web Worker**, select the environment, and enter
-that canonical version UUID. The workflow validates that the Worker name belongs
+that canonical version UUID and its full `expected_revision` commit SHA. The workflow validates that the Worker name belongs
 only to the selected environment, rolls back Worker code non-interactively,
 verifies that Cloudflare routes 100% of traffic to the requested version, and
-checks that post-rollback liveness identifies the selected environment. It does
+checks that post-rollback liveness identifies the selected environment and exact
+expected revision, and requires readiness. It preserves the version, health,
+and readiness results as a rollback artifact. It does
 not require the unhealthy Worker to answer before starting recovery.
 
 D1 migrations are never reversed automatically. A code rollback must remain

@@ -1,7 +1,7 @@
 name: Collect event data
 on:
   schedule:
-    - cron: '17 3,15 * * *'
+    - cron: "17 3,15 * * *"
   workflow_dispatch:
     inputs:
       environment:
@@ -11,21 +11,49 @@ on:
         default: production
 permissions:
   contents: read
-concurrency:
-  group: event-collection-${{ inputs.environment || 'production' }}
-  cancel-in-progress: false
 jobs:
-  collect:
+  environments:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment: ${{ inputs.environment || 'production' }}
+    outputs:
+      matrix: ${{ steps.select.outputs.matrix }}
+    steps:
+      - id: select
+        env:
+          REQUESTED_ENVIRONMENT: ${{ inputs.environment }}
+          SCHEDULED_ENVIRONMENTS: ${{ vars.SCHEDULED_COLLECTION_ENVIRONMENTS || '["production"]' }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            matrix="$SCHEDULED_ENVIRONMENTS"
+          else
+            matrix=$(jq -cn --arg value "$REQUESTED_ENVIRONMENT" '[ $value ]')
+          fi
+          if ! jq -e 'type == "array" and length > 0 and all(. == "staging" or . == "production") and (unique | length) == length' <<<"$matrix" >/dev/null; then
+            echo "Collection environments must be a unique JSON array containing only staging and production." >&2
+            exit 1
+          fi
+          echo "matrix=$(jq -c . <<<"$matrix")" >> "$GITHUB_OUTPUT"
+  collect:
+    needs: environments
+    concurrency:
+      group: event-collection-${{ matrix.environment }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: ${{ fromJSON(needs.environments.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: ${{ matrix.environment }}
     env:
       BIPLAN_URL: ${{ vars.BIPLAN_URL }}
-      SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
-      SITES_ACCESS_TOKEN: ${{ secrets.SITES_ACCESS_TOKEN }}
       INDEX_EMBEDDINGS: ${{ vars.INDEX_EMBEDDINGS }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Record collector checkout revision
+        shell: bash
+        run: echo "COLLECTOR_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - uses: actions/setup-node@v4
         with:
           node-version-file: web/.nvmrc
@@ -34,17 +62,22 @@ jobs:
       - run: npm ci --prefix collector
       - run: npm test --prefix collector
       - name: Validate destination configuration
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
         run: |
           if { [ -n "$BIPLAN_URL" ] && [ -z "$SYNC_TOKEN" ]; } || { [ -z "$BIPLAN_URL" ] && [ -n "$SYNC_TOKEN" ]; }; then
             echo "BIPLAN_URL and SYNC_TOKEN must be configured together." >&2
             exit 1
           fi
       - name: Restore durable checkpoint
-        if: env.BIPLAN_URL != '' && env.SYNC_TOKEN != ''
+        if: env.BIPLAN_URL != ''
         working-directory: collector
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SITES_ACCESS_TOKEN: ${{ secrets.SITES_ACCESS_TOKEN }}
         run: npm run checkpoint:restore -- --output state/events.json --fallback ../web/data/events.json
       - name: Bootstrap artifact-only collection
-        if: env.BIPLAN_URL == '' && env.SYNC_TOKEN == ''
+        if: env.BIPLAN_URL == ''
         run: |
           mkdir -p collector/state
           cp web/data/events.json collector/state/events.json
@@ -52,24 +85,36 @@ jobs:
       - name: Collect public listings including later pages
         run: npm run collect --prefix collector -- --limit 100 --discovery-pages 20 --snapshot state/events.json
       - name: Import, checkpoint, and read back canonical state
-        if: env.BIPLAN_URL != '' && env.SYNC_TOKEN != ''
-        run: npm run publish --prefix collector -- --checkpoint --snapshot state/events.json
+        if: env.BIPLAN_URL != ''
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SITES_ACCESS_TOKEN: ${{ secrets.SITES_ACCESS_TOKEN }}
+        run: npm run publish --prefix collector -- --checkpoint --snapshot state/events.json --receipt output/publication.json
       - name: Index Voyage embeddings
-        if: env.BIPLAN_URL != '' && env.SYNC_TOKEN != '' && env.INDEX_EMBEDDINGS == 'true'
-        run: node web/scripts/index-embeddings.mjs --live
-      - name: Record run evidence
-        if: success()
+        if: env.BIPLAN_URL != '' && env.INDEX_EMBEDDINGS == 'true'
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: node web/scripts/index-embeddings.mjs --live --max-batches 20 --interval-ms 60000
+      - name: Record published run evidence
+        if: success() && env.BIPLAN_URL != ''
         working-directory: collector
+        run: npm run soak:report -- --publication output/publication.json
+      - name: Record artifact-only run evidence
+        if: success() && env.BIPLAN_URL == ''
+        working-directory: collector
+        env:
+          COLLECTION_ENVIRONMENT: ${{ matrix.environment }}
         run: npm run soak:report
       - name: Save normalized data, source health, and run evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: event-data-${{ inputs.environment || 'production' }}-${{ github.run_id }}
+          name: event-data-${{ matrix.environment }}-${{ github.run_id }}
           path: |
             collector/output/events.json
             collector/output/report.json
             collector/output/soak-evidence.json
+            collector/output/publication.json
             collector/state/events.json
           if-no-files-found: warn
           retention-days: 14

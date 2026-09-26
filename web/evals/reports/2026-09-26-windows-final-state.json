@@ -1,0 +1,614 @@
+{
+  "referenceDate": "2026-09-26",
+  "timeZone": "Europe/Istanbul",
+  "note": "Final four-case verification after clause-scope and group-size preservation fixes. Frozen before live execution. One separate synthetic local visitor, application rate limits enabled, 25-second pacing, no retries, at most four requests.",
+  "cases": [
+    {
+      "id": "group_start",
+      "visitor": 3,
+      "message": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz.",
+      "expectation": "Oct4 theatre OR stand-up, comedy source evidence, party4 total1800 max450."
+    },
+    {
+      "id": "clear_budget_keep_party",
+      "visitor": 3,
+      "parent": "group_start",
+      "message": "Para sınırını kaldır, diğer koşullar aynı.",
+      "expectation": "Retain party4, Oct4, theatre OR stand-up and comedy; maxPrice null, totalBudget absent."
+    },
+    {
+      "id": "new_total_after_waiver",
+      "visitor": 3,
+      "parent": "clear_budget_keep_party",
+      "message": "Toplam bütçeyi 3000 TL yap.",
+      "expectation": "Reuse party4 without clarification, total3000 max750; retain Oct4, theatre OR stand-up and comedy."
+    },
+    {
+      "id": "venue_set_date_indifferent",
+      "visitor": 3,
+      "message": "Mekân Beşiktaş olsun, tarih fark etmez. Stand-up için kişi başı en fazla 700 TL.",
+      "expectation": "Retain Besiktas district, no date restriction, Stand-up, max700; returned cards must satisfy district and budget."
+    }
+  ],
+  "fixture": "web\\evals\\cases\\2026-09-26-windows-final-state.json",
+  "codeRevision": "ea8da5a9a16bfe81bd753b60aa8acba5b2229eab",
+  "dirtyWorktree": true,
+  "startedAt": "2026-09-26T18:47:17.768Z",
+  "maxHttpRequests": 24,
+  "automaticRetries": 0,
+  "origin": "http://127.0.0.1:3001",
+  "results": [
+    {
+      "id": "group_start",
+      "input": {
+        "message": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.3",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-55a5804c6df02e1dc6a23c105430618f",
+              "title": "Kadıköy Açık Mikrofon Stand-up - Comedy Lab",
+              "description": "Kadıköy Açık Mikrofon Stand-up Gösterisi Comedy Lab Istanbul, açık mikrofon stand-up komedi gösterileriyle her Pazar 20:00'da Vohu Cafe Kadıköy sahnesinde! İster seyirci ol, ister sahneye çık! Herkesin 5 dakika sahneye çıkıp yeni şakalarını deneyebildiği Açık Mikrofon, her hafta farklı komedyenlerin sunumuyla Vohu Cafe'de! * Sahne almak için gösteri başlangıcında sunucuya isminizi yazdırmanız yeterli. Gösteri 18 yaş üzeri seyirci kitlesine yöneliktir.",
+              "startsAt": "2026-10-04T17:00:00.000Z",
+              "checkedAt": "2026-09-24T06:40:05.106Z",
+              "venue": "Vohu Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Kırtasiyeci Sk. n0:2 a, 34740 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-acik-mikrofon-stand-up-comedy-lab-20268491629d68f553631d4a2fb7027e628778961f.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "628185a9ab6e813a9cd0775f",
+              "offers": [
+                {
+                  "id": "b42d0b8a3148ba1cd30eab35",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:40:05.106Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "263889bd18ffd81c6205609f",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-acik-mikrofon-stand-up-comedy-lab",
+                  "price": 224,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:23.468Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "263889bd18ffd81c6205609f",
+                "b42d0b8a3148ba1cd30eab35",
+                "session-55a5804c6df02e1dc6a23c105430618f"
+              ],
+              "canonicalProductionKey": "production-3aa5ab803297643c4d61a93f70938c28",
+              "canonicalShowKey": "show-3b4bc93e10420cedafd9de3005110f44"
+            }
+          },
+          {
+            "event": {
+              "id": "f257541e049ae41cff40ca24",
+              "title": "Kadıköy Stand up Gecesi Pazar 19:00",
+              "description": "Kadıköy Stand up Gecesi Pazar 19:00",
+              "startsAt": "2026-10-04T16:00:00.000Z",
+              "checkedAt": "2026-09-24T06:39:36.175Z",
+              "venue": "Ada Bar",
+              "district": "",
+              "address": "Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-pazar-19-00",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/kadikoy-stand-up-gecesi-pazar-19-00-20260521125352407-662ef776f0d0.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "5ff295ffaf5648ed7ae4ece1",
+              "offers": [
+                {
+                  "id": "f257541e049ae41cff40ca24",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-pazar-19-00",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:36.175Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "f257541e049ae41cff40ca24",
+                "session-0d3d73611776c39e05bcde683971113e"
+              ],
+              "canonicalProductionKey": "production-0c765ec61c808930e6cc1f718b01f8a8",
+              "canonicalShowKey": "show-9b8e66802472cbce3e85b5cd725f8868"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 450,
+          "category": null,
+          "partySize": 4,
+          "totalBudget": 1800,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 8
+      },
+      "durationMs": 1717,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+        }
+      ]
+    },
+    {
+      "id": "clear_budget_keep_party",
+      "input": {
+        "message": "Para sınırını kaldır, diğer koşullar aynı.",
+        "history": [
+          {
+            "role": "user",
+            "content": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 450,
+          "category": null,
+          "partySize": 4,
+          "totalBudget": 1800,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.3",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-55a5804c6df02e1dc6a23c105430618f",
+              "title": "Kadıköy Açık Mikrofon Stand-up - Comedy Lab",
+              "description": "Kadıköy Açık Mikrofon Stand-up Gösterisi Comedy Lab Istanbul, açık mikrofon stand-up komedi gösterileriyle her Pazar 20:00'da Vohu Cafe Kadıköy sahnesinde! İster seyirci ol, ister sahneye çık! Herkesin 5 dakika sahneye çıkıp yeni şakalarını deneyebildiği Açık Mikrofon, her hafta farklı komedyenlerin sunumuyla Vohu Cafe'de! * Sahne almak için gösteri başlangıcında sunucuya isminizi yazdırmanız yeterli. Gösteri 18 yaş üzeri seyirci kitlesine yöneliktir.",
+              "startsAt": "2026-10-04T17:00:00.000Z",
+              "checkedAt": "2026-09-24T06:40:05.106Z",
+              "venue": "Vohu Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Kırtasiyeci Sk. n0:2 a, 34740 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-acik-mikrofon-stand-up-comedy-lab-20268491629d68f553631d4a2fb7027e628778961f.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "628185a9ab6e813a9cd0775f",
+              "offers": [
+                {
+                  "id": "b42d0b8a3148ba1cd30eab35",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:40:05.106Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "263889bd18ffd81c6205609f",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-acik-mikrofon-stand-up-comedy-lab",
+                  "price": 224,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:23.468Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "263889bd18ffd81c6205609f",
+                "b42d0b8a3148ba1cd30eab35",
+                "session-55a5804c6df02e1dc6a23c105430618f"
+              ],
+              "canonicalProductionKey": "production-3aa5ab803297643c4d61a93f70938c28",
+              "canonicalShowKey": "show-3b4bc93e10420cedafd9de3005110f44"
+            }
+          },
+          {
+            "event": {
+              "id": "f257541e049ae41cff40ca24",
+              "title": "Kadıköy Stand up Gecesi Pazar 19:00",
+              "description": "Kadıköy Stand up Gecesi Pazar 19:00",
+              "startsAt": "2026-10-04T16:00:00.000Z",
+              "checkedAt": "2026-09-24T06:39:36.175Z",
+              "venue": "Ada Bar",
+              "district": "",
+              "address": "Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-pazar-19-00",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/kadikoy-stand-up-gecesi-pazar-19-00-20260521125352407-662ef776f0d0.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "5ff295ffaf5648ed7ae4ece1",
+              "offers": [
+                {
+                  "id": "f257541e049ae41cff40ca24",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-pazar-19-00",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:39:36.175Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "f257541e049ae41cff40ca24",
+                "session-0d3d73611776c39e05bcde683971113e"
+              ],
+              "canonicalProductionKey": "production-0c765ec61c808930e6cc1f718b01f8a8",
+              "canonicalShowKey": "show-9b8e66802472cbce3e85b5cd725f8868"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": null,
+          "category": null,
+          "partySize": 4,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 18
+      },
+      "durationMs": 1133,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+        },
+        {
+          "role": "user",
+          "content": "Para sınırını kaldır, diğer koşullar aynı."
+        }
+      ]
+    },
+    {
+      "id": "new_total_after_waiver",
+      "input": {
+        "message": "Toplam bütçeyi 3000 TL yap.",
+        "history": [
+          {
+            "role": "user",
+            "content": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+          },
+          {
+            "role": "user",
+            "content": "Para sınırını kaldır, diğer koşullar aynı."
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": null,
+          "category": null,
+          "partySize": 4,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.3",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-55a5804c6df02e1dc6a23c105430618f",
+              "title": "Kadıköy Açık Mikrofon Stand-up - Comedy Lab",
+              "description": "Kadıköy Açık Mikrofon Stand-up Gösterisi Comedy Lab Istanbul, açık mikrofon stand-up komedi gösterileriyle her Pazar 20:00'da Vohu Cafe Kadıköy sahnesinde! İster seyirci ol, ister sahneye çık! Herkesin 5 dakika sahneye çıkıp yeni şakalarını deneyebildiği Açık Mikrofon, her hafta farklı komedyenlerin sunumuyla Vohu Cafe'de! * Sahne almak için gösteri başlangıcında sunucuya isminizi yazdırmanız yeterli. Gösteri 18 yaş üzeri seyirci kitlesine yöneliktir.",
+              "startsAt": "2026-10-04T17:00:00.000Z",
+              "checkedAt": "2026-09-24T06:40:05.106Z",
+              "venue": "Vohu Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Kırtasiyeci Sk. n0:2 a, 34740 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-acik-mikrofon-stand-up-comedy-lab-20268491629d68f553631d4a2fb7027e628778961f.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "628185a9ab6e813a9cd0775f",
+              "offers": [
+                {
+                  "id": "b42d0b8a3148ba1cd30eab35",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-acik-mikrofon-stand-up-comedy-lab-istanbul",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:40:05.106Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "263889bd18ffd81c6205609f",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-acik-mikrofon-stand-up-comedy-lab",
+                  "price": 224,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:23.468Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "263889bd18ffd81c6205609f",
+                "b42d0b8a3148ba1cd30eab35",
+                "session-55a5804c6df02e1dc6a23c105430618f"
+              ],
+              "canonicalProductionKey": "production-3aa5ab803297643c4d61a93f70938c28",
+              "canonicalShowKey": "show-3b4bc93e10420cedafd9de3005110f44"
+            }
+          },
+          {
+            "event": {
+              "id": "session-3bb4609198c2bb367e6c06ed1062fbef",
+              "title": "Musti Kusti - Stand Up (Yeni Gösteri)",
+              "description": "Musti Kusti - Stand Up (Yeni Gösteri) Musti Kusti Youtube'da yayınladığı ve kısa zamanda büyük beğeni toplayan Kara Mizah isimli stand up gösterisinin ardından yeni gösterisiyle sahnede!",
+              "startsAt": "2026-10-04T16:30:00.000Z",
+              "checkedAt": "2026-09-24T06:28:39.490Z",
+              "venue": "Mall Of İstanbul Biletinial Moi Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "Başakşehir, Ziya Gökalp Mahallesi, Süleyman Demirel Bulvarı No:7, Mall of İstanbul, 34306 İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 750,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/musti-kusti-kara-mizah",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/musti-kusti-stand-up-yeni-gosteri-202641202735c5ba9d166ba14d25a04fc642d8128cc0.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "39b9cf282f970f983f684028",
+              "offers": [
+                {
+                  "id": "972ac8e8e0b3523a4d5dced6",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/musti-kusti-kara-mizah",
+                  "price": 750,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:28:39.490Z",
+                  "category": "Stand-up",
+                  "venue": "Mall of İstanbul MOİ Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "dbff3a846fb1154693e5ceed",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/musti-kusti-stand-up-yeni-gosteri",
+                  "price": 750,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:33:10.410Z",
+                  "category": "Stand-up",
+                  "venue": "Mall Of İstanbul Biletinial Moi Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "972ac8e8e0b3523a4d5dced6",
+                "dbff3a846fb1154693e5ceed",
+                "session-3bb4609198c2bb367e6c06ed1062fbef"
+              ],
+              "canonicalProductionKey": "production-cb3755f853a953603aef99a31dc153f3",
+              "canonicalShowKey": "show-f1afb2d3d239be0e82fd53dbab636753"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-10-04",
+          "dateTo": "2026-10-04",
+          "maxPrice": 750,
+          "category": null,
+          "partySize": 4,
+          "totalBudget": 3000,
+          "categories": [
+            "Stand-up",
+            "Tiyatro"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 13
+      },
+      "durationMs": 988,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz."
+        },
+        {
+          "role": "user",
+          "content": "Para sınırını kaldır, diğer koşullar aynı."
+        },
+        {
+          "role": "user",
+          "content": "Toplam bütçeyi 3000 TL yap."
+        }
+      ]
+    },
+    {
+      "id": "venue_set_date_indifferent",
+      "input": {
+        "message": "Mekân Beşiktaş olsun, tarih fark etmez. Stand-up için kişi başı en fazla 700 TL.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.3",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "e917a229932017d0e94a446f",
+              "title": "Yunus Emre Gündüz - 4. Gösteri - Stand Up",
+              "description": "Yunus Emre Gündüz - 4. Gösteri - Stand Up",
+              "startsAt": "2026-10-28T17:00:00.000Z",
+              "checkedAt": "2026-09-24T06:28:37.954Z",
+              "venue": "The Mentalist Pub - Beşiktaş | Maltica Gastro Pub Beşiktaş",
+              "district": "",
+              "address": "Sinanpaşa, Şht. Asım Cd. No:42, 34353 BEŞİKTAŞ / İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 450.8,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-emre-gunduz-4-gosteri-stand-up",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/yunus-emre-gunduz-4-gosteri-stand-up-58546.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "a1d80a9daba5cb840711ffb9",
+              "offers": [
+                {
+                  "id": "e917a229932017d0e94a446f",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-emre-gunduz-4-gosteri-stand-up",
+                  "price": 450.8,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:28:37.954Z",
+                  "category": "Stand-up",
+                  "venue": "The Mentalist Pub - Beşiktaş | Maltica Gastro Pub Beşiktaş",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "e917a229932017d0e94a446f",
+                "session-8e740b3e0938b596a5d5d699e2627f47"
+              ],
+              "canonicalProductionKey": "production-8ed8a25cfbc943ae8bfa5026038a0a55",
+              "canonicalShowKey": "show-8005f2139e3e3a510f57f195ef737e48"
+            }
+          },
+          {
+            "event": {
+              "id": "fd238c534e29f04c9682f9c6",
+              "title": "Serdar Nalçakar - Çok Bozdu (Stand Up Gösterisi)",
+              "description": "Serdar Nalçakar - Çok Bozdu (Stand Up Gösterisi)",
+              "startsAt": "2026-10-31T18:00:00.000Z",
+              "checkedAt": "2026-09-24T06:40:21.146Z",
+              "venue": "The Mentalist Pub - Beşiktaş | Maltica Gastro Pub Beşiktaş",
+              "district": "",
+              "address": "Sinanpaşa, Şht. Asım Cd. No:42, 34353 BEŞİKTAŞ / İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 600,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/serdar-nalcakar-cok-bozdu-stand-up-gosterisi",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/serdar-nalcakar-cok-bozdu-stand-up-gosterisi-20260817092021054-16390233a8c0.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "895f141f8040a661b49529b5",
+              "offers": [
+                {
+                  "id": "fd238c534e29f04c9682f9c6",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/serdar-nalcakar-cok-bozdu-stand-up-gosterisi",
+                  "price": 600,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:40:21.146Z",
+                  "category": "Stand-up",
+                  "venue": "The Mentalist Pub - Beşiktaş | Maltica Gastro Pub Beşiktaş",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "fd238c534e29f04c9682f9c6",
+                "session-6f6fd0d7921b45b0bfed754071146e5c"
+              ],
+              "canonicalProductionKey": "production-fcd6bcd8df61cace3e3a0ed014019ab2",
+              "canonicalShowKey": "show-46efeeac86adcc6fc8d0f52e162cf1a7"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 700,
+          "category": "Stand-up",
+          "district": "Besiktas"
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 8
+      },
+      "durationMs": 1239,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Mekân Beşiktaş olsun, tarih fark etmez. Stand-up için kişi başı en fazla 700 TL."
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-09-26T18:48:37.882Z"
+}

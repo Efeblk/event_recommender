@@ -152,19 +152,19 @@ await test('semantic calm-mood shortlist reserves diverse sourced formats withou
       ]),
     ),
   };
-  const result = shortlistEvents(
-    events,
+  for (const message of [
     'Çok yoruldum, sakin ama sıkıcı olmayan bir akşam istiyorum',
-    [],
-    16,
-    semantic,
-  );
-  const ids = new Set(result.map(({ id }) => id));
-  assert.equal(result.length, 16);
-  assert.equal(ids.has(acoustic.id), true);
-  assert.equal(ids.has(strings.id), true);
-  assert.equal(ids.has(candle.id), true);
-  assert.equal(strings.description.includes('sakin'), false);
+    'Kafam çok dolu; sakinleşebileceğim, gürültülü olmayan bir akşam arıyorum.',
+    'Sakinleşmek istiyoruz, tarih fark etmez.',
+  ]) {
+    const result = shortlistEvents(events, message, [], 16, semantic);
+    const ids = new Set(result.map(({ id }) => id));
+    assert.equal(result.length, 16);
+    assert.equal(ids.has(acoustic.id), true);
+    assert.equal(ids.has(strings.id), true);
+    assert.equal(ids.has(candle.id), true);
+    assert.equal(strings.description.includes('sakin'), false);
+  }
 });
 
 await test('calm-format coverage does not activate for a rejected calm mood', () => {
@@ -184,16 +184,16 @@ await test('calm-format coverage does not activate for a rejected calm mood', ()
       ]),
     ),
   };
-  assert.equal(
-    shortlistEvents(
-      events,
-      'Sakin bir şey istemiyorum, enerjik olsun',
-      [],
-      16,
-      semantic,
-    ).some(({ id }) => id === acoustic.id),
-    false,
-  );
+  for (const message of [
+    'Sakin bir şey istemiyorum, enerjik olsun',
+    'Sakinleşmek istemiyorum, enerjik olsun',
+  ])
+    assert.equal(
+      shortlistEvents(events, message, [], 16, semantic).some(
+        ({ id }) => id === acoustic.id,
+      ),
+      false,
+    );
 });
 
 await test('calm mood uses reset-aware history and supports English phrasing', () => {

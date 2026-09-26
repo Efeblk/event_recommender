@@ -230,7 +230,7 @@ function requestsCalmOptionalMood(message: string, history: Message[]) {
   for (const turn of turns) {
     const text = normalize(turn);
     if (
-      /\b(?:sakin|huzurlu|dinlendirici|calm|relaxed|relaxing|quiet)\b[^.!?]{0,24}\b(?:istemiyorum|istemem|olmasin|degil|is not|isn't)\b/.test(
+      /\b(?:sakin(?:les(?:mek|ebilecegim|ebilecegimiz))?|huzurlu|dinlendirici|calm|relaxed|relaxing|quiet)\b[^.!?]{0,24}\b(?:istemiyorum|istemem|olmasin|degil|is not|isn't)\b/.test(
         text,
       ) ||
       /\b(?:not|no|don't want|do not want)\s+(?:a\s+)?(?:calm|relaxed|relaxing|quiet)\b/.test(
@@ -239,7 +239,7 @@ function requestsCalmOptionalMood(message: string, history: Message[]) {
     )
       return false;
     if (
-      /\b(?:sakin|huzurlu|dinlendirici|yoruldum|yorgunum|rahat(?:\s+bir)?\s+aksam|calm|relaxed|relaxing|tired|exhausted)\b/.test(
+      /\b(?:sakin(?:les(?:mek|ebilecegim|ebilecegimiz))?|huzurlu|dinlendirici|yoruldum|yorgunum|rahat(?:\s+bir)?\s+aksam|calm|relaxed|relaxing|tired|exhausted)\b/.test(
         text,
       )
     )

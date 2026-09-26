@@ -37,6 +37,7 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/deploy-provenance/
 
 !.env.example
 *.tsbuildinfo

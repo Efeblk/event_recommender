@@ -27,6 +27,34 @@ function event(overrides: Partial<EventRecord> = {}): EventRecord {
   };
 }
 
+await test('reviewed Kütüphanedeki Ceset titles combine offers only for the same session', () => {
+  const base = event({
+    title: 'Kütüphanedeki Ceset',
+    venue: 'Taksim İstiklal Sahne',
+    category: 'Tiyatro',
+    description: 'Sude Naz Demirci uyarlaması, Funda Bayraktaroğlu oyunculuğu.',
+    price: 336,
+  });
+  const alias = event({
+    ...base,
+    id: 'bubilet:ceset',
+    source: 'bubilet',
+    title: 'Kütüphanedeki Ceset Tiyatro Oyunu',
+    url: 'https://bubilet.example/ceset',
+    price: 300,
+  });
+  const merged = mergeEventSessions([base, alias]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].price, 300);
+  assert.equal(merged[0].offers?.length, 2);
+  for (const different of [
+    { ...alias, startsAt: '2026-10-10T19:00:00.000Z' },
+    { ...alias, venue: 'Başka Sahne' },
+    { ...alias, title: 'Kütüphanedeki Ceset - Başka Uyarlama' },
+  ])
+    assert.equal(mergeEventSessions([base, different]).length, 2);
+});
+
 await test('merges the screenshot category and curated venue conflict', () => {
   const result = mergeEventSessions([
     event({ category: 'Tiyatro', description: 'Metin Zakoğlu gösterisi' }),
@@ -48,6 +76,33 @@ await test('merges the screenshot category and curated venue conflict', () => {
   assert.ok(result[0].mergedIds?.includes('biletinial:1'));
   assert.ok(result[0].mergedIds?.includes('bubilet:9'));
   assert.equal(result[0].productionKey, 'existing-source-production');
+});
+
+await test('JJ Arena aliases retain the cheaper Redd offer without merging another venue or session', () => {
+  const first = event({
+    title: 'Redd Konseri',
+    venue: 'JJ Arena Ataşehir',
+    category: 'Konser',
+    price: 1605,
+  });
+  const second = event({
+    ...first,
+    id: 'bubilet:redd',
+    source: 'bubilet',
+    venue: 'JJ Arena',
+    price: 3420,
+    url: 'https://bubilet.example/redd',
+    address: 'Watergarden AVM, Ataşehir/İstanbul',
+  });
+  const merged = mergeEventSessions([first, second]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].price, 1605);
+  assert.equal(merged[0].offers?.length, 2);
+  for (const different of [
+    { ...second, venue: 'Jolly Joker Kartal' },
+    { ...second, startsAt: '2026-10-11T17:00:00.000Z' },
+  ])
+    assert.equal(mergeEventSessions([first, different]).length, 2);
 });
 
 await test('requires exact normalized title, city, venue identity and instant', () => {
@@ -457,6 +512,33 @@ await test('fills a missing address only from consistent exact-session source fa
     mergeEventSessions([event({ address: 'Original' }), secondary])[0].address,
     'Original',
   );
+});
+
+await test('reviewed Mustafa Boz titles merge only the same venue and session', () => {
+  const solo = event({
+    title: 'Mustafa Boz - Tek Kişilik Stand Up',
+    venue: 'Vohu Sahne',
+    startsAt: '2026-09-26T19:00:00.000Z',
+    price: 200,
+  });
+  const shorter = event({
+    id: 'bubilet:mustafa',
+    source: 'bubilet',
+    title: 'Mustafa Boz Stand Up',
+    venue: solo.venue,
+    startsAt: solo.startsAt,
+    price: 200,
+  });
+  const merged = mergeEventSessions([solo, shorter]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].offers?.length, 2);
+  assert.equal(merged[0].price, 200);
+  for (const distinct of [
+    { ...shorter, startsAt: '2026-09-26T20:00:00.000Z' },
+    { ...shorter, venue: 'Başka Sahne' },
+    { ...shorter, title: 'Mustafa Boz - Yeni Gösteri Stand Up' },
+  ])
+    assert.equal(mergeEventSessions([solo, distinct]).length, 2);
 });
 
 await test('reviewed Ada Bar schedule titles merge only at the same performance time', () => {

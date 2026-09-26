@@ -119,47 +119,19 @@ try {
   const listing = await events.json();
   assert.equal(listing.aiEnabled, false);
   assert.ok(Array.isArray(listing.events));
-  const search = await request('/api/recommend', {
+  const unavailableSearch = await request('/api/recommend', {
     message: '1000 TL altında konser',
   });
-  assert.equal(search.status, 200);
-  const result = await search.json();
-  assert.equal(result.mode, 'filters');
-  assert.equal(result.filters.maxPrice, 1000);
-  assert.ok(['empty', 'results'].includes(result.status));
-  assert.equal('message' in result, false);
-  assert.ok(result.recommendations.every((item) => !('reason' in item)));
-  // A source snapshot can expire: an empty result is valid, fabricated events aren't.
-  assert.ok(
-    result.recommendations.every(
-      ({ event }) =>
-        event.price !== null &&
-        event.price <= 1000 &&
-        event.category === 'Konser',
-    ),
-  );
+  assert.equal(unavailableSearch.status, 503);
+  assert.equal(unavailableSearch.headers.get('cache-control'), 'no-store');
+  assert.equal(unavailableSearch.headers.get('retry-after'), '300');
+  const unavailableBody = await unavailableSearch.json();
+  assert.equal(unavailableBody.code, 'catalog_unavailable');
+  assert.equal(unavailableBody.catalog.status, 'stale');
+  assert.match(unavailableBody.error, /yenileniyor|yeniden dene/);
   const invalid = await request('/api/recommend', { message: '' });
   assert.equal(invalid.status, 400);
   await invalid.arrayBuffer();
-  const unclear = await request('/api/recommend', {
-    message: 'Toplam bütçem 800 TL',
-  });
-  assert.equal(unclear.status, 200);
-  const unclearBody = await unclear.json();
-  assert.equal(unclearBody.status, 'needs_input');
-  assert.equal(unclearBody.filters.maxPrice, null);
-  assert.deepEqual(unclearBody.recommendations, []);
-  const excluded = await request('/api/recommend', {
-    message: 'Konser istemiyorum',
-  });
-  assert.equal(excluded.status, 200);
-  const excludedBody = await excluded.json();
-  assert.deepEqual(excludedBody.filters.excludedCategories, ['Konser']);
-  assert.ok(
-    excludedBody.recommendations.every(
-      ({ event }) => event.category !== 'Konser',
-    ),
-  );
   const sync = await request('/api/admin/sync', {});
   assert.equal(sync.status, 401);
   await sync.arrayBuffer();
@@ -213,6 +185,51 @@ try {
   const readyEvents = await request('/api/events');
   assert.equal(readyEvents.status, 200);
   assert.deepEqual((await readyEvents.json()).catalog, readyCatalog);
+  const search = await request('/api/recommend', {
+    message: '1000 TL altında konser',
+  });
+  assert.equal(search.status, 200);
+  const result = await search.json();
+  assert.equal(result.mode, 'filters');
+  assert.equal(result.filters.maxPrice, 1000);
+  assert.ok(['empty', 'results'].includes(result.status));
+  assert.equal('message' in result, false);
+  assert.ok(result.recommendations.every((item) => !('reason' in item)));
+  assert.ok(
+    result.recommendations.every(
+      ({ event }) =>
+        event.price !== null &&
+        event.price <= 1000 &&
+        event.category === 'Konser',
+    ),
+  );
+  const genuineNoMatch = await request('/api/recommend', {
+    message: '1 TL altında konser',
+  });
+  assert.equal(genuineNoMatch.status, 200);
+  const genuineNoMatchBody = await genuineNoMatch.json();
+  assert.equal(genuineNoMatchBody.status, 'empty');
+  assert.deepEqual(genuineNoMatchBody.recommendations, []);
+  assert.equal(genuineNoMatchBody.filters.maxPrice, 1);
+  const unclear = await request('/api/recommend', {
+    message: 'Toplam bütçem 800 TL',
+  });
+  assert.equal(unclear.status, 200);
+  const unclearBody = await unclear.json();
+  assert.equal(unclearBody.status, 'needs_input');
+  assert.equal(unclearBody.filters.maxPrice, null);
+  assert.deepEqual(unclearBody.recommendations, []);
+  const excluded = await request('/api/recommend', {
+    message: 'Konser istemiyorum',
+  });
+  assert.equal(excluded.status, 200);
+  const excludedBody = await excluded.json();
+  assert.deepEqual(excludedBody.filters.excludedCategories, ['Konser']);
+  assert.ok(
+    excludedBody.recommendations.every(
+      ({ event }) => event.category !== 'Konser',
+    ),
+  );
 
   await env.DB.prepare(
     "INSERT INTO metadata(key,value) VALUES('sync_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",

@@ -5,6 +5,7 @@ import {
   type Filters,
   type Category,
 } from './types.ts';
+import { hasSupportedEventFormat } from './event-format.ts';
 import {
   CATEGORY_NEGATION,
   isFullPreferenceReset,
@@ -87,7 +88,7 @@ export function validateFilters(value: unknown): Filters {
       f.totalBudget > 100000)
   )
     throw new Error('Toplam bütçe 1–100.000 TL arasında olmalı.');
-  if ((f.partySize == null) !== (f.totalBudget == null))
+  if (f.totalBudget != null && f.partySize == null)
     throw new Error('Toplam bütçe için kişi sayısı gerekli.');
   if (
     typeof f.partySize === 'number' &&
@@ -164,7 +165,7 @@ const categoryTerms: Array<[Category, RegExp, RegExp]> = [
   ['Stand-up', /\b(?:stand[ -]?up)\b/, /\b(?:stand[ -]?up|komedi|comedy)\b/],
   [
     'Tiyatro',
-    /\b(?:tiyatro|sahne oyunu|komedi oyunu|comedy play|theatre|theater)\b/,
+    /\b(?:tiyatro(?:su(?:na|nda|nu)?)?|sahne oyunu|komedi oyunu|comedy play|theatre|theater)\b/,
     /\b(?:tiyatro(?:ya|yu)?|sahne oyunu|theatre|theater)\b/,
   ],
   [
@@ -230,11 +231,11 @@ function parseCategories(q: string, previous: Filters) {
 
 function budgetIssue(q: string, previous: Filters): ConstraintIssue | null {
   const freeWaived =
-    /(?:ucretsiz|bedava)[^.!?]{0,32}(?:sart degil|zorunlu degil|gerekli degil)/.test(
+    /(?:ucretsiz|bedava)[^.!?]{0,32}(?:sart degil|zorunlu degil|gerekli degil|gerekmez|gerekmiyor)/.test(
       q,
     );
   if (
-    /butce(?:yi)?.*(?:yok|sinir.*yok|kaldir|bosver)|fiyat.*(?:onemli degil|fark etmez)|(?:no budget limit|without a budget limit)|butcesiz/.test(
+    /butce(?:yi)?.*(?:yok|sinir.*yok|kaldir|bosver)|fiyat.*(?:onemli degil|fark etmez)|para\s+sinir(?:i|ini)?\s+(?:kaldir|olmasin)\b|(?:no budget limit|without a budget limit)|butcesiz/.test(
       q,
     ) ||
     (!freeWaived && /ucretsiz|bedava/.test(q))
@@ -275,7 +276,10 @@ function budgetIssue(q: string, previous: Filters): ConstraintIssue | null {
   const perPerson = /\b(?:kisi basi|per[ -]?person|each|per ticket)\b/.test(q);
   const hasParty = partySize(q) !== null;
   if (total && perPerson) return 'budget_ambiguous';
-  if (total) return hasParty ? null : 'budget_ambiguous';
+  if (total)
+    return hasParty || previous.partySize !== undefined
+      ? null
+      : 'budget_ambiguous';
   if (hasParty && !perPerson) return 'budget_ambiguous';
   return null;
 }
@@ -639,7 +643,7 @@ function unsupportedLocation(q: string) {
 }
 
 const recognizedDateToken =
-  '(?:yarin|tomorrow|bugun|today|tonight|pazartesi|monday|sali|tuesday|carsamba|wednesday|persembe|thursday|cuma|friday|cumartesi|saturday|pazar|sunday)';
+  '(?:hafta sonu|haftasonu|(?:this )?weekend|yarin|tomorrow|bugun|today|tonight|pazartesi|monday|sali|tuesday|carsamba|wednesday|persembe|thursday|cuma|friday|cumartesi|saturday|pazar|sunday)';
 
 function maskNegatedRecognizedDates(q: string) {
   let hadNegatedDate = false;
@@ -783,12 +787,11 @@ export function parseFilters(
   const f = { ...previous };
   const today = todayInIstanbul(now);
   if (
-    /butce(?:yi)?.*(yok|sinir.*yok|kaldir|bosver)|fiyat.*(onemli degil|fark etmez)|no budget limit|without a budget limit|butcesiz/.test(
+    /butce(?:yi)?.*(yok|sinir.*yok|kaldir|bosver)|fiyat.*(onemli degil|fark etmez)|para\s+sinir(?:i|ini)?\s+(?:kaldir|olmasin)\b|no budget limit|without a budget limit|butcesiz/.test(
       q,
     )
   ) {
     f.maxPrice = null;
-    delete f.partySize;
     delete f.totalBudget;
   } else {
     const prefixedMoney = q.match(/₺\s*(\d[\d.,]*)/);
@@ -809,7 +812,7 @@ export function parseFilters(
           q,
         );
       if (total) {
-        const size = partySize(q);
+        const size = partySize(q) ?? f.partySize ?? null;
         if (size) {
           f.partySize = size;
           f.totalBudget = amount;
@@ -833,7 +836,7 @@ export function parseFilters(
     }
     if (
       /ucretsiz|bedava/.test(q) &&
-      !/(?:ucretsiz|bedava)[^.!?]{0,32}(?:sart degil|zorunlu degil|gerekli degil)/.test(
+      !/(?:ucretsiz|bedava)[^.!?]{0,32}(?:sart degil|zorunlu degil|gerekli degil|gerekmez|gerekmiyor)/.test(
         q,
       )
     ) {
@@ -852,7 +855,7 @@ export function parseFilters(
   )
     delete f.categories;
   if (
-    /\b(?:konum|ilce|district|location).*(?:fark etmez|onemli degil|kaldir|anywhere)\b|\banywhere in istanbul\b/.test(
+    /\b(?:(?:mekan|venue)\s+(?:ve|and)\s+(?:tarih|date)|(?:tarih|date)\s+(?:ve|and)\s+(?:mekan|venue))[^,.!?;]{0,48}\b(?:fark etmez|onemli degil|kaldir|anywhere)\b|\b(?:konum|ilce|district|location)\b[^,.!?;]{0,80}\b(?:fark etmez|onemli degil|kaldir|anywhere)\b|\b(?:mekan|venue)\b(?![^,.!?;]*\b(?:tarih|date)\b)[^,.!?;]{0,80}\b(?:fark etmez|onemli degil|kaldir|anywhere)\b|\banywhere in istanbul\b/.test(
       q,
     )
   ) {
@@ -890,7 +893,7 @@ export function parseFilters(
       f.dateFrom = addDays(today, (6 - day + 7) % 7 || 7);
       f.dateTo = addDays(f.dateFrom, 1);
     }
-  } else if (/bu hafta/.test(q)) {
+  } else if (/bu hafta/.test(positiveDateText)) {
     const day = new Date(today + 'T12:00:00Z').getUTCDay();
     f.dateFrom = today;
     f.dateTo = addDays(today, (7 - day) % 7);
@@ -988,7 +991,8 @@ export function isEligible(
     checked < now.getTime() - 72 * 3600000 ||
     checked > now.getTime() + 300000 ||
     e.city !== 'İstanbul' ||
-    e.availability !== 'available'
+    e.availability !== 'available' ||
+    !hasSupportedEventFormat(e)
   )
     return false;
   if (

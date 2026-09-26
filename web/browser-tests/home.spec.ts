@@ -129,6 +129,67 @@ test.describe('browser contracts', () => {
     await expect(
       page.getByText(/ham IP adresi yerine türetilmiş/),
     ).toBeVisible();
+    await expect(
+      page.getByText(/Etkinlik afişleri bilet sağlayıcılarının/),
+    ).toBeVisible();
+    expect(unhandled).toEqual([]);
+  });
+
+  test('group size and total budget stay visible across a budget waiver', async ({
+    page,
+  }) => {
+    const unhandled = await mockShell(page);
+    let call = 0;
+    const payloads: Record<string, unknown>[] = [];
+    await page.route('**/api/recommend', async (route) => {
+      call += 1;
+      payloads.push(route.request().postDataJSON());
+      await route.fulfill({
+        json: result({
+          filters:
+            call === 1
+              ? {
+                  ...emptyFilters,
+                  dateFrom: '2026-10-04',
+                  dateTo: '2026-10-04',
+                  maxPrice: 450,
+                  partySize: 4,
+                  totalBudget: 1800,
+                  categories: ['Stand-up', 'Tiyatro'],
+                }
+              : {
+                  ...emptyFilters,
+                  dateFrom: '2026-10-04',
+                  dateTo: '2026-10-04',
+                  partySize: 4,
+                  categories: ['Stand-up', 'Tiyatro'],
+                },
+        }),
+      });
+    });
+    await page.goto('/');
+    const textarea = page.getByLabel('Planını anlat');
+    await textarea.fill(
+      '4 kişiyiz, toplam 1800 TL. 4 Ekim komedi veya stand-up.',
+    );
+    await textarea.press('Enter');
+
+    const filters = page.getByLabel('Etkin filtreler');
+    await expect(filters.getByText('4 kişi', { exact: true })).toBeVisible();
+    await expect(filters.getByText('Toplam bütçe ₺1.800')).toBeVisible();
+    await expect(filters.getByText('En fazla ₺450')).toBeVisible();
+
+    await textarea.fill('Para sınırını kaldır, diğer koşullar aynı.');
+    await textarea.press('Enter');
+    await expect.poll(() => call).toBe(2);
+    expect(payloads[1].filters).toMatchObject({
+      partySize: 4,
+      totalBudget: 1800,
+      maxPrice: 450,
+    });
+    await expect(filters.getByText('4 kişi', { exact: true })).toBeVisible();
+    await expect(filters.getByText(/Toplam bütçe/)).toHaveCount(0);
+    await expect(filters.getByText(/En fazla/)).toHaveCount(0);
     expect(unhandled).toEqual([]);
   });
 

@@ -11,6 +11,10 @@ on:
         description: Previously verified Cloudflare Worker version ID
         required: true
         type: string
+      expected_revision:
+        description: Full commit SHA recorded for that known-good Worker version
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -21,15 +25,16 @@ concurrency:
 
 jobs:
   rollback:
-    environment: ${{ inputs.environment }}
+    environment: ${{ format('{0}-deploy', inputs.environment) }}
     runs-on: ubuntu-latest
     env:
       DEPLOY_TARGET: ${{ inputs.environment }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
       CF_WORKER_NAME: ${{ vars.CF_WORKER_NAME }}
       CF_PUBLIC_URL: ${{ vars.CF_PUBLIC_URL }}
       VERSION_ID: ${{ inputs.version_id }}
+      EXPECTED_REVISION: ${{ inputs.expected_revision }}
+      BIPLAN_URL: ${{ vars.CF_PUBLIC_URL }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -42,6 +47,8 @@ jobs:
       - run: npm ci
         working-directory: web
       - name: Validate rollback inputs
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           [[ "$DEPLOY_TARGET" == staging || "$DEPLOY_TARGET" == production ]]
           test -n "$CLOUDFLARE_API_TOKEN"
@@ -51,25 +58,44 @@ jobs:
           if [[ "$DEPLOY_TARGET" == staging ]]; then other_environment=production; else other_environment=staging; fi
           [[ "$worker_name" != *"$other_environment"* ]]
           [[ "$VERSION_ID" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]
+          [[ "$EXPECTED_REVISION" =~ ^[0-9a-f]{40}$ ]]
           [[ "$CF_PUBLIC_URL" =~ ^https://[^/]+/?$ ]]
           public_host="${CF_PUBLIC_URL#https://}"
           public_host="${public_host%/}"
           if [[ "$public_host" == *.workers.dev ]]; then [[ "$public_host" == "$worker_name".* ]]; fi
       - name: Roll back Worker code
         working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: npx wrangler rollback "$VERSION_ID" --name "$CF_WORKER_NAME" --message "${{ inputs.environment }} manual rollback" --yes
       - name: Verify active version and check liveness
         working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           for attempt in {1..24}; do
             echo "Checking rollback identity and liveness (attempt $attempt/24)."
             if npx wrangler deployments status --name "$CF_WORKER_NAME" --json > deployment-status.json && \
               node scripts/verify-rollback.mjs deployment-status.json "$VERSION_ID" && \
               curl --silent --show-error --fail --max-time 15 --output health.json "$CF_PUBLIC_URL/api/health" && \
-              node -e "const fs=require('fs'); const body=JSON.parse(fs.readFileSync('health.json')); if(body.status!=='ok'||body.deployment?.environment!==process.env.DEPLOY_TARGET) process.exit(1)"; then
+              node -e "const fs=require('fs'); const body=JSON.parse(fs.readFileSync('health.json')); if(body.status!=='ok'||body.deployment?.environment!==process.env.DEPLOY_TARGET||body.deployment?.revision!==process.env.EXPECTED_REVISION) process.exit(1)"; then
               exit 0
             fi
             sleep 5
           done
-          echo "Rollback did not activate the requested version with matching environment liveness." >&2
+          echo "Rollback did not activate the requested version with matching environment and revision." >&2
           exit 1
+      - name: Verify readiness after restoring the selected version
+        working-directory: collector
+        run: npm run monitor -- --environment "$DEPLOY_TARGET" --output output/rollback-readiness.json
+      - name: Preserve rollback verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-${{ inputs.environment }}-${{ github.run_id }}
+          path: |
+            web/deployment-status.json
+            web/health.json
+            collector/output/rollback-readiness.json
+          if-no-files-found: warn
+          retention-days: 30
