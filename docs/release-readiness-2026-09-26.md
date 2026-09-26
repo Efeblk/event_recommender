@@ -63,6 +63,11 @@ local import published 3,854 incoming events and checkpointed a canonical
 records explains why the canonical snapshot is larger than the incoming report.
 The checked-in seed was refreshed from that canonical readback.
 
+The subsequent local index refresh completed 19 document-embedding batches,
+paced 60 seconds apart with no retries. It embedded 590 new documents and reused
+1,052 existing document vectors, ending at 1,642/1,642 eligible unique documents
+with zero pending. This is local cache coverage, not staging index evidence.
+
 ## Cloud and automation state
 
 - Cloudflare browser/Wrangler OAuth works on this Windows PC. The dedicated
@@ -74,8 +79,11 @@ The checked-in seed was refreshed from that canonical readback.
 - Runtime GitHub environments `staging` and `production` remain unattended.
   Separate `staging-deploy` and `production-deploy` environments require the
   repository owner's review for deploy/rollback. Staging configuration and the
-  sync/provider secrets were installed securely. The long-lived Cloudflare
-  automation API token is still missing; local OAuth cannot replace it in Actions.
+  sync/provider secrets were installed securely. At 19:51 UTC, the account-owned
+  Cloudflare automation token was verified active using the account token endpoint;
+  account, Worker, D1, and R2 read checks passed. It was transferred securely to
+  `staging-deploy`. Local OAuth is not used as the Actions credential. Actual
+  deployment writes remain untested until authorized publication.
 - The earlier [readiness monitor run](https://github.com/Efeblk/event_recommender/actions/runs/36265877841)
   failed: staging had no Worker and production had no configured URL. The failure
   remains recorded. No 48-hour observation window has started.
@@ -90,8 +98,7 @@ the steps that need them, outside dependency installation and artifact upload.
 ## Remaining release gates
 
 1. Require green core CI for the exact candidate commit and review its immutable
-   staging artifact. Install the automation token securely and obtain staging
-   publication authorization.
+   staging artifact. Obtain staging publication authorization.
 2. Deploy staging, verify exact health identity, publish/checkpoint the actual
    collected catalog, reuse unchanged embeddings, and require readiness and full
    eligible embedding coverage.
