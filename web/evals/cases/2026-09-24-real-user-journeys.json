@@ -1,0 +1,23 @@
+{
+  "referenceDate": "2026-09-24",
+  "timeZone": "Europe/Istanbul",
+  "note": "Expectations frozen before live baseline. Stateful requests emulate website history, filters and exclusions. Separate synthetic loopback visitors isolate this local test from earlier manual sessions; application hourly/daily limits remain enabled.",
+  "cases": [
+    {"id":"casual_start","visitor":1,"message":"yarın kadıköyde bi standup izleyelim, kişi başı en fazla 400 tl","expectation":"September25, Kadikoy, stand-up, <=400/person despite casual spelling and missing apostrophe."},
+    {"id":"correct_day","visitor":1,"parent":"casual_start","message":"Pardon, yarın değil cumartesi olsun. Diğer şartlar aynı.","expectation":"Replace Friday with Saturday September26; retain Kadikoy/stand-up/400. Do not keep tomorrow or unnecessarily ask which day."},
+    {"id":"later_and_raise","visitor":1,"parent":"correct_day","message":"Bütçeyi 600 TL yap, akşam 9'dan sonra olsun.","expectation":"September26 Kadikoy stand-up; budget600; strictly after21:00, preserving prior constraints."},
+    {"id":"casual_alternatives","visitor":1,"parent":"later_and_raise","message":"bunları beğenmedim, başka var mı?","expectation":"Exclude previously shown shows and preserve constraints; no repeat, empty valid if exhausted."},
+    {"id":"english_start","visitor":2,"message":"Friday in Beyoglu, stand-up under 500 TRY per person please.","expectation":"September25 Beyoglu stand-up <=500/person."},
+    {"id":"english_switch","visitor":2,"parent":"english_start","message":"Actually theatre instead, no stand-up. Anywhere in Istanbul, no budget limit.","expectation":"KeepFriday, change to theatre, exclude stand-up, clear district and budget; drop stale comedy preference unless current play supports it independently."},
+    {"id":"english_date_clear","visitor":2,"parent":"english_switch","message":"Any date is fine now. Something dramatic, not comedy.","expectation":"Cleardates, retaintheatre/noStandup, dramarequired andcomedyexcluded, district/budgetunrestricted."},
+    {"id":"group_start","visitor":3,"message":"Pazar günü 4 kişiyiz, toplam en fazla 2000 TL. Biraz gülelim, tiyatro veya stand-up olabilir.","expectation":"September27 theatreORstandup, comedy, <=500/person."},
+    {"id":"group_resize","visitor":3,"parent":"group_start","message":"Bir arkadaşımız gelemiyor, artık 3 kişiyiz. Toplam bütçemiz yine 2000 TL.","expectation":"KeepSunday/categories/mood; recomputeperperson2000/3, not prior500 or total2000 perperson."},
+    {"id":"full_reset","visitor":3,"parent":"group_resize","message":"Baştan başlayalım, önceki şartları unut. Cuma bir caz konseri istiyorum, kişi başı 1000 TL.","expectation":"Resetpriorconstraints/requirements/historyforintent; September25 jazzconcert<=1000, no stalecomedyrequirement."},
+    {"id":"soft_mood","visitor":4,"message":"Bu hafta çok yoruldum. Sevgilimle sakin ama sıkıcı olmayan bir akşam istiyoruz. İstanbul'da kişi başı 900 TL'yi geçmesin, tarih fark etmez.","expectation":"Softmood request shouldseekplausiblesourcedoptions<=900; don'tinventromance, seating orquietfacts."},
+    {"id":"child_age","visitor":5,"message":"5 yaşındaki kızımla pazar günü bir etkinliğe gitmek istiyorum. İkimiz için toplam 1000 TL, çocuklara uygun olsun.","expectation":"September27<=500each, positivechildandage5suitability; noadultstandup. Ifagecannotbeestablished sayso/emptyorclarify."},
+    {"id":"impossible_budget","visitor":6,"message":"Cumartesi kişi başı 0 TL, sadece ücretsiz konserler olsun. Ücretli etkinlik gösterme.","expectation":"September26concertprice0only; no unknownprice orpaidoptions."},
+    {"id":"unsupported_city","visitor":7,"message":"Ankara'da yarın 500 TL altı stand-up önerir misin?","expectation":"ExplainIstanbulonly, noIstanbulcardsasAnkararesults."},
+    {"id":"negated_free","visitor":8,"message":"Ücretsiz olması şart değil, kişi başı 700 TL'ye kadar cuma bir caz konseri olabilir.","expectation":"Fridayjazz<=700; doNOTforcezero becausefreeexplicitlynotrequired. Emptyvalidifnocandidateunder700."},
+    {"id":"contradictory_bounds","visitor":9,"message":"Yarın Beyoğlu'nda 22:00'dan sonra ama 20:00'den önce başlayan bir konser olsun.","expectation":"Clarifycontradictorysame-eveningbounds; doNOTreturnviolatingeventorsilentlyignorebound."}
+  ]
+}

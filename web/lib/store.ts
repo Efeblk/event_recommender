@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import seed from '../data/events.json';
-import type { EventRecord, Filters } from './types.ts';
+import { emptyFilters, type EventRecord, type Filters } from './types.ts';
+import { mergeEventSessions } from './event-merge.ts';
 import { isEligible } from './search.ts';
 import { embeddingText } from './ai.ts';
 import {
@@ -11,8 +12,17 @@ import {
 } from './providers.ts';
 export interface RuntimeEnv extends ProviderEnv {
   DB: D1Database;
+  COLLECTION_STATE?: R2Bucket;
   SYNC_TOKEN?: string;
   AI_DAILY_LIMIT?: string;
+  DONATION_URL?: string;
+  DEPLOYMENT_ENV?: string;
+  DEPLOYMENT_SHA?: string;
+  TYPESAFE_API_KEY?: string;
+  TYPESAFE_MODEL?: string;
+  VOYAGE_API_KEY?: string;
+  VOYAGE_MODEL?: string;
+  VOYAGE_DIMENSIONS?: string;
 }
 export function runtime() {
   return env as unknown as RuntimeEnv;
@@ -43,10 +53,16 @@ async function initialize(db: D1Database) {
       'CREATE TABLE IF NOT EXISTS embeddings (event_id TEXT PRIMARY KEY, hash TEXT NOT NULL, model TEXT NOT NULL, vector TEXT NOT NULL)',
     ),
     db.prepare(
+      'CREATE TABLE IF NOT EXISTS voyage_embeddings (profile TEXT NOT NULL, hash TEXT NOT NULL, vector TEXT NOT NULL, PRIMARY KEY(profile,hash))',
+    ),
+    db.prepare(
       'CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
     ),
     db.prepare(
       'CREATE TABLE IF NOT EXISTS request_limits (key TEXT PRIMARY KEY, count INTEGER NOT NULL, expires_at INTEGER NOT NULL)',
+    ),
+    db.prepare(
+      'CREATE INDEX IF NOT EXISTS idx_request_limits_expires_at ON request_limits(expires_at)',
     ),
   ]);
   const version =
@@ -110,7 +126,12 @@ function upsertStatements(db: D1Database, items: EventRecord[]) {
        SELECT json_extract(value,'$.id'),json_extract(value,'$.startsAt'),
               json_extract(value,'$.checkedAt'),json_extract(value,'$.category'),
               json_extract(value,'$.price'),json_extract(value,'$.url'),value
-       FROM json_each(?) WHERE 1
+       FROM json_each(?) AS incoming
+       WHERE NOT EXISTS (
+         SELECT 1 FROM events AS current
+         WHERE current.source_url=json_extract(incoming.value,'$.url')
+           AND current.checked_at>json_extract(incoming.value,'$.checkedAt')
+       )
        ON CONFLICT(id) DO UPDATE SET starts_at=excluded.starts_at,
          checked_at=excluded.checked_at,category=excluded.category,price=excluded.price,
          source_url=excluded.source_url,payload=excluded.payload
@@ -140,23 +161,66 @@ export async function candidates(f: Filters, now = new Date()) {
       ).toISOString(),
     );
   }
-  if (f.category) {
-    sql.push('category=?');
-    args.push(f.category);
+  // Resolve provider disagreements before applying category/price filters.
+  // Otherwise filtering a single provider row can split one session back up.
+  const events: EventRecord[] = [];
+  let afterStart = '',
+    afterId = '';
+  for (;;) {
+    const page = await db
+      .prepare(
+        `SELECT id,starts_at,payload FROM events WHERE ${sql.join(' AND ')}
+         AND (starts_at>? OR (starts_at=? AND id>?))
+         ORDER BY starts_at,id LIMIT 200`,
+      )
+      .bind(...args, afterStart, afterStart, afterId)
+      .all<{ id: string; starts_at: string; payload: string }>();
+    if (!page.results.length) break;
+    for (const row of page.results) {
+      const event = JSON.parse(row.payload) as EventRecord;
+      if (isEligible(event, emptyFilters, now)) events.push(event);
+      afterStart = row.starts_at;
+      afterId = row.id;
+    }
   }
-  if (f.maxPrice !== null) {
-    sql.push('price IS NOT NULL AND price<=?');
-    args.push(f.maxPrice);
-  }
-  const result = await db
+  return mergeEventSessions(events).filter((event) =>
+    isEligible(event, f, now),
+  );
+}
+export async function catalogStatus(now = new Date()) {
+  const db = await database();
+  const cutoff = new Date(now.getTime() - 72 * 3600000).toISOString();
+  const row = await db
     .prepare(
-      `SELECT payload FROM events WHERE ${sql.join(' AND ')} ORDER BY starts_at LIMIT 1000`,
+      `SELECT COUNT(*) AS stored, MIN(checked_at) AS oldestCheckedAt,
+       MAX(checked_at) AS lastCheckedAt,
+       COALESCE(SUM(CASE WHEN checked_at>=? AND starts_at>=?
+         AND json_extract(payload,'$.availability')='available' THEN 1 ELSE 0 END),0) AS eligible,
+       COALESCE(SUM(CASE WHEN checked_at>=? THEN 1 ELSE 0 END),0) AS fresh
+     FROM events`,
     )
-    .bind(...args)
-    .all<{ payload: string }>();
-  return result.results
-    .map((r) => JSON.parse(r.payload) as EventRecord)
-    .filter((e) => isEligible(e, f, now));
+    .bind(cutoff, now.toISOString(), cutoff)
+    .first<{
+      stored: number;
+      oldestCheckedAt: string | null;
+      lastCheckedAt: string | null;
+      eligible: number;
+      fresh: number;
+    }>();
+  return {
+    status: row?.eligible
+      ? 'ready'
+      : row?.stored && !row.fresh
+        ? 'stale'
+        : 'empty',
+    stored: row?.stored ?? 0,
+    eligible: row?.eligible ?? 0,
+    lastCheckedAt: row?.lastCheckedAt ?? null,
+    oldestCheckedAt: row?.oldestCheckedAt ?? null,
+    expiresAt: row?.lastCheckedAt
+      ? new Date(Date.parse(row.lastCheckedAt) + 72 * 3600000).toISOString()
+      : null,
+  };
 }
 export async function replaceSource(url: string, items: EventRecord[]) {
   const db = await database();
@@ -176,6 +240,7 @@ export async function consumeLimit(
   expiresAt: number,
 ) {
   const db = await database();
+  await maybeCleanupExpiredLimits(db);
   const row = await db
     .prepare(
       'INSERT INTO request_limits(key,count,expires_at) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=count+1 WHERE count<? RETURNING count',
@@ -183,6 +248,25 @@ export async function consumeLimit(
     .bind(key, expiresAt, limit)
     .first();
   return Boolean(row);
+}
+
+let nextLimitCleanupAt = 0;
+async function maybeCleanupExpiredLimits(db: D1Database, now = Date.now()) {
+  if (now < nextLimitCleanupAt) return;
+  // At most one small indexed cleanup per isolate per five minutes. The LIMIT keeps a
+  // long-idle database from turning a user request into an unbounded delete.
+  nextLimitCleanupAt = now + 5 * 60000;
+  try {
+    await db
+      .prepare(
+        'DELETE FROM request_limits WHERE key IN (SELECT key FROM request_limits WHERE expires_at<? ORDER BY expires_at LIMIT 500)',
+      )
+      .bind(now)
+      .run();
+  } catch {
+    // Rate limiting must remain available if housekeeping fails.
+    nextLimitCleanupAt = now + 60000;
+  }
 }
 export async function digest(text: string) {
   return Array.from(

@@ -1,21 +1,39 @@
 # Bi’ Plan
 
-[Özel önizlemeyi aç](https://biplan-istanbul.efebalikofc.chatgpt.site) — yalnızca site sahibine açık, anahtarsız sürüm.
+Yerel önizleme: **http://127.0.0.1:3001**. Aşağıdaki `local:start` komutuyla açılır; bu çalışma yayın yapmaz.
 
-İstanbul’da konuşarak etkinlik bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
+İstanbul’da doğal dille arayıp etkinlik kartları bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
 
-## Çalıştırma
+Aynı seansın farklı bilet sitelerindeki kayıtları eşleştirilerek tek kartta fiyatları ve bilet bağlantılarıyla gösterilir. Ham kaynak kayıtları korunur; farklı saat ve mekanlar ayrı kalır. [Eşleştirme kuralları](web/docs/event-merging.md).
 
-Node **22.13+** gerekir (Node 20 desteklenmez).
+## Yerel çalıştırma
+
+Node **22.13+** gerekir. Proje kökünde bağımlılıkları kur:
+
+```sh
+npm ci --prefix web
+npm ci --prefix collector
+```
+
+İlk terminalde önizlemeyi başlat:
 
 ```sh
 cd web
-npm ci
-cp .env.example .env
-npm run dev
+npm run local:start
 ```
 
-Terminalin gösterdiği yerel adresi aç. `.env` dosyasında API anahtarı boş bırakıldığında uygulama **Filtreli önizleme · AI henüz bağlı değil** modunda çalışır. Anahtar tarayıcıya gönderilmez. Geliştirme veritabanı `.wrangler/` altında yerel SQLite/D1 olarak tutulur.
+**http://127.0.0.1:3001** adresini aç. Bu komut uygulamayı derler ve kalıcı yerel D1 ile çalıştırır; hiçbir şeyi yayına göndermez. API anahtarı olmadan tarih, bütçe, kategori ve kelime eşleşmesi çalışır. İkinci terminalde güncel veri toplayıp çalışan uygulamaya aktar:
+
+```sh
+cd web
+npm run local:refresh -- --collect
+```
+
+Bu işlem liste sayfalarını ve bilinen etkinlik detaylarını yeniden kontrol ettiği için birkaç dakika sürebilir. Daha önce üretilmiş başarılı raporu yeniden aktarmak için `npm run local:refresh`; farklı bir rapor için `npm run local:refresh -- --report /tam/yol/report.json` kullan.
+
+`local:start` yalnızca `127.0.0.1:3001` adresini dinler. Yoksa rastgele bir `SYNC_TOKEN` üretip Git tarafından yok sayılan `web/.dev.vars` dosyasında saklar; mevcut ayarları korur ve sırrı terminale basmaz. İsteğe bağlı sağlayıcı ayarlarını `.env.example` rehberiyle `.env` veya `.dev.vars` içinde tutabilirsin. Sırlar yalnızca yok sayılan yerel çalışma klasörüne yüklenir; derleme çıktısına eklenmez.
+
+`local:refresh`, sunucunun hazır olmasını bekleyip doğrulanmış raporu korumalı import endpoint'ine gönderir. Başarılı import anında aramaya yansır; veri için yeniden başlatma gerekmez. Kod veya sağlayıcı ayarı değiştiğinde `local:start` komutunu yeniden çalıştır. HMR geliştirme modu ayrıca `npm run local:start -- --dev` ile açılır. Kayıtlar `.wrangler/` altındaki yerel SQLite/D1 içinde yeniden başlatmalar arasında korunur.
 
 ## Şu an ne çalışıyor?
 
@@ -23,8 +41,9 @@ Terminalin gösterdiği yerel adresi aç. `.env` dosyasında API anahtarı boş 
 - Türkçe tarih, kişi başı bütçe ve kategori filtreleri; aramaya devam ederken önceki filtreleri koruma.
 - Aynı prodüksiyonun farklı seanslarını tek öneride toplama; başka seçenekleri isteme.
 - Geçmiş, iptal edilmiş, tükenmiş ve **72 saatten eski kontrol tarihli** kayıtları eleme. Bütçe varken fiyatı bilinmeyen kayıtları eleme. Kaynak fiyatları bilet garantisi değildir.
-- İsteğe bağlı OpenAI Responses veya OpenAI uyumlu Chat Completions API ile niyet/filtre çıkarımı, gerektiğinde netleştirme sorusu, adaylar arasından gerekçeli seçim.
-- Sohbetten bağımsız, isteğe bağlı embedding sağlayıcısıyla anlamsal sıralama; metin hash’i, API adresi, model ve boyuta göre kalıcı embedding önbelleği. Graph veritabanı gerektirmez.
+- TypeSafe Jev ile adayların isteğe uygunluğunu puanlama; sonuçlarda yalnızca doğrulanmış etkinlik kartları gösterilir. Üretilmiş sohbet yanıtı veya gerekçe yoktur.
+- Konser gibi kategorileri hariç tutma, toplam grup bütçesini kişi başına çevirme, belirsiz koşullarda statik netleştirme durumu.
+- Voyage 4 Large ile anlamsal arama ve kelime sıralaması birleştirilir; Jev kısa aday listesini değerlendirir. Etkinlik vektörleri D1’de önbelleğe alınır; GPU veya graph veritabanı gerekmez.
 - AI kapalıysa veya sağlayıcı başarısızsa açıkça belirtilen kelime/filtre araması. Anahtarsız mod ruh hâlini yorumladığını iddia etmez.
 - Mobil uyumlu arayüz, yüklenme/hata/boş sonuç durumları, klavye ile gönderme (Enter; yeni satır Shift+Enter).
 
@@ -42,19 +61,27 @@ Yeni Crawlee toplayıcısı eski Python scraper'lardan bağımsızdır. Üç kay
 
 [Araç karşılaştırması, kapsam, kalite kuralları ve zamanlama](collector/README.md). Koleksiyon raporu `collector/output/report.json` altında. Günde iki toplama için GitHub iş akışı eklendi; master'a alındığında çalışır. Canlı aktarım hedefi ve sunucu sırrı tanımlanmadığında yalnızca artifact üretir. Canlıya aktarım için korumalı `/api/admin/import` ve `collector/publish.mjs` kullanılır; AI anahtarı gerekmez.
 
-## AI’ı açma
+## Jev’i açma
 
-`web/.env.example` anahtarsız önizleme için hazırdır. Sağlayıcı seçilene kadar anahtarları boş bırak; hiçbir AI çağrısı yapılmaz. Üçüncü taraf bağlantısında `AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL` ayarlanır. Yerelde `.env` değişikliğinden sonra geliştirme sunucusunu yeniden başlat; yayında anahtarlar sunucu sırları olarak tanımlanır.
+Anahtarsız önizleme çalışmaya devam eder. Jev sıralamasını kullanmak için `web/.dev.vars` içine `TYPESAFE_API_KEY` ekle ve yerel sunucuyu yeniden başlat. Anahtarı sohbete veya Git’e yazma. `TYPESAFE_MODEL` varsayılanı `jev-1.13.0`; eski `AI_API_KEY` / `OPENAI_API_KEY` ayarları öneri akışını açmaz. Kurulum ve değerlendirme: [Jev rehberi](web/docs/jev-evaluation.md).
 
-[Sağlayıcı kurulumu ve örnekler](web/docs/providers.md): OpenRouter, Gemini'nin OpenAI uyumlu arayüzü ve genel uyumlu servisler için ayarlar; bağımsız embedding ve hata davranışları. Sağlayıcı/model uyumluluğu gerçek anahtarla henüz test edilmedi.
+Akış: **kesin filtreleri yorumla → tüm güncel adayları bul → Voyage anlamsal arama + kelime araması → en fazla 16 farklı prodüksiyon → tek Jev isteği → en fazla 5 etkinlik kartı**. Jev’e özgün istek, kısa kullanıcı arama geçmişi ve adayların kaynak metinleri gönderilir; embedding vektörü gönderilmez. Başlık, fiyat, tarih ve bağlantı her zaman veritabanındaki kayıttan gelir. Genel sohbet modeli çalışmaz.
 
-Eski doğrudan OpenAI ayarları da çalışır: yalnızca `OPENAI_API_KEY` ile sohbet modeli `OPENAI_MODEL` (varsayılan `gpt-4.1-mini`), embedding modeli `text-embedding-3-small` (512 boyut). Embedding'i kapatmak için `EMBEDDING_ENABLED=false`.
+Jev, dört seviyeli uygunluk ölçeğinde puan verir. Başlangıç politikası en az 2 puan alanları göstermektir; bu eşik Türkçe verilerle henüz kalibre edilmemiştir. Geçerli bir “uygun aday yok” yanıtı boş sonuç olarak kalır. Ağ/sağlayıcı hatasında açıkça belirtilen temel arama gösterilir. Belirsiz bütçe veya tarihte önceki filtreler değiştirilmez; kullanıcı aramasını düzenleyebilir. Doğal dil yorumlama her ifade biçimini desteklemez.
 
-Anlamsal arama için anahtar tanımlandıktan sonra korumalı `/api/admin/sync` işlemini çalıştır: etkinlikleri ve embedding önbelleğini oluşturur. Embedding bulunmuyorsa kelime tabanlı aday sıralaması + AI değerlendirmesi kullanılır. Embedding adresi/modeli/boyutu değişirse eski indeks kullanılmaz; sync ile yeniden oluşturulur. Yeni `embedding-v2` önbellek kimliğine geçişte de bir sync gerekir.
+“Ciddi bir oyun” gibi bağlamı açık tiyatro istekleri artık konser adaylarına genişlemez. Çocuk gösterisi istemeyen aramalarda açıklamadaki çocuklara yönelik yaş ve izleyici bilgileri de denetlenir. Aynı kurallar anahtarsız aramada ve sağlayıcı kesintisinde geçerlidir; az sonuç varsa ilgisiz kartlarla tamamlanmaz.
 
-Akış: **isteği anla → kesin filtreler → embedding/kelime sıralaması → en fazla 16 farklı aday → 3–5 gerekçeli öneri**. AI yalnızca aday ID’lerini seçebilir; gösterilen etkinlik bilgileri veritabanından gelir. Öneri gerekçelerinin kalitesi gerçek sağlayıcıyla ayrıca değerlendirilmelidir.
+AI etkin öneri istekleri IP başına saatte 20, uygulama genelinde varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bir arama en fazla bir Voyage sorgu embedding çağrısı ve bir Jev çağrısı yapar; 15 saniye zaman aşımı ve sınırlı girdi/çıktı boyutu vardır. Otomatik ücretli tekrar yoktur. Bu sayaç dolar harcama limiti değildir. Arama geçmişi yalnızca açık sekmenin belleğinde tutulur.
 
-Ücretli aramalar IP başına saatte 20, tüm uygulama için varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bu bir dolar harcama limiti değildir; sağlayıcı hesabında ayrıca bütçe limiti tanımlanabilir. Veri yenilemenin embedding çağrıları bu sohbet sayacından ayrıdır ve yönetici sırrı gerektirir. Kullanıcı mesajı, kısa sohbet geçmişi ve aday açıklamaları AI sağlayıcısına gönderilir; Responses isteklerinde `store:false` kullanılır. Bu ayar üçüncü tarafların saklama politikasını garanti etmez. İstekler 25 saniyede zaman aşımına uğrar; otomatik ücretli tekrar denenmez. Sohbet geçmişi bu sürümde yalnızca açık sekmenin belleğinde tutulur.
+[Eski sağlayıcı rehberi](web/docs/providers.md) korunur, fakat aktif öneri yolunu anlatmaz. Eski embedding adaptörleri etkin öneri yolunda kullanılmaz; Voyage için ayrı, içerik adresli bir D1 indeksi bulunur. İlk canlı Jev denemesinde 10 etiketli isteğin ilk sonucu doğru, iki desteksiz tercih isteğinin sonucu boştu. Ciddi yetişkin oyunu isteğinde bazı zayıf ek sonuçlar da eşikten geçti; tüm sonuç listesinin kalitesi henüz doğrulanmış sayılmaz. [Ölçüm raporu](web/evals/reports/2026-09-22-jev-1.13.0.json) 12 çağrı, tokenlar ve gecikmeyi kaydeder. Daha geniş gerçek katalog denemeleri gerekir.
+
+Değerlendirme artık yalnızca ilk sırayı değil, dönen bütün kartların uygunluğunu ölçer. Kayıtlı puanları ağ çağrısı yapmadan tekrar uygulayan denetim, filtre değişikliklerinin bilinen yanlış ek sonuçları engellediğini sınar. Bu denetim yeni bir canlı Jev ölçümü değildir; eşik ve modelin Türkçe kalitesi için daha geniş örnekler gerekir.
+
+## Voyage anlamsal arama
+
+`web/.dev.vars` dosyasına `VOYAGE_API_KEY` ekleyip sunucuyu yeniden başlat. Varsayılan model `voyage-4-large`, boyut 1024. Sonra önce `npm run embeddings:index --prefix web -- --origin http://127.0.0.1:3001 --allow-loopback-http` ile kapsamı kontrol et; `--live` eklemek eksik etkinlik vektörlerini oluşturur ve Voyage kotasını kullanır. Tam kurulum ve sınırlar: [Voyage rehberi](web/docs/voyage-retrieval.md).
+
+Sorgu embedding’i bütün uygun katalog üzerinde karşılaştırılır; 1.000 seans kesintisi kaldırılmıştır. İndeks eksikse veya Voyage erişilemiyorsa kelime araması devreye girer ve bu durum kullanıcıya belirtilir. “Biraz gülelim” gibi tercihler yalnızca stand-up filtresine dönüştürülmez. Yeni veya değişen içerik indekslenir; yalnızca tarih/fiyat/güncellik değişmesi yeniden embedding gerektirmez. `local:refresh -- --collect --index` ve `INDEX_EMBEDDINGS=true` ile koleksiyon sonrası indeksleme isteğe bağlı açılır.
 
 ## Kontroller
 
@@ -67,7 +94,7 @@ npm run build
 npm run test:smoke
 ```
 
-Testler tarih/saat dilimi sınırlarını, fiyatı bilinmeyen ve eski kayıtları, kaynak ayrıştırmayı, yinelenen seansları, alternatif önerileri, AI kesintisini ve uydurma ID’lerin elenmesini kapsar. AI testlerinde sağlayıcı yerine kontrollü test yanıtları kullanılır; gerçek anahtarla model kalitesi/latans testi henüz yapılmamıştır.
+Testler tarih/saat dilimi sınırlarını, fiyatı bilinmeyen ve eski kayıtları, kaynak ayrıştırmayı, yinelenen seansları, alternatif önerileri, AI kesintisini ve uydurma ID’lerin elenmesini kapsar. Otomatik testler kontrollü sağlayıcı yanıtları kullanır ve ücretli API çağrısı yapmaz. Ayrıca kullanıcı onayıyla 12 örnek üzerinde bir canlı Jev değerlendirmesi kaydedilmiştir.
 
 GitHub Actions, `master` için her PR'da ve `master` push'larında bu kontrolleri çalıştırır. Smoke kontrolü derlenen Worker'ı geçici bir D1 veritabanıyla açar; sayfa, anahtarsız API, geçersiz istek ve yönetici erişim korumasını doğrular. Yerel sırları ve mevcut veritabanını kullanmaz. Eski Python testleri ayrı CI iş akışında korunur.
 
@@ -78,3 +105,17 @@ Yeni uygulama React + TypeScript + Vinext üzerinde tek Cloudflare Worker ve D1 
 `db/schema.ts` şema kaynağıdır; değişiklik sonrası `npm run db:generate` ile SQL üret. Migration’lar `drizzle/` altında sürümlenir. Çalışma sırasında ilk açılışta doğrulanmış başlangıç seçkisi veritabanına aktarılır.
 
 Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve eksiksiz şehir kapsamı. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.
+
+## Destek ve reklam alanları
+
+Ana sayfa doğal dil arama çubuğu, önerilen etkinlikler ve projeye destek bölümü içerir. Bağış sayfasının HTTPS adresini `web/.env` veya `web/.dev.vars` içine `DONATION_URL` olarak ekleyip yerel sunucuyu yeniden başlat. Bağlantı tanımlanana kadar destek bölümü “yakında” durumunda kalır; ödeme alınmaz. `/api/site` yalnızca bu herkese açık bağlantıyı döndürür.
+
+Sayfada iki ayrı reklam alanı ayrılmıştır. Henüz reklam ağı, takip betiği veya reklam isteği yoktur. Bu alanlar ileride reklam içeriğiyle doldurulabilir.
+
+## Public beta hazırlığı
+
+[Cloudflare kurulum, staging/production ayrımı, deployment ve rollback](docs/deployment.md) hazırdır. Deployment iş akışı yalnızca elle başlatılır; PR veya push siteyi yayınlamaz. [Yayın sırası ve kalan doğrulamalar](docs/launch-checklist.md) tamamlanmadan public beta hazır sayılmaz.
+
+`/api/health` uygulamanın çalıştığını, `/api/ready` ise kataloğun ve kalıcı toplama checkpoint'inin sağlığını gösterir. İkincisi eksik, 24 saatten eski veya ciddi şekilde küçülmüş katalog/checkpoint için 503 döner. Yerel sunucu D1 yanında yerel R2 deposunu da kalıcı tutar; normal arama checkpoint olmadan çalışır. `collector/publish.mjs --checkpoint` bütün import partileri tamamlandıktan sonra sunucudaki gerçek kayıtların R2 snapshot'ını alır ve geri okuyarak doğrular.
+
+[Jev değerlendirmesi](web/docs/jev-evaluation.md), 12 Türkçe örnekle aday kapsamını, sıralamayı, boş sonuç davranışını, gecikmeyi ve token tüketimini ölçer. Varsayılan test API çağrısı yapmaz. Jev öneri akışına bağlanmıştır; anahtar olmadan temel arama çalışır. Gerçek sağlayıcı kalitesi ayrıca ölçülmelidir.

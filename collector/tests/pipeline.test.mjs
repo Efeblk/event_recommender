@@ -129,6 +129,54 @@ await test("Bubilet truncated session state cannot replace the complete page", a
     /session_coverage_mismatch/,
   );
 });
+await test("Bubilet ignores a false Istanbul JSON-LD date corroborated as another city", async () => {
+  const schema = structuredClone(bubilet),
+    state = structuredClone(sessions),
+    nonLocal = {
+      ...schema.subEvent[0],
+      startDate: "2026-12-10T18:00:00+00:00",
+      location: {
+        ...schema.subEvent[0].location,
+        name: "Ankara Test Sahnesi",
+        address: {
+          ...schema.subEvent[0].location.address,
+          addressLocality: "İstanbul",
+        },
+      },
+    };
+  schema.subEvent.push(nonLocal);
+  state.allSessions.push({
+    sessionId: 999,
+    cityId: 6,
+    date: nonLocal.startDate,
+    venueName: nonLocal.location.name,
+  });
+  const events = await extract(wrap(schema, state), "bubilet", url, "Konser", now);
+  assert.equal(events.length, state.eventSessions.length);
+  assert.ok(events.some((item) => item.city === "İstanbul"));
+});
+await test("Bubilet keeps ambiguous allSessions city evidence fail-closed", async () => {
+  const schema = structuredClone(bubilet),
+    state = structuredClone(sessions),
+    missing = {
+      ...schema.subEvent[0],
+      startDate: "2026-12-10T18:00:00+00:00",
+      location: {
+        ...schema.subEvent[0].location,
+        name: "Belirsiz Test Sahnesi",
+      },
+    };
+  schema.subEvent.push(missing);
+  state.allSessions.push({
+    sessionId: 999,
+    date: missing.startDate,
+    venueName: missing.location.name,
+  });
+  await assert.rejects(
+    extract(wrap(schema, state), "bubilet", url, "Konser", now),
+    /session_coverage_mismatch/,
+  );
+});
 await test("Bubilet unknown, calendar and conditional offers are not normal tickets", async () => {
   const state = structuredClone(sessions);
   state.eventSessions[0].isCombinedTicket = true;

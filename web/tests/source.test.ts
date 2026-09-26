@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  fetchPage,
   jsonLd,
   listingUrls,
   parseEvents,
@@ -109,4 +110,22 @@ await test('stand-up listed under theatre is classified as stand-up', async () =
     now,
   );
   assert.equal(e.category, 'Stand-up');
+});
+await test('source fetch rejects manual redirects without following them', async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = (async (_url, init) => {
+    calls++;
+    assert.equal(init?.redirect, 'manual');
+    return new Response(null, {
+      status: 302,
+      headers: { Location: 'https://untrusted.example/collect' },
+    });
+  }) as typeof fetch;
+  try {
+    await assert.rejects(fetchPage(url), /Source returned 302/);
+    assert.equal(calls, 1);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

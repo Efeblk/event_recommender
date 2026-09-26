@@ -1,0 +1,321 @@
+{
+  "referenceDate": "2026-09-24",
+  "timeZone": "Europe/Istanbul",
+  "note": "Explicit romance/crowding regression frozen before API execution; original failure retained in fictional live fixture report.",
+  "cases": [
+    {
+      "id": "mandatory_romance_uncrowded",
+      "visitor": 24,
+      "message": "Kesin romantik ve kalabalık olmayan bir yer istiyorum.",
+      "expectation": "Require romantic setting and uncrowded evidence. Acoustic format alone cannot prove either."
+    },
+    {
+      "id": "waive_romance_uncrowded",
+      "visitor": 24,
+      "parent": "mandatory_romance_uncrowded",
+      "message": "Romantik olması şart değil, kalabalık da sorun değil. Kişi başı 900 TL olsun.",
+      "expectation": "Remove both mandatory experience requirements; budget900 and normal eligible results allowed."
+    }
+  ],
+  "codeRevision": "655d099",
+  "startedAt": "2026-09-24T08:18:03.365Z",
+  "maxHttpRequests": 2,
+  "automaticRetries": 0,
+  "results": [
+    {
+      "id": "mandatory_romance_uncrowded",
+      "input": {
+        "message": "Kesin romantik ve kalabalık olmayan bir yer istiyorum.",
+        "history": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.24",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "filters",
+        "status": "empty",
+        "notice": "Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.",
+        "totalCandidates": 0
+      },
+      "durationMs": 1504,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Kesin romantik ve kalabalık olmayan bir yer istiyorum."
+        }
+      ]
+    },
+    {
+      "id": "waive_romance_uncrowded",
+      "input": {
+        "message": "Romantik olması şart değil, kalabalık da sorun değil. Kişi başı 900 TL olsun.",
+        "history": [
+          {
+            "role": "user",
+            "content": "Kesin romantik ve kalabalık olmayan bir yer istiyorum."
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "excludeIds": []
+      },
+      "syntheticLoopbackVisitor": "127.0.1.24",
+      "httpStatus": 200,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "e3d52377bfe745facfb2a423",
+              "title": "Chalet Garden 90’lar Türkçe Pop - Eylül",
+              "description": "90’ların unutulmaz Türkçe pop hitleriyle zamanda yolculuğa hazır mısın? Şehrin en keyifli açık hava mekanlarından Swissôtel Chalet Garden’da gerçekleşecek bu özel gecede, 90’lar Türkçe pop müziğinin efsane şarkılarıyla dans edip nostaljinin tadını çıkaracağız. Sezen Aksu’dan Tarkan’a, Sertab Erener’den Levent Yüksel’e uzanan geniş repertuvarla, hafızalara kazınan şarkılar yeniden hayat bulacak. Doğayla iç içe atmosfer, sürpriz performanslar ve enerjisi hiç düşmeyen DJ setleriyle bu gece, hem geçmişi yad etmek hem de doyasıya eğlenmek isteyenler için kaçırılmayacak bir deneyim sunuyor. Etkinlik Saati: 19:30 - 23:30 Mekan: Chalet Garden - Swissotel The Bosphorus",
+              "startsAt": "2026-09-30T16:30:00.000Z",
+              "checkedAt": "2026-09-24T06:31:13.320Z",
+              "venue": "Swissotel The Bosphorus",
+              "district": "BEŞİKTAŞ",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 488.9,
+              "url": "https://www.biletix.com/etkinlik/5PA17/ISTANBUL/tr",
+              "imageUrl": "https://www.biletix.com/static/images/live/event/eventimages/5PA13-chalet90lar.png",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletix",
+              "productionKey": "8a3f8dc78e72d9a5d0fcc1a5",
+              "offers": [
+                {
+                  "id": "e3d52377bfe745facfb2a423",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5PA17/ISTANBUL/tr",
+                  "price": 488.9,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:31:13.320Z",
+                  "category": "Konser",
+                  "venue": "Swissotel The Bosphorus",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "e3d52377bfe745facfb2a423",
+                "session-c7215b78dd69a95ef23e95a11f5ec13c"
+              ],
+              "canonicalProductionKey": "production-52b7e5fce4302932db2089275ae9b779",
+              "canonicalShowKey": "show-a3444f1427f0f12de1b7d544a38245b5"
+            }
+          },
+          {
+            "event": {
+              "id": "b16c9e987e7b9664de81791e",
+              "title": "90’lar Kafası: Nihat Sırdar",
+              "description": "90’lar Kafası: Nihat Sırdar Konseri Etkinlik genelinde geçerli olan kurallara ek olarak, seanslara özgü ek düzenlemeler de yapılmıştır. Seans listesinde, katılacağınız seansın kurallarını bulabilirsiniz. 90’ların o unutulmaz tempolu müzik sahnesine geri dönüyoruz! Nihat Sırdar DJ setiyle sahnede, sen de danslarınla Jolly Joker'de yerini al. Sevilen şarkılar eşliğinde dans dolu bu özel etkinliği kaçırma, biletini tükenmeden yakala ve 90’ların ruhunu canlı yaşa!",
+              "startsAt": "2026-10-03T18:00:00.000Z",
+              "checkedAt": "2026-09-24T06:32:17.475Z",
+              "venue": "Jolly Joker Vadistanbul",
+              "district": "İstanbul Avrupa",
+              "address": "Ayazağa, Ayazağa Cendere Cd. 109/C, 34396 Sarıyer/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 856,
+              "url": "https://biletinial.com/tr-tr/muzik/90lar-kafasi-nihat-sirdar-jj",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/90lar-kafasi-nihat-sirdar-jj-202491814543cfc2f25b2ac2428697b0b88eac317058.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "4a0d62f18d0969a60ae21eaf",
+              "offers": [
+                {
+                  "id": "b16c9e987e7b9664de81791e",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/muzik/90lar-kafasi-nihat-sirdar-jj",
+                  "price": 856,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:32:17.475Z",
+                  "category": "Konser",
+                  "venue": "Jolly Joker Vadistanbul",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "b16c9e987e7b9664de81791e",
+                "session-33427321b17c2f5fe4374744519b2d28"
+              ],
+              "canonicalProductionKey": "production-29248bbd418eb970c18ab2656d99cf8e",
+              "canonicalShowKey": "show-f41e7f25a252c7f51488245da376879d"
+            }
+          },
+          {
+            "event": {
+              "id": "817217f0aef03c78c89e1f22",
+              "title": "Serdar Ortaç",
+              "description": "Serdar Ortaç, 25 Eylül akşamı JJ Arena Ataşehir sahnesinde sizlerle! Serdar Ortaç, efsane şarkıları ve bize her zaman iyi gelen enerjisiyle Jolly Joker sahnesinde! Türk pop müziğinin en unutulmaz hitlerine imza atan Serdar Ortaç; yıllardır dillerden düşmeyen şarkıları, sahnedeki yüksek temposu ve seyirciyle kurduğu içten bağ ile müzik tutkunlarına unutulmaz bir konser yaşatmaya hazırlanıyor. Her performansında salonu ilk notayla birlikte ayağa kaldıran Ortaç, hem eğlencenin ritmini yükselten dinamizmiyle hem de duygusal anlara eşlik eden güçlü yorumuyla Jolly Joker atmosferini bambaşka bir seviyeye taşıyacak. “Karabiberim”, “Poşet”, “Dansöz”, “Mesafe”, “Beni Unut” ve daha birçok klasiği bu gecede hep bir ağızdan söylemeye hazır mısın? Kapı Açılış Saati: 21:00 Etkinlik Başlangıç Saati: 22:30 Sahne Önü (VIP) - İkramlı * Sahne önünde yer alan alanı kapsar. * Ücrete 1 Şişe Premium içecek, meyve,çerez ve diğer ikramlar dahildir. İkram detayları için 0 850 549 01 17 numaralı telefonu arayarak bilgi alabilirsiniz. * Sahne Önü (VIP) bilet sahiplerinin, 0 850 549 01 17 numaralı telefonu arayarak, rezervasyon yaptırmaları zorunludur. * Sahne Önü (VIP) bilet sahiplerine minimum 3 kişi olması şartı ile bistro imkânı sunulmaktadır. * 18 yaş sınırı vardır. Sahne Önü Ayakta * Sahne Önü Ayakta kategorisi, Sahne Önü (VIP) - İkramlı kategorisinden sonra başlayan seyir alanını kapsar. * 18 yaş sınırı vardır. Ayakta * Ayakta kategorisi, Sahne Önü Ayakta kategorisinden sonra başlayan ve ayakta olarak ayrılmış seyir alanını kapsar. * 18 yaş sınırı vardır.",
+              "startsAt": "2026-09-25T18:00:00.000Z",
+              "checkedAt": "2026-09-24T06:41:28.340Z",
+              "venue": "JJ Arena Ataşehir",
+              "district": "ATAŞEHIR",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 769.5,
+              "url": "https://www.biletix.com/etkinlik/5TX63/ISTANBUL/tr",
+              "imageUrl": "https://www.biletix.com/static/images/live/event/eventimages/serdarortac_2025su.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletix",
+              "productionKey": "c36a60a2bf8a77268913c118",
+              "offers": [
+                {
+                  "id": "817217f0aef03c78c89e1f22",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5TX63/ISTANBUL/tr",
+                  "price": 769.5,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:41:28.340Z",
+                  "category": "Konser",
+                  "venue": "JJ Arena Ataşehir",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "817217f0aef03c78c89e1f22",
+                "session-07184344d2f754104d864cf2008c0b00"
+              ],
+              "canonicalProductionKey": "production-c7800754e74dbbf836b06b9e0b1e192f",
+              "canonicalShowKey": "show-3b13beea9f8f1608237af586a30f7b17"
+            }
+          },
+          {
+            "event": {
+              "id": "session-761bf08c303a0d43a14f4fe4a4ec26d6",
+              "title": "Kaktüs Çiçeği",
+              "description": "Kaktüs Çiçeği Tiyatro Oyunu Paris'in ünlü diş hekimi Julien, her zamanki gibi yalanla başlayan bir ilişkisinin ciddileşmesi üzerine durumu kurtarmak için gittikçe daha çok oyuna ve yalana başvurur. Hem işini, hem doktoru çekidüzene sokmayı görev edinen asistanı Stephanie, kendini ister istemez çapkın doktorun hesaplarının içinde bulur. Ona asla hayır diyememektedir ki! Kemal Başar'ın yönettiği, dünyanın sayılı koreograflarından Nikolay Manolov'un koreografisini yaptığı romantik komedide Ko",
+              "startsAt": "2026-11-17T17:30:00.000Z",
+              "checkedAt": "2026-09-24T06:27:53.832Z",
+              "venue": "Kadıköy Eğitim Sahnesi",
+              "district": "İstanbul Anadolu",
+              "address": "Caferağa Mahallesi Moda Caddesi No: 117 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 867,
+              "url": "https://biletinial.com/tr-tr/tiyatro/kaktus-cicegi",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kaktus-cicegi-2026214151850e5fed36fcf3449d8a93fbaff4afac57a.jpg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "63d4970d176a7bd214ee8437",
+              "offers": [
+                {
+                  "id": "399399160c24a58a8fd74f74",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kaktus-cicegi",
+                  "price": 867,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:27:53.832Z",
+                  "category": "Tiyatro",
+                  "venue": "Kadıköy Eğitim Sahnesi",
+                  "availability": "available"
+                },
+                {
+                  "id": "233da32af6a467a43c6eac2d",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kaktus-cicegi",
+                  "price": 1200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:36:07.421Z",
+                  "category": "Tiyatro",
+                  "venue": "Kadıköy Eğitim Sahnesi",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "233da32af6a467a43c6eac2d",
+                "399399160c24a58a8fd74f74",
+                "session-761bf08c303a0d43a14f4fe4a4ec26d6"
+              ],
+              "canonicalProductionKey": "production-f08ec11c3cd34bd7de53e332cc43efd9",
+              "canonicalShowKey": "show-7f6d4cb519549999edce80c5e36518ba"
+            }
+          },
+          {
+            "event": {
+              "id": "a5ac72ec6789999427a70242",
+              "title": "90lar Dans Gecesi - Eylül Etkinlikleri",
+              "description": "90'ların unutulmaz şarkıları Dj eşliğinde canlı performans olarak yeniden hayat buluyor. 90'lar Dans Gecesi Her Çarşamba &amp; Cuma &amp; Cumartesi 21.00-04.00 arasında Sanat Performance Sahnesi'nde.. 70’ler 80’ler 90’lardan günümüze Türkçe şarkılarla yeni bir hatıra yazıyoruz. Çocukluk anılarınız, ilk aşkınız, büyüdüğünüz yer, hayalleriniz, oyuncaklarınız, kasetler...Hepsi hala içinizde bir yerde hepsi bu festivalde. Bizleri büyüten, olgunlaştıran ve hayallerimizin içine yerleştirdiğimiz Türkçe ve Yabancı pop şarkılarında görüşmek üzere.",
+              "startsAt": "2026-09-25T19:00:00.000Z",
+              "checkedAt": "2026-09-24T06:41:35.291Z",
+              "venue": "Sanat Performance",
+              "district": "BEYOĞLU",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 49,
+              "url": "https://www.biletix.com/etkinlik/5SPHO/ISTANBUL/tr",
+              "imageUrl": "https://www.biletix.com/static/images/live/event/eventimages/90dansgecesi_2025su.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletix",
+              "productionKey": "f48a6cf2154d62110bf338e6",
+              "offers": [
+                {
+                  "id": "a5ac72ec6789999427a70242",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5SPHO/ISTANBUL/tr",
+                  "price": 49,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-24T06:41:35.291Z",
+                  "category": "Konser",
+                  "venue": "Sanat Performance",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "a5ac72ec6789999427a70242",
+                "session-3ef56bdddd14a5dc3a53efeaa34b32fd"
+              ],
+              "canonicalProductionKey": "production-b0f801e0fa0ff9cfd771676b9a165392",
+              "canonicalShowKey": "show-5d9206bca0d036e82c6be313b6d970a0"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 900,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 1518
+      },
+      "durationMs": 6497,
+      "nextHistory": [
+        {
+          "role": "user",
+          "content": "Kesin romantik ve kalabalık olmayan bir yer istiyorum."
+        },
+        {
+          "role": "user",
+          "content": "Romantik olması şart değil, kalabalık da sorun değil. Kişi başı 900 TL olsun."
+        }
+      ]
+    }
+  ],
+  "finishedAt": "2026-09-24T08:18:36.381Z"
+}

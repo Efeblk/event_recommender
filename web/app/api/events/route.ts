@@ -1,15 +1,22 @@
-import { configFrom } from '@/lib/ai';
-import { candidates, runtime } from '@/lib/store';
+import { jevConfigFrom } from '@/lib/jev';
+import { voyageConfigFrom } from '@/lib/voyage';
+import { candidates, catalogStatus, runtime } from '@/lib/store';
 import { emptyFilters } from '@/lib/types';
 import { uniqueEvents } from '@/lib/search';
 export async function GET() {
   try {
-    const events = await candidates(emptyFilters);
+    const [events, catalog] = await Promise.all([
+      candidates(emptyFilters),
+      catalogStatus(),
+    ]);
     return Response.json(
       {
         events: uniqueEvents(events, 12),
         total: events.length,
-        aiEnabled: Boolean(configFrom(runtime())),
+        aiEnabled: Boolean(
+          jevConfigFrom(runtime()) || voyageConfigFrom(runtime()),
+        ),
+        catalog,
         checkedAt:
           events.reduce(
             (last, e) => (e.checkedAt > last ? e.checkedAt : last),

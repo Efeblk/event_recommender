@@ -1,0 +1,15 @@
+{
+  "referenceDate": "2026-09-24",
+  "timeZone": "Europe/Istanbul",
+  "note": "New cases and expectations declared before paid execution. Some parser defects were found and fixed offline before the live run; this is not an untouched held-out benchmark.",
+  "cases": [
+    {"id":"ordinary_family","message":"Annemle neşeli bir akşam geçirmek istiyoruz. Ailece izlenebilecek bir komedi gösterisi öner; kişi başı en fazla 900 TL, tarih fark etmez.","expectation":"Family-friendly comedy supported by source facts; <=900 TRY; no exact proof of zero profanity requested. Prefer supported family suitability over unjustified empty."},
+    {"id":"strict_inflected","message":"Komedi olsun, kişi başı en fazla 900 TL. Küfür ve cinsel içerik olmasın; emin olmadıklarını önerme.","expectation":"Both no-swearing and no-sexual-content require explicit evidence. Unknown and generic family-friendly descriptions cannot satisfy exact absences; empty valid."},
+    {"id":"three_person_total","message":"Üç kişiyiz, toplam 1800 TL ayırdık. 2026-09-27 tarihinde tiyatro veya stand-up olsun; biraz gülmek istiyoruz.","expectation":"September27; <=600 TRY per ticket; theatre OR stand-up; source-supported comic suitability."},
+    {"id":"english_dot_clock","message":"Tomorrow after 19.30, I want a concert in Beyoğlu, at most 600 TL per person.","expectation":"September25; Beyoglu; concert; strictly after19:30 Istanbul; <=600TRY.19.30 is a clock, not an ambiguous date."},
+    {"id":"coordinated_genre_exclusion","message":"No jazz or rock, please. A classical concert would help me unwind; at most 1000 TL per person.","expectation":"Positive classical evidence; exclude both jazz and rock; <=1000TRY. Relaxation is soft."},
+    {"id":"soft_mood_alternatives","message":"Yarın Beyoğlu’nda 20:00’dan sonra başlayan tiyatro veya stand-up arıyorum. Yorucu bir gün geçirdim, hafif ve eğlenceli olsun; kişi başı en fazla 700 TL.","expectation":"September25; Beyoglu; strictly after20:00; theatre OR stand-up; <=700TRY. Light/fun ranks softly."},
+    {"id":"negated_accessibility","message":"Basamaksız giriş şart değil. Cuma günü bir caz konseri olsun; kişi başı en fazla 1000 TL.","expectation":"September25; <=1000TRY and jazz source evidence. No step-free requirement; expressly waived."},
+    {"id":"alternative_followup","parent":"soft_mood_alternatives","excludeParent":true,"message":"Aynı tarih, saat ve ilçede başka seçenekler göster. Bütçeyi 900 TL’ye çıkar; önce gösterdiğin yapımlar tekrar olmasın.","expectation":"Keep September25/Beyoglu/after20:00/category alternatives and mood; raise budget900; exclude parent productions. Diversify different show titles where supported."}
+  ]
+}

@@ -1,0 +1,1675 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-23T13:18:18.586Z",
+  "origin": "http://127.0.0.1:3001",
+  "live": true,
+  "maxHttpRequests": 12,
+  "automaticRetries": 0,
+  "grading": "Expectations declared before execution; returned cards require manual source-based review. This is a small adversarial evaluation, not a population accuracy estimate.",
+  "cases": [
+    {
+      "id": "quiet_mood",
+      "message": "Bugün işten çok bunaldım. Bu akşam oturarak nefes alabileceğim, arkadaşımla rahatça konuşabileceğim sakin bir şey istiyorum. Yüksek sesli müzik ve ayakta kalabalık ortam olmasın.",
+      "expectation": "Tonight; no loud music/standing crowd; quiet seated conversational setting requires source evidence. Empty is preferable to unsupported claims."
+    },
+    {
+      "id": "laugh_budget",
+      "message": "Keyfim kaçık, biraz gülüp kafamı dağıtmak istiyorum. Konser istemiyorum, çocuk etkinliği de olmasın. Kişi başı en fazla 800 TL.",
+      "expectation": "Comic experience supported by facts; no concert or child event; each starting price <=800 TRY."
+    },
+    {
+      "id": "adult_drama",
+      "message": "Yetişkinlere uygun ciddi bir sahne oyunu arıyorum. Çocuk oyunu ve komedi istemiyorum; düşündüren, dramatik bir hikâye olsun.",
+      "expectation": "Adult dramatic theatre only; exclude comedy, child shows and concerts. Source evidence required."
+    },
+    {
+      "id": "group_weekend",
+      "message": "Bu hafta sonu iki kişiyiz, toplam 1200 TL bütçemiz var. Stand-up olsun, konser istemiyorum.",
+      "expectation": "Sep26-27 Istanbul; stand-up; each starting price <=600 TRY, not1200."
+    },
+    {
+      "id": "district_time",
+      "message": "Cumartesi sadece Kadıköy’de, 20:30’dan sonra başlayan bir stand-up arıyorum. Kişi başı 500 TL’yi geçmesin; Avrupa yakasına geçmeyeceğim.",
+      "expectation": "Sep26; confirmed Kadikoy venue; strictly after20:30 Istanbul; <=500TRY; stand-up only."
+    },
+    {
+      "id": "accessibility",
+      "message": "Tekerlekli sandalye kullanıyorum. Girişin basamaksız olduğu ve erişilebilir tuvaleti bulunduğu açıklamasında açıkça belirtilen bir etkinlik öner. Bu iki özellik kesin olmalı.",
+      "expectation": "Both step-free entry AND accessible toilet explicitly supported. Unknown cannot be treated as accessible; no catalog matches likely."
+    },
+    {
+      "id": "unsupported_activity",
+      "message": "Pazar sabahı Boğaz’da kürek çekmek veya kano yapmak istiyorum. Tekne partisi, yemekli gemi turu ya da konser aramıyorum.",
+      "expectation": "Sep27 morning rowing/kayaking, not boatparty/dinner cruise/concert. Empty if missing."
+    },
+    {
+      "id": "family_comedy",
+      "message": "Annemle birlikte güleceğimiz bir gösteri arıyorum. Küfür ya da cinsel mizah olmasın; bunu açıklamasından anlayabildiğimiz seçenekleri göster, emin değilsen önerme.",
+      "expectation": "Comedy with positive evidence of nonsexual/nonswearing family suitability; explicit sexual comedy is forbidden. Unknown unsuitable for strict request."
+    },
+    {
+      "id": "english_request",
+      "message": "I want to laugh this Saturday, but no concerts or children’s shows. Keep it under 600 Turkish lira per person. A stand-up show or a comedy play would work.",
+      "expectation": "Sep26; adult stand-up/comedy play; no concerts or children; known starting price <600TRY."
+    },
+    {
+      "id": "switch_preferences",
+      "parent": "group_weekend",
+      "message": "Vazgeçtim, stand-up istemiyorum. Onun yerine caz konseri olsun; bütçeyi kaldır ama hafta sonu kalsın.",
+      "expectation": "Retain Sep26-27; remove budget; switch to jazz concerts, exclude stand-up; no stale category."
+    },
+    {
+      "id": "alternatives",
+      "parent": "laugh_budget",
+      "excludeParent": true,
+      "message": "Aynı koşullarda başka seçenekler göster; az önce gösterdiklerini tekrar istemiyorum.",
+      "expectation": "Keep comic mood/no concert/no child/<=800 preferences and exclude prior productions across providers."
+    },
+    {
+      "id": "ambiguous_budget",
+      "message": "İki kişiyiz, bütçemiz 800 TL, cumartesi gülebileceğimiz bir şey olsun.",
+      "expectation": "Ask whether800 total or per person; do not silently assume."
+    }
+  ],
+  "results": [
+    {
+      "id": "quiet_mood",
+      "input": {
+        "message": "Bugün işten çok bunaldım. Bu akşam oturarak nefes alabileceğim, arkadaşımla rahatça konuşabileceğim sakin bir şey istiyorum. Yüksek sesli müzik ve ayakta kalabalık ortam olmasın."
+      },
+      "httpStatus": 200,
+      "durationMs": 1347,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-23",
+          "dateTo": "2026-09-23",
+          "maxPrice": null,
+          "category": "Konser"
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 3
+      }
+    },
+    {
+      "id": "laugh_budget",
+      "input": {
+        "message": "Keyfim kaçık, biraz gülüp kafamı dağıtmak istiyorum. Konser istemiyorum, çocuk etkinliği de olmasın. Kişi başı en fazla 800 TL."
+      },
+      "httpStatus": 200,
+      "durationMs": 1326,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-4b5383d2b233339f2d43f2c148088be6",
+              "title": "Edepsiz Komedi",
+              "description": "Edepsiz Komedi Tiyatro Oyunu Metin Zakoğlu ile EVDE TİYATRO sizlerle buluşuyor. Gerçek bir ev, gerçek bir komedyen ve içeri alınan sadece 30 kişi Metin Zakoğlu’nun evinin salonunda bir araya geliyorlar ve sıradan bir ev salonunu hep birlikte şenlikli bir kabare çeviriyorlar. Dünyanın bu en avangard mekanında yerinizi ayırtmakta acele edin. Metin Zakoğlu'ndan cinselleşemeyen ülkenin insanları ve durumları üzerine edepsiz bir komedi. Zakoğlu hikayelerinde kadın - erkek ilişkilerinde erkeğin",
+              "startsAt": "2026-09-23T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:42:48.787Z",
+              "venue": "Cafe Theatre",
+              "district": "İstanbul Anadolu",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 658,
+              "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/edepsiz-komedi-2023518114826.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "09e588a9e448f775e9a2e853",
+              "offers": [
+                {
+                  "id": "f612792273af6753fbf38abf",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+                  "price": 658,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:42:48.787Z",
+                  "category": "Stand-up",
+                  "venue": "Cafe Theatre",
+                  "availability": "available"
+                },
+                {
+                  "id": "3b9ca1e39699210eec7ddb8a",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr",
+                  "price": 672,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:47:19.500Z",
+                  "category": "Tiyatro",
+                  "venue": "Cafe Theatre Koşuyolu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "3b9ca1e39699210eec7ddb8a",
+                "f612792273af6753fbf38abf",
+                "session-4b5383d2b233339f2d43f2c148088be6"
+              ],
+              "canonicalProductionKey": "production-c8d5eb34bac413c2cc07826eb8bfd505"
+            }
+          },
+          {
+            "event": {
+              "id": "30ec9d2b094b09319bcbf681",
+              "title": "Kadıköy Stand-up Gecesi",
+              "description": "Kadıköy Stand-up Gecesi Her Çarşamba, Cuma, Cumartesi gecesi; üç komedyen ve enerjisi yüksek bir sunucu sahne'de, siz ise bol kahkaha ve keyif dolu anların tadını çıkarıyorsunuz. Eğer siz de iş çıkışı stresinizi atıp, kahkahalarla dolu bir gece yaşamak istiyorsanız Kadıköy Ada Bar’da buluşalım!",
+              "startsAt": "2026-09-23T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:48:07.668Z",
+              "venue": "Ada Bar Kadıköy",
+              "district": "İstanbul Anadolu",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 250,
+              "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesii",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-stand-up-gecesi-202593192347677c834b676c4e96873f397029a050a4.jpeg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "49de4723893020145e585b97",
+              "offers": [
+                {
+                  "id": "30ec9d2b094b09319bcbf681",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesii",
+                  "price": 250,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:07.668Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar Kadıköy",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "30ec9d2b094b09319bcbf681",
+                "session-dfc595559b0d74a1e0c0346cec7419d6"
+              ],
+              "canonicalProductionKey": "production-0c765ec61c808930e6cc1f718b01f8a8"
+            }
+          },
+          {
+            "event": {
+              "id": "b1b69adbdc0dfef23e94e30c",
+              "title": "Kadıköy Stand Up Gecesi Açık Mikrofon",
+              "description": "Kadıköy Stand Up Gecesi Açık Mikrofon Türkiye'nin En İyi Komedyenleri Kadıköy’de! İnfiniti Comedy Club organizasyonuyla Ada Bar da kahkaha dolu gecelere ev sahipliği yapıyor! Açık mikrofonda komedyenler şakalarını deniyor herkesin 5 dakikası var Eğer siz de iş çıkışı stresinizi atıp, kahkahalarla dolu bir gece yaşamak istiyorsanız Kadıköy Ada Bar’da buluşalım!",
+              "startsAt": "2026-09-28T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:48:03.735Z",
+              "venue": "Ada Bar Kadıköy",
+              "district": "İstanbul Anadolu",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 175,
+              "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesi-acik-mikrofon",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-stand-up-gecesi-acik-mikrofon-2026520105649d8b33627973242cdb3e9282c33a23ada.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "57904e0b69ca8c9c6d3408bc",
+              "offers": [
+                {
+                  "id": "b1b69adbdc0dfef23e94e30c",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesi-acik-mikrofon",
+                  "price": 175,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:03.735Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar Kadıköy",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "b1b69adbdc0dfef23e94e30c",
+                "session-5a88b52528153b26ff7c932f3a5a7b9b"
+              ],
+              "canonicalProductionKey": "production-ed3bdb73323ea35ad510e28d20f384bf"
+            }
+          },
+          {
+            "event": {
+              "id": "46d7198b7c90299fe891f6da",
+              "title": "Edepsiz Komedi",
+              "description": "Edepsiz Komedi Tiyatro Oyunu Metin Zakoğlu ile EVDE TİYATRO sizlerle buluşuyor. Gerçek bir ev, gerçek bir komedyen ve içeri alınan sadece 30 kişi Metin Zakoğlu’nun evinin salonunda bir araya geliyorlar ve sıradan bir ev salonunu hep birlikte şenlikli bir kabare çeviriyorlar. Dünyanın bu en avangard mekanında yerinizi ayırtmakta acele edin. Metin Zakoğlu'ndan cinselleşemeyen ülkenin insanları ve durumları üzerine edepsiz bir komedi. Zakoğlu hikayelerinde kadın - erkek ilişkilerinde erkeğin",
+              "startsAt": "2026-10-02T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:42:48.787Z",
+              "venue": "Evde Tiyatro",
+              "district": "İstanbul Anadolu",
+              "address": "Caddebostan mahallesi Dr Vasıf çıkmazı 4/3 villa apartmanı kat 1 Caddebostan",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 658,
+              "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/edepsiz-komedi-2023518114826.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "b358f189fca71239618cec63",
+              "offers": [
+                {
+                  "id": "46d7198b7c90299fe891f6da",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+                  "price": 658,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:42:48.787Z",
+                  "category": "Stand-up",
+                  "venue": "Evde Tiyatro",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "46d7198b7c90299fe891f6da",
+                "session-25a09b01e54a1e39a448e96544478d84"
+              ],
+              "canonicalProductionKey": "production-7e5bf482f5f19034f1165c14cc503b11"
+            }
+          },
+          {
+            "event": {
+              "id": "9d1d11b0795ac672c51f0b69",
+              "title": "Açık Mikrofon Ekstra",
+              "description": "Açık Mikrofon Ekstra Stand Up Eğlence dolu bir akşam geçireceğiniz \"Açık Mikrofon Extra\" stand up gösterisi sahnede! Yeni hikayeler ve kahkaha dolu anlarla dolu bu gösteri için indirimli stand up biletlerini sakın kaçırmayın... İstanbul'un en gözde, herkesin uğrak yeri olan Beyoğlu'nda bulunan Efsahne Beyoğlu, çeşitli organizasyonlara ev sahipliği yapmaktadır.",
+              "startsAt": "2026-09-23T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:48:05.620Z",
+              "venue": "Efsahne Beyoğlu",
+              "district": "İstanbul Avrupa",
+              "address": "Kuloğlu, Kuloğlu Mahallaesi, İstiklâl Caddesi, Sadri Alışık Sk. No:24 Kat:3, 34433 Beyoğlu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 150,
+              "url": "https://biletinial.com/tr-tr/tiyatro/acik-mikrofon-ekstra-tkiraz",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/acik-mikrofon-ekstra-tiyatro-kiraz-20251112101433e2bd2adbe8e844b3aa11f00409d248dc.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "40e469ece70bcc42c443547c",
+              "offers": [
+                {
+                  "id": "9d1d11b0795ac672c51f0b69",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/acik-mikrofon-ekstra-tkiraz",
+                  "price": 150,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:05.620Z",
+                  "category": "Stand-up",
+                  "venue": "Efsahne Beyoğlu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "9d1d11b0795ac672c51f0b69",
+                "session-08662e17d15d82ab49a8d9d3ee8ab210"
+              ],
+              "canonicalProductionKey": "production-ed258e091e3ebaba397540d5c382150f"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 800,
+          "category": null,
+          "excludedCategories": [
+            "Konser"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 248
+      }
+    },
+    {
+      "id": "adult_drama",
+      "input": {
+        "message": "Yetişkinlere uygun ciddi bir sahne oyunu arıyorum. Çocuk oyunu ve komedi istemiyorum; düşündüren, dramatik bir hikâye olsun."
+      },
+      "httpStatus": 200,
+      "durationMs": 1198,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "ae2b06f1a9f4c2c1b4150df6",
+              "title": "Hizmetçiler",
+              "description": "Hizmetçiler Tiyatro Oyunu “Özgür Yaşa Ya Da Öl!” “Vivre Libre Ou Mourir!” Uzun yıllardır Hanımefendi’nin emrinde çalışan Solange ve Claire, yaşama tutundukları “oyunun” son dakikalarını yaşamaktadır. Taparcasına sevdikleri, saygıda kusur etmedikleri, varlıklarını borçlu oldukları Hanımefendi’yi öldürmeye karar vermişlerdir. Bir cinayetin işleneceği bu gece, dizginlenemeyen arzuların iktidarı devralışına, değişen rollerin kaosuna, aynaların kırılmasına, şiddetin salıverilmesine, ku",
+              "startsAt": "2026-09-23T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:48:23.600Z",
+              "venue": "Moda Sahnesi",
+              "district": "İstanbul Anadolu",
+              "address": "Osmanağa, Halil Ethem Sokak, Gen. Asım Gündüz Cd., 34714 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 554,
+              "url": "https://biletinial.com/tr-tr/tiyatro/hizmetciler",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/hizmetciler-202542163235a68f95e8c0d4b28904ac177870d0f47.jpg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "b51def99fd570c15f55f08de",
+              "offers": [
+                {
+                  "id": "ae2b06f1a9f4c2c1b4150df6",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/hizmetciler",
+                  "price": 554,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:23.600Z",
+                  "category": "Tiyatro",
+                  "venue": "Moda Sahnesi",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "ae2b06f1a9f4c2c1b4150df6",
+                "session-84340256512cb67426948795a9d9cd3b"
+              ],
+              "canonicalProductionKey": "production-e17a4b836fd11464ab2abf0f798921a6"
+            }
+          },
+          {
+            "event": {
+              "id": "cb9bbe6cd555bf61b579b432",
+              "title": "Lady Macbeth",
+              "description": "Gücün, Hırsın ve Karanlığın En Çıplak Hali: Lady Macbeth Sahne Alıyor! Shakespeare’in en trajik, en karmaşık ve en güçlü figürlerinden biri olan Lady Macbeth, bu kez kendi hikayesinin mutlak odağı olarak sahneye devleşiyor. Bir krallığı yıkan hırsın, vicdan azabıyla deliliğe sürüklenen bir ruhun ve tahtın arkasındaki asıl iradenin sarsıcı portresi, nefes kesen bir karakter dramasıyla seyirci karşısına çıkıyor. Güç Tutkusunun ve Vicdan Azabının Karanlık Dansı! \"Ellerim sizinle aynı renkte ama kalbimin bu kadar beyaz olmasından utanıyorum!\" Bir kehanetin peşinden giderek tarihin en kanlı taht kavgasını başlatan, hırsı ve iradesiyle bir adamı krala, bir krallığı ise mezarlığa dönüştüren kadının hikayesi… Lady Macbeth, sadakat ile ihanet, güç ile delilik arasındaki ince çizgide yürürken seyirciyi de kendi karanlığına çekiyor. Bu oyun, sadece bir iktidar mücadelesini değil; insanın içindeki o bastırılamaz güce ulaşma arzusunu ve bu arzunun doğurduğu vicdan azabının sarsıcı yıkımını merkezine alıyor. Lekelenen eller, susmayan vicdanlar ve uykusuz geceler… Sahnede bir kadının zirveye tırmanışına ve ardından kendi zihninin dehlizlerinde kayboluşuna şahitlik edeceksiniz. • Devleşen Bir Karakter Performansı: Karakterin zarafetten zalimliğe, güçten çaresizliğe uzanan tüm duygusal kırılmalarını iliklerinize kadar hissettirecek, oyunculuk sınırlarını zorlayan bir sahne yorumu. • Sarsıcı Bir Psikolojik Gerilim: Shakespeare’in zamansız metninin, insan psikolojisinin en karanlık odalarını aydınlatan modern ve derinlikli bir rejiyle buluşması. • Seyirciyi Sarsacak Bir Yüzleşme: İktidar arzusu, suçluluk duygusu ve kaçınılmaz son… Oyun bittikten sonra bile zihninizde yankılanmaya devam edecek edebi bir Manifesto. \"Çık, uğursuz leke! Çık diyorum sana! ... Arabistan’ın tüm parfümleri temizleyemeyecek bu küçük eli.\" Bu Karanlık Büyüye Ortak Olmak İçin Yerinizi Ayırtın! Tiyatro tarihinin en ikonik karakterlerinden birinin iç dünyasına yapılacak bu sarsıcı ve hipnotize edici yolculukta yerinizi almak için acele edin. Biletler tükenmeden koltuğunuzu seçin ve Lady Macbeth’in trajedisine canlı tanıklık edin! Yazan: Shakespeare Yöneten: Furkan Karayama Uyarlayan: Zehra Nur Suri &amp; Furkan Karayama Oynayan: Zehra Nur Suri Yapımcı: Furkan Karayama Yönetmen Yardımcısı: Eyfel Sema Çoruh Kostüm Tasarım: Hasret Melek Aslan Sahne düzeni: Müslüm Çelik Reji: Şeyma Aktaş Afiş Tasarım: Zehra Nur Suri &amp; Eyfel Sema Çoruh Sosyal Medya: Ramazan Cihan Kara Yapım &amp; Organizasyon: Sadece Kumpanya",
+              "startsAt": "2026-09-29T13:00:00.000Z",
+              "checkedAt": "2026-09-22T06:47:27.120Z",
+              "venue": "Taksim İstiklal Sahne",
+              "district": "BEYOĞLU",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.biletix.com/etkinlik/5FKEG/ISTANBUL/tr",
+              "imageUrl": "https://www.biletix.com/static/images/live/event/eventimages/ladymacbeth-28-8-26.png",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletix",
+              "productionKey": "064d60e2c3d69f022d142771",
+              "offers": [
+                {
+                  "id": "cb9bbe6cd555bf61b579b432",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5FKEG/ISTANBUL/tr",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:47:27.120Z",
+                  "category": "Tiyatro",
+                  "venue": "Taksim İstiklal Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "cb9bbe6cd555bf61b579b432",
+                "session-0710ff11d1ec12289f9e22c5435e04d4"
+              ],
+              "canonicalProductionKey": "production-af6ef186e0bc926fdd83a4d2d38c6d9c"
+            }
+          },
+          {
+            "event": {
+              "id": "057d31eb55ab8ef16dcebd2c",
+              "title": "Evlilikte Ufak Tefek Cinayetler",
+              "description": "Evlilikte Ufak Tefek Cinayetler Tiyatro Oyunu Tek perde Evlilikte Ufak Tefek Cinayetler, Dolunay Soysert ve Bülent İnal’ın çarpıcı performanslarıyla, sırların, yalanların ve tehlikeli oyunların gölgesinde evlilik kurumunun çatışmalarla örülü yüzünü sahneye taşıyor. Eric-Emmanuel Schmitt’in oyunu, Ersin Umut Güler’in rejisiyle, bir çiftin geçmişi ve gerçekleri arasında soluksuz bir hesaplaşmaya dönüşüyor. Estetik soyutlamalardan ve çağdaş sanat pratiklerinden ilham alan sahneleme bilinçd",
+              "startsAt": "2026-10-30T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:44:09.579Z",
+              "venue": "Fişekhane Ana Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "Kazlıçeşme mah. Kennedy Cad, No52V, 34020 Zeytinburnu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 1189,
+              "url": "https://biletinial.com/tr-tr/tiyatro/evlilikte-ufak-tefek-cinayetler-aysa",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/evlilikte-ufak-tefek-cinayetler-aysa-202582815335bb8692fb95974464b9f68e0095f62f9e.jpg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "ac8bb3535d08e314c6ceb7f7",
+              "offers": [
+                {
+                  "id": "057d31eb55ab8ef16dcebd2c",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/evlilikte-ufak-tefek-cinayetler-aysa",
+                  "price": 1189,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:44:09.579Z",
+                  "category": "Tiyatro",
+                  "venue": "Fişekhane Ana Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "057d31eb55ab8ef16dcebd2c",
+                "session-6ca735ee8a2ca217042c1ef2d307e56b"
+              ],
+              "canonicalProductionKey": "production-547bf57fd4446778d3124f082ff24502"
+            }
+          },
+          {
+            "event": {
+              "id": "a5bb144fc3680ddfef855358",
+              "title": "Koku",
+              "description": "Koku Tiyatro Oyunu İnsanın hafızasında en derine işleyen, en geç unutulan izin, kokunun peşinde görünmez bir ruhun varolma çabası… Bir koku, bir anıyı canlandırır. Bir anı, bir suçun izini sürer. Ve bir insan o izde kendini bulur. Bir annenin, bir babanın, bir çocuğun, bir aşkın, bir günahın ve bir hatıranın birbirine karıştığı o bulanık noktada geçen bir iç hesaplaşmadır. Gerçekle hayalin, suçla kefaretin, sevgiyle nefretin birbirine karıştığı bu hikaye, kokunun belleğinde ka",
+              "startsAt": "2026-09-23T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:48:22.576Z",
+              "venue": "Trump Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "Kuştepe, Kuştepe Trump Alışveriş Merkezi, Mecidiyeköy Yolu Cd. No:12, 34387 Şişli/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 1120,
+              "url": "https://biletinial.com/tr-tr/tiyatro/koku",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/koku-2025103118292082b8304daf3e4481b8b5fa2aeb046e0c.jpg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "d3b769906bd3ad21a5a503a8",
+              "offers": [
+                {
+                  "id": "a5bb144fc3680ddfef855358",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/koku",
+                  "price": 1120,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:22.576Z",
+                  "category": "Tiyatro",
+                  "venue": "Trump Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "a5bb144fc3680ddfef855358",
+                "session-36fa07d8149a7bc30d91b5ba58890b60"
+              ],
+              "canonicalProductionKey": "production-4259ec2a01f9a7719f828e6aeb66d4a5"
+            }
+          },
+          {
+            "event": {
+              "id": "7f6d76775bf4f0f18b7c1586",
+              "title": "Ballı Süt",
+              "description": "Ballı Süt Tiyatro Oyunu Eski bir koltuk, deniz kenarında bir bank, çocukluk evinin terası. İki kız kardeş. Zamanın içinden sızan bir yüzleşme. “Böyle yabancı gibi mi olacağız? Herkes gitti Asiye. İkimiz kaldık. ” Yazan ve Yöneten: Anıl Can Beydilli Oynayanlar: Tülin Özen, Nilperi Şahinkaya Yapım: Kadar, Cogito Yapımcı: Begüm Ertuğrul, Önem Günal, Aksel Bonfil Hikaye: Önem Günal Proje Koordinatörü: Çağla Erdoğan Yardımcı Yönetmen: Beril Çelik Dramaturg: Tuğba Sorgun Kostüm Tasar",
+              "startsAt": "2026-10-24T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:43:49.581Z",
+              "venue": "Fişekhane Ana Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "Kazlıçeşme mah. Kennedy Cad, No52V, 34020 Zeytinburnu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 1188,
+              "url": "https://biletinial.com/tr-tr/tiyatro/balli-sut",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/balli-sut-20262261419194699d451be5742e8a64a6d697f62bb73.jpg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "c7f5949542bdad9011dfd7ae",
+              "offers": [
+                {
+                  "id": "7f6d76775bf4f0f18b7c1586",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/balli-sut",
+                  "price": 1188,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:43:49.581Z",
+                  "category": "Tiyatro",
+                  "venue": "Fişekhane Ana Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "7f6d76775bf4f0f18b7c1586",
+                "session-f7afa813c7535c9f0057b240e57fa48b"
+              ],
+              "canonicalProductionKey": "production-23e182531b23aca0141190562ceaecf1"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": "Tiyatro",
+          "excludedCategories": [
+            "Stand-up"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 322
+      }
+    },
+    {
+      "id": "group_weekend",
+      "input": {
+        "message": "Bu hafta sonu iki kişiyiz, toplam 1200 TL bütçemiz var. Stand-up olsun, konser istemiyorum."
+      },
+      "httpStatus": 200,
+      "durationMs": 18,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "filters",
+        "status": "needs_input",
+        "notice": "Bütçeyi kişi başı belirt veya toplam bütçeyle birlikte kişi sayısını yaz. Örneğin: iki kişi toplam 800 TL.",
+        "totalCandidates": 0
+      }
+    },
+    {
+      "id": "district_time",
+      "input": {
+        "message": "Cumartesi sadece Kadıköy’de, 20:30’dan sonra başlayan bir stand-up arıyorum. Kişi başı 500 TL’yi geçmesin; Avrupa yakasına geçmeyeceğim."
+      },
+      "httpStatus": 200,
+      "durationMs": 1017,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-26",
+          "dateTo": "2026-09-26",
+          "maxPrice": 500,
+          "category": "Stand-up"
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 6
+      }
+    },
+    {
+      "id": "accessibility",
+      "input": {
+        "message": "Tekerlekli sandalye kullanıyorum. Girişin basamaksız olduğu ve erişilebilir tuvaleti bulunduğu açıklamasında açıkça belirtilen bir etkinlik öner. Bu iki özellik kesin olmalı."
+      },
+      "httpStatus": 200,
+      "durationMs": 1293,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 773
+      }
+    },
+    {
+      "id": "unsupported_activity",
+      "input": {
+        "message": "Pazar sabahı Boğaz’da kürek çekmek veya kano yapmak istiyorum. Tekne partisi, yemekli gemi turu ya da konser aramıyorum."
+      },
+      "httpStatus": 200,
+      "durationMs": 909,
+      "body": {
+        "recommendations": [],
+        "filters": {
+          "dateFrom": "2026-09-27",
+          "dateTo": "2026-09-27",
+          "maxPrice": null,
+          "category": "Konser"
+        },
+        "mode": "jev",
+        "status": "empty",
+        "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+        "totalCandidates": 5
+      }
+    },
+    {
+      "id": "family_comedy",
+      "input": {
+        "message": "Annemle birlikte güleceğimiz bir gösteri arıyorum. Küfür ya da cinsel mizah olmasın; bunu açıklamasından anlayabildiğimiz seçenekleri göster, emin değilsen önerme."
+      },
+      "httpStatus": 200,
+      "durationMs": 1540,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "e43b6c0aa99178559a8c12c6",
+              "title": "Fani But Funny",
+              "description": "Fani But Funny Stand Up Gösterisi Biletleri ‘Fânî But Funny’ muhafazakar insanların günlük hayatlarında yaşadıkları ikilemleri, komik enstantaneleri mizahi bir üslup ile ele alan keyifli ve eğlenceli bir stand up şovudur. Türk ahlak yapısına uygun, ailece keyifle izlenebilecek bu gösteri Türkiye’de ve 8 farklı ülkede ses getiren performanslara imza atmış Bekir Develi tarafından sahnelenmektedir.",
+              "startsAt": "2026-10-09T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:43:36.592Z",
+              "venue": "Başakşehir Belediyesi Şehir Sanat Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 800,
+              "url": "https://biletinial.com/tr-tr/tiyatro/fani-but-funny",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/fani-but-funny-20241082163817ef8ceefa144f7d82b8abcbb0d5c64f.jpeg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "6463e52f720ed8bdd7c44d38",
+              "offers": [
+                {
+                  "id": "e43b6c0aa99178559a8c12c6",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/fani-but-funny",
+                  "price": 800,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:43:36.592Z",
+                  "category": "Tiyatro",
+                  "venue": "Başakşehir Belediyesi Şehir Sanat Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "e43b6c0aa99178559a8c12c6",
+                "session-56dad4e7e3afbc71ebce2b8d7c8fe32a"
+              ],
+              "canonicalProductionKey": "production-ef7745b4a519d233eca3728542633ceb"
+            }
+          },
+          {
+            "event": {
+              "id": "session-04593678a629a6d5daa3c6909b222e5e",
+              "title": "Bengi İdil Uras ile Beng Beng Show",
+              "description": "Bengi İdil Uras ile Beng Beng Show Bengi İdil Uras ile kahkaha dolu bir dünyaya hazır olun! Beng Beng Show”, o hep parıltılı gördüğümüz dünyanın arkasında dönen tatlı karmaşayı ve sahne tozu yutma sevdasının insanı düşürdüğü akılalmaz halleri önünüze seren dinamik bir gösteri. Bengi İdil Uras’ın bitmeyen enerjisiyle şekillenen bu şovda; bir yandan hayallerin peşinden koşarken başa gelen trajikomik manzaralara gülecek, bir yandan da \"Peki tüm bu yaşananların tam ortasına o tanıdık 'kahkül kad",
+              "startsAt": "2026-10-13T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:45:50.014Z",
+              "venue": "HOP Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 850,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bengi-idil-uras-ile-beng-beng-show",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/bengi-idil-uras-ile-beng-beng-show-202654151144e5260fcb553f409383bebdaf29cf6728.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "2811aee53a683100b69586d0",
+              "offers": [
+                {
+                  "id": "54bcc33b30c4cbefab357b0a",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bengi-idil-uras-ile-beng-beng-show",
+                  "price": 850,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:45:50.014Z",
+                  "category": "Stand-up",
+                  "venue": "House of Performance - HoP",
+                  "availability": "available"
+                },
+                {
+                  "id": "e01a78923a8032f69eb75539",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/bengi-idil-uras-ile-beng-beng-show",
+                  "price": 850,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:43:43.590Z",
+                  "category": "Stand-up",
+                  "venue": "HOP Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "54bcc33b30c4cbefab357b0a",
+                "e01a78923a8032f69eb75539",
+                "session-04593678a629a6d5daa3c6909b222e5e"
+              ],
+              "canonicalProductionKey": "production-a4da4ce0b1626b1d5eb3a00501d86ad0"
+            }
+          },
+          {
+            "event": {
+              "id": "b7ba7ed7dfe590fbadab16ff",
+              "title": "Özlem Kosif - Hayatım Yanlış Anlama",
+              "description": "Özlem Kosif - Hayatım Yanlış Anlama Stand Up (Tek Kişilik Gösteri) Özlem Kosif, sahnedeki muazzam enerjisi ve samimi anlatımıyla hayatın içinden yaşanmış hikayeleri, çarpıcı gözlemleri ve eğlenceli anekdotlarıyla sizlere unutulmaz bir akşam yaşatacak. Mizahı, doğrudan ve içten üslubu ile birleşerek, gerçek hayattan kesitleri birer komedi şölenine dönüştürüyor.",
+              "startsAt": "2026-09-25T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:43:47.568Z",
+              "venue": "Küçükçekmece Atakent Kültür Merkezi",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 650,
+              "url": "https://biletinial.com/tr-tr/tiyatro/ozlem-kosif-hayatim-yanlis-anlama",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/ozlem-kosif-hayatim-yanlis-anlama-2026214153829ddcab27c9c6a47d2b2d0a3207b8c7623.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "e38f81b5c044fa71dc9300fd",
+              "offers": [
+                {
+                  "id": "b7ba7ed7dfe590fbadab16ff",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/ozlem-kosif-hayatim-yanlis-anlama",
+                  "price": 650,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:43:47.568Z",
+                  "category": "Stand-up",
+                  "venue": "Küçükçekmece Atakent Kültür Merkezi",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "b7ba7ed7dfe590fbadab16ff",
+                "session-a9ea5f59e0f9d01cd61d6611f2169db9"
+              ],
+              "canonicalProductionKey": "production-8ceaac7c07d2b98e9fc95f214e153758"
+            }
+          },
+          {
+            "event": {
+              "id": "session-4b8343349874c833661b2546f4545d5e",
+              "title": "Bengi İdil Uras ile Beng Beng Show",
+              "description": "Bengi İdil Uras ile Beng Beng Show Bengi İdil Uras ile kahkaha dolu bir dünyaya hazır olun! Beng Beng Show”, o hep parıltılı gördüğümüz dünyanın arkasında dönen tatlı karmaşayı ve sahne tozu yutma sevdasının insanı düşürdüğü akılalmaz halleri önünüze seren dinamik bir gösteri. Bengi İdil Uras’ın bitmeyen enerjisiyle şekillenen bu şovda; bir yandan hayallerin peşinden koşarken başa gelen trajikomik manzaralara gülecek, bir yandan da \"Peki tüm bu yaşananların tam ortasına o tanıdık 'kahkül kad",
+              "startsAt": "2026-10-01T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:43:43.590Z",
+              "venue": "Maltepe Dragos Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "Cevizli Mah. Tugayyolu cad. Kurşunlu Sk. No:9 34791 Cumhuriyet Parkı/ Maltepe/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 850,
+              "url": "https://biletinial.com/tr-tr/tiyatro/bengi-idil-uras-ile-beng-beng-show",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/bengi-idil-uras-ile-beng-beng-show-202654151144e5260fcb553f409383bebdaf29cf6728.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "b902f1bb8f4c290574c37e2a",
+              "offers": [
+                {
+                  "id": "e0aab0036d1969a8eb679fef",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/bengi-idil-uras-ile-beng-beng-show",
+                  "price": 850,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:43:43.590Z",
+                  "category": "Stand-up",
+                  "venue": "Maltepe Dragos Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "fc79419f0037fdfe4ace6421",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/bengi-idil-uras-ile-beng-beng-show",
+                  "price": 850,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:45:50.014Z",
+                  "category": "Stand-up",
+                  "venue": "Sahne Dragos",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "e0aab0036d1969a8eb679fef",
+                "fc79419f0037fdfe4ace6421",
+                "session-4b8343349874c833661b2546f4545d5e"
+              ],
+              "canonicalProductionKey": "production-7cd7c7cb6e4c647254896ea5bdd8bca7"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 773
+      }
+    },
+    {
+      "id": "english_request",
+      "input": {
+        "message": "I want to laugh this Saturday, but no concerts or children’s shows. Keep it under 600 Turkish lira per person. A stand-up show or a comedy play would work."
+      },
+      "httpStatus": 200,
+      "durationMs": 1152,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "777ca8728a7a225b8bb227d7",
+              "title": "Kadıköy Falan Stand Up Gecesi",
+              "description": "Kadıköy Falan Stand Up Gecesi",
+              "startsAt": "2026-09-23T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:45:01.287Z",
+              "venue": "Motto Sahne Kadıköy",
+              "district": "",
+              "address": "Caferağa Mah, Miralay Nazım Sk. No:26/A, 34710 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up-gecesi-falan-",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/stand-up-gecesi-falan-20260805152013998-c7134a5920dc.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "71f179770814230f8c648720",
+              "offers": [
+                {
+                  "id": "777ca8728a7a225b8bb227d7",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up-gecesi-falan-",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:45:01.287Z",
+                  "category": "Stand-up",
+                  "venue": "Motto Sahne Kadıköy",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "777ca8728a7a225b8bb227d7",
+                "session-01efbd9494fc3ef1fcdbed2911de3aea"
+              ],
+              "canonicalProductionKey": "production-8104cbbd59a82759d5671ab3e2308bd3"
+            }
+          },
+          {
+            "event": {
+              "id": "d04bde8cd8692cd36a4ab754",
+              "title": "Yunus Emre Gündüz - 4. Gösteri - Stand Up",
+              "description": "Yunus Emre Gündüz - 4. Gösteri - Stand Up",
+              "startsAt": "2026-11-08T17:00:00.000Z",
+              "checkedAt": "2026-09-22T06:49:19.794Z",
+              "venue": "Sahne Beşiktaş",
+              "district": "",
+              "address": "Abbasağa, Leşker Sk. No:4, 34353 Beşiktaş/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 450.5,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-emre-gunduz-4-gosteri-stand-up",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/yunus-emre-gunduz-4-gosteri-stand-up-58546.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "ae0a87aed877497da9b6e09c",
+              "offers": [
+                {
+                  "id": "d04bde8cd8692cd36a4ab754",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/yunus-emre-gunduz-4-gosteri-stand-up",
+                  "price": 450.5,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:49:19.794Z",
+                  "category": "Stand-up",
+                  "venue": "Sahne Beşiktaş",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "d04bde8cd8692cd36a4ab754",
+                "session-356ea842e31c8f4c80f96531023443fb"
+              ],
+              "canonicalProductionKey": "production-32c71232c9aa0ab732b8bb7ce0840153"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": "Stand-up"
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 248
+      }
+    },
+    {
+      "id": "switch_preferences",
+      "input": {
+        "message": "Vazgeçtim, stand-up istemiyorum. Onun yerine caz konseri olsun; bütçeyi kaldır ama hafta sonu kalsın.",
+        "history": [
+          {
+            "role": "user",
+            "content": "Bu hafta sonu iki kişiyiz, toplam 1200 TL bütçemiz var. Stand-up olsun, konser istemiyorum."
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": null,
+          "category": null
+        }
+      },
+      "httpStatus": 200,
+      "durationMs": 1028,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "a98ffa5ae2d34869b465ace5",
+              "title": "Duman",
+              "description": "Duman",
+              "startsAt": "2026-09-27T18:00:00.000Z",
+              "checkedAt": "2026-09-22T06:48:37.268Z",
+              "venue": "Büyükçekmece Kültürpark Kemal Sunal Amfi Tiyatro",
+              "district": "",
+              "address": "Dizdariye, Kültür Park İçi Yolu, 34500 Büyükçekmece/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 1400,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/Duman-istanbul",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/duman-istanbul-20260721090316228-470c454ee196.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "eed87f7fbe80c8e83620afb5",
+              "offers": [
+                {
+                  "id": "a98ffa5ae2d34869b465ace5",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/Duman-istanbul",
+                  "price": 1400,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:37.268Z",
+                  "category": "Konser",
+                  "venue": "Büyükçekmece Kültürpark Kemal Sunal Amfi Tiyatro",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "a98ffa5ae2d34869b465ace5",
+                "session-da76d4475549da42a07ebb0883b80d33"
+              ],
+              "canonicalProductionKey": "production-d575925bce358fd5ddce4a5887d15491"
+            }
+          },
+          {
+            "event": {
+              "id": "d0ede142085b1f7bc5506f37",
+              "title": "Gülşen",
+              "description": "Gülşen",
+              "startsAt": "2026-09-26T18:00:00.000Z",
+              "checkedAt": "2026-09-22T06:46:01.795Z",
+              "venue": "Harbiye Cemil Topuzlu Açıkhava Tiyatrosu",
+              "district": "",
+              "address": "Harbiye, Taşkışla Cd. No:8, 34367 Şişli",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 2675,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/gulsen--",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/gulsen---46455.jpeg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "0bb52faaa834409cb95f3113",
+              "offers": [
+                {
+                  "id": "d0ede142085b1f7bc5506f37",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/gulsen--",
+                  "price": 2675,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:46:01.795Z",
+                  "category": "Konser",
+                  "venue": "Harbiye Cemil Topuzlu Açıkhava Tiyatrosu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "d0ede142085b1f7bc5506f37",
+                "session-c2e611b6f0bc18f3aa43b9d5827dbf4a"
+              ],
+              "canonicalProductionKey": "production-ca4c2315149d301e3f55ecc211b766e8"
+            }
+          },
+          {
+            "event": {
+              "id": "588259c8d8bb8d88f62bdb42",
+              "title": "Derya Bedavacı",
+              "description": "Derya Bedavacı Konseri Etkinlik genelinde geçerli olan kurallara ek olarak, seanslara özgü ek düzenlemeler de yapılmıştır. Seans listesinde, katılacağınız seansın kurallarını bulabilirsiniz. Derya Bedavacı, güçlü yorumuyla müzikseverleri büyülemeye devam ediyor! Kendine has tarzı ve etkileyici sesiyle, \"Deme\", \"Seni Seven Kimdi\" ve \"Çık Artık Aklımdan\" gibi en sevilen şarkılarını bu kez Jolly Joker sahnesinde söylüyor! Derya Bedavacı’nın büyülü sesine tanık olacağın bu geceye hazır o",
+              "startsAt": "2026-09-26T18:00:00.000Z",
+              "checkedAt": "2026-09-22T06:43:28.613Z",
+              "venue": "Jolly Joker Atakent Tema",
+              "district": "İstanbul Avrupa",
+              "address": "Tema World AVM - Yan Yol Cad. No: 33/1 Atakent Küçükçekmece, İstanbul, Türkiye",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 2675,
+              "url": "https://biletinial.com/tr-tr/muzik/derya-bedavaci-jj",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/derya-bedavaci-konseri-20251120114842486f7cd7849c4ef7933ade236c414e1e.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "fbbce4a76625a6adf78f3478",
+              "offers": [
+                {
+                  "id": "588259c8d8bb8d88f62bdb42",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/muzik/derya-bedavaci-jj",
+                  "price": 2675,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:43:28.613Z",
+                  "category": "Konser",
+                  "venue": "Jolly Joker Atakent Tema",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "588259c8d8bb8d88f62bdb42",
+                "session-1c844c0ce5a49206eed723b6315b68d4"
+              ],
+              "canonicalProductionKey": "production-58c8e7d2a675ca9e3781237275dc2146"
+            }
+          },
+          {
+            "event": {
+              "id": "d607e4c37865eea5788507e8",
+              "title": "Candela Concert",
+              "description": "Candela Concert Dünyada ilk kez bu özel candle atmosferini farklı bir formata taşıyan Candela Concert, artık yalnızca İstanbul’da değil; Türkiye’nin dört bir yanındaki sahnelerde binlerce mum ışığıyla hayat buluyor. Usta sanatçıların performansları, özenle tasarlanan sahne kurgusu ve Candela’nın kendine özgü ışık atmosferiyle her şehirde aynı duyguyu yeniden kuruyor. Kimi an sahnede, kimi an bir bakışta, kimi an ise kaydettiğiniz bir karede saklı kalan bu deneyim; bir konserden çok daha",
+              "startsAt": "2026-09-27T17:00:00.000Z",
+              "checkedAt": "2026-09-22T06:47:45.119Z",
+              "venue": "Beyoğlu Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 900,
+              "url": "https://biletinial.com/tr-tr/muzik/candela-concert",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/candela-concert-20266192043417108f7b671dd451cab4745376e8f58c2.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "dd050dee48751cd53ca27851",
+              "offers": [
+                {
+                  "id": "d607e4c37865eea5788507e8",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/muzik/candela-concert",
+                  "price": 900,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:47:45.119Z",
+                  "category": "Konser",
+                  "venue": "Beyoğlu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "d607e4c37865eea5788507e8",
+                "session-188ff30436f6a67649cd8327ed21c356"
+              ],
+              "canonicalProductionKey": "production-ea23ee844b9d6be7192ddc9955712089"
+            }
+          },
+          {
+            "event": {
+              "id": "4bba71a9cd385da6813c7f3b",
+              "title": "Candle Experience - Kırım Kilisesi",
+              "description": "Candle Experience biletleri Bubilet'te!",
+              "startsAt": "2026-09-26T16:30:00.000Z",
+              "checkedAt": "2026-09-22T06:45:18.884Z",
+              "venue": "Kırım Kilisesi",
+              "district": "",
+              "address": "Şahkulu, Serdar-ı Ekrem Cd. No:52, 34425 Beyoğlu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 1000,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/candle-experience",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/candle-experience-31117.jpg",
+              "category": "Konser",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "95b74a7ed32feb90adf1046c",
+              "offers": [
+                {
+                  "id": "4bba71a9cd385da6813c7f3b",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/candle-experience",
+                  "price": 1000,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:45:18.884Z",
+                  "category": "Konser",
+                  "venue": "Kırım Kilisesi",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "4bba71a9cd385da6813c7f3b",
+                "session-d60734e493ffd659c3d7b226db5d0353"
+              ],
+              "canonicalProductionKey": "production-91cd14508eb6b0e92f18f0501f9dd538"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-09-26",
+          "dateTo": "2026-09-27",
+          "maxPrice": null,
+          "category": "Konser",
+          "excludedCategories": [
+            "Stand-up"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 15
+      }
+    },
+    {
+      "id": "alternatives",
+      "input": {
+        "message": "Aynı koşullarda başka seçenekler göster; az önce gösterdiklerini tekrar istemiyorum.",
+        "history": [
+          {
+            "role": "user",
+            "content": "Keyfim kaçık, biraz gülüp kafamı dağıtmak istiyorum. Konser istemiyorum, çocuk etkinliği de olmasın. Kişi başı en fazla 800 TL."
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 800,
+          "category": null,
+          "excludedCategories": [
+            "Konser"
+          ]
+        },
+        "excludeIds": [
+          "session-4b5383d2b233339f2d43f2c148088be6",
+          "30ec9d2b094b09319bcbf681",
+          "b1b69adbdc0dfef23e94e30c",
+          "46d7198b7c90299fe891f6da",
+          "9d1d11b0795ac672c51f0b69"
+        ]
+      },
+      "httpStatus": 200,
+      "durationMs": 1267,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "session-b4197054c300951da7248ec5e72fbe8e",
+              "title": "İsmail Nuri - Stand Up (Yeni Gösteri)",
+              "description": "İsmail Nuri - Stand Up (Yeni Gösteri) Youtube'da yayınladığı \"Hayatın Yüzde Doksan Beşi \" gösterisiyle büyük beğeni toplayan İsmail Nuri, yeni gösterisiyle şehrinize geliyor. Gülmeyi, eğlenmeyi seviyorsanız bu gösteri tam size göre.",
+              "startsAt": "2026-09-24T17:00:00.000Z",
+              "checkedAt": "2026-09-22T06:49:30.036Z",
+              "venue": "Corner Kadıköy",
+              "district": "İstanbul Anadolu",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 594,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ismail-nuri-stand-up-yeni-gosteri-",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/ismail-nuri-stand-up-yeni-gosteri-2026318133543bd3d15265ef94a979c69a66855f83226.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "11f3470845d68875a737dd28",
+              "offers": [
+                {
+                  "id": "6c92e2197dec7a8e43bd548b",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/ismail-nuri-stand-up-yeni-gosteri-",
+                  "price": 594,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:49:30.036Z",
+                  "category": "Stand-up",
+                  "venue": "Corner Kadıköy",
+                  "availability": "available"
+                },
+                {
+                  "id": "b846ecf00e1dbd249ee74fb5",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/ismail-nuri-stand-up-yeni-gosteri",
+                  "price": 594,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:01.727Z",
+                  "category": "Stand-up",
+                  "venue": "Corner Kadıköy",
+                  "availability": "available"
+                },
+                {
+                  "id": "ee313d5eaf65c9f6e9d82efe",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5IIN6/ISTANBUL/tr",
+                  "price": 594,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:49:46.930Z",
+                  "category": "Stand-up",
+                  "venue": "Corner Kadıköy",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "6c92e2197dec7a8e43bd548b",
+                "b846ecf00e1dbd249ee74fb5",
+                "ee313d5eaf65c9f6e9d82efe",
+                "session-b4197054c300951da7248ec5e72fbe8e"
+              ],
+              "canonicalProductionKey": "production-bc3a71bf3ffa40082cd6f2274cbffcb4"
+            }
+          },
+          {
+            "event": {
+              "id": "5b9eb856f1c35ec5321516bd",
+              "title": "Beyoğlu- Taksim- Pera Stand Up Gecesi",
+              "description": "Beyoğlu- Taksim- Pera Stand Up Gecesi",
+              "startsAt": "2026-09-24T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:45:02.281Z",
+              "venue": "Efsahne Beyoğlu",
+              "district": "",
+              "address": "Kuloğlu Mahallaesi, İstiklâl Caddesi, Sadri Alışık Sk. No:24 Kat:3, 34433 Beyoğlu/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 250,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up--gecesi--",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/stand-up--gecesi---66340.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "037abc99a6c1bd9fb763cb50",
+              "offers": [
+                {
+                  "id": "5b9eb856f1c35ec5321516bd",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up--gecesi--",
+                  "price": 250,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:45:02.281Z",
+                  "category": "Stand-up",
+                  "venue": "Efsahne Beyoğlu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "5b9eb856f1c35ec5321516bd",
+                "session-80ea1f71bad06d215f2d67dbaefb1622"
+              ],
+              "canonicalProductionKey": "production-de867edc4d9ac50c4bc02390e30afcef"
+            }
+          },
+          {
+            "event": {
+              "id": "e43b6c0aa99178559a8c12c6",
+              "title": "Fani But Funny",
+              "description": "Fani But Funny Stand Up Gösterisi Biletleri ‘Fânî But Funny’ muhafazakar insanların günlük hayatlarında yaşadıkları ikilemleri, komik enstantaneleri mizahi bir üslup ile ele alan keyifli ve eğlenceli bir stand up şovudur. Türk ahlak yapısına uygun, ailece keyifle izlenebilecek bu gösteri Türkiye’de ve 8 farklı ülkede ses getiren performanslara imza atmış Bekir Develi tarafından sahnelenmektedir.",
+              "startsAt": "2026-10-09T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:43:36.592Z",
+              "venue": "Başakşehir Belediyesi Şehir Sanat Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 800,
+              "url": "https://biletinial.com/tr-tr/tiyatro/fani-but-funny",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/fani-but-funny-20241082163817ef8ceefa144f7d82b8abcbb0d5c64f.jpeg",
+              "category": "Tiyatro",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "6463e52f720ed8bdd7c44d38",
+              "offers": [
+                {
+                  "id": "e43b6c0aa99178559a8c12c6",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/fani-but-funny",
+                  "price": 800,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:43:36.592Z",
+                  "category": "Tiyatro",
+                  "venue": "Başakşehir Belediyesi Şehir Sanat Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "e43b6c0aa99178559a8c12c6",
+                "session-56dad4e7e3afbc71ebce2b8d7c8fe32a"
+              ],
+              "canonicalProductionKey": "production-ef7745b4a519d233eca3728542633ceb"
+            }
+          },
+          {
+            "event": {
+              "id": "e76310e4f46fd9fbabb5b7d6",
+              "title": "Stand up Açık Mikrofon Beyoğlu | İnfiniti Sahne",
+              "description": "Beyoğlu Stand up Açık Mikrofon Gecesi Türkiye'nin en iyi komedyenleri sadece Taksim'de! Beyoğlu hala en iyi komedyenlerin yeri, Taksim artık değişiyor. Sende eski Beyoğlu'nu özlüyorsan, sınırsız eğlenceye hazırsan, Stand up Taksim buluşalım! Açık Mikrofon formatıyla eski komedyenler yeni şakalarını deniyor yeni komedyen adayları da kendilerini göstermeye çalışıyorlar.",
+              "startsAt": "2026-09-23T17:30:00.000Z",
+              "checkedAt": "2026-09-22T06:48:08.765Z",
+              "venue": "İnfiniti Sahne",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 175,
+              "url": "https://biletinial.com/tr-tr/tiyatro/beyoglu-stand-up-acik-mikrofon-gecesi",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/beyoglu-stand-up-acik-mikrofon-gecesi-20251113929498a8497fd964c48749f1704227cffd3a5.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "9d9aba157a3210ac28353c2b",
+              "offers": [
+                {
+                  "id": "e76310e4f46fd9fbabb5b7d6",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/beyoglu-stand-up-acik-mikrofon-gecesi",
+                  "price": 175,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:08.765Z",
+                  "category": "Stand-up",
+                  "venue": "İnfiniti Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "e76310e4f46fd9fbabb5b7d6",
+                "session-7013410b9d49779020859cf599dc8788"
+              ],
+              "canonicalProductionKey": "production-6699ee9b2275f6739e6fbd9d8f7b4849"
+            }
+          },
+          {
+            "event": {
+              "id": "37b2e5a3aae537cedb67c9ce",
+              "title": "Yunus Emre Gündüz – 4. Gösteri - Stand up",
+              "description": "Yunus Emre Gündüz – 4. Gösteri - Stand up Youtube’da yayınladığı “Kemikleşmiş Travma”, \"Başka Biri Var\" ve \"Varınca Ara\" gösterileri ile yüzbinlerce izlenmeye ulaşan Yunus Emre Gündüz bir yandan da sosyal medyada çizdiği karikatür ve Youtube’da ve Instagram’da yayınladığı animasyonlarıyla, yine Youtube’da yayınladığı podcastleri ile adından söz ettirmeyi başarmıştır. 4. yeni gösterisinde ilişkiler, arkadaşlık, şehir hayatı, yolculuk, kaos ve politik konular üzerine 60-90 dakikalık eğlenceli h",
+              "startsAt": "2026-09-25T17:00:00.000Z",
+              "checkedAt": "2026-09-22T06:48:10.626Z",
+              "venue": "Maltica Gastro Pub",
+              "district": "İstanbul Avrupa",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 336,
+              "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/yunus-emre-gunduz-4-gosteri-stand-up-202621216313730a0ace1697454fa43c1304bf85a19e.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "acd0e24b10af1c51ae37a008",
+              "offers": [
+                {
+                  "id": "37b2e5a3aae537cedb67c9ce",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/yunus-emre-gunduz-stand-up",
+                  "price": 336,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:10.626Z",
+                  "category": "Stand-up",
+                  "venue": "Maltica Gastro Pub",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "37b2e5a3aae537cedb67c9ce",
+                "session-5aec15c9d15f34c51ea1a39bffb0ca83"
+              ],
+              "canonicalProductionKey": "production-d416120c7e7b769b476447789cc1fb3c"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": null,
+          "dateTo": null,
+          "maxPrice": 800,
+          "category": null,
+          "excludedCategories": [
+            "Konser"
+          ]
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 217
+      }
+    },
+    {
+      "id": "ambiguous_budget",
+      "input": {
+        "message": "İki kişiyiz, bütçemiz 800 TL, cumartesi gülebileceğimiz bir şey olsun."
+      },
+      "httpStatus": 200,
+      "durationMs": 1036,
+      "body": {
+        "recommendations": [
+          {
+            "event": {
+              "id": "47496cc0e14345695db99bb3",
+              "title": "Kadıköy Stand-up Gecesi",
+              "description": "Kadıköy Stand-up Gecesi Her Çarşamba, Cuma, Cumartesi gecesi; üç komedyen ve enerjisi yüksek bir sunucu sahne'de, siz ise bol kahkaha ve keyif dolu anların tadını çıkarıyorsunuz. Eğer siz de iş çıkışı stresinizi atıp, kahkahalarla dolu bir gece yaşamak istiyorsanız Kadıköy Ada Bar’da buluşalım!",
+              "startsAt": "2026-09-26T16:00:00.000Z",
+              "checkedAt": "2026-09-22T06:48:07.668Z",
+              "venue": "Ada Bar Kadıköy",
+              "district": "İstanbul Anadolu",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 250,
+              "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesii",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-stand-up-gecesi-202593192347677c834b676c4e96873f397029a050a4.jpeg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "49de4723893020145e585b97",
+              "offers": [
+                {
+                  "id": "47496cc0e14345695db99bb3",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-stand-up-gecesii",
+                  "price": 250,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:07.668Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar Kadıköy",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "47496cc0e14345695db99bb3",
+                "session-dfd2abed469385c70769a0ec675bb1bc"
+              ],
+              "canonicalProductionKey": "production-0c765ec61c808930e6cc1f718b01f8a8"
+            }
+          },
+          {
+            "event": {
+              "id": "session-c26e1bdaf91eb00ba74ac08a96c71a22",
+              "title": "Kadıköy Komedi Kulübü Stand Up Gecesi",
+              "description": "Kadıköy Komedi Kulübü Stand Up Gecesi Vohu Sahne ve Kadıköy Komedi Kulubü Sunar: Türkiye'nin ilk ve tek komedi kulübü olan Kadıköy Komedi Kulübü, mizah ve kahkaha dolu komedi gecelerine Vohu Sahne’de kaldığı yerden devam ediyor! New York'taki Comedy Cellar kültürünü İstanbul sokaklarına taşıyan ve Kadıköy'ün deli cesaretli ruhuyla besleyen ekibimiz; Amerika’dan Avrupa’ya, Türkiye'nin dört bir yanına uzanan sahne deneyimiyle her hafta yepyeni komedyenleri sizlerle buluşturuyor. Eğer si",
+              "startsAt": "2026-09-26T17:00:00.000Z",
+              "checkedAt": "2026-09-22T06:44:56.927Z",
+              "venue": "Vohu Sahne",
+              "district": "İstanbul Anadolu",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-komedi-kulubu-stand-up-gecesi",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/kadikoy-komedi-kulubu-stand-up-gecesi-2026941014576b893d44c8444a27b9cdd46cb15bc6d1.jpg",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "4e07a241e9c215d63797008a",
+              "offers": [
+                {
+                  "id": "882e2359203c183c86880aa9",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-komedi-kulubu-stand-up-gecesi",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:44:56.927Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                },
+                {
+                  "id": "9f1325360c1556b5a93b0f03",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/kadikoy-komedi-kulubu-stand-up-gecesi",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:48:04.729Z",
+                  "category": "Stand-up",
+                  "venue": "Vohu Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "882e2359203c183c86880aa9",
+                "9f1325360c1556b5a93b0f03",
+                "session-c26e1bdaf91eb00ba74ac08a96c71a22"
+              ],
+              "canonicalProductionKey": "production-fce8fad3835cabb6bb0a94a14aebb969"
+            }
+          },
+          {
+            "event": {
+              "id": "session-4d50c0d7591312a3e0b8196ca5710f04",
+              "title": "Edepsiz Komedi",
+              "description": "Edepsiz Komedi Tiyatro Oyunu Metin Zakoğlu ile EVDE TİYATRO sizlerle buluşuyor. Gerçek bir ev, gerçek bir komedyen ve içeri alınan sadece 30 kişi Metin Zakoğlu’nun evinin salonunda bir araya geliyorlar ve sıradan bir ev salonunu hep birlikte şenlikli bir kabare çeviriyorlar. Dünyanın bu en avangard mekanında yerinizi ayırtmakta acele edin. Metin Zakoğlu'ndan cinselleşemeyen ülkenin insanları ve durumları üzerine edepsiz bir komedi. Zakoğlu hikayelerinde kadın - erkek ilişkilerinde erkeğin",
+              "startsAt": "2026-09-26T20:00:00.000Z",
+              "checkedAt": "2026-09-22T06:42:48.787Z",
+              "venue": "Cafe Theatre",
+              "district": "İstanbul Anadolu",
+              "address": "",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 658,
+              "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+              "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/edepsiz-komedi-2023518114826.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "biletinial",
+              "productionKey": "09e588a9e448f775e9a2e853",
+              "offers": [
+                {
+                  "id": "00f6dbd2cdfb05b0863b860b",
+                  "source": "biletinial",
+                  "url": "https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi-doruk-tyt",
+                  "price": 658,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:42:48.787Z",
+                  "category": "Stand-up",
+                  "venue": "Cafe Theatre",
+                  "availability": "available"
+                },
+                {
+                  "id": "8b949719c4c89fe662c02809",
+                  "source": "biletix",
+                  "url": "https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr",
+                  "price": 672,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:47:19.500Z",
+                  "category": "Tiyatro",
+                  "venue": "Cafe Theatre Koşuyolu",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "00f6dbd2cdfb05b0863b860b",
+                "8b949719c4c89fe662c02809",
+                "session-4d50c0d7591312a3e0b8196ca5710f04"
+              ],
+              "canonicalProductionKey": "production-c8d5eb34bac413c2cc07826eb8bfd505"
+            }
+          },
+          {
+            "event": {
+              "id": "b68537827b1bae4d0318e354",
+              "title": "Kadıköy Stand up Gecesi Cumartesi 21:45",
+              "description": "Kadıköy Stand up Gecesi Cumartesi 21:45",
+              "startsAt": "2026-09-26T18:45:00.000Z",
+              "checkedAt": "2026-09-22T06:45:22.206Z",
+              "venue": "Ada Bar",
+              "district": "",
+              "address": "Osmanağa, Leylak Sk. 24/A, 34000 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 300,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-cumartesi-21-45",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/kadikoy-stand-up-gecesi-cumartesi-21-45-61384.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "5c875715332bc8f6fb3a502d",
+              "offers": [
+                {
+                  "id": "b68537827b1bae4d0318e354",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/kadikoy-stand-up-gecesi-cumartesi-21-45",
+                  "price": 300,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:45:22.206Z",
+                  "category": "Stand-up",
+                  "venue": "Ada Bar",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "b68537827b1bae4d0318e354",
+                "session-4a750cec0a13f9a64ab6db7423115787"
+              ],
+              "canonicalProductionKey": "production-75df314e585b93cbd36188110eccccc6"
+            }
+          },
+          {
+            "event": {
+              "id": "6e9f525be6d9c93e55f40b31",
+              "title": "Kadıköy Falan Stand Up Gecesi",
+              "description": "Kadıköy Falan Stand Up Gecesi",
+              "startsAt": "2026-09-26T16:30:00.000Z",
+              "checkedAt": "2026-09-22T06:45:01.287Z",
+              "venue": "Entropi Sahne",
+              "district": "",
+              "address": "Osmanağa, O-1 No:6, 34714 Kadıköy/İstanbul",
+              "city": "İstanbul",
+              "currency": "TRY",
+              "price": 200,
+              "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up-gecesi-falan-",
+              "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/stand-up-gecesi-falan-20260805152013998-c7134a5920dc.png",
+              "category": "Stand-up",
+              "availability": "available",
+              "source": "bubilet",
+              "productionKey": "96de41958598cf6c5afe6d93",
+              "offers": [
+                {
+                  "id": "6e9f525be6d9c93e55f40b31",
+                  "source": "bubilet",
+                  "url": "https://www.bubilet.com.tr/istanbul/etkinlik/stand-up-gecesi-falan-",
+                  "price": 200,
+                  "currency": "TRY",
+                  "checkedAt": "2026-09-22T06:45:01.287Z",
+                  "category": "Stand-up",
+                  "venue": "Entropi Sahne",
+                  "availability": "available"
+                }
+              ],
+              "mergedIds": [
+                "6e9f525be6d9c93e55f40b31",
+                "session-a3523f39d17da2dfc7d90551340d9c0b"
+              ],
+              "canonicalProductionKey": "production-1ec9d53c257cc88ab8aaf1902c040b50"
+            }
+          }
+        ],
+        "filters": {
+          "dateFrom": "2026-09-26",
+          "dateTo": "2026-09-26",
+          "maxPrice": 800,
+          "category": null
+        },
+        "mode": "jev",
+        "status": "results",
+        "notice": null,
+        "totalCandidates": 9
+      }
+    }
+  ],
+  "finishedAt": "2026-09-23T13:23:06.823Z"
+}

@@ -1,42 +1,61 @@
 import { readFile } from "node:fs/promises";
-const origin = process.env.BIPLAN_URL,
-  token = process.env.SYNC_TOKEN;
-if (!origin || !token) throw new Error("Set BIPLAN_URL and SYNC_TOKEN in the runner secret store.");
-const endpoint = new URL("/api/admin/import", origin);
-if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password)
-  throw new Error("Publishing requires a trusted HTTPS origin.");
-const report = JSON.parse(await readFile(new URL("./output/report.json", import.meta.url), "utf8"));
-if (report.schemaVersion !== 1 || report.summary?.blocked || !report.pages?.length)
-  throw new Error("Only a validated, successful collection can be imported.");
-const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
-if (process.env.SITES_ACCESS_TOKEN)
-  headers["OAI-Sites-Authorization"] = `Bearer ${process.env.SITES_ACCESS_TOKEN}`;
-let batch = [],
-  bytes = 0;
-async function send() {
-  if (!batch.length) return;
-  const response = await fetch(endpoint, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ schemaVersion: 1, pages: batch }),
-    redirect: "error",
-    signal: AbortSignal.timeout(60000),
-  });
-  if (!response.ok)
-    throw new Error(
-      `Import returned HTTP ${response.status}; successful earlier batches are safe to retry.`,
-    );
-  const result = await response.json();
-  console.log(`Imported ${result.imported} records; skipped ${result.skipped} older pages.`);
-  batch = [];
-  bytes = 0;
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { parseArgs } from "node:util";
+import { atomicJson, endpointFor, requestJson, validateCollection } from "./remote.mjs";
+
+export async function publish({ origin, token, report, checkpoint = false, snapshot, allowLoopbackHttp = false }) {
+  const importEndpoint = endpointFor(origin, "/api/admin/import", allowLoopbackHttp);
+  if (report.schemaVersion !== 1 || report.summary?.blocked || !report.pages?.length)
+    throw new Error("Only a validated, successful collection can be imported.");
+  let batch = [], bytes = 0, imported = 0;
+  async function send() {
+    if (!batch.length) return;
+    const { response, result } = await requestJson(importEndpoint, { token, method: "POST", body: { schemaVersion: 1, pages: batch } });
+    if (!response.ok) throw new Error(`Import returned HTTP ${response.status}; checkpoint was not advanced.`);
+    imported += Number(result?.imported ?? 0);
+    batch = [];
+    bytes = 0;
+  }
+  for (const page of report.pages) {
+    const minimal = { url: page.url, events: page.events };
+    const size = Buffer.byteLength(JSON.stringify(minimal));
+    if (size > 3_500_000) throw new Error("A source page exceeds the import limit.");
+    if (batch.length >= 30 || bytes + size > 3_500_000) await send();
+    batch.push(minimal);
+    bytes += size;
+  }
+  await send();
+  if (!checkpoint) return { imported, checkpointed: false };
+
+  const collectionEndpoint = endpointFor(origin, "/api/admin/collection", allowLoopbackHttp);
+  const expectedSources = Object.keys(report.summary.sources ?? {});
+  const refreshedBySource = Object.fromEntries(expectedSources.map((source) => [source, report.pages.filter((page) => page.source === source).length]));
+  const missingSources = expectedSources.filter((source) => Number(report.summary.sources[source]) > 0 && refreshedBySource[source] === 0);
+  const summary = { ...report.summary, missingSources, sourceHealth: { refreshedPages: refreshedBySource } };
+  const saved = await requestJson(collectionEndpoint, { token, method: "POST", body: { schemaVersion: 1, report: { finishedAt: report.finishedAt, summary } } });
+  if (!saved.response.ok) throw new Error(`Checkpoint save returned HTTP ${saved.response.status}.`);
+  if (saved.result?.schemaVersion !== 1 || typeof saved.result.savedAt !== "string" || !Number.isFinite(Date.parse(saved.result.savedAt)) || !Number.isInteger(saved.result.events) || saved.result.events < 0 || saved.result.events > 20_000)
+    throw new Error("Checkpoint save returned an invalid receipt.");
+  const readback = await requestJson(collectionEndpoint, { token, timeout: 30_000 });
+  if (!readback.response.ok) throw new Error(`Checkpoint readback returned HTTP ${readback.response.status}.`);
+  const canonical = validateCollection(readback.result);
+  if (canonical.savedAt !== saved.result.savedAt || canonical.events.length !== saved.result.events)
+    throw new Error("Checkpoint readback does not match the save receipt.");
+  if (Date.parse(canonical.report.finishedAt) < Date.parse(report.finishedAt))
+    throw new Error("Checkpoint readback predates the submitted collection report.");
+  if (snapshot) await atomicJson(snapshot, canonical.events);
+  return { imported, checkpointed: true, savedAt: canonical.savedAt, events: canonical.events.length };
 }
-for (const page of report.pages) {
-  const minimal = { url: page.url, events: page.events },
-    size = Buffer.byteLength(JSON.stringify(minimal));
-  if (size > 3500000) throw new Error("A source page exceeds the import limit.");
-  if (batch.length >= 30 || bytes + size > 3500000) await send();
-  batch.push(minimal);
-  bytes += size;
+
+async function main() {
+  const { values } = parseArgs({ options: { report: { type: "string" }, checkpoint: { type: "boolean", default: false }, snapshot: { type: "string", default: "state/events.json" }, "allow-loopback-http": { type: "boolean", default: false } } });
+  const { BIPLAN_URL: origin, SYNC_TOKEN: token } = process.env;
+  if (!origin || !token) throw new Error("Set BIPLAN_URL and SYNC_TOKEN in the runner secret store.");
+  endpointFor(origin, "/api/admin/import", values["allow-loopback-http"]);
+  const reportPath = values.report ? resolve(values.report) : new URL("./output/report.json", import.meta.url);
+  const report = JSON.parse(await readFile(reportPath, "utf8"));
+  console.log(JSON.stringify(await publish({ origin, token, report, checkpoint: values.checkpoint, snapshot: values.checkpoint ? resolve(values.snapshot) : undefined, allowLoopbackHttp: values["allow-loopback-http"] })));
 }
-await send();
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();

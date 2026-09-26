@@ -1,0 +1,20 @@
+{
+  "referenceDate": "2026-09-24",
+  "timeZone": "Europe/Istanbul",
+  "note": "Explicit romance/crowding regression frozen before API execution; original failure retained in fictional live fixture report.",
+  "cases": [
+    {
+      "id": "mandatory_romance_uncrowded",
+      "visitor": 24,
+      "message": "Kesin romantik ve kalabalık olmayan bir yer istiyorum.",
+      "expectation": "Require romantic setting and uncrowded evidence. Acoustic format alone cannot prove either."
+    },
+    {
+      "id": "waive_romance_uncrowded",
+      "visitor": 24,
+      "parent": "mandatory_romance_uncrowded",
+      "message": "Romantik olması şart değil, kalabalık da sorun değil. Kişi başı 900 TL olsun.",
+      "expectation": "Remove both mandatory experience requirements; budget900 and normal eligible results allowed."
+    }
+  ]
+}

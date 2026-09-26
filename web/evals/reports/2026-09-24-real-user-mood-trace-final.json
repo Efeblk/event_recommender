@@ -1,0 +1,326 @@
+{
+  "schemaVersion": 1,
+  "kind": "real-user-recommend-trace",
+  "mode": "live-single-case",
+  "generatedAt": "2026-09-24T07:53:40.270Z",
+  "evaluationTime": "2026-09-24T07:30:29.223Z",
+  "case": {
+    "id": "soft_mood",
+    "visitor": 4,
+    "message": "Bu hafta çok yoruldum. Sevgilimle sakin ama sıkıcı olmayan bir akşam istiyoruz. İstanbul'da kişi başı 900 TL'yi geçmesin, tarih fark etmez.",
+    "expectation": "Softmood request shouldseekplausiblesourcedoptions<=900; don'tinventromance, seating orquietfacts."
+  },
+  "source": {
+    "events": "data/events.json",
+    "frozenCases": "evals/cases/2026-09-24-real-user-journeys.json",
+    "localD1": ".wrangler/state/v3/d1/miniflare-D1DatabaseObject/faaf2b0445ab934c3aac48ddf0cdfade8f9bac050be98993748742cdd2cb05fb.sqlite"
+  },
+  "calls": {
+    "queryEmbedding": 1,
+    "jev": 1
+  },
+  "evidence": {
+    "phases": [
+      {
+        "phase": "input",
+        "status": "validated",
+        "detail": "Frozen soft_mood case and fixed evaluation time loaded."
+      },
+      {
+        "phase": "retrieval",
+        "status": "completed",
+        "detail": "Production recommend path will use cached document vectors and one query embedding."
+      },
+      {
+        "phase": "jev",
+        "status": "completed",
+        "detail": "Production recommend path may make one Jev ranking call for at most 16 candidates."
+      }
+    ],
+    "vectorCoverage": {
+      "requestedEvents": 1518,
+      "uniqueDocuments": 564,
+      "cachedDocuments": 564,
+      "missingIds": [],
+      "profile": "voyage-embedding-v1|endpoint=https://api.voyageai.com/v1/embeddings|model=voyage-4-large|dimensions=1024|input_type=document|text_profile=event-title-category-venue-description-v1"
+    },
+    "jevCandidates": [
+      {
+        "id": "2d58134e21d369cf22feb6de",
+        "title": "Açık Mikrofon Ekstra",
+        "description": "Açık Mikrofon Ekstra Stand Up Eğlence dolu bir akşam geçireceğiniz \"Açık Mikrofon Extra\" stand up gösterisi sahnede! Yeni hikayeler ve kahkaha dolu anlarla dolu bu gösteri için indirimli stand up biletlerini sakın kaçırmayın... İstanbul'un en gözde, herkesin uğrak yeri olan Beyoğlu'nda bulunan Efsahne Beyoğlu, çeşitli organizasyonlara ev sahipliği yapmaktadır.",
+        "category": "Stand-up",
+        "venue": "Efsahne Beyoğlu",
+        "district": "İstanbul Avrupa",
+        "startsAt": "2026-09-30T17:30:00.000Z",
+        "price": 150,
+        "currency": "TRY"
+      },
+      {
+        "id": "e84f18a06b57eda0fffc827a",
+        "title": "Alper Kul - Çok Tatlı Bi Hikaye",
+        "description": "Çok Tatlı Bi Hikaye Ama Finalde Üzüyor Az Biraz İsmail 45 yaşında, evli, mutlu, çocuklu. Ona sorarsanız, her şey yolunda. Her şey gayet iyi, olması gerektiği gibi. Hayatta çözülmeyecek bir problem yok. İlişkiler, duygular, alışkanlıklar, evlilik, erkeklerin dünyası, kadınların dünyası, arkadaşlıklar, kavga etmek, susmak, anlatamamak… “Çok Tatlı Bi Hikaye Ama Finalde Üzüyor Az Biraz” Kimi zaman kahkaha attıran, kimi zaman insanın boğazında düğüm bırakan, hepimizin bildiği ama p",
+        "category": "Tiyatro",
+        "venue": "Kozzy Gönül Ülkü Gazanfer Özcan Sahnesi",
+        "district": "İstanbul Anadolu",
+        "startsAt": "2026-10-21T17:30:00.000Z",
+        "price": 800,
+        "currency": "TRY"
+      },
+      {
+        "id": "session-d1833118adcca1be2c3d74ea6931b7a9",
+        "title": "Neşeli Gazino",
+        "description": "Maestro Selehattin Ellek orkestrası eşliğinde gerçekleşecek NEŞELİ GAZİNO adlı şovunda hem şarkılar okuyacak hem de anlatacağı hikayeler ile sizleri çok eğlendirecek. Sanatçı dostlarının da eşlik edeceği bu doğum günü gecesinde sizler içinde ayırdığımız sınırlı yerleri çok uygun bir fiyata satışa açtık, biletinizi bu sembolik rakamla almak için acele edin. Metin Zakoğlu; Selami Şahin’den Zeki Müren’e, Ferdi Özbeğen’den Cem Karaca’ya, Müzeyyen Senar’dan Bülent Ersoy’a kadar uzanan muhteşem repertuarı içine çok çok komik hikayeler ekleyerek size unutulmaz bir gece vaat ediyor.",
+        "category": "Tiyatro",
+        "venue": "Cafe Theatre Koşuyolu",
+        "district": "ÜSKÜDAR",
+        "startsAt": "2026-09-25T17:30:00.000Z",
+        "price": 672,
+        "currency": "TRY"
+      },
+      {
+        "id": "230b94ce63d287a8c4ad744b",
+        "title": "Stand-Up Menü Komedi Gecesi",
+        "description": "Stand-Up Menü Komedi Gecesi Bu akşam ne izlesem? diye düşünüyorsanız; \"Stand up Menü\" tam da sizin için! Tek komedyen fiyatına üç komedyen farklı tatlardaki mizah anlayışlarıyla 30’ar dakikalık gösteriyle karşınızda olacak. Lezzetli bir akşam için 16 eylül çarşamba ve 30 eylül çarşamba saat 20:30 da Rose Marine Stage sahnesinde \"Stand Up Menü\" ye bekleriz.",
+        "category": "Stand-up",
+        "venue": "Rose Marine Stage Cihangir",
+        "district": "İstanbul Avrupa",
+        "startsAt": "2026-09-30T17:30:00.000Z",
+        "price": 336,
+        "currency": "TRY"
+      },
+      {
+        "id": "d607e4c37865eea5788507e8",
+        "title": "Candela Concert",
+        "description": "Candela Concert Dünyada ilk kez bu özel candle atmosferini farklı bir formata taşıyan Candela Concert, artık yalnızca İstanbul’da değil; Türkiye’nin dört bir yanındaki sahnelerde binlerce mum ışığıyla hayat buluyor. Usta sanatçıların performansları, özenle tasarlanan sahne kurgusu ve Candela’nın kendine özgü ışık atmosferiyle her şehirde aynı duyguyu yeniden kuruyor. Kimi an sahnede, kimi an bir bakışta, kimi an ise kaydettiğiniz bir karede saklı kalan bu deneyim; bir konserden çok daha",
+        "category": "Konser",
+        "venue": "Beyoğlu Sahne",
+        "district": "İstanbul Avrupa",
+        "startsAt": "2026-09-27T17:00:00.000Z",
+        "price": 900,
+        "currency": "TRY"
+      },
+      {
+        "id": "b7f49c7be63d858aa896db66",
+        "title": "CANDLE AND GHOST: Binlerce Mum Işığında İstanbul’un Hayaleti Canlanıyor!",
+        "description": "CANDLE AND GHOST: Binlerce Mum Işığında İstanbul’un Hayaleti Canlanıyor!",
+        "category": "Tiyatro",
+        "venue": "Legends Of İstanbul - Yücel Art Center",
+        "district": "",
+        "startsAt": "2026-09-26T18:00:00.000Z",
+        "price": 750,
+        "currency": "TRY"
+      },
+      {
+        "id": "fbb4ac33a789de698a9c2a5c",
+        "title": "9/8'lik Kıyamet",
+        "description": "9/8'lik Kıyamet Tiyatro Oyunu Yakın gelecek… İklim krizinin vurduğu bir dünyadayız! Kıyamet gibi “acayip” bir şey olmuş, ama tam öyle de olmamış! Hiçbir ülkenin istemediği, Parazitler denen göçebe topluluklar çıkmış ortaya. Bir oğlan: Diyar! Bu yeni toplumun hikâye anlatıcılarından biri. Her akşam, ateş başında toplanan Parazitler’e, kıyametin ilk günlerine dönüp darbukasıyla bir hikâye anlatıyor. Bir ihanet hikâyesi! İklim krizinin ilk günleri! İstanbul’dayız! Büyüyen açlık ve kıtlığ",
+        "category": "Tiyatro",
+        "venue": "Moda Sahnesi Büyük Sahne",
+        "district": "İstanbul Anadolu",
+        "startsAt": "2026-10-11T17:00:00.000Z",
+        "price": 831,
+        "currency": "TRY"
+      },
+      {
+        "id": "session-42af5e83931e73a5187d4ac75cb06883",
+        "title": "Sakın Yalan Söyleme",
+        "description": "Sakın Yalan Söyleme Tiyatro Oyunu Freida McFadden tarafından kaleme alınan Sakın Yalan Söyleme, yeni evli Tricia ve Ethan çiftinin, dört yıl önce kaybolan ünlü bir psikiyatristin malikânesinde kar fırtınası nedeniyle mahsur kalmasını anlatır. Tricia, evin gizli odasında bulduğu hasta kayıt kasetlerini dinledikçe cinayetin ve sırların karanlık perdesi aralanır.",
+        "category": "Tiyatro",
+        "venue": "Taksim İstiklal Sahne",
+        "district": "İstanbul Avrupa",
+        "startsAt": "2026-09-24T17:30:00.000Z",
+        "price": 800,
+        "currency": "TRY"
+      },
+      {
+        "id": "9291b15fc8eed5a2bb5176da",
+        "title": "Seçmen Lazım",
+        "description": "Seçmen Lazım Tiyatro Oyunu Seçmen Lazım \"Artık böyle oyunlar yapmıyorlar!\" diyeceğiniz bir oyun. Hem gerçek hem gerçeküstü. Alışılmadık, benzersiz, kıvrak ve çok eğenceli. Her şey 1 gün içinde olup bitiyor! Ama ne gün oluyor! Bir ömre bedel! İdil ve Onay kendilerini bir anda 'EN ÇOK ARANANLAR' listesinde buluyor. Elif \"Bu işi bir tek ben çözerim!\" diyor. Devrim Küba'yı özlüyor. Seçmen Lazım herkese selam çakıyor! 4 kişi o gün, koca bir ülke ne yaşıyorsa; onu yaşıyor! XXVI",
+        "category": "Tiyatro",
+        "venue": "HOP Sahne",
+        "district": "İstanbul Avrupa",
+        "startsAt": "2026-12-26T17:00:00.000Z",
+        "price": 896,
+        "currency": "TRY"
+      },
+      {
+        "id": "d9758365c9faa5fa482e9982",
+        "title": "Cin Seddi",
+        "description": "Cin Seddi",
+        "category": "Konser",
+        "venue": "Blind İstanbul",
+        "district": "",
+        "startsAt": "2026-10-22T18:30:00.000Z",
+        "price": 700,
+        "currency": "TRY"
+      },
+      {
+        "id": "e3d52377bfe745facfb2a423",
+        "title": "Chalet Garden 90’lar Türkçe Pop - Eylül",
+        "description": "90’ların unutulmaz Türkçe pop hitleriyle zamanda yolculuğa hazır mısın? Şehrin en keyifli açık hava mekanlarından Swissôtel Chalet Garden’da gerçekleşecek bu özel gecede, 90’lar Türkçe pop müziğinin efsane şarkılarıyla dans edip nostaljinin tadını çıkaracağız. Sezen Aksu’dan Tarkan’a, Sertab Erener’den Levent Yüksel’e uzanan geniş repertuvarla, hafızalara kazınan şarkılar yeniden hayat bulacak. Doğayla iç içe atmosfer, sürpriz performanslar ve enerjisi hiç düşmeyen DJ setleriyle bu gece, hem geçmişi yad etmek hem de doyasıya eğlenmek isteyenler için kaçırılmayacak bir deneyim sunuyor. Etkinlik Saati: 19:30 - 23:30 Mekan: Chalet Garden - Swissotel The Bosphorus",
+        "category": "Konser",
+        "venue": "Swissotel The Bosphorus",
+        "district": "BEŞİKTAŞ",
+        "startsAt": "2026-09-30T16:30:00.000Z",
+        "price": 488.9,
+        "currency": "TRY"
+      },
+      {
+        "id": "fb08bc814d376e79d587fbdc",
+        "title": "Stand Up Taksim / Beyoğlu Gecesi - Pazar 19:00",
+        "description": "Stand Up Taksim / Beyoğlu Gecesi - Pazar",
+        "category": "Stand-up",
+        "venue": "İnfiniti Sahne",
+        "district": "",
+        "startsAt": "2026-10-04T16:00:00.000Z",
+        "price": 400,
+        "currency": "TRY"
+      },
+      {
+        "id": "83c94d3fd1d41e09208f0c8a",
+        "title": "Müdahale",
+        "description": "Müdahale Tiyatro Oyunu Ya bir gün yakın arkadaşın sana kendi yarattığın gerçekliğin; sosyal ilişkilerinin, olduğun kişinin, var olan arkadaşlığının, kısacası hayatının gerçekliğinin artık olduğu haliyle sürdürülemeyeceğini söylerse? Ya arkadaşın bugüne kadar zannettiğin kişi değilse? Oyun, bir ülkenin bir diğerini kendi iradesine bağlayabilmek için uygulayacağı askeri müdahaleyi protesto etmek için şehrin meydanında buluşmaya sözleşen iki arkadaşın, aynı akşam ilerleyen saatlerde birinin",
+        "category": "Tiyatro",
+        "venue": "Pax Sahne",
+        "district": "İstanbul Anadolu",
+        "startsAt": "2026-10-31T17:30:00.000Z",
+        "price": 450,
+        "currency": "TRY"
+      },
+      {
+        "id": "4077acff2b08a56c619acb3b",
+        "title": "52 Hertz",
+        "description": "52 Hertz Tiyatro Oyunu \"İşte böyle kopar kıyamet / Gümbürtüyle değil iniltiyle\" — T.S. Eliot Çocukluklarını, kayıplarını ve aşklarını ilk kez İstanbul yakınlarındaki bir adada yaşamış dört kadın, adanın birkaç saat içinde yok olacağını öğrenince adaya bir oyunla veda etmeye karar verir. Bu son oyun, onları hafızalarındaki zamansız mekânlara götürecektir. Ada yok oluşa yaklaştıkça hayatla baş etme yöntemlerini, birbirleriyle ilişkilerini, ait oldukları yerleri ve görünür olmak ile görünm",
+        "category": "Tiyatro",
+        "venue": "istos sahne aznavur",
+        "district": "İstanbul Avrupa",
+        "startsAt": "2026-10-18T16:00:00.000Z",
+        "price": 750,
+        "currency": "TRY"
+      },
+      {
+        "id": "bdbf2f18ea94e11dfc0bcf45",
+        "title": "Okan Reis - Akustik Sahne",
+        "description": "Okan Reis ile Akustik Bir Cuma Gecesi! Besteci ve yorumcu kimliğiyle geniş bir dinleyici kitlesine hitap eden Okan Reis , her cuma akşamı Sanat Performance Akustik Sahne ’de müzikseverlerle buluşuyor. Kendi hit şarkılarının yanı sıra, Türkçe Pop ve Alternatif Rock müziğin hafızalara kazınan efsane eserlerini kendine has yorumuyla sahneye taşıyan Okan Reis, izleyicilerine hem duygusal hem de enerjisi yüksek bir gece vaat ediyor. İstanbul’un kalbinde, akustik tınıların ruhunuza dokunacağı bu özel performansı kaçırmamak için sınırlı sayıdaki biletler tükenmeden yerinizi alın, bu müzik şölenine ortak olun!",
+        "category": "Konser",
+        "venue": "Sanat Performance",
+        "district": "BEYOĞLU",
+        "startsAt": "2026-09-25T17:30:00.000Z",
+        "price": 400,
+        "currency": "TRY"
+      },
+      {
+        "id": "7415c1ba26e47dbc6e9a5c0f",
+        "title": "Barrière’den Kodály’a : Üç Viyolonsel",
+        "description": "Pera Müzesi, Macaristan’dan Ditta Rohmann ve Richárd Rózsa ile Türkiye’den Ozan Evrim Tunca’yı üç viyolonsel için hazırlanan özel bir konser programında bir araya getiriyor. Barok dönemden 20. yüzyıla uzanan konser, Jean-Baptiste Barrière, Joseph Haydn, Zoltán Kodály, Reinhold Glière ve György Ligeti’nin eserleri aracılığıyla viyolonselin farklı dönemlerde değişen ifade olanaklarını keşfe açıyor. Solo, düet ve üçlü eserlerden oluşan repertuvar, Barok müziğin zarafetinden 20. yüzyılın yenilikçi müzikal diline uzanırken üç viyolonselin farklı renklerini ve birbiriyle kurduğu diyaloğu öne çıkarıyor. Kodály ve Ligeti’nin solo eserlerinin yanı sıra Glière, Barrière ve Haydn’ın yapıtlarını buluşturan program, Kodály’ın Háry János eserinden Intermezzo ile tamamlanıyor.Osmanlı diplomasi tarihini resim sanatı aracılığıyla anlatan Kesişen Dünyalar: Elçiler ve Ressamlar sergisinin bulunduğu katta gerçekleşen konser, serginin kültürler arası karşılaşmalara açtığı alanı Macaristan ve Türkiye’den üç sanatçının müzikal birlikteliğiyle buluşturuyor. Liszt Enstitüsü – Macar Kültür Merkezi iş birliğiyle düzenlenen etkinlik, farklı dönem ve müzikal geleneklerden eserleri üç viyolonselin ortak sesi etrafında bir araya getiriyor. Ditta Rohmann Hakkında 1983 Budapeşte doğumlu Ditta Rohmann, eğitimini New England Conservatory, Liszt Ferenc Müzik Akademisi ve Basel Müzik Akademisi’nde sürdürdü. Leipzig Bach Yarışması’nda ödüller kazanan sanatçı, Junior Prima ve Artisjus ödüllerine değer görüldü. Klasik repertuvarın yanı sıra çağdaş müzik, doğaçlama ve disiplinlerarası projelerde de yer alan Rohmann; András Schiff, Steven Isserlis ve Thomas Adès gibi sanatçılarla sahne paylaştı. 2018’den bu yana Liszt Ferenc Müzik Üniversitesi’nde öğretim üyesidir. Richárd Rózsa Hakkında Altı yaşında viyolonsel eğitimine başlayan Richárd Rózsa, Liszt Ferenc Müzik Akademisi ve Saarbrücken’de eğitim gördü. Ulusal Weiner Leó Oda Müziği Yarışması’nda birincilik kazanan sanatçı, Macar çağdaş müziğinin aktif yorumcuları arasında yer alıyor. Maxim Vengerov, Romain Guyot ve Jenő Jandó gibi sanatçılarla sahne paylaşan Rózsa, Ferenc Liszt Oda Orkestrası ve Macar Devlet Operası’nda görev yaptı. 2017’den bu yana Szigeti Quartet’in çellistidir. Ozan Evrim Tunca Hakkında Viyolonsel eğitimine Hacettepe Üniversitesi Ankara Devlet Konservatuvarı’nda başlayan Ozan Evrim Tunca, öğrenimini ABD’de Louisiana ve Florida Eyalet Üniversitelerinde sürdürdü. Türkiye’de ve yurt dışında çeşitli orkestralarla solist olarak konserler veren Tunca, Hezarfen Ensemble ve Ulucan Trio’nun daimi çellistidir. Klasik müziğin daha geniş kitlelere ulaşmasına yönelik yayın ve eğitim projeleri de geliştiren sanatçı, Anadolu Üniversitesi Devlet Konservatuvarı’nda öğretim üyesi olarak görev yapmaktadır.",
+        "category": "Konser",
+        "venue": "Pera Müzesi",
+        "district": "BEYOĞLU",
+        "startsAt": "2026-09-24T16:30:00.000Z",
+        "price": 500,
+        "currency": "TRY"
+      }
+    ],
+    "jevRanking": [
+      {
+        "id": "bdbf2f18ea94e11dfc0bcf45",
+        "score": 1.98,
+        "confidence": 0.77
+      },
+      {
+        "id": "7415c1ba26e47dbc6e9a5c0f",
+        "score": 1.97,
+        "confidence": 0.8
+      },
+      {
+        "id": "session-d1833118adcca1be2c3d74ea6931b7a9",
+        "score": 1.92,
+        "confidence": 0.73
+      },
+      {
+        "id": "230b94ce63d287a8c4ad744b",
+        "score": 1.91,
+        "confidence": 0.75
+      },
+      {
+        "id": "e84f18a06b57eda0fffc827a",
+        "score": 1.9,
+        "confidence": 0.79
+      },
+      {
+        "id": "d607e4c37865eea5788507e8",
+        "score": 1.86,
+        "confidence": 0.72
+      },
+      {
+        "id": "4077acff2b08a56c619acb3b",
+        "score": 1.84,
+        "confidence": 0.7
+      },
+      {
+        "id": "2d58134e21d369cf22feb6de",
+        "score": 1.8,
+        "confidence": 0.7
+      },
+      {
+        "id": "session-42af5e83931e73a5187d4ac75cb06883",
+        "score": 1.79,
+        "confidence": 0.73
+      },
+      {
+        "id": "83c94d3fd1d41e09208f0c8a",
+        "score": 1.75,
+        "confidence": 0.6
+      },
+      {
+        "id": "fbb4ac33a789de698a9c2a5c",
+        "score": 1.7,
+        "confidence": 0.62
+      },
+      {
+        "id": "b7f49c7be63d858aa896db66",
+        "score": 1.67,
+        "confidence": 0.61
+      },
+      {
+        "id": "e3d52377bfe745facfb2a423",
+        "score": 1.66,
+        "confidence": 0.52
+      },
+      {
+        "id": "9291b15fc8eed5a2bb5176da",
+        "score": 1.62,
+        "confidence": 0.53
+      },
+      {
+        "id": "fb08bc814d376e79d587fbdc",
+        "score": 1.62,
+        "confidence": 0.53
+      },
+      {
+        "id": "d9758365c9faa5fa482e9982",
+        "score": 1.51,
+        "confidence": 0.44
+      }
+    ],
+    "jevModel": "jev-1.13.0",
+    "jevUsage": {
+      "inputTokens": 13076,
+      "outputTokens": 250
+    }
+  },
+  "result": {
+    "mode": "jev",
+    "status": "empty",
+    "notice": "İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.",
+    "filters": {
+      "dateFrom": null,
+      "dateTo": null,
+      "maxPrice": 900,
+      "category": null
+    },
+    "totalCandidates": 1518,
+    "recommendationIds": []
+  }
+}

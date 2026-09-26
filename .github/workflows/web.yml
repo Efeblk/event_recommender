@@ -37,8 +37,34 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
       - run: npm test
+      - run: npm run test:deploy-config
+      - name: Check frozen conversational release constraints without API calls
+        run: node --experimental-strip-types scripts/check-release-cases.mjs
+      - name: Replay Jev scores and check every recommendation without API calls
+        run: node --experimental-strip-types scripts/evaluate-jev.ts
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run build
       - name: Verify built Worker and local D1 without API keys
         run: npm run test:smoke
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Verify desktop and mobile browser flows without API calls
+        env:
+          BIPLAN_BROWSER_START: '1'
+        run: npx playwright test
+      - name: Verify standalone Cloudflare staging build without deploying
+        env:
+          DEPLOY_TARGET: staging
+          CLOUDFLARE_ACCOUNT_ID: '0123456789abcdef0123456789abcdef'
+          CF_WORKER_NAME: biplan-staging-ci
+          CF_D1_DATABASE_NAME: biplan-staging-ci
+          CF_D1_DATABASE_ID: '00000000-0000-4000-8000-000000000001'
+          CF_R2_BUCKET_NAME: biplan-staging-ci-state
+          CF_PUBLIC_URL: https://biplan-staging-ci.example.workers.dev
+          CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: 'false'
+        run: |
+          npm run deploy:config -- --env staging --validate-only
+          npm run build
+          npm run test:smoke
+          npm run deploy:dry-run -- --env staging

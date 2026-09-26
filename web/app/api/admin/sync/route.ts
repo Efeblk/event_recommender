@@ -13,11 +13,12 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   const db = await database();
   const now = Date.now();
+  const lease = `${now + 300000}:${crypto.randomUUID()}`;
   const lock = await db
     .prepare(
       "INSERT INTO metadata(key,value) VALUES('sync_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(value AS INTEGER)<? RETURNING value",
     )
-    .bind(String(now + 300000), now)
+    .bind(lease, now)
     .first();
   if (!lock)
     return Response.json({ error: 'Sync already running' }, { status: 409 });
@@ -84,6 +85,9 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: 'Sync failed' }, { status: 502 });
   } finally {
-    await db.prepare("DELETE FROM metadata WHERE key='sync_lock'").run();
+    await db
+      .prepare("DELETE FROM metadata WHERE key='sync_lock' AND value=?")
+      .bind(lease)
+      .run();
   }
 }

@@ -49,15 +49,25 @@ Biletix'te `52000` değerinin arayüzde `520,00₺` olarak gösterildiği doğru
 
 ## Zamanlama ve canlı aktarım
 
-`Collect event data` iş akışı, bu değişiklik master'a alındığında her gün 03:17 ve 15:17 UTC'de (Türkiye 06:17/18:17) çalışır; manuel de başlatılabilir. Veri ve raporlar GitHub Actions artifact'ı olarak 14 gün saklanır. Son başarılı snapshot ayrıca Actions cache üzerinden sonraki çalışmaya taşınır; böylece daha önce keşfedilen prodüksiyonlar yeniden kontrol edilir. Cache yoksa repodaki başlangıç snapshot'ından devam edilir; bozuk/başarısız toplama cache'i güncellemez. Normal PR CI'ı internete çıkmadan fixture testlerini çalıştırır; gerçek site erişimi sadece ayrı toplama iş akışındadır.
+`Collect event data` iş akışı her gün 03:17 ve 15:17 UTC'de (Türkiye 06:17/18:17) production ortamında çalışır; manuel çalıştırmada `staging` veya `production` seçilir. Yapılandırılmış çalışmada taramadan önce `GET /api/admin/collection` ile R2'deki son kalıcı snapshot okunur. Yalnızca 404, ilk kurulum olarak kabul edilip repodaki başlangıç snapshot'ını kullanır. Kimlik doğrulama, ağ ve 503 hataları eski repo verisine sessizce dönmez. Veri, rapor, kanonik readback ve çalışma kanıtı GitHub Actions artifact'ı olarak 14 gün saklanır. Normal PR CI'ı internete çıkmadan fixture testlerini çalıştırır; gerçek site erişimi sadece ayrı toplama iş akışındadır.
 
-Canlı aktarım için GitHub repository variable `BIPLAN_URL` ve secret `SYNC_TOKEN` tanımlanır; aynı `SYNC_TOKEN` uygulamanın sunucu sırrı olmalıdır. Sahibe özel Sites yayını ayrıca erişim doğrulaması gerektirir; kullanıcı tarafından sağlanmış Sites erişim tokenı varsa `SITES_ACCESS_TOKEN` olarak tutulur. Bu ayarlar yoksa iş akışı **yalnızca artifact üretir**, canlı veritabanını değiştirmez. Sırlar bu çalışmada oluşturulmadı veya paylaşılmadı.
+GitHub'da `staging` ve `production` environment'ları oluşturulur. Her birine o dağıtımın HTTPS kök adresi `BIPLAN_URL` variable'ı, uygulamayla aynı değer olan `SYNC_TOKEN` secret'ı olarak eklenir. Sahibe özel Sites yayını erişim doğrulaması gerektiriyorsa `SITES_ACCESS_TOKEN` da environment secret'ı olur. `BIPLAN_URL` ve `SYNC_TOKEN` birlikte yoksa toplama **yalnızca artifact üretir** ve bunu job summary'de açıkça bildirir; yalnızca birinin bulunması yapılandırma hatasıdır.
 
 ```sh
 npm run publish
+# Üretim akışı: tüm importlar sonrası kalıcı snapshot oluştur, tekrar oku ve yerel state'i kanonik veriyle değiştir
+npm run publish -- --checkpoint --snapshot state/events.json
+# Son kalıcı snapshot'ı tara öncesi geri yükle (yalnızca 404'te fallback)
+npm run checkpoint:restore -- --output state/events.json --fallback ../web/data/events.json
 ```
 
-`publish.mjs`, başarılı raporun doğrulanmış sayfalarını sınırlı partilerle `POST /api/admin/import` adresine yollar. Endpoint kaynağı, alanları, tarihleri ve fiyatları tekrar doğrular; her kaynak sayfasını atomik yazar. Eski bir rapor yeni veriyi geri alamaz; tekrar gönderim güvenlidir. Import embedding çağrısı yapmaz. Eski `/api/admin/sync` Biletinial'a özel uyumluluk yoludur; yeni üç kaynaklı akış için `collect` + `publish` kullanılır.
+`publish.mjs`, başarılı raporun doğrulanmış sayfalarını sınırlı partilerle `POST /api/admin/import` adresine yollar. Varsayılan komut R2'siz yerel geliştirme sunucularıyla çalışmaya devam eder. `--checkpoint` açıldığında bütün partiler başarıyla bittikten sonra rapor özeti `POST /api/admin/collection` ile kaydedilir; ardından `GET /api/admin/collection` readback'i doğrulanır ve yerel snapshot sunucunun kanonik kayıtlarıyla atomik olarak değiştirilir. Bir import partisi başarısızsa checkpoint çağrısı yapılmaz. Endpoint kaynağı, alanları, tarihleri ve fiyatları tekrar doğrular; eski bir rapor yeni veriyi geri alamaz ve tekrar gönderim güvenlidir.
+
+Varsayılan dışındaki bir rapor `npm run publish -- --report /tam/yol/report.json` ile seçilir. Uzak hedeflerde HTTPS zorunludur. Yalnızca yerel geliştirmede `--allow-loopback-http` açıkça verilerek `localhost`, `127.0.0.1` veya `[::1]` HTTP hedefi kullanılabilir; bu seçenek uzak bir HTTP adresine izin vermez. Yerel token oluşturma, sağlık kontrolü ve kalıcı D1 aktarımı için depo kökündeki `README.md` içindeki `web` komutlarını kullan.
+
+`Monitor catalog readiness` iş akışı saat başı staging ve production ortamlarında `/api/ready` adresini kontrol eder; manuel çalıştırmada tek ortam seçilebilir. Endpoint yalnızca katalog hazırsa, önerilebilir kayıt varsa ve kalıcı checkpoint 24 saatten gençse 200 döndürür. Hata ayrıntısı GitHub job summary'ye yazılır ve standart başarısız workflow bildirimi kullanılır; harici mesaj gönderilmez.
+
+Başarılı her toplama `output/soak-evidence.json` üretir. Dosya gerçek başlangıç/bitiş zamanlarını, çalışma süresini, kanonik checkpoint kayıt sayısını ve kaynak dağılımını taşır. Tek bir run 48 saatlik soak sonucu sayılmaz; 48 saat boyunca üretilen artifact'lar ayrıca incelenmeden böyle bir iddia yapılmaz.
 
 ## Araç seçimi
 

@@ -117,7 +117,7 @@ await test('settings reject ambiguous model and unsafe or malformed endpoints', 
 await test('Responses transport sends structured output, storage and token settings', async () => {
   const transport: Fetcher = async (url, init) => {
     assert.equal(url, 'https://api.openai.com/v1/responses');
-    assert.equal(init?.redirect, 'error');
+    assert.equal(init?.redirect, 'manual');
     assert.equal(
       new Headers(init?.headers).get('authorization'),
       'Bearer legacy-secret',
@@ -145,6 +145,21 @@ await test('Responses transport sends structured output, storage and token setti
     ),
     { answer: 'tamam' },
   );
+});
+await test('provider transport rejects manual redirects without following them', async () => {
+  let calls = 0;
+  await assert.rejects(
+    structured(legacy, 'test', schema, 'Interpret', {}, async (_url, init) => {
+      calls++;
+      assert.equal(init?.redirect, 'manual');
+      return new Response(null, {
+        status: 308,
+        headers: { Location: 'https://untrusted.example/collect' },
+      });
+    }),
+    /returned 308/,
+  );
+  assert.equal(calls, 1);
 });
 await test('compatible transport uses its own URL/key and chat response format', async () => {
   const transport: Fetcher = async (url, init) => {

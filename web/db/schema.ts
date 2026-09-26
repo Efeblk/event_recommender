@@ -31,8 +31,12 @@ export const metadata = sqliteTable('metadata', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 });
-export const limits = sqliteTable('request_limits', {
-  key: text('key').primaryKey(),
-  count: integer('count').notNull(),
-  expiresAt: integer('expires_at').notNull(),
-});
+export const limits = sqliteTable(
+  'request_limits',
+  {
+    key: text('key').primaryKey(),
+    count: integer('count').notNull(),
+    expiresAt: integer('expires_at').notNull(),
+  },
+  (t) => [index('idx_request_limits_expires_at').on(t.expiresAt)],
+);

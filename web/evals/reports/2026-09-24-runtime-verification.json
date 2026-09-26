@@ -1,0 +1,83 @@
+{
+  "checkedAt": "2026-09-24T07:09:05.517Z",
+  "codeRevision": "0d59d36",
+  "health": {
+    "httpStatus": 200,
+    "body": {
+      "status": "ok",
+      "aiEnabled": true,
+      "deployment": {
+        "environment": "local",
+        "revision": null
+      },
+      "catalog": {
+        "status": "ready",
+        "stored": 2909,
+        "eligible": 2749,
+        "lastCheckedAt": "2026-09-24T06:42:05.791Z",
+        "oldestCheckedAt": "2026-09-07T08:24:35.295Z",
+        "expiresAt": "2026-09-27T06:42:05.791Z"
+      }
+    }
+  },
+  "readiness": {
+    "httpStatus": 200,
+    "body": {
+      "ready": true,
+      "checkedAt": "2026-09-24T07:09:05.545Z",
+      "reasons": [],
+      "catalog": {
+        "status": "ready",
+        "stored": 2909,
+        "eligible": 2749,
+        "lastCheckedAt": "2026-09-24T06:42:05.791Z",
+        "oldestCheckedAt": "2026-09-07T08:24:35.295Z",
+        "expiresAt": "2026-09-27T06:42:05.791Z"
+      },
+      "checkpoint": {
+        "savedAt": "2026-09-24T06:44:13.921Z",
+        "finishedAt": "2026-09-24T06:42:05.866Z",
+        "events": 2909,
+        "bytes": 2622666,
+        "summary": {
+          "blocked": null,
+          "events": 2810,
+          "available": 2749,
+          "carried": 3,
+          "refreshedPages": 920,
+          "failedPages": 31,
+          "quarantined": 1,
+          "discovery": {
+            "completedListings": 7,
+            "incompleteListings": 0,
+            "limitedListings": 6
+          },
+          "sources": {
+            "biletinial": 978,
+            "bubilet": 1392,
+            "biletix": 440
+          },
+          "coverage": "paginated discovery with explicit completion status; bounded detail refresh plus previously known productions",
+          "missingSources": [],
+          "sourceHealth": {
+            "refreshedPages": {
+              "biletinial": 366,
+              "bubilet": 438,
+              "biletix": 116
+            }
+          }
+        }
+      }
+    }
+  },
+  "embeddings": {
+    "httpStatus": 200,
+    "body": {
+      "configured": true,
+      "eligible": 2420,
+      "documents": 1236,
+      "indexed": 1236,
+      "pending": 0
+    }
+  }
+}

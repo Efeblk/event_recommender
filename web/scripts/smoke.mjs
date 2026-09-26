@@ -1,5 +1,7 @@
 // Exercise the production Worker and disposable D1 through Cloudflare's test harness.
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { voyageCacheKey, voyageDocumentText } from '../lib/voyage.ts';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -18,9 +20,15 @@ let server;
 try {
   config.main = resolve(build, config.main);
   config.assets.directory = resolve(build, config.assets.directory);
+  config.r2_buckets = [
+    { binding: 'COLLECTION_STATE', bucket_name: 'biplan-isolated-smoke-state' },
+  ];
   config.vars = {
-    AI_API_KEY: '',
-    OPENAI_API_KEY: '',
+    // Old keys must not silently enable another model on the Jev-only path.
+    AI_API_KEY: 'unused-legacy-smoke-key',
+    OPENAI_API_KEY: 'unused-legacy-smoke-key',
+    TYPESAFE_API_KEY: '',
+    VOYAGE_API_KEY: '',
     EMBEDDING_API_KEY: '',
     EMBEDDING_ENABLED: 'false',
     SYNC_TOKEN: 'local-smoke-only',
@@ -40,10 +48,23 @@ try {
   const health = await healthResponse.json();
   assert.equal(health.status, 'ok');
   assert.equal(health.aiEnabled, false);
+  const publicSite = await server.fetch('/api/site');
+  assert.equal(publicSite.status, 200);
+  assert.deepEqual(await publicSite.json(), { donationUrl: null });
   // Dispatch directly to workerd. The dev HTTP proxy can lose its connection
   // after an early 401 leaves a request body unread (workerd issue #1730).
-  const worker = server.getWorker();
-  const env = await worker.getEnv();
+  let worker = server.getWorker();
+  let env = await worker.getEnv();
+  const absentCheckpoint = await worker.fetch('/api/admin/collection', {
+    headers: { Authorization: 'Bearer local-smoke-only' },
+  });
+  assert.equal(absentCheckpoint.status, 404);
+  await absentCheckpoint.arrayBuffer();
+  const initialReadiness = await worker.fetch('/api/ready');
+  assert.equal(initialReadiness.status, 503);
+  assert.ok(
+    (await initialReadiness.json()).reasons.includes('checkpoint_missing'),
+  );
   const snapshot = JSON.parse(
     await readFile(join(root, 'data/events.json'), 'utf8'),
   );
@@ -56,6 +77,23 @@ try {
     }),
   );
   for (const event of snapshot) assert.deepEqual(indexed.get(event.id), event);
+  const expiredCheckedAt = new Date(Date.now() - 73 * 3600000).toISOString();
+  await env.DB.prepare(
+    "UPDATE events SET checked_at=?, payload=json_set(payload,'$.checkedAt',?)",
+  )
+    .bind(expiredCheckedAt, expiredCheckedAt)
+    .run();
+  const staleHealthResponse = await worker.fetch('/api/health');
+  assert.equal(staleHealthResponse.status, 200);
+  const staleCatalog = (await staleHealthResponse.json()).catalog;
+  assert.equal(staleCatalog.status, 'stale');
+  assert.equal(staleCatalog.eligible, 0);
+  assert.equal(staleCatalog.stored, snapshot.length);
+  assert.equal(staleCatalog.lastCheckedAt, expiredCheckedAt);
+  assert.equal(
+    staleCatalog.expiresAt,
+    new Date(Date.parse(expiredCheckedAt) + 72 * 3600000).toISOString(),
+  );
   function request(path, body, authenticated = false) {
     return worker.fetch(path, {
       ...(body === undefined
@@ -88,7 +126,9 @@ try {
   const result = await search.json();
   assert.equal(result.mode, 'filters');
   assert.equal(result.filters.maxPrice, 1000);
-  assert.match(result.notice, /Anahtarsız/);
+  assert.ok(['empty', 'results'].includes(result.status));
+  assert.equal('message' in result, false);
+  assert.ok(result.recommendations.every((item) => !('reason' in item)));
   // A source snapshot can expire: an empty result is valid, fabricated events aren't.
   assert.ok(
     result.recommendations.every(
@@ -101,6 +141,25 @@ try {
   const invalid = await request('/api/recommend', { message: '' });
   assert.equal(invalid.status, 400);
   await invalid.arrayBuffer();
+  const unclear = await request('/api/recommend', {
+    message: 'Toplam bütçem 800 TL',
+  });
+  assert.equal(unclear.status, 200);
+  const unclearBody = await unclear.json();
+  assert.equal(unclearBody.status, 'needs_input');
+  assert.equal(unclearBody.filters.maxPrice, null);
+  assert.deepEqual(unclearBody.recommendations, []);
+  const excluded = await request('/api/recommend', {
+    message: 'Konser istemiyorum',
+  });
+  assert.equal(excluded.status, 200);
+  const excludedBody = await excluded.json();
+  assert.deepEqual(excludedBody.filters.excludedCategories, ['Konser']);
+  assert.ok(
+    excludedBody.recommendations.every(
+      ({ event }) => event.category !== 'Konser',
+    ),
+  );
   const sync = await request('/api/admin/sync', {});
   assert.equal(sync.status, 401);
   await sync.arrayBuffer();
@@ -140,6 +199,36 @@ try {
     assert.fail(`Import returned ${imported.status}: ${detail.slice(0, 2000)}`);
   }
   assert.equal((await imported.json()).imported, 1);
+  const expectedExpiry = new Date(
+    Date.parse(checkedAt) + 72 * 3600000,
+  ).toISOString();
+  const readyHealth = await request('/api/health');
+  assert.equal(readyHealth.status, 200);
+  const readyCatalog = (await readyHealth.json()).catalog;
+  assert.equal(readyCatalog.status, 'ready');
+  assert.equal(readyCatalog.lastCheckedAt, checkedAt);
+  assert.equal(readyCatalog.expiresAt, expectedExpiry);
+  assert.ok(readyCatalog.stored >= snapshot.length + 1);
+  assert.ok(readyCatalog.eligible >= 1);
+  const readyEvents = await request('/api/events');
+  assert.equal(readyEvents.status, 200);
+  assert.deepEqual((await readyEvents.json()).catalog, readyCatalog);
+
+  await env.DB.prepare(
+    "INSERT INTO metadata(key,value) VALUES('sync_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+  )
+    .bind(`${Date.now() + 300000}:smoke-held-lease`)
+    .run();
+  const lockedImport = await request(
+    '/api/admin/import',
+    envelope({ ...importedEvent, id: 'smoke-locked-import' }),
+    true,
+  );
+  assert.equal(lockedImport.status, 409);
+  assert.deepEqual(await lockedImport.json(), {
+    error: 'Sync already running',
+  });
+  await env.DB.prepare("DELETE FROM metadata WHERE key='sync_lock'").run();
   const staleImport = await request(
     '/api/admin/import',
     envelope({
@@ -159,6 +248,78 @@ try {
   );
   assert.equal(importedRecommendation.event.price, 500);
   assert.ok(importedRecommendation.event.productionKey);
+
+  const seedSource = snapshot.find(
+    (candidate, index) =>
+      snapshot.findIndex((event) => event.url === candidate.url) === index &&
+      snapshot.filter((event) => event.url === candidate.url).length > 1,
+  )?.url;
+  assert.ok(seedSource);
+  const seedSourceEvent = snapshot.find((event) => event.url === seedSource);
+  assert.ok(seedSourceEvent);
+  const obsoleteSeedIds = snapshot
+    .filter((event) => event.url === seedSource)
+    .map((event) => event.id);
+  assert.ok(obsoleteSeedIds.length > 1);
+  const replacement = {
+    ...seedSourceEvent,
+    id: 'smoke-seed-source-replacement',
+    title: 'Yeniden Başlatma Doğrulama Etkinliği',
+    startsAt: new Date(Date.now() + 4 * 86400000).toISOString(),
+    checkedAt: new Date(Date.now() + 1000).toISOString(),
+  };
+  const replacementImport = await request(
+    '/api/admin/import',
+    envelope(replacement),
+    true,
+  );
+  assert.equal(replacementImport.status, 200);
+  assert.deepEqual(await replacementImport.json(), { imported: 1, skipped: 0 });
+  await env.DB.prepare("DELETE FROM metadata WHERE key='seed_version'").run();
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: {
+              ...configuredWorker.secrets,
+              SMOKE_RELOAD_MARKER: crypto.randomUUID(),
+              DONATION_URL: 'https://example.com/support',
+            },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
+  const afterRestart = await request('/api/health');
+  assert.equal(afterRestart.status, 200);
+  await afterRestart.arrayBuffer();
+  const configuredSite = await request('/api/site');
+  assert.equal(configuredSite.status, 200);
+  assert.deepEqual(await configuredSite.json(), {
+    donationUrl: 'https://example.com/support',
+  });
+  const sourceAfterRestart = await env.DB.prepare(
+    'SELECT id FROM events WHERE source_url=? ORDER BY id',
+  )
+    .bind(seedSource)
+    .all();
+  assert.deepEqual(
+    sourceAfterRestart.results.map(({ id }) => id),
+    [replacement.id],
+  );
+  assert.ok(
+    obsoleteSeedIds.every(
+      (id) => !sourceAfterRestart.results.some((row) => row.id === id),
+    ),
+  );
+  assert.ok(
+    await env.DB.prepare(
+      "SELECT value FROM metadata WHERE key='seed_version'",
+    ).first(),
+  );
   const bulk = Array.from({ length: 101 }, (_, i) => ({
     ...importedEvent,
     id: `smoke-bulk-${i}`,
@@ -198,8 +359,414 @@ try {
   );
   assert.equal(badImport.status, 400);
   await badImport.arrayBuffer();
+  // Durable checkpoints must contain the canonical published DB, never a
+  // caller-provided snapshot. R2 and D1 here are both disposable local bindings.
+  const checkpointRequest = (body, authenticated = true) =>
+    request('/api/admin/collection', body, authenticated);
+  const checkpointGet = () =>
+    worker.fetch('/api/admin/collection', {
+      headers: { Authorization: 'Bearer local-smoke-only' },
+    });
+  const checkpointUnauthorized = await checkpointRequest({}, false);
+  assert.equal(checkpointUnauthorized.status, 401);
+  await checkpointUnauthorized.arrayBuffer();
+  const checkpointUnauthorizedGet = await worker.fetch('/api/admin/collection');
+  assert.equal(checkpointUnauthorizedGet.status, 401);
+  await checkpointUnauthorizedGet.arrayBuffer();
+  const canonical = await env.DB.prepare(
+    'SELECT payload FROM events ORDER BY id',
+  ).all();
+  const report = {
+    finishedAt: new Date().toISOString(),
+    summary: {
+      blocked: null,
+      events: canonical.results.length,
+      available: 103,
+      refreshedPages: 3,
+      sources: { biletinial: 103, bubilet: 1, biletix: 1 },
+    },
+  };
+  const reportEnvelope = {
+    schemaVersion: 1,
+    report,
+    events: [{ id: 'caller-forged-event' }],
+  };
+  const blockedCheckpoint = await checkpointRequest({
+    schemaVersion: 1,
+    report: {
+      ...report,
+      summary: { ...report.summary, blocked: 'large_catalog_drop' },
+    },
+  });
+  assert.equal(blockedCheckpoint.status, 400);
+  await blockedCheckpoint.arrayBuffer();
+  const oversizedCheckpoint = await checkpointRequest({
+    ...reportEnvelope,
+    oversized: 'x'.repeat(128 * 1024),
+  });
+  assert.equal(oversizedCheckpoint.status, 413);
+  await oversizedCheckpoint.arrayBuffer();
+  await env.DB.prepare(
+    "INSERT INTO metadata(key,value) VALUES('sync_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+  )
+    .bind(`${Date.now() + 300000}:checkpoint-held-lease`)
+    .run();
+  const lockedCheckpoint = await checkpointRequest(reportEnvelope);
+  assert.equal(lockedCheckpoint.status, 409);
+  await lockedCheckpoint.arrayBuffer();
+  await env.DB.prepare("DELETE FROM metadata WHERE key='sync_lock'").run();
+  const checkpointResponse = await checkpointRequest(reportEnvelope);
+  assert.equal(
+    checkpointResponse.status,
+    200,
+    await checkpointResponse.clone().text(),
+  );
+  const savedCheckpoint = await checkpointResponse.json();
+  assert.equal(savedCheckpoint.events, canonical.results.length);
+  const restoredResponse = await checkpointGet();
+  assert.equal(restoredResponse.status, 200);
+  const restoredCheckpoint = await restoredResponse.json();
+  assert.equal(restoredCheckpoint.events.length, canonical.results.length);
+  assert.deepEqual(
+    restoredCheckpoint.events,
+    canonical.results.map((row) => JSON.parse(row.payload)),
+  );
+  assert.ok(
+    restoredCheckpoint.events.every(
+      (event) => event && event.id !== 'caller-forged-event',
+    ),
+  );
+  const checkpointReady = await worker.fetch('/api/ready');
+  assert.equal(
+    checkpointReady.status,
+    200,
+    await checkpointReady.clone().text(),
+  );
+  assert.equal((await checkpointReady.json()).ready, true);
+  const duplicateCheckpoint = await checkpointRequest(reportEnvelope);
+  assert.equal(duplicateCheckpoint.status, 200);
+  assert.deepEqual(await duplicateCheckpoint.json(), savedCheckpoint);
+  const olderCheckpoint = await checkpointRequest({
+    schemaVersion: 1,
+    report: {
+      ...report,
+      finishedAt: new Date(Date.parse(report.finishedAt) - 60000).toISOString(),
+    },
+  });
+  assert.equal(olderCheckpoint.status, 200);
+  assert.deepEqual(await olderCheckpoint.json(), savedCheckpoint);
+  const pointerRow = await env.DB.prepare(
+    "SELECT value FROM metadata WHERE key='collection_checkpoint'",
+  ).first();
+  const pointer = JSON.parse(pointerRow.value);
+  await env.DB.prepare(
+    "UPDATE metadata SET value=? WHERE key='collection_checkpoint'",
+  )
+    .bind(
+      JSON.stringify({
+        ...pointer,
+        finishedAt: new Date(Date.now() - 25 * 3600000).toISOString(),
+      }),
+    )
+    .run();
+  const oldReportReady = await worker.fetch('/api/ready');
+  assert.equal(oldReportReady.status, 503);
+  assert.ok((await oldReportReady.json()).reasons.includes('checkpoint_stale'));
+  await env.DB.prepare(
+    "UPDATE metadata SET value=? WHERE key='collection_checkpoint'",
+  )
+    .bind(pointerRow.value)
+    .run();
+  await env.COLLECTION_STATE.delete(savedCheckpoint.key);
+  const missingObjectReady = await worker.fetch('/api/ready');
+  assert.equal(missingObjectReady.status, 503);
+  assert.ok(
+    (await missingObjectReady.json()).reasons.includes(
+      'checkpoint_unavailable',
+    ),
+  );
+  const missingObjectGet = await checkpointGet();
+  assert.equal(missingObjectGet.status, 503);
+  await missingObjectGet.arrayBuffer();
+  await env.COLLECTION_STATE.put(
+    savedCheckpoint.key,
+    JSON.stringify(restoredCheckpoint),
+  );
+  const checkpointRecovered = await worker.fetch('/api/ready');
+  assert.equal(checkpointRecovered.status, 200);
+  await checkpointRecovered.arrayBuffer();
+  // Regression through the actual HTTP route and D1, without a provider key.
+  // A play request must not be padded with concerts or child performances.
+  // The restart test reseeded other pages; expire those in this disposable DB
+  // so the regression does not depend on today's scraped catalogue ordering.
+  await env.DB.prepare(
+    "UPDATE events SET checked_at=?, payload=json_set(payload,'$.checkedAt',?)",
+  )
+    .bind(expiredCheckedAt, expiredCheckedAt)
+    .run();
+  const plays = [
+    {
+      id: 'smoke-adult-play',
+      title: 'Son Mektup',
+      description: 'Yetişkinlere yönelik dramatik bir oyun. Komedi değildir.',
+    },
+    {
+      id: 'smoke-child-play',
+      title: 'Ormandaki Arkadaşlar',
+      description: '4–8 yaş çocuklar ve aileleri için kukla tiyatrosu.',
+    },
+  ].map((play) => ({
+    ...importedEvent,
+    ...play,
+    category: 'Tiyatro',
+    url: `https://biletinial.com/tr-tr/tiyatro/${play.id}`,
+  }));
+  for (const play of plays) {
+    const importedPlay = await request(
+      '/api/admin/import',
+      envelope(play),
+      true,
+    );
+    assert.equal(importedPlay.status, 200, await importedPlay.clone().text());
+    await importedPlay.arrayBuffer();
+  }
+  const playMessage =
+    'Çocuk oyunu istemiyorum, yetişkinlere uygun ciddi bir oyun olsun.';
+  const playResponse = await request('/api/recommend', {
+    message: playMessage,
+  });
+  assert.equal(playResponse.status, 200);
+  const playResult = await playResponse.json();
+  assert.equal(playResult.filters.category, 'Tiyatro');
+  assert.deepEqual(
+    playResult.recommendations.map(({ event }) => event.id),
+    ['smoke-adult-play'],
+  );
+  const noMorePlays = await request('/api/recommend', {
+    message: 'Aynı koşullarda başka etkinlikler bul',
+    filters: playResult.filters,
+    history: [{ role: 'user', content: playMessage }],
+    excludeIds: ['smoke-adult-play'],
+  });
+  assert.equal(noMorePlays.status, 200);
+  const noMoreResult = await noMorePlays.json();
+  assert.equal(noMoreResult.status, 'empty');
+  assert.deepEqual(noMoreResult.recommendations, []);
+  const indexUnauthorized = await worker.fetch('/api/admin/embeddings');
+  assert.equal(indexUnauthorized.status, 401);
+  await indexUnauthorized.arrayBuffer();
+  const indexHeaders = { Authorization: 'Bearer local-smoke-only' };
+  const noKeyIndex = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.equal(noKeyIndex.status, 200);
+  assert.equal((await noKeyIndex.json()).configured, false);
+  const noKeyPost = await worker.fetch('/api/admin/embeddings', {
+    method: 'POST',
+    headers: indexHeaders,
+  });
+  assert.equal(noKeyPost.status, 503);
+  await noKeyPost.arrayBuffer();
+  // Over 1,000 identical-time sessions exercise the stable pagination tie-breaker.
+  const manySessions = Array.from({ length: 1005 }, (_, i) => ({
+    ...plays[0],
+    id: `voyage-pagination-${String(i).padStart(4, '0')}`,
+    url: `https://biletinial.com/tr-tr/tiyatro/voyage-pagination-${Math.floor(i / 250)}`,
+    title: 'Sayfalama Oyunu',
+    description: 'Yetişkinlere yönelik sahne oyunu.',
+  }));
+  const manyImport = await request(
+    '/api/admin/import',
+    {
+      schemaVersion: 1,
+      pages: [...new Set(manySessions.map((event) => event.url))].map(
+        (url) => ({
+          url,
+          events: manySessions.filter((event) => event.url === url),
+        }),
+      ),
+    },
+    true,
+  );
+  assert.equal(manyImport.status, 200, await manyImport.clone().text());
+  await manyImport.arrayBuffer();
+  const allEvents = await worker.fetch('/api/events');
+  const paginatedCatalog = await allEvents.json();
+  assert.equal(paginatedCatalog.total, 3);
+  const mergedPagination = paginatedCatalog.events.find(
+    (event) => event.title === 'Sayfalama Oyunu',
+  );
+  assert.ok(mergedPagination.mergedIds.includes('voyage-pagination-0000'));
+  assert.ok(mergedPagination.mergedIds.includes('voyage-pagination-1004'));
+  assert.equal(
+    mergedPagination.mergedIds.filter((id) =>
+      id.startsWith('voyage-pagination-'),
+    ).length,
+    1005,
+  );
+  const indexBefore = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  const beforeCoverage = await indexBefore.json();
+  assert.equal(beforeCoverage.eligible, 3);
+  assert.equal(beforeCoverage.documents, 3);
+
+  const profile = voyageCacheKey({
+    apiKey: 'unused-fake-key',
+    model: 'voyage-4-large',
+    dimensions: 1024,
+  });
+  const vector = JSON.stringify(
+    Array.from({ length: 1024 }, (_, i) => (i === 0 ? 1 : 0)),
+  );
+  for (const event of [...plays, manySessions[0]]) {
+    const hash = createHash('sha256')
+      .update(voyageDocumentText(event))
+      .digest('hex');
+    await env.DB.prepare(
+      'INSERT INTO voyage_embeddings(profile,hash,vector) VALUES(?,?,?)',
+    )
+      .bind(profile, hash, vector)
+      .run();
+  }
+  // A fake key enables status inspection only. No recommendation/model request.
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: {
+              ...configuredWorker.secrets,
+              VOYAGE_API_KEY: 'unused-fake-key',
+            },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
+  const cachedCoverage = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.deepEqual(await cachedCoverage.json(), {
+    configured: true,
+    eligible: 3,
+    documents: 3,
+    indexed: 3,
+    pending: 0,
+  });
+  // Content changes invalidate only their own vectors, without matching by ID.
+  await env.DB.prepare(
+    "UPDATE events SET payload=json_set(payload,'$.description','Değişen yetişkin oyunu açıklaması') WHERE id=?",
+  )
+    .bind(plays[0].id)
+    .run();
+  const changedCoverage = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.equal((await changedCoverage.json()).pending, 1);
+  // A different dimensions profile cannot silently reuse the old vectors.
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: { ...configuredWorker.secrets, VOYAGE_DIMENSIONS: '512' },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  const otherProfile = await worker.fetch('/api/admin/embeddings', {
+    headers: indexHeaders,
+  });
+  assert.equal((await otherProfile.json()).indexed, 0);
+  // Cross-provider identity is resolved before category/budget filters. These
+  // two source listings reproduce the reported Edepsiz Komedi duplicate.
+  await server.update((options) => ({
+    ...options,
+    workers: options.workers?.map((configuredWorker) =>
+      'configPath' in configuredWorker
+        ? {
+            ...configuredWorker,
+            secrets: { ...configuredWorker.secrets, VOYAGE_API_KEY: '' },
+          }
+        : configuredWorker,
+    ),
+  }));
+  worker = server.getWorker();
+  env = await worker.getEnv();
+  await env.DB.prepare('DELETE FROM events').run();
+  const mergedSources = [
+    {
+      ...plays[0],
+      id: 'merge-biletinial',
+      source: 'biletinial',
+      title: 'Edepsiz Komedi',
+      venue: 'Cafe Theatre',
+      category: 'Stand-up',
+      description: 'Metin Zakoğlu stand-up gösterisi.',
+      price: 658,
+      url: 'https://biletinial.com/tr-tr/tiyatro/edepsiz-komedi',
+    },
+    {
+      ...plays[0],
+      id: 'merge-biletix',
+      source: 'biletix',
+      title: 'Edepsiz Komedi',
+      venue: 'Cafe Theatre Koşuyolu',
+      category: 'Tiyatro',
+      description: 'Metin Zakoğlu stand-up gösterisi.',
+      price: 672,
+      url: 'https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr',
+    },
+  ];
+  const mergedImport = await request(
+    '/api/admin/import',
+    {
+      schemaVersion: 1,
+      pages: mergedSources.map((event) => ({
+        url: event.url,
+        events: [event],
+      })),
+    },
+    true,
+  );
+  assert.equal(mergedImport.status, 200, await mergedImport.clone().text());
+  await mergedImport.arrayBuffer();
+  const mergedCatalog = await (await worker.fetch('/api/events')).json();
+  assert.equal(mergedCatalog.total, 1);
+  assert.equal(mergedCatalog.events.length, 1);
+  const mergedCard = mergedCatalog.events[0];
+  assert.equal(mergedCard.category, 'Stand-up');
+  assert.equal(mergedCard.offers.length, 2);
+  assert.equal(mergedCard.price, 658);
+  const mergedResult = await (
+    await request('/api/recommend', { message: '660 TL altında stand-up' })
+  ).json();
+  assert.equal(mergedResult.recommendations.length, 1);
+  assert.equal(mergedResult.recommendations[0].event.offers.length, 2);
+  assert.equal(
+    (await env.DB.prepare('SELECT COUNT(*) AS count FROM events').first())
+      .count,
+    2,
+  );
+  // If one provider disappears, an already shown merged ID must still exclude
+  // the surviving offer when asking for alternatives.
+  await env.DB.prepare('DELETE FROM events WHERE id=?')
+    .bind('merge-biletinial')
+    .run();
+  const surviving = await (
+    await request('/api/recommend', {
+      message: 'Başka etkinlik',
+      excludeIds: [mergedCard.id],
+    })
+  ).json();
+  assert.deepEqual(surviving.recommendations, []);
   console.log(
-    'Built Worker smoke check passed: page, D1, keyless search, validation, protected sync, import and stale-update protection.',
+    'Built Worker smoke check passed: page, D1, protected import, restart-safe source replacement, canonical R2 checkpoints, stale/missing-state readiness play recommendation exclusions, catalog pagination and Voyage cache coverage.',
   );
 } catch (error) {
   server?.debug();

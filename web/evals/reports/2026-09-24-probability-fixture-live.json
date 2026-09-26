@@ -1,0 +1,906 @@
+{
+  "schemaVersion": 2,
+  "evaluatedAt": "2026-09-24T08:11:31.408Z",
+  "status": "completed",
+  "mode": "live-rescore",
+  "requestedModel": "jev-1.13.0",
+  "responseModels": [
+    "jev-1.13.0"
+  ],
+  "model": "jev-1.13.0",
+  "calls": 12,
+  "plannedCalls": 12,
+  "minJevSupportProbability": 0.7,
+  "candidateRecall": 1,
+  "candidateRecallNoMatchCases": "not_applicable",
+  "cases": 12,
+  "wholeListCorrect": 11,
+  "wholeListAccuracy": 0.9166666666666666,
+  "top1Hits": 10,
+  "top1Accuracy": 1,
+  "acceptedCount": 11,
+  "acceptableAcceptedCount": 10,
+  "forbiddenAcceptedCount": 1,
+  "unacceptableAcceptedCount": 1,
+  "recommendationPrecision": 0.9090909090909091,
+  "noMatchCases": 2,
+  "noMatchCorrect": 1,
+  "noMatchFalsePositives": 1,
+  "inputTokens": 29366,
+  "outputTokens": 648,
+  "note": "Small fictional Turkish evaluation, not production approval. Live-catalog and user evaluations remain necessary.",
+  "plan": [
+    {
+      "id": "acoustic",
+      "shortlistCount": 4,
+      "acceptableCandidateIds": [
+        "acoustic"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "dance",
+      "shortlistCount": 4,
+      "acceptableCandidateIds": [
+        "electronic"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "family",
+      "shortlistCount": 7,
+      "acceptableCandidateIds": [
+        "children"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "comedy",
+      "shortlistCount": 1,
+      "acceptableCandidateIds": [
+        "comedy"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "drama",
+      "shortlistCount": 1,
+      "acceptableCandidateIds": [
+        "drama"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "rock",
+      "shortlistCount": 1,
+      "acceptableCandidateIds": [
+        "rock"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "seated",
+      "shortlistCount": 1,
+      "acceptableCandidateIds": [
+        "acoustic"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "negation",
+      "shortlistCount": 1,
+      "acceptableCandidateIds": [
+        "drama"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "budget",
+      "shortlistCount": 2,
+      "acceptableCandidateIds": [
+        "acoustic"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "followup",
+      "shortlistCount": 4,
+      "acceptableCandidateIds": [
+        "acoustic"
+      ],
+      "candidateRecall": 1
+    },
+    {
+      "id": "unsupported-romance",
+      "shortlistCount": 7,
+      "acceptableCandidateIds": [],
+      "candidateRecall": null
+    },
+    {
+      "id": "unsupported-access",
+      "shortlistCount": 7,
+      "acceptableCandidateIds": [],
+      "candidateRecall": null
+    }
+  ],
+  "results": [
+    {
+      "id": "acoustic",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "acoustic"
+      ],
+      "acceptableAcceptedIds": [
+        "acoustic"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 1037,
+      "usage": {
+        "inputTokens": 2795,
+        "outputTokens": 64
+      },
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.98,
+          "confidence": 0.98,
+          "probabilities": [
+            0,
+            0,
+            0.01,
+            0.99
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "unknown",
+          "score": 0.49,
+          "confidence": 0.51,
+          "probabilities": [
+            0.52,
+            0.48,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "rock",
+          "score": 0.24,
+          "confidence": 0.76,
+          "probabilities": [
+            0.77,
+            0.23,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "electronic",
+          "score": 0.01,
+          "confidence": 0.99,
+          "probabilities": [
+            1,
+            0,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "dance",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "electronic"
+      ],
+      "acceptableAcceptedIds": [
+        "electronic"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 707,
+      "usage": {
+        "inputTokens": 2802,
+        "outputTokens": 64
+      },
+      "ranking": [
+        {
+          "id": "electronic",
+          "score": 2.99,
+          "confidence": 0.99,
+          "probabilities": [
+            0,
+            0,
+            0.01,
+            0.99
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "rock",
+          "score": 0.93,
+          "confidence": 0.6,
+          "probabilities": [
+            0.24,
+            0.63,
+            0.09,
+            0.04
+          ],
+          "supportProbability": 0.13
+        },
+        {
+          "id": "unknown",
+          "score": 0.53,
+          "confidence": 0.52,
+          "probabilities": [
+            0.48,
+            0.52,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "acoustic",
+          "score": 0.02,
+          "confidence": 0.98,
+          "probabilities": [
+            0.98,
+            0.02,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "family",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "children"
+      ],
+      "acceptableAcceptedIds": [
+        "children"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 306,
+      "usage": {
+        "inputTokens": 4640,
+        "outputTokens": 109
+      },
+      "ranking": [
+        {
+          "id": "children",
+          "score": 2.97,
+          "confidence": 0.97,
+          "probabilities": [
+            0,
+            0,
+            0.02,
+            0.98
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "unknown",
+          "score": 0.57,
+          "confidence": 0.55,
+          "probabilities": [
+            0.44,
+            0.56,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "acoustic",
+          "score": 0.5,
+          "confidence": 0.5,
+          "probabilities": [
+            0.52,
+            0.46,
+            0.01,
+            0.01
+          ],
+          "supportProbability": 0.02
+        },
+        {
+          "id": "electronic",
+          "score": 0.06,
+          "confidence": 0.94,
+          "probabilities": [
+            0.96,
+            0.04,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "rock",
+          "score": 0.06,
+          "confidence": 0.94,
+          "probabilities": [
+            0.96,
+            0.04,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "comedy",
+          "score": 0.04,
+          "confidence": 0.96,
+          "probabilities": [
+            0.97,
+            0.03,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "drama",
+          "score": 0.04,
+          "confidence": 0.96,
+          "probabilities": [
+            0.97,
+            0.03,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "comedy",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "comedy"
+      ],
+      "acceptableAcceptedIds": [
+        "comedy"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 278,
+      "usage": {
+        "inputTokens": 1076,
+        "outputTokens": 19
+      },
+      "ranking": [
+        {
+          "id": "comedy",
+          "score": 2.86,
+          "confidence": 0.86,
+          "probabilities": [
+            0,
+            0,
+            0.13,
+            0.87
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "drama",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "drama"
+      ],
+      "acceptableAcceptedIds": [
+        "drama"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 315,
+      "usage": {
+        "inputTokens": 1192,
+        "outputTokens": 19
+      },
+      "ranking": [
+        {
+          "id": "drama",
+          "score": 2.93,
+          "confidence": 0.93,
+          "probabilities": [
+            0,
+            0,
+            0.06,
+            0.9400000000000001
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "rock",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "rock"
+      ],
+      "acceptableAcceptedIds": [
+        "rock"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 279,
+      "usage": {
+        "inputTokens": 1062,
+        "outputTokens": 19
+      },
+      "ranking": [
+        {
+          "id": "rock",
+          "score": 2.96,
+          "confidence": 0.96,
+          "probabilities": [
+            0,
+            0,
+            0.03,
+            0.97
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "seated",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "acoustic"
+      ],
+      "acceptableAcceptedIds": [
+        "acoustic"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 286,
+      "usage": {
+        "inputTokens": 1078,
+        "outputTokens": 19
+      },
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.97,
+          "confidence": 0.97,
+          "probabilities": [
+            0,
+            0,
+            0.03,
+            0.97
+          ],
+          "supportProbability": 1
+        }
+      ]
+    },
+    {
+      "id": "negation",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "drama"
+      ],
+      "acceptableAcceptedIds": [
+        "drama"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 273,
+      "usage": {
+        "inputTokens": 1063,
+        "outputTokens": 19
+      },
+      "ranking": [
+        {
+          "id": "drama",
+          "score": 2.79,
+          "confidence": 0.79,
+          "probabilities": [
+            0.03,
+            0.01,
+            0.12,
+            0.84
+          ],
+          "supportProbability": 0.96
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "acoustic"
+      ],
+      "acceptableAcceptedIds": [
+        "acoustic"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 284,
+      "usage": {
+        "inputTokens": 1570,
+        "outputTokens": 34
+      },
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.72,
+          "confidence": 0.72,
+          "probabilities": [
+            0.04,
+            0.01,
+            0.11,
+            0.84
+          ],
+          "supportProbability": 0.95
+        },
+        {
+          "id": "unknown",
+          "score": 1.09,
+          "confidence": 0.72,
+          "probabilities": [
+            0.1,
+            0.75,
+            0.11,
+            0.04
+          ],
+          "supportProbability": 0.15
+        }
+      ]
+    },
+    {
+      "id": "followup",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "acoustic"
+      ],
+      "acceptableAcceptedIds": [
+        "acoustic"
+      ],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": true,
+      "precision": 1,
+      "expectedNoMatch": false,
+      "noMatchCorrect": null,
+      "wholeListCorrect": true,
+      "latencyMs": 302,
+      "usage": {
+        "inputTokens": 2822,
+        "outputTokens": 64
+      },
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 2.85,
+          "confidence": 0.85,
+          "probabilities": [
+            0,
+            0,
+            0.14,
+            0.86
+          ],
+          "supportProbability": 1
+        },
+        {
+          "id": "unknown",
+          "score": 0.58,
+          "confidence": 0.54,
+          "probabilities": [
+            0.44,
+            0.55,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "rock",
+          "score": 0.04,
+          "confidence": 0.96,
+          "probabilities": [
+            0.97,
+            0.03,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        },
+        {
+          "id": "electronic",
+          "score": 0.02,
+          "confidence": 0.98,
+          "probabilities": [
+            0.99,
+            0.01,
+            0,
+            0
+          ],
+          "supportProbability": 0
+        }
+      ]
+    },
+    {
+      "id": "unsupported-romance",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [
+        "acoustic"
+      ],
+      "acceptableAcceptedIds": [],
+      "unacceptableAcceptedIds": [
+        "acoustic"
+      ],
+      "forbiddenAcceptedIds": [
+        "acoustic"
+      ],
+      "top1Hit": null,
+      "precision": 0,
+      "expectedNoMatch": true,
+      "noMatchCorrect": false,
+      "wholeListCorrect": false,
+      "latencyMs": 371,
+      "usage": {
+        "inputTokens": 4627,
+        "outputTokens": 109
+      },
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 1.73,
+          "confidence": 0.6,
+          "probabilities": [
+            0.09,
+            0.17,
+            0.68,
+            0.06
+          ],
+          "supportProbability": 0.74
+        },
+        {
+          "id": "drama",
+          "score": 1,
+          "confidence": 0.56,
+          "probabilities": [
+            0.22,
+            0.58,
+            0.19,
+            0.01
+          ],
+          "supportProbability": 0.2
+        },
+        {
+          "id": "comedy",
+          "score": 0.62,
+          "confidence": 0.56,
+          "probabilities": [
+            0.41,
+            0.57,
+            0.02,
+            0
+          ],
+          "supportProbability": 0.02
+        },
+        {
+          "id": "unknown",
+          "score": 0.52,
+          "confidence": 0.49,
+          "probabilities": [
+            0.49,
+            0.5,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "children",
+          "score": 0.38,
+          "confidence": 0.62,
+          "probabilities": [
+            0.65,
+            0.34,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "rock",
+          "score": 0.26,
+          "confidence": 0.74,
+          "probabilities": [
+            0.75,
+            0.24,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "electronic",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.84,
+            0.15,
+            0.01,
+            0
+          ],
+          "supportProbability": 0.01
+        }
+      ]
+    },
+    {
+      "id": "unsupported-access",
+      "calledJev": true,
+      "model": "jev-1.13.0",
+      "acceptedIds": [],
+      "acceptableAcceptedIds": [],
+      "unacceptableAcceptedIds": [],
+      "forbiddenAcceptedIds": [],
+      "top1Hit": null,
+      "precision": null,
+      "expectedNoMatch": true,
+      "noMatchCorrect": true,
+      "wholeListCorrect": true,
+      "latencyMs": 327,
+      "usage": {
+        "inputTokens": 4639,
+        "outputTokens": 109
+      },
+      "ranking": [
+        {
+          "id": "acoustic",
+          "score": 0.46,
+          "confidence": 0.54,
+          "probabilities": [
+            0.69,
+            0.21,
+            0.04,
+            0.06
+          ],
+          "supportProbability": 0.1
+        },
+        {
+          "id": "rock",
+          "score": 0.21,
+          "confidence": 0.79,
+          "probabilities": [
+            0.84,
+            0.15,
+            0,
+            0.01
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "drama",
+          "score": 0.18,
+          "confidence": 0.82,
+          "probabilities": [
+            0.86,
+            0.11,
+            0.01,
+            0.02
+          ],
+          "supportProbability": 0.03
+        },
+        {
+          "id": "comedy",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.87,
+            0.1,
+            0.01,
+            0.02
+          ],
+          "supportProbability": 0.03
+        },
+        {
+          "id": "children",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.86,
+            0.11,
+            0.01,
+            0.02
+          ],
+          "supportProbability": 0.03
+        },
+        {
+          "id": "unknown",
+          "score": 0.17,
+          "confidence": 0.83,
+          "probabilities": [
+            0.87,
+            0.12,
+            0,
+            0.01
+          ],
+          "supportProbability": 0.01
+        },
+        {
+          "id": "electronic",
+          "score": 0.13,
+          "confidence": 0.87,
+          "probabilities": [
+            0.9,
+            0.09,
+            0,
+            0.01
+          ],
+          "supportProbability": 0.01
+        }
+      ]
+    }
+  ]
+}

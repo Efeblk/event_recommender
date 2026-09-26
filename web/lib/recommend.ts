@@ -6,17 +6,24 @@ import {
   type SearchResult,
 } from './types.ts';
 import {
-  normalize,
   productionIdentity,
   isEligible,
-  parseFilters,
-  rankEvents,
-  sourceReason,
+  interpretConstraints,
   uniqueEvents,
   validateFilters,
 } from './search.ts';
-import { choose, embed, understand, type AIConfig } from './ai.ts';
-import type { EmbeddingConfig } from './providers.ts';
+import { rankWithJev, type JevConfig, type JevRanking } from './jev.ts';
+import {
+  diverseEvents,
+  fallbackEvents,
+  searchContext,
+  shortlistEvents,
+} from './retrieval.ts';
+import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
+import { semanticQuery, type SemanticRanking } from './hybrid.ts';
+import { mergeEventSessions } from './event-merge.ts';
+import { deriveRequirements, meetsRequirements } from './requirements.ts';
+
 export interface RecommendInput {
   message: string;
   history: Message[];
@@ -24,7 +31,8 @@ export interface RecommendInput {
   excludeIds: string[];
 }
 export function validateInput(value: unknown): RecommendInput {
-  if (!value || typeof value !== 'object') throw new Error('İstek geçersiz.');
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('İstek geçersiz.');
   const x = value as Record<string, unknown>;
   if (
     typeof x.message !== 'string' ||
@@ -44,7 +52,7 @@ export function validateInput(value: unknown): RecommendInput {
         m.content.length > 2000,
     )
   )
-    throw new Error('Sohbet geçmişi geçersiz.');
+    throw new Error('Arama geçmişi geçersiz.');
   const exclude = x.excludeIds ?? [];
   if (
     !Array.isArray(exclude) ||
@@ -54,157 +62,240 @@ export function validateInput(value: unknown): RecommendInput {
     throw new Error('Etkinlik seçimi geçersiz.');
   return {
     message: x.message.trim(),
-    history,
+    // Old clients may send assistant messages. Only user requests are context.
+    history: history.filter((m) => m.role === 'user').slice(-6),
     filters: validateFilters(x.filters ?? emptyFilters),
     excludeIds: exclude,
   };
 }
 export interface Dependencies {
   candidates: (f: Filters) => Promise<EventRecord[]>;
-  vectors: (
-    e: EventRecord[],
-    config: EmbeddingConfig,
-  ) => Promise<Map<string, number[]>>;
-  config: AIConfig | null;
-  embeddings?: () => EmbeddingConfig | null;
+  config: JevConfig | null;
   now?: Date;
-  ai?: {
-    understand: typeof understand;
-    embed: typeof embed;
-    choose: typeof choose;
-  };
+  rank?: typeof rankWithJev;
+  embeddingConfig?: VoyageConfig | null;
+  vectors?: (
+    events: EventRecord[],
+    config: VoyageConfig,
+  ) => Promise<Map<string, number[]>>;
+  embed?: typeof embedWithVoyage;
 }
+
+// Initial product policy, not an empirically calibrated quality claim.
+// Level 2 requires source support; a valid no-match remains empty.
+export const MIN_JEV_SUPPORT_PROBABILITY = 0.7;
+
+// Shared with the evaluation harness so it measures exactly what users see.
+// Only canonical candidates may become cards, even if a ranker supplies others.
+export function selectJevEvents(
+  candidates: EventRecord[],
+  ranking: JevRanking,
+  limit = 2,
+): EventRecord[] {
+  const byId = new Map(candidates.map((event) => [event.id, event]));
+  const supported = ranking.ranked
+    .filter(({ event, score, probabilities, supportProbability }) => {
+      if (
+        !byId.has(event.id) ||
+        !Number.isFinite(score) ||
+        score < 0 ||
+        score > 3 ||
+        !Array.isArray(probabilities) ||
+        probabilities.length !== 4 ||
+        !probabilities.every(
+          (value) =>
+            typeof value === 'number' &&
+            Number.isFinite(value) &&
+            value >= 0 &&
+            value <= 1,
+        ) ||
+        Math.abs(probabilities.reduce((sum, value) => sum + value, 0) - 1) >
+          0.02
+      )
+        return false;
+      const derivedSupport = probabilities[2] + probabilities[3];
+      return (
+        Number.isFinite(supportProbability) &&
+        supportProbability >= MIN_JEV_SUPPORT_PROBABILITY &&
+        supportProbability <= 1 &&
+        Math.abs(supportProbability - derivedSupport) <= 1e-9
+      );
+    })
+    .sort((a, b) => b.score - a.score)
+    .map(({ event }) => byId.get(event.id)!);
+  return diverseEvents(
+    uniqueEvents(supported, supported.length),
+    Math.max(0, Math.min(5, limit)),
+  );
+}
+
+const basicNotice =
+  'Sonuçlar tarih, bütçe, kategori ve kelime eşleşmesine göre listeleniyor.';
+const issueNotices = {
+  budget_ambiguous:
+    'Bütçeyi kişi başı belirt veya toplam bütçeyle birlikte kişi sayısını yaz. Örneğin: iki kişi toplam 800 TL.',
+  date_ambiguous:
+    'Tarihi daha açık belirt. Örneğin: yarın, bu hafta sonu veya YYYY-AA-GG biçiminde bir tarih.',
+  constraint_ambiguous:
+    'Koşulları ayrı ve açık biçimde belirt. Örneğin: cumartesi, kişi başı 800 TL, konser hariç.',
+  unsupported_location:
+    'Şu an yalnızca İstanbul etkinlikleri var. İstanbul için bir arama yapabilirsin.',
+};
+
 export async function recommend(
   input: RecommendInput,
   deps: Dependencies,
 ): Promise<SearchResult> {
-  const now = deps.now ?? new Date(),
-    ai = deps.ai ?? { understand, embed, choose };
-  let filters = parseFilters(input.message, input.filters, now),
-    query = input.message,
-    mode: SearchResult['mode'] = 'filters';
-  let notice = deps.config
-    ? null
-    : 'Anahtarsız önizleme: tarih, bütçe, kategori ve kelime eşleşmesiyle arama yapılır. Serbest sohbet ve anlamsal AI araması henüz açık değil.';
-  if (deps.config) {
-    try {
-      const intent = await ai.understand(
-        deps.config,
-        input.message,
-        input.history,
-        input.filters,
-        now,
-      );
-      filters = validateFilters(intent);
-      query = intent.query;
-      mode = 'ai';
-      if (intent.clarification)
-        return {
-          message: intent.clarification,
-          recommendations: [],
-          filters,
-          mode,
-          notice,
-          totalCandidates: 0,
-        };
-    } catch {
-      notice =
-        'AI bağlantısına şu anda ulaşılamıyor. Filtreli arama sonuçları gösteriliyor.';
-    }
-  }
-  if (
-    mode === 'filters' &&
-    /\b(ankara|izmir|antalya|bursa|eskisehir|adana)\b/.test(
-      normalize(input.message),
-    )
-  )
+  const now = deps.now ?? new Date();
+  const { filters, issue } = interpretConstraints(
+    input.message,
+    input.filters,
+    now,
+  );
+  if (issue)
     return {
-      message:
-        'Şu an yalnızca İstanbul etkinliklerini arayabiliyorum. İstanbul için bir plan yapalım mı?',
       recommendations: [],
       filters,
-      mode,
-      notice,
+      mode: 'filters',
+      status:
+        issue === 'unsupported_location'
+          ? 'unsupported_location'
+          : 'needs_input',
+      notice: issueNotices[issue],
       totalCandidates: 0,
     };
-  let events = (await deps.candidates(filters)).filter((e) =>
-    isEligible(e, filters, now),
-  );
-  const excludedUrls = new Set(
-    events
-      .filter((e) => input.excludeIds.includes(e.id))
-      .map(productionIdentity),
+  let events = mergeEventSessions(
+    (await deps.candidates(filters)).filter((event) =>
+      isEligible(event, emptyFilters, now),
+    ),
+  ).filter((event) => isEligible(event, filters, now));
+  const excludedIds = new Set(input.excludeIds);
+  const isExcluded = (event: EventRecord) =>
+    excludedIds.has(event.id) ||
+    (event.canonicalProductionKey &&
+      excludedIds.has(event.canonicalProductionKey)) ||
+    (event.canonicalShowKey && excludedIds.has(event.canonicalShowKey)) ||
+    event.mergedIds?.some((id) => excludedIds.has(id));
+  const excludedProductions = new Set(
+    events.filter(isExcluded).map(productionIdentity),
   );
   events = events.filter(
-    (e) =>
-      !input.excludeIds.includes(e.id) &&
-      !excludedUrls.has(productionIdentity(e)),
+    (event) =>
+      !isExcluded(event) && !excludedProductions.has(productionIdentity(event)),
   );
+  const context = searchContext(input.message, input.history);
+  const requirements = deriveRequirements(input.message, context.history);
+  const beforeEvidence = events.length;
+  events = events.filter((event) => meetsRequirements(event, requirements));
   const totalCandidates = events.length;
   if (!events.length)
     return {
-      message:
-        'Bu koşullarla doğrulanmış, güncel bir etkinlik bulamadım. Tarihi genişletebilir, bütçeyi değiştirebilir veya başka bir kategori seçebilirsin.',
       recommendations: [],
       filters,
-      mode,
-      notice,
+      mode: 'filters',
+      status: 'empty',
+      notice:
+        beforeEvidence && requirements.length
+          ? 'Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.'
+          : 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
       totalCandidates,
     };
-  if (deps.config && mode === 'ai') {
+  let shortlist = shortlistEvents(events, input.message, input.history, 16);
+  if (!shortlist.length)
+    return {
+      recommendations: [],
+      filters,
+      mode: 'filters',
+      status: 'empty',
+      notice:
+        'Belirttiğin tercih ve hariç tutmalara uyan bir etkinlik bulunamadı.',
+      totalCandidates,
+    };
+  let semantic: SemanticRanking | undefined;
+  let retrievalNotice: string | null = null;
+  if (deps.embeddingConfig) {
     try {
-      const embedding = deps.embeddings?.();
-      const vectors = embedding
-        ? await deps.vectors(events, embedding)
-        : new Map<string, number[]>();
-      if (embedding && vectors.size) {
-        const [vector] = await ai.embed(embedding, [query]);
-        events = rankEvents(events, query, vector, vectors);
-        mode = 'semantic';
-      } else events = rankEvents(events, query);
+      const vectors = await deps.vectors?.(events, deps.embeddingConfig);
+      if (vectors?.size) {
+        const [queryVector] = await (deps.embed ?? embedWithVoyage)(
+          deps.embeddingConfig,
+          [semanticQuery(input.message, context.history)],
+          'query',
+        );
+        semantic = { queryVector, vectors };
+        if (vectors.size < events.length)
+          retrievalNotice =
+            'Anlamsal dizin kısmen hazır; yeni etkinlikler kelime aramasıyla da değerlendiriliyor.';
+      } else
+        retrievalNotice =
+          'Anlamsal arama dizini henüz hazır değil; kelime araması kullanılıyor.';
     } catch {
-      events = rankEvents(events, query);
-      notice =
-        'Anlamsal arama şu anda kullanılamıyor; metin araması ve AI değerlendirmesi kullanıldı.';
+      retrievalNotice =
+        'Anlamsal aramaya şu anda ulaşılamıyor; kelime araması kullanılıyor.';
     }
-    const shortlist = uniqueEvents(events, 16);
+  }
+  shortlist = shortlistEvents(
+    events,
+    input.message,
+    input.history,
+    16,
+    semantic,
+  );
+  const fallback = fallbackEvents(
+    events,
+    input.message,
+    input.history,
+    2,
+    semantic,
+  ).map((event) => ({ event }));
+  if (deps.config) {
     try {
-      const chosen = await ai.choose(deps.config, query, filters, shortlist);
-      const byId = new Map(shortlist.map((e) => [e.id, e]));
-      const seen = new Set<string>();
-      const recommendations = chosen.selections
-        .filter(
-          (s) => byId.has(s.id) && !seen.has(s.id) && Boolean(seen.add(s.id)),
-        )
-        .slice(0, 5)
-        .map((s) => ({
-          event: byId.get(s.id)!,
-          reason: s.reason.slice(0, 500),
-        }));
+      const result = await (deps.rank ?? rankWithJev)(
+        deps.config,
+        { ...input, filters, history: context.history, requirements },
+        shortlist,
+      );
+      const recommendations = selectJevEvents(shortlist, result).map(
+        (event) => ({
+          event,
+        }),
+      );
       return {
-        message: chosen.message.slice(0, 1500),
         recommendations,
         filters,
-        mode,
-        notice,
+        mode: 'jev',
+        status: recommendations.length ? 'results' : 'empty',
+        notice: recommendations.length
+          ? retrievalNotice
+          : 'İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.',
         totalCandidates,
       };
     } catch {
-      notice =
-        'AI önerisi tamamlanamadı. Filtrelere uyan etkinlikler gösteriliyor.';
-      mode = 'filters';
+      return {
+        recommendations: fallback,
+        filters,
+        mode: 'filters',
+        status: fallback.length ? 'results' : 'empty',
+        notice: [
+          retrievalNotice,
+          'Akıllı sıralamaya şu anda ulaşılamıyor. Temel arama sonuçları gösteriliyor.',
+        ]
+          .filter(Boolean)
+          .join(' '),
+        totalCandidates,
+      };
     }
-  } else events = rankEvents(events, query);
+  }
   return {
-    message:
-      'Seçtiğin koşullara uyan seçenekler bunlar. İstersen tarih, bütçe veya kategoriyi değiştirerek aramayı daraltabilirsin.',
-    recommendations: uniqueEvents(events).map((event) => ({
-      event,
-      reason: sourceReason(event, filters),
-    })),
+    recommendations: fallback,
     filters,
-    mode,
-    notice,
+    mode: 'filters',
+    status: fallback.length ? 'results' : 'empty',
+    notice:
+      retrievalNotice ??
+      (semantic
+        ? 'Sonuçlar anlamsal benzerlik ve kelime eşleşmesine göre listeleniyor.'
+        : basicNotice),
     totalCandidates,
   };
 }
