@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildPlan, digestRows, parseArgs, validateLoadResponse, validateOptions } from '../scripts/staging-drill.mjs';
+import { buildPlan, createR2DrillKey, digestRows, parseArgs, validateLoadResponse, validateOptions, verifyR2RestorePhase } from '../scripts/staging-drill.mjs';
 
 const valid = {
   origin: 'https://biplan-staging.example.workers.dev',
@@ -67,6 +67,24 @@ await test('content integrity rejects equal row counts with changed payloads', (
   ];
   assert.equal(source.length, tampered.length);
   assert.notEqual(digestRows(source, columns), digestRows(tampered, columns));
+});
+
+await test('R2 drill keys are revision-scoped and isolated from canonical state', () => {
+  const revision = 'b'.repeat(40);
+  const key = createR2DrillKey(revision, '0123456789abcdef0123456789abcdef');
+  assert.equal(key, `drills/checkpoint-restore/${revision}/0123456789abcdef0123456789abcdef.json`);
+  assert.equal(key.includes('collection-state'), false);
+  assert.throws(() => createR2DrillKey(revision, '../canonical'));
+});
+
+await test('R2 restore phases require exact bytes, deliberate corruption, and checkpoint semantics', () => {
+  const original = Buffer.from(JSON.stringify({ schemaVersion: 1, savedAt: '2026-09-26T20:00:00.000Z', events: [{ id: 'a' }] }));
+  assert.equal(verifyR2RestorePhase(original, Buffer.from(original), 'backup').semanticEquivalent, true);
+  const corrupt = Buffer.from('{"schemaVersion":0,"kind":"intentional-staging-drill-corruption"}\n');
+  assert.equal(verifyR2RestorePhase(original, corrupt, 'corrupted').semanticEquivalent, false);
+  assert.equal(verifyR2RestorePhase(original, Buffer.from(original), 'restored').semanticEquivalent, true);
+  assert.throws(() => verifyR2RestorePhase(original, Buffer.from('{}'), 'restored'));
+  assert.throws(() => verifyR2RestorePhase(original, Buffer.from(original), 'corrupted'));
 });
 
 await test('load response validation rejects fallback, hard-constraint, and duplicate failures', () => {

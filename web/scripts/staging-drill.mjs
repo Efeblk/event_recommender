@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -25,7 +25,38 @@ const TABLE_ORDER = {
   request_limits: 'key',
 };
 const MAX_COMMAND_OUTPUT_BYTES = 4 * 1024 * 1024;
+const MAX_CHECKPOINT_BYTES = 20 * 1024 * 1024;
 const DIGEST_PAGE_SIZE = 50;
+const R2_DRILL_PREFIX = 'drills/checkpoint-restore/';
+const CORRUPT_CHECKPOINT = Buffer.from('{"schemaVersion":0,"kind":"intentional-staging-drill-corruption"}\n');
+
+const sha256Bytes = (bytes) => createHash('sha256').update(bytes).digest('hex');
+
+export function createR2DrillKey(revision, suffix = randomBytes(16).toString('hex')) {
+  if (!SHA.test(revision) || !/^[0-9a-f]{32}$/.test(suffix))
+    throw new Error('R2 drill object identity requires a revision and random hexadecimal suffix.');
+  return `${R2_DRILL_PREFIX}${revision}/${suffix}.json`;
+}
+
+function checkpointSemantics(bytes) {
+  const value = JSON.parse(Buffer.from(bytes).toString('utf8'));
+  if (value?.schemaVersion !== 1 || typeof value.savedAt !== 'string' || !Number.isFinite(Date.parse(value.savedAt)) || !Array.isArray(value.events))
+    throw new Error('Checkpoint copy does not have the expected schema.');
+  return { schemaVersion: value.schemaVersion, savedAt: value.savedAt, events: value.events.length };
+}
+
+export function verifyR2RestorePhase(original, candidate, phase) {
+  const originalBytes = Buffer.from(original), candidateBytes = Buffer.from(candidate);
+  if (phase === 'corrupted') {
+    assert.equal(candidateBytes.equals(CORRUPT_CHECKPOINT), true, 'Isolated R2 object did not contain the deliberate corrupt fixture.');
+    assert.notEqual(sha256Bytes(candidateBytes), sha256Bytes(originalBytes), 'Corrupt fixture unexpectedly matched the checkpoint.');
+    return { phase, bytes: candidateBytes.length, sha256: sha256Bytes(candidateBytes), semanticEquivalent: false };
+  }
+  if (!['backup', 'restored'].includes(phase)) throw new Error(`Unknown R2 restore phase: ${phase}`);
+  assert.equal(sha256Bytes(candidateBytes), sha256Bytes(originalBytes), `${phase} R2 checkpoint hash differs from the saved checkpoint.`);
+  assert.deepEqual(checkpointSemantics(candidateBytes), checkpointSemantics(originalBytes), `${phase} R2 checkpoint semantics differ from the saved checkpoint.`);
+  return { phase, bytes: candidateBytes.length, sha256: sha256Bytes(candidateBytes), semanticEquivalent: true };
+}
 
 export function parseArgs(argv) {
   const options = { execute: false, load: false, maxLoadRequests: 7 };
@@ -97,6 +128,7 @@ export function buildPlan(options) {
       ['GET', `${options.origin}/api/health`],
       ['GET', `${options.origin}/api/ready`],
       ['GET', `${options.origin}/api/admin/collection`, 'Authorization: Bearer <redacted>'],
+      ['wrangler', 'r2', 'object', 'put|get|delete', `${options.r2Bucket}/<generated-${R2_DRILL_PREFIX}key>`, '--remote'],
     ],
   };
 }
@@ -221,6 +253,61 @@ async function sha256File(path) {
   const hash = createHash('sha256');
   for await (const chunk of createReadStream(path)) hash.update(chunk);
   return hash.digest('hex');
+}
+
+async function exerciseIsolatedR2Restore(plan, checkpointPath) {
+  const objectKey = createR2DrillKey(plan.expectedRevision);
+  const identity = `${plan.r2Bucket}/${objectKey}`;
+  const evidencePath = resolve(plan.artifactDir, 'r2-restore.json');
+  const corruptPath = resolve(plan.artifactDir, 'r2-corrupt-fixture.json');
+  const backupReadbackPath = resolve(plan.artifactDir, 'r2-backup-readback.json');
+  const corruptReadbackPath = resolve(plan.artifactDir, 'r2-corrupt-readback.json');
+  const restoredReadbackPath = resolve(plan.artifactDir, 'r2-restored-readback.json');
+  const original = await readFile(checkpointPath);
+  const evidence = {
+    schemaVersion: 1,
+    kind: 'isolated-r2-checkpoint-restore',
+    object: { bucket: plan.r2Bucket, key: objectKey, canonical: false },
+    commands: [],
+    phases: [],
+    cleanup: { attempted: false, deleted: false },
+    limitation: 'This restores an isolated drill object containing actual checkpoint bytes; it does not alter or fail over the live canonical checkpoint key.',
+  };
+  const persist = () => writeFile(evidencePath, JSON.stringify(evidence, null, 2) + '\n');
+  const command = async (args) => {
+    evidence.commands.push(['wrangler', ...args]);
+    await persist();
+    return wrangler(args);
+  };
+  await writeFile(corruptPath, CORRUPT_CHECKPOINT);
+  await persist();
+  try {
+    await command(['r2', 'object', 'put', identity, '--remote', '--file', checkpointPath]);
+    await command(['r2', 'object', 'get', identity, '--remote', '--file', backupReadbackPath]);
+    evidence.phases.push(verifyR2RestorePhase(original, await readFile(backupReadbackPath), 'backup'));
+    await persist();
+
+    await command(['r2', 'object', 'put', identity, '--remote', '--file', corruptPath]);
+    await command(['r2', 'object', 'get', identity, '--remote', '--file', corruptReadbackPath]);
+    evidence.phases.push(verifyR2RestorePhase(original, await readFile(corruptReadbackPath), 'corrupted'));
+    await persist();
+
+    await command(['r2', 'object', 'put', identity, '--remote', '--file', checkpointPath]);
+    await command(['r2', 'object', 'get', identity, '--remote', '--file', restoredReadbackPath]);
+    evidence.phases.push(verifyR2RestorePhase(original, await readFile(restoredReadbackPath), 'restored'));
+    await persist();
+
+    evidence.cleanup.attempted = true;
+    await persist();
+    await command(['r2', 'object', 'delete', identity, '--remote']);
+    evidence.cleanup.deleted = true;
+    await persist();
+    return evidence;
+  } catch (error) {
+    evidence.failure = error instanceof Error ? error.message.slice(0, 300) : 'R2 restore drill failed.';
+    await persist();
+    throw error;
+  }
 }
 
 export function validateLoadResponse(body) {
@@ -363,10 +450,12 @@ export async function execute(plan, syncToken) {
   assert.equal(checkpoint.response.headers.get('cache-control'), 'no-store');
   assert.equal(checkpoint.body?.schemaVersion, 1);
   assert.ok(Array.isArray(checkpoint.body?.events));
+  assert.ok(Buffer.byteLength(checkpoint.text) <= MAX_CHECKPOINT_BYTES, 'Checkpoint response exceeds the application checkpoint limit.');
   assert.equal(checkpoint.body.events.length, ready.body.checkpoint.events);
   assert.equal(checkpoint.body.savedAt, ready.body.checkpoint.savedAt);
   const checkpointPath = resolve(plan.artifactDir, 'checkpoint.json');
   await writeFile(checkpointPath, checkpoint.text);
+  const r2Restore = await exerciseIsolatedR2Restore(plan, checkpointPath);
   const load = plan.load ? await runLoad(plan) : [];
   const loadOk = load.every((request) => request.ok);
   const modes = load.reduce((counts, request) => {
@@ -383,6 +472,7 @@ export async function execute(plan, syncToken) {
     resources: { sourceD1: plan.sourceD1, recoveryD1: plan.recoveryD1, r2Bucket: plan.r2Bucket },
     d1: { exportBytes: sqlInfo.size, exportSha256: await sha256File(sqlPath), sourceStableDuringExport: true, integrity },
     checkpoint: { bytes: Buffer.byteLength(checkpoint.text), sha256: createHash('sha256').update(checkpoint.text).digest('hex'), savedAt: checkpoint.body.savedAt, events: checkpoint.body.events.length },
+    r2Restore,
     load: {
       requested: plan.load,
       ok: loadOk,
@@ -391,7 +481,7 @@ export async function execute(plan, syncToken) {
       modes,
       requests: load,
     },
-    limitations: ['Wall time is not Cloudflare Worker CPU time.', 'The disposable recovery D1 is intentionally not deleted automatically.'],
+    limitations: ['Wall time is not Cloudflare Worker CPU time.', 'The disposable recovery D1 is intentionally not deleted automatically.', 'The R2 drill restores only its generated isolated object; it does not alter or fail over the live canonical checkpoint key.'],
   };
   await writeFile(resolve(plan.artifactDir, 'result.json'), JSON.stringify(artifact, null, 2));
   return artifact;

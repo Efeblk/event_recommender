@@ -18,7 +18,7 @@ by the release workflow before any candidate is deployed.
 | --- | --- |
 | Web unit tests on Node 22.23.3 | 240 passed |
 | Collector tests on Node 22.23.3 | 37 passed |
-| Deployment, artifact, promotion, rollback, and drill tests | 29 passed |
+| Deployment, artifact, promotion, rollback, and drill tests | 31 passed |
 | Typecheck and lint | Passed |
 | Normal and standalone Cloudflare builds | Passed on Windows |
 | Compiled D1/R2 and Voyage workerd smoke checks | Passed for both build paths |
@@ -123,6 +123,12 @@ The corrected release path includes hidden compiled files and verifies the
 uploaded/downloaded artifact before offering it for deployment approval. Manifest
 comparison also checks exact paths and hashes independently of locale-dependent
 file ordering.
+
+The recovery helper now exercises restoration of the actual saved checkpoint in
+a random isolated R2 object: verified backup, deliberate corruption, verified
+restoration, then cleanup. It preserves per-phase evidence and never changes the
+live canonical checkpoint key. Its offline checks pass; remote execution remains
+a staging release gate.
 
 ## Remaining release gates
 
