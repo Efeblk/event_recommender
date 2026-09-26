@@ -1,0 +1,33 @@
+{
+  "referenceDate": "2026-09-26",
+  "timeZone": "Europe/Istanbul",
+  "note": "Final four-case verification after clause-scope and group-size preservation fixes. Frozen before live execution. One separate synthetic local visitor, application rate limits enabled, 25-second pacing, no retries, at most four requests.",
+  "cases": [
+    {
+      "id": "group_start",
+      "visitor": 3,
+      "message": "4 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz.",
+      "expectation": "Oct4 theatre OR stand-up, comedy source evidence, party4 total1800 max450."
+    },
+    {
+      "id": "clear_budget_keep_party",
+      "visitor": 3,
+      "parent": "group_start",
+      "message": "Para sınırını kaldır, diğer koşullar aynı.",
+      "expectation": "Retain party4, Oct4, theatre OR stand-up and comedy; maxPrice null, totalBudget absent."
+    },
+    {
+      "id": "new_total_after_waiver",
+      "visitor": 3,
+      "parent": "clear_budget_keep_party",
+      "message": "Toplam bütçeyi 3000 TL yap.",
+      "expectation": "Reuse party4 without clarification, total3000 max750; retain Oct4, theatre OR stand-up and comedy."
+    },
+    {
+      "id": "venue_set_date_indifferent",
+      "visitor": 3,
+      "message": "Mekân Beşiktaş olsun, tarih fark etmez. Stand-up için kişi başı en fazla 700 TL.",
+      "expectation": "Retain Besiktas district, no date restriction, Stand-up, max700; returned cards must satisfy district and budget."
+    }
+  ]
+}

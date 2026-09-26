@@ -110,7 +110,7 @@ const terms: Record<string, Term> = {
     positive:
       /\b(?:step[ -]?free|barrier[ -]?free|wheelchair access(?:ible)?|basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi)\b/,
     negative:
-      /\b(?:not|isn't|is not)\s+(?:step[ -]?free|wheelchair access(?:ible)?)|\b(?:basamaksiz|engelsiz erisim)\s+(?:degil(?:dir)?|yok)\b/,
+      /\b(?:not|isn't|is not)\s+(?:step[ -]?free|wheelchair access(?:ible)?)|\b(?:basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi)\s+(?:degil(?:dir)?|yok|bulunmuyor|bulunmamaktadir|saglanmiyor)\b/,
   },
   accessible_toilet: {
     positive:
@@ -530,7 +530,7 @@ export function deriveRequirements(
 
     const waiverClauses = text.split(/[,.!?;]|\b(?:ama|fakat|ancak|but)\b/);
     const stepFreeWaived = waiverClauses.some((clause) =>
-      /\b(?:step[ -]?free|basamaksiz(?: giris)?)\b[^.!?;]{0,24}\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary)\b/.test(
+      /\b(?:step[ -]?free|basamaksiz(?: giris)?|engelsiz erisim|tekerlekli sandalye erisimi|wheelchair access(?:ible)?)\b[^.!?;]{0,24}\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary)\b/.test(
         clause,
       ),
     );
@@ -547,7 +547,7 @@ export function deriveRequirements(
       ]);
     if (
       !stepFreeWaived &&
-      /\b(?:step[ -]?free|basamaksiz|engelsiz erisim|wheelchair access(?:ible)?)\b/.test(
+      /\b(?:step[ -]?free|basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi|wheelchair access(?:ible)?)\b/.test(
         text,
       )
     )

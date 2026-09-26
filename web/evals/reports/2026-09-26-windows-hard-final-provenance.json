@@ -1,0 +1,101 @@
+{
+  "recordedAt": "2026-09-26T18:53:39.823Z",
+  "revision": "ea8da5a9a16bfe81bd753b60aa8acba5b2229eab",
+  "dirtyWorktree": true,
+  "runtimeNode": "v24.11.1",
+  "compatibilityNode": "v22.23.3",
+  "platform": "win32",
+  "runtimeSourceSha256": {
+    "web/lib/event-merge.ts": "5c02d98ff5c1f41473ad64d5ca8ed8cbdc351fbe4b3bf1e1af57ee4b45438f99",
+    "web/lib/intent.ts": "c70cb7a9587e90b3a927ef15de759ca5890b295cf2b5ea6315994e993b7bd7df",
+    "web/lib/requirements.ts": "ddb31d7b77d195552c06240ffbe29473f19f88c9c03ebb3aee51c89755562f27",
+    "web/lib/retrieval.ts": "bb7f49b6a89eb49fc18f6e09d436352988879cd9d1e6933f644b629e23b0a0fa",
+    "web/lib/search.ts": "2789dc34e0888ad1a420758c947289866026ef6e3eaa870f7030a81cacb515f1"
+  },
+  "eventsSnapshotSha256": "be72ae93298d5129732259e1d15e65ba3af2bb3ce22d7bae57d08cc821566b16",
+  "traceHelperSha256": "d2bbe1670d30258c635552c86d302f8b821e21f34c63b9f4ce9e359c7b94c44f",
+  "phases": [
+    {
+      "path": "web/evals/reports/2026-09-26-windows-hard-baseline.json",
+      "sha256": "9d3a887b00081eebb51b6a17aa904a2f4da625eecba9ea70909e1acf7d3852ad",
+      "requests": 20,
+      "httpFailures": 0,
+      "jevResponses": 11,
+      "startedAt": "2026-09-26T18:27:28.448Z",
+      "finishedAt": "2026-09-26T18:35:38.490Z"
+    },
+    {
+      "path": "web/evals/reports/2026-09-26-windows-hard-regression.json",
+      "sha256": "b249c6b06892b2bbfd744643186cab51d44f674aaf2bec0bb7edb3949e2b4851",
+      "requests": 12,
+      "httpFailures": 0,
+      "jevResponses": 8,
+      "startedAt": "2026-09-26T18:40:36.533Z",
+      "finishedAt": "2026-09-26T18:45:22.134Z"
+    },
+    {
+      "path": "web/evals/reports/2026-09-26-windows-final-state.json",
+      "sha256": "6942ee2abe74e85fa8d148f333af191c9bbf77c99eb44ef4e52913f5478b62d9",
+      "requests": 4,
+      "httpFailures": 0,
+      "jevResponses": 4,
+      "startedAt": "2026-09-26T18:47:17.768Z",
+      "finishedAt": "2026-09-26T18:48:37.882Z"
+    }
+  ],
+  "finalBuildDeltaAfterStateTest": "Reviewed literal Mustafa Boz title alias; verified by final unit/build/smoke/browser checks and real homepage showing one card/two offers. No further live recommendation requests.",
+  "validation": {
+    "webUnit": {
+      "pass": 237,
+      "fail": 0,
+      "node": "22.23.3"
+    },
+    "collectorUnit": {
+      "pass": 32,
+      "fail": 0,
+      "node": "22.23.3",
+      "sourceUnchanged": true
+    },
+    "typecheck": "pass",
+    "lint": "pass",
+    "deployConfig": {
+      "pass": 15,
+      "fail": 0
+    },
+    "build": "pass",
+    "smoke": "pass",
+    "browser": {
+      "pass": 11,
+      "skip": 1,
+      "fail": 0,
+      "isolatedProviders": true
+    },
+    "frozenParser": 20,
+    "historicalSavedScoreReplay": 12,
+    "finalLiveStateAssertions": 4,
+    "embeddingCoverage": {
+      "documents": 1092,
+      "indexed": 1092,
+      "pending": 0
+    }
+  },
+  "calls": {
+    "httpRecommendationRequests": 36,
+    "httpJevResponses": 23,
+    "directTraceVoyageQueries": 2,
+    "directTraceJevCalls": 2,
+    "documentEmbeddings": 0,
+    "automaticRetries": 0,
+    "exactHttpProviderTransportCount": "not instrumented",
+    "perHttpRequestProviderUpperBound": {
+      "voyageQuery": 1,
+      "jev": 1
+    }
+  },
+  "limitations": [
+    "Local Windows; no staging/production capacity measurement.",
+    "Catalog source snapshot used; ticket pages not all re-fetched.",
+    "Quiet mood request remains empty at unchanged support threshold.",
+    "Live result phases predate final literal Mustafa Boz alias; final compiled listing checked separately."
+  ]
+}

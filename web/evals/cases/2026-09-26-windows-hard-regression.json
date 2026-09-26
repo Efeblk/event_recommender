@@ -1,0 +1,85 @@
+{
+  "referenceDate": "2026-09-26",
+  "timeZone": "Europe/Istanbul",
+  "note": "Focused post-fix cases, frozen before live rerun. Separate synthetic local test visitor; all application rate limits remain enabled; no retries; at most12 requests.",
+  "cases": [
+    {
+      "id": "jazz_start",
+      "message": "Bu hafta sonu değil, 3 Ekim Cumartesi Kadıköy'de caz dinlemek istiyorum. Kişi başı en çok 1200 TL.",
+      "expectation": "Oct3 only, Kadikoy, concert, jazz source evidence, <=1200; negated this weekend ignored.",
+      "visitor": 2
+    },
+    {
+      "id": "genre_correction",
+      "parent": "jazz_start",
+      "message": "Cazdan vazgeçtim, rock olsun. Mekân ve tarih fark etmez; 1200 TL sınırı kalsın.",
+      "expectation": "Remove jazz/date/district, require rock, <=1200.",
+      "visitor": 2
+    },
+    {
+      "id": "group_comedy",
+      "message": "3 kişiyiz, toplam 1800 TL bütçemiz var. 4 Ekim Pazar komedi oyunu veya stand-up izlemek istiyoruz.",
+      "expectation": "Oct4 theatre OR stand-up, comedy, max600/person, party3 total1800.",
+      "visitor": 2
+    },
+    {
+      "id": "group_four",
+      "parent": "group_comedy",
+      "message": "Bir arkadaş daha geliyor, artık 4 kişiyiz. Toplam para aynı.",
+      "expectation": "Party4 total1800 max450; retain Oct4/categories/comedy.",
+      "visitor": 2
+    },
+    {
+      "id": "group_clear_budget",
+      "parent": "group_four",
+      "message": "Para sınırını kaldır, diğer koşullar aynı.",
+      "expectation": "Clear maxPrice and totalBudget; retain party/date/categories/comedy.",
+      "visitor": 2
+    },
+    {
+      "id": "child_age",
+      "message": "8 yaşındaki oğlumla çocuk tiyatrosuna gidelim. İkimiz için toplam 900 TL, 4 Ekim Pazar.",
+      "expectation": "Oct4 theatre, positive age8 child suitability, max450 for party2.",
+      "visitor": 2
+    },
+    {
+      "id": "accessibility",
+      "message": "Tekerlekli sandalye erişimi kesin şart. 3 Ekim'de 1000 TL altında tiyatro öner; erişim bilgisi yoksa gösterme.",
+      "expectation": "Oct3 theatre<=1000 and explicit wheelchair evidence; empty acceptable if unknown.",
+      "visitor": 2
+    },
+    {
+      "id": "free_negated",
+      "message": "Ücretsiz olması gerekmiyor. 9 Ekim Cuma en fazla 800 TL'ye caz konseri istiyorum.",
+      "expectation": "Oct9 jazz concert<=800, do not set zero budget.",
+      "visitor": 2
+    },
+    {
+      "id": "full_reset",
+      "visitor": 2,
+      "parent": "group_four",
+      "message": "Her şeyi unut, yarın tiyatro istiyorum.",
+      "expectation": "Sep27 theatre, reset budget/group/district/prior comedy requirement."
+    },
+    {
+      "id": "total_update",
+      "visitor": 2,
+      "parent": "group_four",
+      "message": "Toplam bütçeyi 3000 TL yap.",
+      "expectation": "Retain group4/dateOct4/categories/comedy, total3000 max750."
+    },
+    {
+      "id": "exact_artist",
+      "message": "Redd konserine gitmek istiyorum. Başka sanatçı istemiyorum, tarih ve bütçe fark etmez.",
+      "expectation": "Only Redd artist concerts, any date/budget; known catalog contains Redd.",
+      "visitor": 2
+    },
+    {
+      "id": "casual_alternatives",
+      "visitor": 2,
+      "parent": "exact_artist",
+      "message": "Bunlar olmadı, başka?",
+      "expectation": "Exclude Redd production already shown, preserve Redd-only intent: no substitutes or repeat, likely empty."
+    }
+  ]
+}

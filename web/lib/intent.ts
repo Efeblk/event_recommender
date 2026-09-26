@@ -6,7 +6,13 @@ export function isFullPreferenceReset(message: string): boolean {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ı/g, 'i');
-  return /\b(?:bastan basla(?:yalim)?|onceki (?:sartlari|kosullari|tercihleri) unut|start (?:over|again)|forget (?:the )?(?:previous|earlier) (?:preferences|constraints|conditions))\b/.test(
+  if (
+    /\b(?:her seyi|herseyi|tumunu) unutma\b|\b(?:don't|dont|do not) forget everything\b/.test(
+      text,
+    )
+  )
+    return false;
+  return /\b(?:bastan basla(?:yalim)?|onceki (?:sartlari|kosullari|tercihleri) unut|(?:her seyi|herseyi|tumunu) unut|start (?:over|again)|forget everything|forget (?:the )?(?:previous|earlier) (?:preferences|constraints|conditions))\b/.test(
     text,
   );
 }
@@ -19,7 +25,7 @@ export function isAlternativesRequest(message: string): boolean {
     .replace(/ı/g, 'i')
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
-  return /\b(?:baska var mi|baska oner(?:i|ir misin)?|baska goster|bunlari begenmedim|baska bir sey oner|something else|anything else)\b|^baska$|\b(?:other|different|more)\s+(?:options|events|suggestions|recommendations)\b|\b(?:show|suggest)\s+(?:me\s+)?alternatives\b|\b(?:baska|diger|alternatif)\b[^.!?\n]{0,32}\b(?:secenek|etkinlik|oneri|alternatif)(?:ler|leri)?\b/.test(
+  return /\b(?:baska var mi|baska oner(?:i|ir misin)?|baska goster|bunlari begenmedim|bunlar(?:i)? olmadi baska|baska bir sey oner|something else|anything else)\b|^baska$|\b(?:other|different|more)\s+(?:options|events|suggestions|recommendations)\b|\b(?:show|suggest)\s+(?:me\s+)?alternatives\b|\b(?:baska|diger|alternatif)\b[^.!?\n]{0,32}\b(?:secenek|etkinlik|oneri|alternatif)(?:ler|leri)?\b/.test(
     normalized,
   );
 }
@@ -40,7 +46,7 @@ const categoryPatterns: Array<[Category, RegExp]> = [
   ],
   [
     'Tiyatro',
-    /\b(?:tiyatro(?:ya|da|yu|lar)?|theatre|theater|sahne oyunu|comedy play)\b/,
+    /\b(?:tiyatro(?:ya|da|yu|lar|su(?:na|nda|nu)?)?|theatre|theater|sahne oyunu|comedy play)\b/,
   ],
   ['Stand-up', /\b(?:stand[ -]?up)\b/],
 ];

@@ -20,11 +20,14 @@ const VENUE_ALIASES = [
   ],
   ['Paribu Vadi Açıkhava', 'Paribu Vadi Açık Hava'],
   ['Jolly Joker Kartal', 'Jolly Joker Kartal İstMarina'],
+  // Matching Redd, Can Bonomo, Kalben and Gökhan Türkmen schedules;
+  // the short-name source address is Watergarden AVM, Ataşehir.
+  ['JJ Arena', 'JJ Arena Ataşehir'],
   ['AKM Türk Telekom Opera Salonu', 'Türk Telekom Opera Salonu'],
   ['Mall Of İstanbul Biletinial Moi Sahne', 'Mall of İstanbul MOİ Sahne'],
 ] as const;
 
-// Reviewed against repeated matching source schedules (September 2026 catalog).
+// Reviewed against matching source schedules and descriptions (September 2026).
 // These are literal show aliases, never a general performer/suffix heuristic.
 const TITLE_ALIASES = [
   [
@@ -48,7 +51,12 @@ const TITLE_ALIASES = [
     'Boğaziçi Komedi Kulübü - Kadıköy Açık Mikrofon Stand-up',
   ],
   ['Gökhan Ünver Stand Up', "Gökhan Ünver 'Çok Tanıdık'"],
+  // Both providers list the same solo show at Vohu Sahne, Sep 26 at 22:00.
+  ['Mustafa Boz - Tek Kişilik Stand Up', 'Mustafa Boz Stand Up'],
   ['Operadaki Hayalet', 'Operadaki Hayalet Tiyatro Oyunu'],
+  // Same Taksim İstiklal Sahne schedules; Biletix/Biletinial descriptions
+  // explicitly name the longer Bubilet title (September 2026 snapshot).
+  ['Kütüphanedeki Ceset', 'Kütüphanedeki Ceset Tiyatro Oyunu'],
   ['Suç ve Ceza', 'Suç ve Ceza Oyunu'],
   [
     'Kadıköy Stand-up Gecesi',
