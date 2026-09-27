@@ -10,6 +10,7 @@ locals {
   }
   services = toset(concat([
     "artifactregistry.googleapis.com",
+    "cloudbilling.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "firestore.googleapis.com",
     "iam.googleapis.com",

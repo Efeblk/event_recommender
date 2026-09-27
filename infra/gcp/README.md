@@ -42,6 +42,8 @@ Requires Terraform 1.7 or newer, below 2.0. The Google provider is pinned to `8.
 
 The provider explicitly uses the selected staging project for API quota attribution. This is required for account-level Budget API calls with a local Google user token; the credentials' default quota project must not select an unrelated project. The provisioning identity needs `serviceusage.services.use` on the staging project. Keep any `GOOGLE_CLOUD_QUOTA_PROJECT` environment override unset or set to that same project.
 
+After provisioning is authorized, enable `serviceusage.googleapis.com`, `cloudresourcemanager.googleapis.com`, and `cloudbilling.googleapis.com` in a brand-new project before its first real plan. The project data source reads billing metadata during planning, before Terraform can enable services during apply. With an explicit quota project, a disabled Cloud Billing API can otherwise appear as an absent billing association. Verify the association with the CLI; do not remove the billing postcondition to bypass that error.
+
 ```powershell
 terraform -chdir=infra/gcp init -backend=false
 terraform -chdir=infra/gcp fmt -check -recursive
