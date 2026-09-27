@@ -1,4 +1,12 @@
-import { digest, runtime, acquireLease, releaseLease } from '@/lib/store';
+import {
+  digest,
+  runtime,
+  acquireLease,
+  releaseLease,
+  readCheckpoint,
+  auditedVoyageIndex,
+} from '@/lib/store';
+import { parseAuditedIndexInput } from '@/lib/audited-index';
 import {
   indexVoyageBatch,
   voyageDocumentCoverage,
@@ -37,6 +45,12 @@ export async function GET(request: Request) {
       configured: true,
       profile: voyageCacheKey(voyage),
       ...(await voyageIndexStatus(voyage)),
+      ...(new URL(request.url).searchParams.get('audited') === '1'
+        ? {
+            checkpointSha256: await digest((await readCheckpoint()) ?? ''),
+            deploymentRevision: runtime().DEPLOYMENT_SHA ?? null,
+          }
+        : {}),
     });
   } catch {
     return Response.json(
@@ -72,15 +86,46 @@ export async function POST(request: Request) {
         { error: 'Embedding index already running' },
         { status: 409 },
       );
+    if (request.headers.get('x-biplan-audited-index') === '1') {
+      const reader = request.body?.getReader(),
+        chunks: Uint8Array[] = [];
+      let size = 0;
+      if (reader)
+        try {
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            size += value.byteLength;
+            if (size > 4096) throw new Error('Index request too large');
+            chunks.push(value);
+          }
+        } finally {
+          await reader.cancel().catch(() => undefined);
+          reader.releaseLock();
+        }
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.length;
+      }
+      const input = parseAuditedIndexInput(
+        JSON.parse(new TextDecoder().decode(bytes)),
+      );
+      return Response.json(await auditedVoyageIndex(voyage, input, lease));
+    }
     return Response.json({
       configured: true,
       ...(await indexVoyageBatch(voyage, lease, 32)),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
-    const reason = /^Voyage request failed(?: \(HTTP \d{3}\))?\.$/.test(message)
-      ? message
-      : 'Embedding batch failed';
+    const reason =
+      request.headers.get('x-biplan-audited-index') === '1'
+        ? 'Audited indexing stopped; inspect private run evidence before another attempt'
+        : /^Voyage request failed(?: \(HTTP \d{3}\))?\.$/.test(message)
+          ? message
+          : 'Embedding batch failed';
     return Response.json(
       { error: `${reason}; no retry was attempted` },
       { status: 503 },

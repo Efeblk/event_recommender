@@ -113,5 +113,10 @@ assert.match(collectorWorkflow, /ref: \$\{\{ github\.sha \}\}/);
 assert.match(collectorWorkflow, /--limit 100 --discovery-pages 20/);
 assert.match(collectorWorkflow, /cancel-in-progress: false/);
 assert.doesNotMatch(collectorWorkflow, /INDEX_EMBEDDINGS|embeddings:index|TYPESAFE|VOYAGE/);
+assert.match(collectorWorkflow, /if: vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
+for (const name of ['FROM', 'UNTIL', 'MAX_CALLS']) assert.match(collectorWorkflow, new RegExp(`GCP_STAGING_INDEXING_${name}`));
+assert.match(collectorWorkflow, /node --experimental-strip-types web\/scripts\/index-collected-embeddings\.mjs --live --report/);
+assert.match(collectorWorkflow, /if: always\(\) && steps\.publish\.outcome == 'success'/);
+assert.match(collectorWorkflow, /collection-embedding-index\.jsonl\*/);
 
 console.log('GCP staging deployment configuration is structurally valid.');
