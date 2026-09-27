@@ -44,6 +44,8 @@ Cloud Monitoring checks and collector requests are separate operational activity
 
 The final seven-request probe passed at `2026-09-27T09:54:46.154Z`: unauthenticated access remained denied, authenticated health matched the deployed revision, readiness returned `200` with `ready=true`, independent application authorization remained enforced, legacy sync remained disabled, invalid recommendation input was rejected before provider work, and the home shell rendered. Readiness reported 4,938 stored records and 4,577 in its available-record view.
 
+A separate isolated Firestore counter probe issued eight concurrent attempts against a cap of two and observed exactly two accepted and six rejected. It used a diagnostic key, not a real user or global AI budget counter. This verifies atomic enforcement for that bounded backend test; it does not qualify public client-IP identity, HTTP rate-limit behavior, or production capacity. Staging retains conservative shared-IP mode until forwarding-header behavior is tested. Local-to-US timings are diagnostics, not user-facing latency measurements.
+
 ## Bootstrap, publication, and readback
 
 The preserved input contained 4,595 raw event records across 1,696 source pages. The import completed with 4,595 imported and zero skipped records. The preserved Voyage cache contained 1,718 entries with its exact endpoint, model, 1,024 dimensions, input type, text profile, document hashes, and vectors; all 1,718 entries were verified without generating a new vector or calling Voyage.

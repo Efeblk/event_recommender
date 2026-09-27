@@ -2,10 +2,11 @@
 
 GCP is the selected target as of September 27, 2026. After Google sign-in and
 explicit approval of the private staging proposal, the dedicated staging
-foundation was provisioned with a TRY 100 budget alert. Application deployment
-and data verification are separate steps; infrastructure creation is not a public
-launch. The existing Cloudflare staging deployment is retained for comparison
-and recovery.
+foundation was provisioned with a TRY 100 budget alert, and one private
+application revision was deployed, bootstrapped, and verified. See the
+[September 27 execution evidence](gcp-staging-execution-2026-09-27.md). This
+private staging execution is not a public launch. The existing Cloudflare staging
+deployment is retained for comparison and recovery.
 
 ## Architecture
 
@@ -105,14 +106,14 @@ application sync token uses `Authorization`.
 The six-hour collector schedule remains disabled unless the repository variable
 `GCP_STAGING_COLLECTION_ENABLED` is exactly `true`. After a successful manual run,
 IAM verification, and cost review, enable that variable deliberately and collect
-48 hours of actual scheduled evidence. Cloud Monitoring uptime checks can use
-service-agent OIDC authentication for a private Cloud Run endpoint, but that
-monitoring path still needs separate configuration and delivery verification;
-the old Cloudflare monitor is not evidence of GCP uptime.
+48 hours of actual scheduled evidence. Authenticated Cloud Monitoring now checks
+the private readiness endpoint through service-agent OIDC, and controlled email
+delivery was verified; see the execution evidence. This bounded verification and
+the old Cloudflare monitor do not establish the required 48-hour GCP uptime record.
 
 ## Cost and abuse controls
 
-The proposed staging profile uses request-based CPU, zero minimum instances,
+The deployed private staging profile uses request-based CPU, zero minimum instances,
 one maximum instance, one CPU, 1 GiB memory and concurrency 32. The default AI
 cap is 100 recommendation requests per day, shared across instances, with the
 existing burst and rolling user limits enforced transactionally in Firestore.

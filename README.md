@@ -45,7 +45,7 @@ Windows'ta PowerShell ile bağımlılıkları kurmak, yerel ayar dosyasını gü
 - Geçmiş, iptal edilmiş, tükenmiş ve **72 saatten eski kontrol tarihli** kayıtları eleme. Bütçe varken fiyatı bilinmeyen kayıtları eleme. Kaynak fiyatları bilet garantisi değildir.
 - TypeSafe Jev ile adayların isteğe uygunluğunu puanlama; sonuçlarda yalnızca doğrulanmış etkinlik kartları gösterilir. Üretilmiş sohbet yanıtı veya gerekçe yoktur.
 - Konser gibi kategorileri hariç tutma, toplam grup bütçesini kişi başına çevirme, belirsiz koşullarda statik netleştirme durumu.
-- Voyage 4 Large ile anlamsal arama ve kelime sıralaması birleştirilir; Jev kısa aday listesini değerlendirir. Etkinlik vektörleri D1’de önbelleğe alınır; GPU veya graph veritabanı gerekmez.
+- Voyage 4 Large ile anlamsal arama ve kelime sıralaması birleştirilir; Jev kısa aday listesini değerlendirir. Etkinlik vektörleri içerik adresli olarak önbelleğe alınır (yerel/Cloudflare yolunda D1, GCP yolunda özel Cloud Storage anlık görüntüsü); GPU veya graph veritabanı gerekmez.
 - AI kapalıysa veya sağlayıcı başarısızsa açıkça belirtilen kelime/filtre araması. Anahtarsız mod ruh hâlini yorumladığını iddia etmez.
 - Mobil uyumlu arayüz, yüklenme/hata/boş sonuç durumları, klavye ile gönderme (Enter; yeni satır Shift+Enter).
 
@@ -102,7 +102,7 @@ GitHub Actions, `master` için her PR'da ve `master` push'larında bu kontroller
 
 ## Yayın
 
-Yeni uygulama React + TypeScript + Vinext üzerinde tek Cloudflare Worker ve D1 veritabanı olarak paketlenir; GPU, FalkorDB veya Python servisi gerektirmez. `.openai/hosting.json` Sites yayın bağlantısını tutar. Sunucu sırları bu dosyaya veya Git’e yazılmaz. `SITE_URL` güvenilir yayın kökü olmalı (sosyal önizleme bağlantıları için).
+Seçilen GCP hedefinde yeni uygulama Node.js kapsayıcısı olarak Cloud Run’da çalışır; Firestore koordinasyon, özel Cloud Storage katalog/checkpoint/vektör anlık görüntüleri için kullanılır. Mevcut Cloudflare Worker + D1 + R2 dağıtımı karşılaştırma ve geri dönüş seçeneği olarak korunur. GPU, FalkorDB veya Python servisi gerekmez. `.openai/hosting.json` Sites yayın bağlantısını tutar. Sunucu sırları bu dosyaya veya Git’e yazılmaz. `SITE_URL` güvenilir yayın kökü olmalı (sosyal önizleme bağlantıları için).
 
 `db/schema.ts` şema kaynağıdır; değişiklik sonrası `npm run db:generate` ile SQL üret. Migration’lar `drizzle/` altında sürümlenir. Çalışma sırasında ilk açılışta doğrulanmış başlangıç seçkisi veritabanına aktarılır.
 
@@ -116,7 +116,7 @@ Sayfada iki ayrı reklam alanı ayrılmıştır. Henüz reklam ağı, takip beti
 
 ## Public beta hazırlığı
 
-[Cloudflare kurulum, staging/production ayrımı, deployment ve rollback](docs/deployment.md) hazırdır. Deployment iş akışı yalnızca elle başlatılır; PR veya push siteyi yayınlamaz. [Yayın sırası ve kalan doğrulamalar](docs/launch-checklist.md) tamamlanmadan public beta hazır sayılmaz.
+[GCP dağıtımı ve kalan yayın kapıları](docs/gcp-deployment.md) ana hedeftir; [Cloudflare kurulumu](docs/deployment.md) geri dönüş seçeneği olarak korunur. Deployment iş akışları yalnızca elle başlatılır; PR veya push siteyi yayınlamaz. [Yayın sırası ve kalan doğrulamalar](docs/launch-checklist.md) tamamlanmadan public beta hazır sayılmaz.
 
 `/api/health` uygulamanın çalıştığını, `/api/ready` ise kataloğun ve kalıcı toplama checkpoint'inin sağlığını gösterir. İkincisi eksik, 24 saatten eski veya ciddi şekilde küçülmüş katalog/checkpoint için 503 döner. Yerel sunucu D1 yanında yerel R2 deposunu da kalıcı tutar; normal arama checkpoint olmadan çalışır. `collector/publish.mjs --checkpoint` bütün import partileri tamamlandıktan sonra sunucudaki gerçek kayıtların R2 snapshot'ını alır ve geri okuyarak doğrular.
 
