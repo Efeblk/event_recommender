@@ -8,6 +8,7 @@ import {
   shortlistEvents,
 } from '../lib/retrieval.ts';
 import type { EventRecord, Message } from '../lib/types.ts';
+import { categoryIntent } from '../lib/intent.ts';
 
 const base: EventRecord = {
   id: 'base',
@@ -382,6 +383,71 @@ await test('category rejection does not resurrect the same category from history
     ).map(({ id }) => id),
     ['theatre'],
   );
+});
+
+await test('kategori dışı is a retrieval rejection and does not inherit concert intent', () => {
+  const message = 'bu cumartesi sevgilimle gidebileceğim konser dışı etkinlik';
+  const context = searchContext(message, [
+    { role: 'user', content: 'Rock konseri istiyorum' },
+  ]);
+  assert.equal(context.category, null);
+  assert.deepEqual(context.rejectedTerms, ['konser']);
+  assert.deepEqual(
+    fallbackEvents(
+      [make('concert'), make('theatre', { category: 'Tiyatro' })],
+      message,
+      [{ role: 'user', content: 'Rock konseri istiyorum' }],
+    ).map(({ id }) => id),
+    ['theatre'],
+  );
+});
+
+await test('shared category intent keeps bounded negations narrow and ordered', () => {
+  for (const [message, expected] of [
+    [
+      'konser olmasın, tiyatro istemiyoruz',
+      {
+        categories: [],
+        exclusions: ['Konser', 'Tiyatro'],
+        terms: ['konser', 'tiyatro'],
+      },
+    ],
+    [
+      'no concerts please recommend theatre',
+      { categories: ['Tiyatro'], exclusions: ['Konser'], terms: ['konser'] },
+    ],
+    [
+      'no elektronik müzik',
+      { categories: [], exclusions: [], terms: ['elektronik muzik'] },
+    ],
+    [
+      'rock konseri istemiyorum',
+      { categories: [], exclusions: [], terms: ['rock'] },
+    ],
+    [
+      'konser olsun ama vazgeçtim konser istemiyoruz',
+      { categories: [], exclusions: ['Konser'], terms: ['konser'] },
+    ],
+    [
+      'konser olsun, vazgeçtim konser istemiyoruz',
+      { categories: [], exclusions: ['Konser'], terms: ['konser'] },
+    ],
+    [
+      'konser olsun. Vazgeçtim konser istemiyoruz',
+      { categories: [], exclusions: ['Konser'], terms: ['konser'] },
+    ],
+    ['no rock concerts', { categories: [], exclusions: [], terms: ['rock'] }],
+  ] as const) {
+    const intent = categoryIntent(message);
+    assert.deepEqual(intent.requestedCategories, expected.categories, message);
+    assert.deepEqual(intent.excludedCategories, expected.exclusions, message);
+    assert.deepEqual(intent.rejectedTerms, expected.terms, message);
+    assert.deepEqual(
+      searchContext(message, []).rejectedTerms,
+      expected.terms,
+      message,
+    );
+  }
 });
 
 await test('alternatives after a history reset cannot resurrect earlier intent', () => {

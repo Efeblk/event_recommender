@@ -6,10 +6,9 @@ import {
   uniqueEvents,
 } from './search.ts';
 import {
+  categoryIntent,
   isAlternativesRequest,
   isFullPreferenceReset,
-  positiveCategoryText,
-  requestedCategories,
 } from './intent.ts';
 import type { Category } from './types.ts';
 import { hybridRank, type SemanticRanking } from './hybrid.ts';
@@ -42,54 +41,12 @@ export function diverseEvents(events: EventRecord[], limit = 5): EventRecord[] {
     .slice(0, Math.max(0, limit));
 }
 
-const rejectionTerms = [
-  'elektronik muzik',
-  'cocuk tiyatrosu',
-  'cocuk oyunu',
-  'sahne oyunu',
-  'stand-up',
-  'stand up',
-  'akustik',
-  'techno',
-  'rock',
-  'jazz',
-  'caz',
-  'comedy',
-  'komedi',
-  'konser',
-  'tiyatro',
-  'muzik',
-] as const;
-
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function explicitRejections(message: string) {
-  let remaining = normalize(message);
-  const rejected = new Set<string>();
-  for (const term of rejectionTerms) {
-    const escaped = escapeRegExp(term);
-    const suffixPattern = new RegExp(
-      `\\b${escaped}\\b\\s+(?:istemiyorum|istemem|olmasin|degil|haric|disinda|yerine)\\b`,
-      'g',
-    );
-    const prefixPattern = new RegExp(
-      `\\b(?:no|not|without|excluding?)\\s+(?:any\\s+)?${escaped}\\b`,
-      'g',
-    );
-    if (suffixPattern.test(remaining) || prefixPattern.test(remaining)) {
-      rejected.add(term.startsWith('cocuk ') ? 'cocuk' : term);
-      remaining = remaining
-        .replace(suffixPattern, ' ')
-        .replace(prefixPattern, ' ');
-    }
-  }
-  return rejected;
-}
-
 function positiveCategories(message: string) {
-  return requestedCategories(normalize(message));
+  return categoryIntent(message).requestedCategories;
 }
 
 function isPreferenceReset(message: string) {
@@ -145,12 +102,6 @@ export function searchContext(
   const relevantHistory = reset || categorySwitch ? [] : persistentRecent;
 
   const rejected = new Set<string>();
-  for (const item of relevantHistory) {
-    for (const term of explicitRejections(item.content)) rejected.add(term);
-  }
-  const currentRejected = explicitRejections(message);
-  for (const term of currentRejected) rejected.add(term);
-  const currentPositive = positiveCategoryText(normalize(message));
   const categoryRejections: Record<string, Category> = {
     konser: 'Konser',
     muzik: 'Konser',
@@ -158,17 +109,28 @@ export function searchContext(
     'stand-up': 'Stand-up',
     'stand up': 'Stand-up',
   };
-  for (const term of rejected) {
-    if (currentRejected.has(term)) continue;
-    if (
-      categoryRejections[term] &&
-      currentCategories.includes(categoryRejections[term])
-    ) {
-      rejected.delete(term);
-      continue;
+  for (const turn of [
+    ...relevantHistory.map(({ content }) => content),
+    message,
+  ]) {
+    const intent = categoryIntent(turn);
+    for (const term of intent.rejectedTerms) rejected.add(term);
+    const currentRejected = new Set(intent.rejectedTerms);
+    const positiveText = normalize(intent.positiveText);
+    for (const term of rejected) {
+      if (
+        categoryRejections[term] &&
+        intent.requestedCategories.includes(categoryRejections[term])
+      ) {
+        rejected.delete(term);
+        continue;
+      }
+      if (
+        !currentRejected.has(term) &&
+        new RegExp(`\\b${escapeRegExp(term)}\\b`).test(positiveText)
+      )
+        rejected.delete(term);
     }
-    if (new RegExp(`\\b${escapeRegExp(term)}\\b`).test(currentPositive))
-      rejected.delete(term);
   }
 
   const query = [
@@ -326,6 +288,11 @@ function eligibleForContext(event: EventRecord, context: SearchContext) {
   if (context.category && event.category !== context.category) return false;
   return !context.rejectedTerms.some((term) => {
     if (term === 'cocuk') return hasChildAudienceEvidence(event);
+    if (term === 'konser' || term === 'muzik')
+      return event.category === 'Konser';
+    if (term === 'tiyatro') return event.category === 'Tiyatro';
+    if (term === 'stand-up' || term === 'stand up')
+      return event.category === 'Stand-up';
     const matches = [
       ...text.matchAll(new RegExp(`\\b${escapeRegExp(term)}\\b`, 'g')),
     ];
