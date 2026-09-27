@@ -34,7 +34,11 @@ const TITLE_ALIASES = [
     'Kadıköy Açık Mikrofon Stand-up - Comedy Lab',
     'Kadıköy Açık Mikrofon Stand-up - Comedy Lab Istanbul',
   ],
-  ['STAND UP GECESİ Taksim- Pera- Beyoğlu', 'Beyoğlu- Taksim- Stand Up Gecesi'],
+  [
+    'STAND UP GECESİ Taksim- Pera- Beyoğlu',
+    'Beyoğlu- Taksim- Stand Up Gecesi',
+    'Stand Up Gecesi - Taksim & Beyoğlu',
+  ],
   [
     'Stand up Taksim / Beyoğlu Gecesi | İnfiniti Sahne',
     'Stand Up Taksim / Beyoğlu Gecesi - Cuma 20:30',
