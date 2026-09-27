@@ -457,6 +457,14 @@ await test('humour preferences do not exclude comedy theatre by inferring stand-
     parseFilters('Sadece stand-up', emptyFilters, now).category,
     'Stand-up',
   );
+  assert.deepEqual(
+    parseFilters('Actually theatre instead, no stand-up.', emptyFilters, now),
+    {
+      ...emptyFilters,
+      category: 'Tiyatro',
+      excludedCategories: ['Stand-up'],
+    },
+  );
 });
 
 await test('inflected Turkish and English group budgets share one basis policy', () => {

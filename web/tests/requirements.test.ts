@@ -93,18 +93,40 @@ await test('same-kind follow-up replaces genre and explicit alternatives use OR'
   const switched = deriveRequirements('Switch from stand-up to jazz', history);
   assert.deepEqual(
     switched.filter((item) => item.kind === 'genre'),
-    [
-      { kind: 'genre', value: 'jazz', policy: 'require_support' },
-      {
-        kind: 'genre',
-        value: 'comedy',
-        policy: 'exclude_positive_evidence',
-      },
-    ],
+    [{ kind: 'genre', value: 'jazz', policy: 'require_support' }],
   );
   const alternatives = deriveRequirements('Jazz or blues is required', []);
   assert.equal(alternatives[0].value, 'jazz|blues');
   assert.equal(meetsRequirements(event('Blues gecesi.'), alternatives), true);
+});
+
+await test('stand-up category rejection does not become a comedy genre rejection', () => {
+  for (const message of [
+    'Actually theatre instead, no stand-up.',
+    'Tiyatro olsun, stand-up istemiyorum.',
+  ]) {
+    assert.equal(
+      deriveRequirements(message, []).some(
+        (item) =>
+          item.kind === 'genre' &&
+          item.value === 'comedy' &&
+          item.policy === 'exclude_positive_evidence',
+      ),
+      false,
+    );
+  }
+
+  const comedy = deriveRequirements('Comedy please, no stand-up.', []);
+  assert.deepEqual(comedy, [
+    { kind: 'genre', value: 'comedy', policy: 'require_support' },
+  ]);
+  assert.equal(
+    meetsRequirements(
+      event('A comedy theatre production, not a stand-up show.'),
+      comedy,
+    ),
+    true,
+  );
 });
 
 await test('a current positive genre removes the matching stale exclusion', () => {

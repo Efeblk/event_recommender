@@ -65,7 +65,7 @@ const terms: Record<string, Term> = {
   comedy: {
     positive: /\b(?:comedy|komedi|stand[ -]?up)\b/,
     negative:
-      /\b(?:not|no|without)\s+(?:comedy|stand[ -]?up)\b|\b(?:komedi|stand[ -]?up)\s+(?:degil(?:dir)?|yok)\b/,
+      /\b(?:not|no|without)\s+comedy\b|\bkomedi\s+(?:degil(?:dir)?|yok)\b/,
   },
   drama: {
     positive: /\b(?:drama|dramatic|dramatik|dram(?:dir)?)\b/,
@@ -148,7 +148,7 @@ const genreEntries: Array<[string, RegExp]> = [
   ['electronic', /\b(?:electronic music|elektronik muzik|techno)\b/],
   ['rap', /\b(?:rap|hip[ -]?hop)\b/],
   ['classical', /\b(?:classical|klasik)\b/],
-  ['comedy', /\b(?:comedy|komedi|stand[ -]?up)\b/],
+  ['comedy', /\b(?:comedy|komedi)\b/],
   ['drama', /\b(?:drama|dramatic|dramatik|dram(?:dir)?)\b/],
 ];
 const activityEntries: Array<[string, RegExp]> = [
