@@ -37,7 +37,7 @@ const theatrePlay =
 const tabletopGame =
   /\b(?:kutu|masa|kart|video|bilgisayar|konsol)\s+oyun(?:u|lari?)?\b/;
 export const CATEGORY_NEGATION =
-  '(?:istemiyorum|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disinda|yerine|bosver)';
+  '(?:istemiyorum|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disi|disinda|yerine|bosver)';
 
 const categoryPatterns: Array<[Category, RegExp]> = [
   [

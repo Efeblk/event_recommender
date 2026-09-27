@@ -34,6 +34,80 @@ const deps: Dependencies = {
 const request = validateInput({ message: 'Cumartesi 800 TL altında konser' });
 const config = jevConfigFrom({ TYPESAFE_API_KEY: 'test-only' })!;
 
+await test('Saturday non-concert partner requests retain eligible events before AI and fallback', async () => {
+  const query = 'bu cumartesi sevgilimle gidebileceğim konser dışı etkinlik';
+  const at = new Date('2026-09-27T19:40:00Z');
+  const saturday = {
+    ...event,
+    startsAt: '2026-10-03T17:30:00Z',
+    checkedAt: at.toISOString(),
+  };
+  const theatre = {
+    ...saturday,
+    id: 'couples-play',
+    title: 'Birlikte Bir Akşam',
+    category: 'Tiyatro',
+    description: 'İlişkiler üzerine yetişkinlere yönelik bir komedi oyunu.',
+    url: 'https://example.test/couples-play',
+  };
+  const comedy = {
+    ...saturday,
+    id: 'comedy-night',
+    title: 'Kahkaha Gecesi',
+    category: 'Stand-up',
+    description: 'Yetişkinler için stand-up gösterisi.',
+    url: 'https://example.test/comedy-night',
+  };
+  for (const mode of ['jev', 'keyless', 'outage'] as const) {
+    let rankCalls = 0;
+    const result = await recommend(validateInput({ message: query }), {
+      now: at,
+      config: mode === 'keyless' ? null : config,
+      candidates: async (filters) => {
+        assert.equal(filters.category, null);
+        assert.deepEqual(filters.excludedCategories, ['Konser']);
+        assert.equal(filters.dateFrom, '2026-10-03');
+        assert.equal(filters.dateTo, '2026-10-03');
+        // Deliberately return unfiltered storage rows to exercise admission too.
+        return [
+          saturday,
+          theatre,
+          comedy,
+          { ...theatre, id: 'friday-play', startsAt: '2026-10-02T17:30:00Z' },
+        ];
+      },
+      rank: async (_config, input, candidates) => {
+        rankCalls++;
+        assert.deepEqual(input.filters.excludedCategories, ['Konser']);
+        assert.deepEqual(
+          new Set(candidates.map((e) => e.id)),
+          new Set(['couples-play', 'comedy-night']),
+        );
+        if (mode === 'outage') throw new Error('Provider unavailable');
+        return {
+          model: 'jev-test',
+          usage: { inputTokens: 0, outputTokens: 0 },
+          ranked: candidates.map((event) => ({
+            event,
+            score: 2.8,
+            confidence: 0.8,
+            probabilities: [0, 0, 0.2, 0.8] as const,
+            supportProbability: 1,
+          })),
+        };
+      },
+    });
+    assert.equal(result.status, 'results');
+    assert.equal(result.mode, mode === 'jev' ? 'jev' : 'filters');
+    assert.equal(result.totalCandidates, 2);
+    assert.deepEqual(
+      new Set(result.recommendations.map(({ event }) => event.id)),
+      new Set(['couples-play', 'comedy-night']),
+    );
+    assert.equal(rankCalls, mode === 'keyless' ? 0 : 1);
+  }
+});
+
 await test('Turkish wheelchair requirements reject unknown access before AI and in keyless fallback', async () => {
   const input = validateInput({
     message: 'Tekerlekli sandalye erişimi kesin şart, konser öner.',

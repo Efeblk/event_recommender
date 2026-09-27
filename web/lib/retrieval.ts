@@ -71,7 +71,7 @@ function explicitRejections(message: string) {
   for (const term of rejectionTerms) {
     const escaped = escapeRegExp(term);
     const suffixPattern = new RegExp(
-      `\\b${escaped}\\b\\s+(?:istemiyorum|istemem|olmasin|degil|haric|disinda|yerine)\\b`,
+      `\\b${escaped}\\b\\s+(?:istemiyorum|istemem|olmasin|degil|haric|disi|disinda|yerine)\\b`,
       'g',
     );
     const prefixPattern = new RegExp(

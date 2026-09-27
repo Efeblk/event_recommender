@@ -384,6 +384,24 @@ await test('category rejection does not resurrect the same category from history
   );
 });
 
+await test('kategori dışı is a retrieval rejection and does not inherit concert intent', () => {
+  const message =
+    'bu cumartesi sevgilimle gidebileceğim konser dışı etkinlik';
+  const context = searchContext(message, [
+    { role: 'user', content: 'Rock konseri istiyorum' },
+  ]);
+  assert.equal(context.category, null);
+  assert.deepEqual(context.rejectedTerms, ['konser']);
+  assert.deepEqual(
+    fallbackEvents(
+      [make('concert'), make('theatre', { category: 'Tiyatro' })],
+      message,
+      [{ role: 'user', content: 'Rock konseri istiyorum' }],
+    ).map(({ id }) => id),
+    ['theatre'],
+  );
+});
+
 await test('alternatives after a history reset cannot resurrect earlier intent', () => {
   const context = searchContext('Başka seçenekler', [
     { role: 'user', content: 'Rock konseri istiyorum' },

@@ -50,6 +50,25 @@ await test('hariç works and positive category after negation is not lost', () =
   });
 });
 
+await test('Turkish kategori dışı excludes that category on the upcoming weekday', () => {
+  const sunday = new Date('2026-09-27T09:00:00Z');
+  const result = interpretConstraints(
+    'bu cumartesi sevgilimle gidebileceğim konser dışı etkinlik',
+    emptyFilters,
+    sunday,
+  );
+  assert.deepEqual(result, {
+    filters: {
+      ...emptyFilters,
+      dateFrom: '2026-10-03',
+      dateTo: '2026-10-03',
+      excludedCategories: ['Konser'],
+    },
+    issue: null,
+  });
+  assert.equal(isEligible(event, result.filters, sunday), false);
+});
+
 await test('category reset clears exclusions and explicit choice overrides its own exclusion', () => {
   const old = { ...emptyFilters, excludedCategories: ['Konser' as const] };
   assert.deepEqual(parseFilters('her kategori olur', old, now), emptyFilters);
