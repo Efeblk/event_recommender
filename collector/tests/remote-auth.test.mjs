@@ -44,13 +44,21 @@ void test("the Cloud Run identity header remains optional", async (t) => {
   assert.equal(received["x-serverless-authorization"], undefined);
 });
 
-void test("the GCP collector stays manual and uses a dedicated identity", async () => {
+void test("the GCP collector schedule is opt-in and uses a dedicated identity", async () => {
   const workflow = await readFile(
     resolve(import.meta.dirname, "../../.github/workflows/gcp-collector.yml"),
     "utf8",
   );
   assert.match(workflow, /^\s*workflow_dispatch:\s*$/m);
-  assert.doesNotMatch(workflow, /^\s*schedule:\s*$/m);
+  assert.match(workflow, /^\s*schedule:\s*$/m);
+  assert.match(workflow, /cron: '17 \*\/6 \* \* \*'/);
+  assert.match(
+    workflow,
+    /github\.event_name == 'workflow_dispatch' \|\| vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'/,
+  );
+  assert.match(workflow, /environment: gcp-staging-collector/);
+  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /--limit 100 --discovery-pages 20/);
   assert.match(workflow, /GCP_COLLECTOR_SERVICE_ACCOUNT/);
   assert.match(workflow, /GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER/);
   assert.match(workflow, /token_format: id_token/);

@@ -72,7 +72,9 @@ The manual **Deploy GCP staging** workflow builds and checks a candidate before
 entering the protected `gcp-staging` GitHub environment. Configure required
 reviewers on that environment before use. Workload Identity Federation replaces
 downloaded service-account keys. Supply the infrastructure outputs as environment
-variables. Keep runtime, deployment and collection identities separate. Secret
+variables. The collector uses the separate reviewer-free, `master`-restricted
+`gcp-staging-collector` environment described below; keep runtime, deployment and
+collection identities separate. Secret
 Manager resources initially contain no versions; transfer existing ignored local
 credentials securely after account setup and pin their numeric versions for
 deployment. Do not print secret values, place them in Terraform variables/state,
@@ -96,15 +98,17 @@ correctly remain unready when its source data is stale.
 The legacy in-request `/api/admin/sync` returns 410 on GCP after authorization.
 Use the durable multi-provider collector pipeline: source imports followed by
 explicit `/api/admin/collection` publication. The Cloudflare fallback retains
-its legacy route. See [private GCP collection](gcp-collector.md) for the manual
+its legacy route. See [private GCP collection](gcp-collector.md) for the gated
 collector workflow. Cloud Run IAM uses `X-Serverless-Authorization`; the separate
 application sync token uses `Authorization`.
 
-No unattended schedule is enabled initially. After staging works, enable the
-approved schedule and independent monitoring deliberately, then collect 48 hours
-of evidence. An external free monitor cannot query a private IAM endpoint without
-an authentication bridge; the old Cloudflare monitor is not evidence of GCP
-uptime. Choose and verify that bridge before relying on external outage alerts.
+The six-hour collector schedule remains disabled unless the repository variable
+`GCP_STAGING_COLLECTION_ENABLED` is exactly `true`. After a successful manual run,
+IAM verification, and cost review, enable that variable deliberately and collect
+48 hours of actual scheduled evidence. Cloud Monitoring uptime checks can use
+service-agent OIDC authentication for a private Cloud Run endpoint, but that
+monitoring path still needs separate configuration and delivery verification;
+the old Cloudflare monitor is not evidence of GCP uptime.
 
 ## Cost and abuse controls
 

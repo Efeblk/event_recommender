@@ -33,7 +33,7 @@ run "private_staging_plan" {
     error_message = "Deployment trust must bind immutable repository identities, protected environment, workflow, and exact branch."
   }
   assert {
-    condition     = google_iam_workload_identity_pool.github.workload_identity_pool_id != google_iam_workload_identity_pool.collector.workload_identity_pool_id && strcontains(google_iam_workload_identity_pool_provider.collector.attribute_condition, "gcp-collector.yml@refs/heads/master") && google_project_iam_member.collector_invoker.role == "roles/run.invoker"
+    condition     = google_iam_workload_identity_pool.github.workload_identity_pool_id != google_iam_workload_identity_pool.collector.workload_identity_pool_id && strcontains(google_iam_workload_identity_pool_provider.collector.attribute_condition, "environment:gcp-staging-collector") && !strcontains(google_iam_workload_identity_pool_provider.collector.attribute_condition, "environment:gcp-staging\"") && strcontains(google_iam_workload_identity_pool_provider.collector.attribute_condition, "gcp-collector.yml@refs/heads/master") && google_project_iam_member.collector_invoker.role == "roles/run.invoker"
     error_message = "The collector must have separate workflow trust and invocation-only cloud permissions."
   }
   assert {

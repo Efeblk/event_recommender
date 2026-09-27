@@ -7,6 +7,11 @@ const workflow = (await readFile(
   'utf8',
 )).replaceAll('\r\n', '\n');
 
+const collectorWorkflow = (await readFile(
+  resolve(import.meta.dirname, '../../.github/workflows/gcp-collector.yml'),
+  'utf8',
+)).replaceAll('\r\n', '\n');
+
 assert.match(workflow, /^\s{2}workflow_dispatch:/m);
 assert.doesNotMatch(workflow, /^\s{2}(push|pull_request|schedule):/m);
 assert.match(workflow, /^permissions:\n\s{2}contents: read$/m);
@@ -84,5 +89,18 @@ assert.match(deploy, /token_format: id_token/);
 assert.match(deploy, /id_token_audience: \$\{\{ steps\.service\.outputs\.url \}\}/);
 assert.doesNotMatch(deploy, /gcloud auth print-identity-token/);
 assert.match(deploy, /h\.status!=='ok'/);
+
+assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
+assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:$/m);
+assert.match(
+  collectorWorkflow,
+  /^\s{4}if: github\.event_name == 'workflow_dispatch' \|\| vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'$/m,
+);
+assert.match(collectorWorkflow, /^\s{4}environment: gcp-staging-collector$/m);
+assert.doesNotMatch(collectorWorkflow, /^\s{4}environment: gcp-staging$/m);
+assert.match(collectorWorkflow, /ref: \$\{\{ github\.sha \}\}/);
+assert.match(collectorWorkflow, /--limit 100 --discovery-pages 20/);
+assert.match(collectorWorkflow, /cancel-in-progress: false/);
+assert.doesNotMatch(collectorWorkflow, /INDEX_EMBEDDINGS|embeddings:index|TYPESAFE|VOYAGE/);
 
 console.log('GCP staging deployment configuration is structurally valid.');

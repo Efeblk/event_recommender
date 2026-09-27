@@ -27,7 +27,7 @@ resource "google_iam_workload_identity_pool_provider" "collector" {
   project                            = var.project_id
   workload_identity_pool_id          = google_iam_workload_identity_pool.collector.workload_identity_pool_id
   workload_identity_pool_provider_id = "github-actions"
-  display_name                       = "Protected collector workflow"
+  display_name                       = "Unattended collector workflow"
   attribute_mapping = {
     "google.subject"                = "assertion.sub"
     "attribute.repository_id"       = "assertion.repository_id"
@@ -37,7 +37,7 @@ resource "google_iam_workload_identity_pool_provider" "collector" {
     "assertion.repository_id == ${jsonencode(var.github_repository_id)}",
     "assertion.repository_owner_id == ${jsonencode(var.github_repository_owner_id)}",
     "assertion.repository == ${jsonencode(var.github_repository)}",
-    "assertion.sub == ${jsonencode("repo:${var.github_repository}:environment:${local.github_environment}")}",
+    "assertion.sub == ${jsonencode("repo:${var.github_repository}:environment:${local.github_collector_environment}")}",
     "assertion.ref == ${jsonencode(local.github_ref)}",
     "assertion.ref_type == 'branch'",
     "assertion.workflow_ref == ${jsonencode("${var.github_repository}/.github/workflows/gcp-collector.yml@${local.github_ref}")}",

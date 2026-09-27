@@ -1,8 +1,9 @@
 locals {
-  prefix             = "biplan-staging"
-  collection_bucket  = var.collection_bucket_name != "" ? var.collection_bucket_name : "${var.project_id}-biplan-staging-data"
-  github_environment = "gcp-staging"
-  github_ref         = "refs/heads/${var.github_allowed_branch}"
+  prefix                       = "biplan-staging"
+  collection_bucket            = var.collection_bucket_name != "" ? var.collection_bucket_name : "${var.project_id}-biplan-staging-data"
+  github_environment           = "gcp-staging"
+  github_collector_environment = "gcp-staging-collector"
+  github_ref                   = "refs/heads/${var.github_allowed_branch}"
   secret_names = {
     sync_token       = "${local.prefix}-sync-token"
     typesafe_api_key = "${local.prefix}-typesafe-api-key"

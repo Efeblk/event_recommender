@@ -1,6 +1,8 @@
 name: Collect GCP staging event data
 
 on:
+  schedule:
+    - cron: '17 */6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -13,7 +15,8 @@ concurrency:
 
 jobs:
   collect:
-    environment: gcp-staging
+    if: github.event_name == 'workflow_dispatch' || vars.GCP_STAGING_COLLECTION_ENABLED == 'true'
+    environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -39,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           for name in BIPLAN_URL COLLECTOR_SERVICE_ACCOUNT WORKLOAD_IDENTITY_PROVIDER SYNC_TOKEN; do
-            test -n "${!name}" || { echo "Missing required gcp-staging collector setting: $name" >&2; exit 1; }
+            test -n "${!name}" || { echo "Missing required gcp-staging-collector setting: $name" >&2; exit 1; }
           done
           case "$BIPLAN_URL" in https://*.run.app) ;; *) echo "BIPLAN_URL must be a direct HTTPS Cloud Run URL." >&2; exit 1;; esac
           node -e "const u=new URL(process.env.BIPLAN_URL);if(u.origin!==process.env.BIPLAN_URL)throw new Error('BIPLAN_URL must be the exact Cloud Run origin without a path, query, or trailing slash.')"
