@@ -16,13 +16,13 @@ Use an **existing, billing-linked project dedicated to Bi Plan staging**. Set `p
 | Deployment identity | Registry write; Cloud Run developer and invoker; service IAM read/update; permission to run as the runtime identity |
 | Collector identity | Cloud Run invocation only; no direct database, bucket, secret, or deployment permission |
 | GitHub federation | Separate deployment and collector pools; repository and owner numeric IDs, repository name, staging environment, exact branch and workflow checks |
-| Optional budget | Project-filtered monthly alert; defaults to USD 5 when an existing billing account is explicitly supplied |
+| Optional budget | Project-filtered monthly alert; defaults to USD 5 when an existing billing account is explicitly supplied; currency and amount are configurable |
 
 The default region is `us-central1`. Firestore, the bucket, registry, and Cloud Run output all share that region. Choose the region before creation: changing a database location is a migration. Staging and production should use separate dedicated projects and state; these files deliberately prepare staging only.
 
 No lifecycle deletion rule is attached to GCS. A source head may still reference an old successful page after repeated collection failures. Deleting objects by age alone could break recovery. Future garbage collection must verify all live catalog, vector, and source references first. Seven-day soft delete can incur retention storage charges after an authorized deletion. Database PITR, scheduled backups, and Firestore TTL deletion are not enabled by this free-first preparation; their recovery/cost implications need a deliberate launch decision.
 
-The registry cleanup keeps at least three versions, not exactly three. Tagged commit images remain until an explicit retention decision removes their tags or versions. Storage and indexing traffic can accumulate: vector publication currently rewrites a whole immutable profile snapshot per indexing batch, and collection publication reads the durable source pages. Budget alerts do **not** stop spending or guarantee a free bill.
+The registry cleanup keeps at least three versions, not exactly three. Tagged commit images remain until an explicit retention decision removes their tags or versions. Storage and indexing traffic can accumulate: vector publication currently rewrites a whole immutable profile snapshot per indexing batch, and collection publication reads the durable source pages. A budget amount is an alert threshold, not a service price, spending cap, or authorization to spend. Budget alerts do **not** stop spending or guarantee a free bill. When enabling the optional budget, set `budget_currency_code` to the billing account's actual three-letter currency code; the Budgets API requires them to match. Terraform cannot infer or verify that account currency from this configuration before the API request.
 
 ## Identity boundaries
 
@@ -33,6 +33,8 @@ The runtime cannot delete or overwrite GCS objects. Its create-only permission m
 The collector and deployment workflows have separate federation pools. A valid collector token therefore cannot acquire the deployment identity through a shared repository principal. Both require GitHub environment `gcp-staging`, the selected branch, and their exact workflow path. Repository ID `1107941471` and owner ID `108200358` were read from GitHub for `Efeblk/event_recommender` on 2026-09-27. Reverify IDs when changing repository ownership or configuration.
 
 Configure the GitHub environment's reviewers and deployment-branch restrictions before use. Terraform checks OIDC claims; it cannot establish or verify GitHub environment protection settings. The trusted branch defaults to `master`, the repository's default branch verified through the GitHub API on 2026-09-27. A first deployment from `t3code/gcp-migration` requires an explicit reviewed variable override and matching GitHub environment restrictions. No wildcard branch trust is used.
+
+GitHub permits manual dispatch only when the workflow file exists on the default branch. Before the first **Deploy GCP staging** dispatch, merge `.github/workflows/gcp-staging.yml` into the default `master` branch. A branch input or `github_allowed_branch` override can select the revision to run after that, but the override alone cannot make a workflow absent from the default branch dispatchable.
 
 ## Local validation without GCP sign-in
 
@@ -49,7 +51,7 @@ The tests exercise a private staging plan, identity restrictions, optional budge
 
 ## After project selection and an authorized provisioning step
 
-1. Verify the dedicated project, existing billing association, region, repository IDs, and protected GitHub environment. Copy `terraform.tfvars.example` to ignored `terraform.tfvars` and provide the actual project ID. Do not place credentials or secret values in this file.
+1. Verify the dedicated project, existing billing association, region, repository IDs, and protected GitHub environment. Copy `terraform.tfvars.example` to ignored `terraform.tfvars` and provide the actual project ID. If enabling the optional budget, explicitly set its amount and the billing account's actual currency. Do not place credentials or secret values in this file.
 2. Choose protected Terraform state storage and an administrative provisioning identity. The default is local state for preparation. Do not put Terraform state in the application's bucket: its runtime can read that bucket. A separate administrative state bucket/backend can be configured before the first apply. Preserve state securely; do not commit state or plans.
 3. With appropriate administrator credentials, create and review a saved plan. Confirm it touches only the chosen project's new Bi Plan staging resources. Provisioning and any resulting charges require a separately authorized apply; none has been performed here.
 4. Populate the three Secret Manager secret versions through an approved protected channel. This configuration contains only their names; a deployment cannot start successfully until the needed versions exist. Set the protected GitHub environment variables `GCP_SYNC_TOKEN_SECRET_VERSION`, `GCP_TYPESAFE_API_KEY_SECRET_VERSION`, and `GCP_VOYAGE_API_KEY_SECRET_VERSION` to the resulting positive numeric versions. The workflow pins these versions and rejects `latest`. They cannot be Terraform outputs because Terraform deliberately creates no secret versions or values.
@@ -67,3 +69,4 @@ The collector workflow can then invoke the private service with its audience-bou
 - [Workload Identity Federation provider](https://registry.terraform.io/providers/hashicorp/google/8.4.0/docs/resources/iam_workload_identity_pool_provider)
 - [Cloud Run IAM roles](https://docs.cloud.google.com/run/docs/reference/iam/roles)
 - [Billing budget resource](https://registry.terraform.io/providers/hashicorp/google/8.4.0/docs/resources/billing_budget)
+- [Manually running a GitHub Actions workflow](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow)

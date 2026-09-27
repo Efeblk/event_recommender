@@ -55,13 +55,32 @@ run "optional_budget_and_reviewed_branch" {
     github_allowed_branch  = "t3code/gcp-migration"
   }
   assert {
-    condition     = length(google_billing_budget.staging) == 1 && google_billing_budget.staging[0].amount[0].specified_amount[0].units == "5"
-    error_message = "An explicitly selected account should produce the five-dollar alert configuration."
+    condition     = length(google_billing_budget.staging) == 1 && google_billing_budget.staging[0].amount[0].specified_amount[0].currency_code == "USD" && google_billing_budget.staging[0].amount[0].specified_amount[0].units == "5"
+    error_message = "An explicitly selected account should produce the default USD 5 alert configuration."
   }
   assert {
     condition     = strcontains(google_iam_workload_identity_pool_provider.github.attribute_condition, "refs/heads/t3code/gcp-migration") && !strcontains(google_iam_workload_identity_pool_provider.github.attribute_condition, "refs/heads/master")
     error_message = "A reviewed branch override must replace, not broaden, branch trust."
   }
+}
+
+run "try_budget" {
+  command = plan
+  variables {
+    budget_billing_account = "ABCDEF-123456-ABCDEF"
+    budget_currency_code   = "TRY"
+    budget_amount          = 250
+  }
+  assert {
+    condition     = google_billing_budget.staging[0].amount[0].specified_amount[0].currency_code == "TRY" && google_billing_budget.staging[0].amount[0].specified_amount[0].units == "250"
+    error_message = "A TRY billing account should support an explicit TRY 250 alert threshold."
+  }
+}
+
+run "invalid_budget_currency_rejected" {
+  command = plan
+  variables { budget_currency_code = "try" }
+  expect_failures = [var.budget_currency_code]
 }
 
 run "wrong_billing_account_rejected" {

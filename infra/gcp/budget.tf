@@ -9,8 +9,8 @@ resource "google_billing_budget" "staging" {
   }
   amount {
     specified_amount {
-      currency_code = "USD"
-      units         = tostring(var.budget_amount_usd)
+      currency_code = var.budget_currency_code
+      units         = tostring(var.budget_amount)
     }
   }
   threshold_rules {

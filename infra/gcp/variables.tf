@@ -87,13 +87,23 @@ variable "budget_billing_account" {
   }
 }
 
-variable "budget_amount_usd" {
-  description = "Whole-dollar monthly alert threshold, only used when budget_billing_account is set."
+variable "budget_currency_code" {
+  description = "ISO 4217 currency code for the billing account's currency. The Budgets API requires an exact match."
+  type        = string
+  default     = "USD"
+  validation {
+    condition     = can(regex("^[A-Z]{3}$", var.budget_currency_code))
+    error_message = "Use a three-letter uppercase ISO 4217 currency code, such as USD or TRY."
+  }
+}
+
+variable "budget_amount" {
+  description = "Positive whole-unit monthly alert threshold in budget_currency_code, only used when budget_billing_account is set."
   type        = number
   default     = 5
   validation {
-    condition     = var.budget_amount_usd >= 1 && floor(var.budget_amount_usd) == var.budget_amount_usd
-    error_message = "Use a positive whole-dollar amount."
+    condition     = var.budget_amount >= 1 && floor(var.budget_amount) == var.budget_amount
+    error_message = "Use a positive whole-unit amount."
   }
 }
 

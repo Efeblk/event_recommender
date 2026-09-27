@@ -57,6 +57,7 @@ resource "google_project_iam_custom_role" "private_service_policy" {
   title       = "Bi Plan staging service IAM"
   description = "Read and update Cloud Run service invocation policy in the dedicated staging project"
   permissions = ["run.services.getIamPolicy", "run.services.setIamPolicy"]
+  depends_on  = [google_project_service.required]
 }
 
 resource "google_project_iam_member" "deploy_service_policy" {
