@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import {
   ArrowUp,
   CalendarDays,
@@ -182,7 +182,7 @@ function EventCard({ event }: { event: EventRecord }) {
                     : formatMoney(event.price, event.currency)}
               </span>
               {event.price !== null && event.price > 0 && (
-                <small>başlangıç</small>
+                <small>bilet başlangıç fiyatı</small>
               )}
             </div>
             <a
@@ -218,6 +218,11 @@ function LoadingCards() {
   );
 }
 
+// React uses the server snapshot until hydration attaches the search handlers.
+const subscribeToHydration = () => () => {};
+const hydratedSnapshot = () => true;
+const serverHydrationSnapshot = () => false;
+
 export default function Home() {
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
@@ -229,6 +234,11 @@ export default function Home() {
   const [catalog, setCatalog] = useState<CatalogInfo | null>(null);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    hydratedSnapshot,
+    serverHydrationSnapshot,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [rateLimited, setRateLimited] = useState(false);
@@ -520,7 +530,7 @@ export default function Home() {
                   ref={textarea}
                   value={message}
                   maxLength={1200}
-                  disabled={busy}
+                  disabled={!hydrated || busy}
                   placeholder={
                     aiEnabled
                       ? 'Örn. Cumartesi iki kişilik, sakin ama sıkıcı olmayan bir akşam…'
@@ -547,7 +557,7 @@ export default function Home() {
                   <Button
                     type="submit"
                     size="icon"
-                    disabled={busy}
+                    disabled={!hydrated || busy}
                     aria-label="Planımı bul"
                   >
                     {busy ? <LoaderCircle className="spin" /> : <ArrowUp />}
@@ -564,7 +574,7 @@ export default function Home() {
                 <button
                   type="button"
                   key={prompt}
-                  disabled={busy}
+                  disabled={!hydrated || busy}
                   onClick={() => void search(prompt)}
                 >
                   {prompt}
@@ -576,7 +586,7 @@ export default function Home() {
                 {filters.dateFrom && <span>{filters.dateFrom}</span>}
                 {filters.dateTo && <span>{filters.dateTo}</span>}
                 {filters.maxPrice !== null && (
-                  <span>En fazla {formatMoney(filters.maxPrice)}</span>
+                  <span>En fazla {formatMoney(filters.maxPrice)} (kişi başı)</span>
                 )}
                 {filters.category && <span>{filters.category}</span>}
                 {!!filters.categories?.length && (
@@ -649,7 +659,7 @@ export default function Home() {
           {busy
             ? 'Sana uygun etkinlikler aranıyor.'
             : result
-              ? `${result.recommendations.length} etkinlik bulundu.`
+              ? `${result.recommendations.length} öneri gösteriliyor.`
               : ''}
         </output>
         <section
@@ -662,7 +672,7 @@ export default function Home() {
             <div>
               <p className="kicker">
                 <Compass size={13} />{' '}
-                {result ? 'Arama sonuçları' : 'Yakında İstanbul’da'}
+                {result ? 'Senin için öneriler' : 'Yakında İstanbul’da'}
               </p>
               <h2>
                 {result ? lastRequest || 'Etkinlik araması' : 'Şehirde ne var?'}
@@ -676,13 +686,19 @@ export default function Home() {
               )}
               <span>
                 {result
-                  ? `${result.recommendations.length} sonuç`
+                  ? `${result.recommendations.length} öneri gösteriliyor`
                   : total
                     ? `${total} kayıt içinden seçki`
                     : catalogLabel}
               </span>
             </div>
           </div>
+          {result?.status === 'results' && (
+            <p className="recommendation-hint">
+              Her seferinde en fazla 2 öneri gösteriyoruz. Diğer seçenekler için
+              “Başka seçenekler”i deneyebilirsin.
+            </p>
+          )}
           {result?.notice && result.status === 'results' && (
             <output className="result-notice">
               <Search size={16} aria-hidden="true" />
@@ -830,7 +846,7 @@ export default function Home() {
                 sekmenin belleğinde tutulur ve sayfayı yenilediğinde silinir.
                 İstek sınırlandırması için ham IP adresi yerine türetilmiş bir
                 anahtar ve süre sonu bilgisi saklanır. Süresi geçen sayaçlar
-                sonraki istekler sırasında temizlenir.
+                istek sınırı hesabında kullanılmaz.
               </p>
               <p>
                 Etkinlik afişleri bilet sağlayıcılarının veya görsel dağıtım

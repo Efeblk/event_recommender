@@ -492,6 +492,12 @@ button:focus-visible {
 .event-offers svg {
   flex: none;
 }
+.recommendation-hint {
+  margin: -8px 0 20px;
+  color: #4f6557;
+  font-size: 14px;
+  line-height: 1.7;
+}
 .result-notice {
   background: #e9eddf;
   padding: 16px 18px;

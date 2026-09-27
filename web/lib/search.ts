@@ -299,10 +299,10 @@ function partySize(q: string): number | null {
     /\b([1-9]\d?)\s*(?:kisi(?:yiz|lik)?|people|persons?|of us)\b/,
   );
   if (numeric) return Number(numeric[1]);
+
   const word = q.match(
     /\b(bir|iki|uc|dort|bes|alti|yedi|sekiz|dokuz|on|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:kisi(?:yiz|lik)?|people|persons?|of us)\b/,
   );
-  if (!word) return null;
   const values: Record<string, number> = {
     bir: 1,
     iki: 2,
@@ -325,7 +325,23 @@ function partySize(q: string): number | null {
     nine: 9,
     ten: 10,
   };
-  return values[word[1]] ?? null;
+  if (word) return values[word[1]] ?? null;
+
+  const companionNotAttending =
+    /\b(?:without|excluding|not with|never with)\s+(?:my\s+)?(?:girlfriend|boyfriend|wife|husband|partner|date)\b|\b(?:do not|don't|dont)\b[^.!?]{0,32}\b(?:go|attend|join)[^.!?]{0,24}\bwith\s+(?:my\s+)?(?:girlfriend|boyfriend|wife|husband|partner|date)\b|\b(?:my\s+)?(?:girlfriend|boyfriend|wife|husband|partner|date)\b[^.!?]{0,24}\b(?:is not|isn't|not)\s+(?:coming|attending|joining)\b|\b(?:broke|broken)\s+up\s+with\s+(?:my\s+)?(?:girlfriend|boyfriend|wife|husband|partner|date)\b|\b(?:sevgilim|partnerim|esim|kiz arkadasim|erkek arkadasim)\b[^.!?]{0,24}\b(?:gelmiyor|katilmiyor|gelemeyecek)\b|\b(?:sevgilim|partnerim|esim|kiz arkadasim|erkek arkadasim)\s+olmadan\b|\b(?:sevgilimle|partnerimle|esimle|kiz arkadasimla|erkek arkadasimla)\b[^.!?]{0,24}\b(?:ayrildik|kavga ettim)\b/.test(
+      q,
+    );
+  const mentionsExtraCompanions =
+    /\b(?:and|plus)\s+(?:(?:[1-9]\d?|one|two|three|four|five|six|seven|eight|nine|ten)\s+)?(?:my\s+)?friends?\b|\bve\s+(?:(?:[1-9]\d?|bir|iki|uc|dort|bes|alti|yedi|sekiz|dokuz|on)\s+)?(?:arkadasimla|arkadaslarimla)\b/.test(
+      q,
+    );
+  const attendingCompanion =
+    /\b(?:with|together with)\s+(?:my\s+)?(?:girlfriend|boyfriend|wife|husband|partner)\b|\b(?:with|together with)\s+my\s+date\b|\b(?:sevgilimle|partnerimle|esimle|kiz arkadasimla|erkek arkadasimla)\b/.test(
+      q,
+    );
+  return attendingCompanion && !companionNotAttending && !mentionsExtraCompanions
+    ? 2
+    : null;
 }
 
 function parseMoneyAmount(raw: string): number {

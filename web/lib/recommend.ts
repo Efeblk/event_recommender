@@ -133,7 +133,7 @@ const basicNotice =
   'Sonuçlar tarih, bütçe, kategori ve kelime eşleşmesine göre listeleniyor.';
 const issueNotices = {
   budget_ambiguous:
-    'Bütçeyi kişi başı belirt veya toplam bütçeyle birlikte kişi sayısını yaz. Örneğin: iki kişi toplam 800 TL.',
+    'Bu bütçe kişi başı mı, toplam mı? Örneğin: kişi başı 800 TL veya iki kişi toplam 800 TL.',
   date_ambiguous:
     'Tarihi daha açık belirt. Örneğin: yarın, bu hafta sonu veya YYYY-AA-GG biçiminde bir tarih.',
   constraint_ambiguous:
