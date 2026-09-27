@@ -502,6 +502,7 @@ await test('inflected Turkish and English group budgets share one basis policy',
 await test('an attending romantic companion makes an unspecified budget basis ambiguous', () => {
   for (const message of [
     '1000 tl altı sevgilimle gidebileceğim etkinlik',
+    "Sevgilimle 1000 TL'nin altında etkinlik",
     'events under 1000 TRY with my girlfriend',
   ]) {
     const result = interpretConstraints(message, emptyFilters, now);
@@ -515,7 +516,7 @@ await test('an attending romantic companion makes an unspecified budget basis am
       emptyFilters,
       now,
     ).filters,
-    { ...emptyFilters, maxPrice: 1000 },
+    { ...emptyFilters, maxPrice: 1000, maxPriceExclusive: true },
   );
   assert.deepEqual(
     interpretConstraints(
@@ -563,6 +564,7 @@ await test('relationship mentions do not imply an attending companion', () => {
     const result = interpretConstraints(message, emptyFilters, now);
     assert.equal(result.issue, null, message);
     assert.equal(result.filters.maxPrice, 1000, message);
+    assert.equal(result.filters.maxPriceExclusive, true, message);
     assert.equal(result.filters.partySize, undefined, message);
   }
 });
@@ -674,6 +676,7 @@ await test('English weekdays, exact district and strict local time are hard filt
     dateFrom: '2026-09-12',
     dateTo: '2026-09-12',
     maxPrice: 500,
+    maxPriceExclusive: true,
     category: 'Stand-up',
     district: 'Kadikoy',
     startTimeFrom: '20:30',
@@ -683,6 +686,7 @@ await test('English weekdays, exact district and strict local time are hard filt
     ...event,
     startsAt: '2026-09-12T18:00:00Z', // 21:00 Europe/Istanbul
     category: 'Stand-up',
+    price: 499,
   };
   assert.equal(isEligible(late, filters, now), true);
   assert.equal(isEligible({ ...late, district: 'Şişli' }, filters, now), false);
@@ -1079,6 +1083,7 @@ await test('removing the money limit clears durable group-budget state', () => {
       dateFrom: '2026-09-27',
       dateTo: '2026-09-27',
       maxPrice: 450,
+      maxPriceExclusive: true,
       partySize: 4,
       totalBudget: 1800,
       district: 'Kadikoy',
@@ -1087,6 +1092,7 @@ await test('removing the money limit clears durable group-budget state', () => {
   );
   assert.equal(result.issue, null);
   assert.equal(result.filters.maxPrice, null);
+  assert.equal(result.filters.maxPriceExclusive, undefined);
   assert.equal(result.filters.partySize, 4);
   assert.equal(result.filters.totalBudget, undefined);
   assert.equal(result.filters.district, 'Kadikoy');
@@ -1119,6 +1125,7 @@ await test('ordinary per-person updates do not inherit durable group semantics',
     {
       ...emptyFilters,
       maxPrice: 450,
+      maxPriceExclusive: true,
       partySize: 4,
       totalBudget: 1800,
     },
@@ -1126,8 +1133,42 @@ await test('ordinary per-person updates do not inherit durable group semantics',
   );
   assert.equal(result.issue, null);
   assert.equal(result.filters.maxPrice, 500);
+  assert.equal(result.filters.maxPriceExclusive, undefined);
   assert.equal(result.filters.partySize, undefined);
   assert.equal(result.filters.totalBudget, undefined);
+});
+
+await test('strict total budgets remain strict when the same total is divided among a changed group', () => {
+  const initial = interpretConstraints(
+    'İki kişi toplam 1200 TL altı',
+    emptyFilters,
+    now,
+  );
+  assert.equal(initial.issue, null);
+  assert.equal(initial.filters.maxPrice, 600);
+  assert.equal(initial.filters.maxPriceExclusive, true);
+
+  const changed = interpretConstraints(
+    'Üç kişiyiz, aynı toplam bütçe',
+    initial.filters,
+    now,
+  );
+  assert.equal(changed.issue, null);
+  assert.equal(changed.filters.maxPrice, 400);
+  assert.equal(changed.filters.maxPriceExclusive, true);
+  assert.equal(changed.filters.totalBudget, 1200);
+});
+
+await test('unsupported lower budget bounds request clarification instead of becoming ceilings', () => {
+  for (const message of [
+    'not under 1000 TRY',
+    'no less than ₺1000',
+    "1000 TL'nin altında değil",
+  ]) {
+    const result = interpretConstraints(message, emptyFilters, now);
+    assert.equal(result.issue, 'constraint_ambiguous', message);
+    assert.deepEqual(result.filters, emptyFilters, message);
+  }
 });
 
 await test('child theatre inflection is a theatre category and remains negatable', () => {

@@ -42,6 +42,7 @@ await test('weekend and localized currency are exact', () =>
       dateFrom: '2026-09-12',
       dateTo: '2026-09-13',
       maxPrice: 1500,
+      maxPriceExclusive: true,
       category: 'Tiyatro',
     },
   ));
@@ -77,6 +78,45 @@ await test('budget removal and category removal are explicit', () =>
   ));
 await test('free is a real zero budget', () =>
   assert.equal(parseFilters('ücretsiz konser', emptyFilters, now).maxPrice, 0));
+await test('strict and inclusive budget wording preserve the stated boundary', () => {
+  for (const message of [
+    '1000 TL altı konser',
+    "1000 TL'den az konser",
+    "1000 TL'den daha az konser",
+    "1000 TL'nin altı konser",
+    "1000 TL'nin altında konser",
+    'concert under 1000 TRY',
+    'concert under ₺1000',
+    'concert below 1000 TRY',
+    'concert below ₺1000',
+    'concert less than 1000 TRY',
+    'concert less than ₺1000',
+  ]) {
+    const filters = parseFilters(message, emptyFilters, now);
+    assert.equal(filters.maxPrice, 1000, message);
+    assert.equal(filters.maxPriceExclusive, true, message);
+  }
+  for (const message of [
+    'En fazla 1000 TL konser',
+    '1000 TL bütçeyle konser',
+    'concert up to 1000 TRY',
+    'concert at most 1000 TRY',
+    '1000 TL ve altı konser',
+  ]) {
+    const filters = parseFilters(message, emptyFilters, now);
+    assert.equal(filters.maxPrice, 1000, message);
+    assert.equal(filters.maxPriceExclusive, undefined, message);
+  }
+  for (const message of [
+    'not under 1000 TRY',
+    'no less than ₺1000',
+    "1000 TL'nin altında değil",
+  ]) {
+    const filters = parseFilters(message, emptyFilters, now);
+    assert.equal(filters.maxPrice, null, message);
+    assert.equal(filters.maxPriceExclusive, undefined, message);
+  }
+});
 await test('filters reject impossible dates and inverted ranges', () => {
   assert.throws(() =>
     validateFilters({ ...emptyFilters, dateFrom: '2026-02-30' }),
@@ -89,6 +129,12 @@ await test('filters reject impossible dates and inverted ranges', () => {
     }),
   );
   assert.throws(() => validateFilters({ ...emptyFilters, maxPrice: -1 }));
+  assert.throws(() =>
+    validateFilters({ ...emptyFilters, maxPriceExclusive: true }),
+  );
+  assert.throws(() =>
+    validateFilters({ ...emptyFilters, maxPrice: 1000, maxPriceExclusive: 1 }),
+  );
 });
 await test('event hard constraints reject stale, past, cancelled and sold-out data', () => {
   assert.equal(isEligible(event, emptyFilters, now), true);
@@ -112,14 +158,18 @@ await test('explicit workshop and talk evidence cannot pass as a concert', () =>
     },
     {
       title: 'Miles: Bir Caz İkonunun Anatomisi',
-      description: 'Bu keyifli söyleşi Miles Davis’i ele alıyor. Moderatör ve panelistler katılıyor.',
+      description:
+        'Bu keyifli söyleşi Miles Davis’i ele alıyor. Moderatör ve panelistler katılıyor.',
     },
     {
       title: 'Seramik Deneyimi',
       description: 'Bu atölyede çocuklar kil ile üretir.',
     },
   ])
-    for (const filters of [emptyFilters, { ...emptyFilters, category: 'Konser' as const }])
+    for (const filters of [
+      emptyFilters,
+      { ...emptyFilters, category: 'Konser' as const },
+    ])
       assert.equal(isEligible({ ...event, ...mismatch }, filters, now), false);
   assert.equal(
     isEligible(
@@ -150,7 +200,8 @@ await test('explicit workshop and talk evidence cannot pass as a concert', () =>
       {
         ...event,
         title: 'Konser Atölyesi',
-        description: 'Bu atölyede katılımcılar temel ritim tekniklerini öğrenir.',
+        description:
+          'Bu atölyede katılımcılar temel ritim tekniklerini öğrenir.',
       },
       emptyFilters,
       now,
@@ -163,7 +214,8 @@ await test('explicit workshop and talk evidence cannot pass as a concert', () =>
         ...event,
         category: 'Tiyatro',
         title: 'Ayrılık Çeşmesi',
-        description: "Ayrılık Çeşmesi Tiyatro Oyunu, bir yazarlık atölyesinin üretimlerindendir.",
+        description:
+          'Ayrılık Çeşmesi Tiyatro Oyunu, bir yazarlık atölyesinin üretimlerindendir.',
       },
       { ...emptyFilters, category: 'Tiyatro' },
       now,
@@ -187,6 +239,32 @@ await test('unknown price never passes a budget; free events do', () => {
   assert.equal(
     isEligible({ ...event, price: 1 }, { ...emptyFilters, maxPrice: 0 }, now),
     false,
+  );
+});
+await test('strict budgets exclude an event exactly at the boundary', () => {
+  assert.equal(
+    isEligible(
+      { ...event, price: 1000 },
+      { ...emptyFilters, maxPrice: 1000, maxPriceExclusive: true },
+      now,
+    ),
+    false,
+  );
+  assert.equal(
+    isEligible(
+      { ...event, price: 999 },
+      { ...emptyFilters, maxPrice: 1000, maxPriceExclusive: true },
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    isEligible(
+      { ...event, price: 1000 },
+      { ...emptyFilters, maxPrice: 1000 },
+      now,
+    ),
+    true,
   );
 });
 await test('date filters use Istanbul calendar day for late-night sessions', () =>

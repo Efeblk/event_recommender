@@ -163,6 +163,77 @@ await test('Jev admission uses support probability while score only orders admit
   );
 });
 
+await test('Jev returns every distinct supported event without padding rejected matches', () => {
+  for (const count of [3, 8, 12]) {
+    const supported = Array.from({ length: count }, (_, index) => ({
+      ...event,
+      id: `all-supported-${count}-${index}`,
+      title: `All supported ${count} event ${index}`,
+      url: `https://example.test/all-supported-${count}-${index}`,
+    }));
+    assert.equal(
+      selectJevEvents(supported, {
+        ranked: supported.map((candidate) => ({
+          event: candidate,
+          score: 3,
+          confidence: 1,
+          probabilities: [0, 0, 0, 1],
+          supportProbability: 1,
+        })),
+        model: 'jev-test',
+        usage: { inputTokens: 0, outputTokens: 0 },
+      }).length,
+      count,
+    );
+  }
+
+  const candidates = Array.from({ length: 8 }, (_, index) => ({
+    ...event,
+    id: `supported-${index}`,
+    title: `Supported event ${index}`,
+    url: `https://example.test/supported-${index}`,
+  }));
+  const ranked = candidates.map((candidate, index) => ({
+    event: candidate,
+    score: index === 2 ? 1.69 : 3 - index * 0.1,
+    confidence: 0.9,
+    probabilities:
+      index === 2
+        ? ([0, 0.31, 0.69, 0] as const)
+        : ([0, 0, index * 0.1, 1 - index * 0.1] as const),
+    supportProbability: index === 2 ? 0.69 : 1,
+  }));
+  ranked.push({
+    ...ranked[0],
+    event: {
+      ...ranked[0].event,
+      id: 'duplicate-show',
+      venue: 'Another venue',
+      url: 'https://example.test/duplicate-show',
+    },
+    score: 2.95,
+    probabilities: [0, 0, 0.05, 0.95],
+  });
+
+  const selected = selectJevEvents(candidates.concat(ranked.at(-1)!.event), {
+    ranked,
+    model: 'jev-test',
+    usage: { inputTokens: 0, outputTokens: 0 },
+  });
+  assert.deepEqual(
+    selected.map(({ id }) => id),
+    [
+      'supported-0',
+      'supported-1',
+      'supported-3',
+      'supported-4',
+      'supported-5',
+      'supported-6',
+      'supported-7',
+    ],
+  );
+});
+
 function assertRecommendedEvent(actual: EventRecord, expected: EventRecord) {
   const sourceFields = (record: EventRecord) => {
     return Object.fromEntries(
@@ -248,6 +319,34 @@ await test('keyless results contain only eligible event records, without generat
   assertRecommendedEvent(result.recommendations[0].event, event);
   assert.equal('message' in result, false);
   assert.equal('reason' in result.recommendations[0], false);
+});
+
+await test('keyless and unavailable-Jev fallbacks return every distinct shortlisted event', async () => {
+  const candidates = Array.from({ length: 8 }, (_, index) => ({
+    ...event,
+    id: `fallback-${index}`,
+    title: `Fallback concert ${index}`,
+    url: `https://example.test/fallback-${index}`,
+  }));
+  for (const activeConfig of [null, config]) {
+    let rankingCalls = 0;
+    const result = await recommend(validateInput({ message: 'Konser' }), {
+      ...deps,
+      config: activeConfig,
+      candidates: async () => candidates,
+      rank: async () => {
+        rankingCalls++;
+        throw new Error('Provider unavailable');
+      },
+    });
+    assert.equal(result.mode, 'filters');
+    assert.equal(result.recommendations.length, 8);
+    assert.equal(
+      new Set(result.recommendations.map(({ event }) => event.title)).size,
+      8,
+    );
+    assert.equal(rankingCalls, activeConfig ? 1 : 0);
+  }
 });
 await test('no match never relaxes a hard budget or spends a Jev call', async () => {
   const result = await recommend(
@@ -380,6 +479,46 @@ await test('group total and category exclusion are enforced before Jev', async (
   assert.equal(result.recommendations.length, 1);
   assertRecommendedEvent(result.recommendations[0].event, theatre);
 });
+await test('strict per-person and group budgets exclude the boundary before Jev and fallback', async () => {
+  for (const [message, ceiling] of [
+    ['Sevgilimle kişi başı 1000 TL altı etkinlik', 1000],
+    ['Sevgilimle iki kişi toplam 1000 TL altı etkinlik', 500],
+  ] as const) {
+    const affordable = { ...event, id: 'affordable', price: ceiling - 1 };
+    const boundary = {
+      ...event,
+      id: 'boundary',
+      title: 'Sınırdaki Konser',
+      url: 'https://example.test/boundary',
+      price: ceiling,
+    };
+    for (const mode of ['jev', 'keyless', 'outage'] as const) {
+      let calls = 0;
+      const result = await recommend(validateInput({ message }), {
+        ...deps,
+        config: mode === 'keyless' ? null : config,
+        candidates: async () => [boundary, affordable],
+        rank: async (...args) => {
+          calls++;
+          assert.deepEqual(
+            args[2].map(({ id }) => id),
+            ['affordable'],
+          );
+          if (mode === 'outage') throw new Error('Provider unavailable');
+          return mockRank([3])(...args);
+        },
+      });
+      assert.equal(result.filters.maxPriceExclusive, true);
+      assert.equal(result.totalCandidates, 1);
+      assert.deepEqual(
+        result.recommendations.map(({ event }) => event.id),
+        ['affordable'],
+      );
+      assert.equal(calls, mode === 'keyless' ? 0 : 1);
+    }
+  }
+});
+
 await test('one bounded Jev request ranks text candidates and preserves their facts', async () => {
   const events = Array.from({ length: 30 }, (_, i) => ({
     ...event,
@@ -388,12 +527,14 @@ await test('one bounded Jev request ranks text candidates and preserves their fa
     url: `https://example.test/${i}`,
   }));
   let calls = 0;
+  let shortlistedIds: string[] = [];
   const result = await recommend(request, {
     ...deps,
     config,
     candidates: async () => events,
-    rank: mockRank([2, 3], (body) => {
+    rank: mockRank([...Array(8).fill(3), ...Array(8).fill(1)], (body) => {
       calls++;
+      shortlistedIds = body.state.candidates.map(({ id }) => id);
       assert.equal(body.state.candidates.length, 16);
       assert.equal(Object.keys(body.questions).length, 16);
       assert.equal(body.state.candidates[0].description, event.description);
@@ -402,9 +543,12 @@ await test('one bounded Jev request ranks text candidates and preserves their fa
     }),
   });
   assert.equal(calls, 1);
-  assert.equal(result.recommendations.length, 2);
-  assert.equal(result.recommendations[0].event.id, '1');
-  assertRecommendedEvent(result.recommendations[0].event, events[1]);
+  assert.equal(result.recommendations.length, 8);
+  assert.deepEqual(
+    result.recommendations.map(({ event }) => event.id),
+    shortlistedIds.slice(0, 8),
+  );
+  assertRecommendedEvent(result.recommendations[0].event, events[0]);
 });
 await test('valid low Jev scores produce no results, not unrelated fallback cards', async () => {
   const result = await recommend(request, {

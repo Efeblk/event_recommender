@@ -1,7 +1,13 @@
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {
   ArrowUp,
   CalendarDays,
@@ -401,7 +407,10 @@ export default function Home() {
       const data = (await response.json()) as SearchResult & { error?: string };
       if (generation !== searchGeneration.current) return;
       if (response.status === 429) {
-        setError(data.error || 'Arama sınırına ulaşıldı. Lütfen daha sonra yeniden dene.');
+        setError(
+          data.error ||
+            'Arama sınırına ulaşıldı. Lütfen daha sonra yeniden dene.',
+        );
         setRateLimited(true);
         setRetryAction(null);
         return;
@@ -586,17 +595,22 @@ export default function Home() {
                 {filters.dateFrom && <span>{filters.dateFrom}</span>}
                 {filters.dateTo && <span>{filters.dateTo}</span>}
                 {filters.maxPrice !== null && (
-                  <span>En fazla {formatMoney(filters.maxPrice)} (kişi başı)</span>
+                  <span>
+                    {filters.maxPriceExclusive
+                      ? `${formatMoney(filters.maxPrice)} altı`
+                      : `En fazla ${formatMoney(filters.maxPrice)}`}{' '}
+                    (kişi başı)
+                  </span>
                 )}
                 {filters.category && <span>{filters.category}</span>}
                 {!!filters.categories?.length && (
                   <span>{filters.categories.join(' veya ')}</span>
                 )}
-                {groupFilterLabels(filters, (value) =>
-                  formatMoney(value),
-                ).map((label) => (
-                  <span key={label}>{label}</span>
-                ))}
+                {groupFilterLabels(filters, (value) => formatMoney(value)).map(
+                  (label) => (
+                    <span key={label}>{label}</span>
+                  ),
+                )}
                 {filters.district && <span>{filters.district}</span>}
                 {filters.startTimeFrom && (
                   <span>
@@ -695,8 +709,7 @@ export default function Home() {
           </div>
           {result?.status === 'results' && (
             <p className="recommendation-hint">
-              Her seferinde en fazla 2 öneri gösteriyoruz. Diğer seçenekler için
-              “Başka seçenekler”i deneyebilirsin.
+              Diğer seçenekleri görmek için “Başka seçenekler”i deneyebilirsin.
             </p>
           )}
           {result?.notice && result.status === 'results' && (
@@ -850,9 +863,9 @@ export default function Home() {
               </p>
               <p>
                 Etkinlik afişleri bilet sağlayıcılarının veya görsel dağıtım
-                servislerinin adreslerinden yüklenebilir. Tarayıcın bu görselleri
-                getirirken ilgili üçüncü tarafla doğrudan bağlantı kurar; Bi’ Plan
-                sayfa adresini bu görsel istekleriyle göndermez.
+                servislerinin adreslerinden yüklenebilir. Tarayıcın bu
+                görselleri getirirken ilgili üçüncü tarafla doğrudan bağlantı
+                kurar; Bi’ Plan sayfa adresini bu görsel istekleriyle göndermez.
               </p>
             </div>
           </details>

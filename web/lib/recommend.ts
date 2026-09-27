@@ -90,7 +90,6 @@ export const MIN_JEV_SUPPORT_PROBABILITY = 0.7;
 export function selectJevEvents(
   candidates: EventRecord[],
   ranking: JevRanking,
-  limit = 2,
 ): EventRecord[] {
   const byId = new Map(candidates.map((event) => [event.id, event]));
   const supported = ranking.ranked
@@ -125,7 +124,7 @@ export function selectJevEvents(
     .map(({ event }) => byId.get(event.id)!);
   return diverseEvents(
     uniqueEvents(supported, supported.length),
-    Math.max(0, Math.min(5, limit)),
+    supported.length,
   );
 }
 
@@ -242,10 +241,10 @@ export async function recommend(
     semantic,
   );
   const fallback = fallbackEvents(
-    events,
+    shortlist,
     input.message,
     input.history,
-    2,
+    shortlist.length,
     semantic,
   ).map((event) => ({ event }));
   if (deps.config) {

@@ -39,6 +39,8 @@ export interface Filters {
   dateFrom: string | null;
   dateTo: string | null;
   maxPrice: number | null;
+  /** True when the stated ceiling excludes an event priced exactly at maxPrice. */
+  maxPriceExclusive?: boolean;
   /** Budget-basis metadata used to recompute a per-person ceiling on follow-up. */
   partySize?: number;
   totalBudget?: number;

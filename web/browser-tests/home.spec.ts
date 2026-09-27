@@ -66,6 +66,20 @@ const eventsResponse = {
   },
 };
 
+function matchingRecommendations() {
+  return Array.from({ length: 8 }, (_, index) => ({
+    event: {
+      ...event,
+      id: `event-${index + 1}`,
+      title: `Etkinlik ${index + 1}`,
+      url: `https://tickets.example/event-${index + 1}`,
+      canonicalProductionKey: `production-${index + 1}`,
+      canonicalShowKey: `show-${index + 1}`,
+      offers: undefined,
+    },
+  }));
+}
+
 function result(overrides: Record<string, unknown> = {}) {
   return {
     recommendations: [{ event }],
@@ -136,7 +150,9 @@ test.describe('browser contracts', () => {
     await scriptRequested;
     const textarea = page.getByLabel('Planını anlat');
     await expect(textarea).toBeDisabled();
-    await expect(page.getByRole('button', { name: 'Planımı bul' })).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Planımı bul' }),
+    ).toBeDisabled();
     await expect(
       page.getByRole('button', { name: 'Bu hafta sonu bir konser' }),
     ).toBeDisabled();
@@ -242,6 +258,47 @@ test.describe('browser contracts', () => {
     expect(unhandled).toEqual([]);
   });
 
+  test('strict group budget labels and follow-up preserve the exclusive boundary', async ({
+    page,
+  }) => {
+    const unhandled = await mockShell(page);
+    const payloads: Record<string, unknown>[] = [];
+    await page.route('**/api/recommend', async (route) => {
+      payloads.push(route.request().postDataJSON());
+      await route.fulfill({
+        json: result({
+          filters: {
+            ...emptyFilters,
+            maxPrice: 500,
+            maxPriceExclusive: true,
+            partySize: 2,
+            totalBudget: 1000,
+          },
+        }),
+      });
+    });
+    await page.goto('/');
+    const textarea = page.getByLabel('Planını anlat');
+    await textarea.fill('Sevgilimle iki kişi toplam 1000 TL altı etkinlik');
+    await textarea.press('Enter');
+    const filters = page.getByLabel('Etkin filtreler');
+    await expect(
+      filters.getByText('₺500 altı (kişi başı)', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      filters.getByText('Toplam bütçe ₺1.000 altı', { exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Başka seçenekler' }).click();
+    await expect.poll(() => payloads.length).toBe(2);
+    expect(payloads[1].filters).toMatchObject({
+      maxPrice: 500,
+      maxPriceExclusive: true,
+      partySize: 2,
+      totalBudget: 1000,
+    });
+    expect(unhandled).toEqual([]);
+  });
+
   test('Enter submits, Shift+Enter adds a newline, and follow-up carries history and exclusions', async ({
     page,
   }) => {
@@ -249,7 +306,12 @@ test.describe('browser contracts', () => {
     const payloads: Record<string, unknown>[] = [];
     await page.route('**/api/recommend', async (route) => {
       payloads.push(route.request().postDataJSON());
-      await route.fulfill({ json: result() });
+      await route.fulfill({
+        json: result({
+          recommendations: matchingRecommendations(),
+          totalCandidates: 20,
+        }),
+      });
     });
     await page.goto('/');
 
@@ -262,6 +324,7 @@ test.describe('browser contracts', () => {
     await expect(
       page.getByRole('heading', { name: /Sakin bir caz/ }),
     ).toBeVisible();
+    await expect(page.locator('.events-grid .event-card')).toHaveCount(8);
 
     await page.getByRole('button', { name: /Başka seçenekler/ }).click();
     await expect.poll(() => payloads.length).toBe(2);
@@ -280,10 +343,10 @@ test.describe('browser contracts', () => {
       ],
     });
     expect(payloads[1].excludeIds).toEqual(
-      expect.arrayContaining([
-        'event-1',
-        'production-jazz',
-        'show-jazz-2026-10-03',
+      matchingRecommendations().flatMap(({ event }) => [
+        event.id,
+        event.canonicalProductionKey,
+        event.canonicalShowKey,
       ]),
     );
     expect(unhandled).toEqual([]);
@@ -307,7 +370,9 @@ test.describe('browser contracts', () => {
     await page.goto('/');
     // The textarea is present in the server-rendered shell before React can
     // handle its key events. The mocked catalog card appears after hydration.
-    await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Gece Cazı' }),
+    ).toBeVisible();
     const textarea = page.getByLabel('Planını anlat');
     await textarea.fill('Bir konser bul');
     await textarea.press('Enter');
@@ -356,7 +421,9 @@ test.describe('browser contracts', () => {
     await expect(page.getByRole('alert')).toContainText(
       'Arama sınırına ulaşıldı.',
     );
-    await expect(page.getByRole('button', { name: 'Yeniden dene' })).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Yeniden dene' }),
+    ).toHaveCount(0);
     expect(unhandled).toEqual([]);
   });
 
@@ -411,6 +478,14 @@ test.describe('mobile accessibility and layout', () => {
     page,
   }) => {
     const unhandled = await mockShell(page);
+    await page.route('**/api/recommend', (route) =>
+      route.fulfill({
+        json: result({
+          recommendations: matchingRecommendations(),
+          totalCandidates: 20,
+        }),
+      }),
+    );
     await page.goto('/');
     const textarea = page.getByLabel('Planını anlat');
     await textarea.focus();
@@ -424,6 +499,9 @@ test.describe('mobile accessibility and layout', () => {
       .boundingBox();
     expect(sendBox?.width).toBeGreaterThanOrEqual(44);
     expect(sendBox?.height).toBeGreaterThanOrEqual(44);
+    await textarea.fill('Konserleri göster');
+    await textarea.press('Enter');
+    await expect(page.locator('.events-grid .event-card')).toHaveCount(8);
     const dimensions = await page.evaluate(() => ({
       viewport: window.innerWidth,
       page: document.documentElement.scrollWidth,
