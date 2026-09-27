@@ -6,7 +6,7 @@ import {
   saveVoyageVectors,
 } from './store.ts';
 import {
-  embedWithVoyage,
+  embedWithVoyageDetailed,
   voyageCacheKey,
   voyageDocumentText,
   type VoyageConfig,
@@ -100,17 +100,20 @@ export async function indexVoyageBatch(
     (document) => !cached.has(document.hash),
   );
   const batch = pending.slice(0, batchSize);
+  const profile = voyageCacheKey(config);
+  let usage = { totalTokens: 0 };
   if (batch.length) {
-    const vectors = await embedWithVoyage(
+    const result = await embedWithVoyageDetailed(
       config,
       batch.map((document) => document.text),
       'document',
     );
+    usage = result.usage;
     await saveVoyageVectors(
-      voyageCacheKey(config),
+      profile,
       batch.map((document, index) => ({
         hash: document.hash,
-        vector: vectors[index],
+        vector: result.vectors[index],
       })),
       lease,
     );
@@ -121,5 +124,8 @@ export async function indexVoyageBatch(
     indexed: cached.size + batch.length,
     pending: pending.length - batch.length,
     embedded: batch.length,
+    profile,
+    hashes: batch.map((document) => document.hash),
+    usage,
   };
 }

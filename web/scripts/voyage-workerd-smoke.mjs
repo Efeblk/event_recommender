@@ -26,7 +26,12 @@ const provider = createServer(async (request, response) => {
       response.write('{"data":');
       return;
     }
-    response.end(JSON.stringify({ data: [{ index: 0, embedding: vector }] }));
+    response.end(
+      JSON.stringify({
+        data: [{ index: 0, embedding: vector }],
+        usage: { total_tokens: 2 },
+      }),
+    );
   } catch {
     response.statusCode = 400;
     response.end('{}');

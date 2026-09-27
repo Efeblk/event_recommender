@@ -13,6 +13,13 @@ export interface VoyageConfig {
   dimensions: 256 | 512 | 1024 | 2048;
 }
 
+export interface VoyageEmbeddingResult {
+  vectors: number[][];
+  usage: { totalTokens: number };
+  rawResponse: string;
+  rawResponseSha256: string;
+}
+
 const endpoint = 'https://api.voyageai.com/v1/embeddings';
 const supportedModels = new Set([
   'voyage-4-large',
@@ -101,7 +108,19 @@ function parseEmbeddings(
   return result as number[][];
 }
 
-async function readBoundedJson(response: Response): Promise<unknown> {
+function parseUsage(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('Invalid Voyage token usage.');
+  const usage = (value as Record<string, unknown>).usage;
+  if (!usage || typeof usage !== 'object' || Array.isArray(usage))
+    throw new Error('Invalid Voyage token usage.');
+  const totalTokens = (usage as Record<string, unknown>).total_tokens;
+  if (!Number.isSafeInteger(totalTokens) || (totalTokens as number) < 0)
+    throw new Error('Invalid Voyage token usage.');
+  return { totalTokens: totalTokens as number };
+}
+
+async function readBoundedJson(response: Response) {
   const reader = response.body?.getReader();
   if (!reader) throw new Error('Missing Voyage response.');
   const chunks: Uint8Array[] = [];
@@ -125,20 +144,27 @@ async function readBoundedJson(response: Response): Promise<unknown> {
     buffer.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  const rawResponse = new TextDecoder().decode(buffer);
+  let value: unknown;
   try {
-    return JSON.parse(new TextDecoder().decode(buffer));
+    value = JSON.parse(rawResponse);
   } catch {
     throw new Error('Invalid Voyage JSON response.');
   }
+  const hash = await crypto.subtle.digest('SHA-256', buffer);
+  const rawResponseSha256 = Array.from(new Uint8Array(hash), (byte) =>
+    byte.toString(16).padStart(2, '0'),
+  ).join('');
+  return { rawResponse, rawResponseSha256, value };
 }
 
-export async function embedWithVoyage(
+export async function embedWithVoyageDetailed(
   config: VoyageConfig,
   texts: string[],
   inputType: 'query' | 'document',
   fetcher: typeof fetch = fetch,
   timeoutMs = 15000,
-): Promise<number[][]> {
+): Promise<VoyageEmbeddingResult> {
   if (!config.apiKey.trim()) throw new Error('VOYAGE_API_KEY is required.');
   if (!supportedModels.has(config.model))
     throw new Error('Invalid Voyage model.');
@@ -179,11 +205,25 @@ export async function embedWithVoyage(
         await response.body?.cancel();
         throw new Error(`Voyage request failed (HTTP ${response.status}).`);
       }
-      return parseEmbeddings(
-        await readBoundedJson(response),
-        texts.length,
-        config.dimensions,
-      );
+      const parsed = await readBoundedJson(response);
+      return {
+        vectors: parseEmbeddings(parsed.value, texts.length, config.dimensions),
+        usage: parseUsage(parsed.value),
+        rawResponse: parsed.rawResponse,
+        rawResponseSha256: parsed.rawResponseSha256,
+      };
     },
   );
+}
+
+export async function embedWithVoyage(
+  config: VoyageConfig,
+  texts: string[],
+  inputType: 'query' | 'document',
+  fetcher: typeof fetch = fetch,
+  timeoutMs = 15000,
+): Promise<number[][]> {
+  return (
+    await embedWithVoyageDetailed(config, texts, inputType, fetcher, timeoutMs)
+  ).vectors;
 }

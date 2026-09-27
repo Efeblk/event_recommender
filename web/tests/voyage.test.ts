@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import {
   embedWithVoyage,
+  embedWithVoyageDetailed,
   voyageCacheKey,
   voyageConfigFrom,
   voyageDocumentText,
@@ -124,12 +126,46 @@ await test('adapter sends the bounded retrieval request and restores provider in
           { index: 1, embedding: vector().map((value) => -value) },
           { index: 0, embedding: vector() },
         ],
+        usage: { total_tokens: 17 },
       });
     }) as typeof fetch,
   );
   assert.equal(calls, 1);
   assert.ok(embeddings[0][0] > 0);
   assert.ok(embeddings[1][0] < 0);
+});
+
+await test('detailed adapter preserves exact response bytes, hash, and usage', async () => {
+  const rawResponse = JSON.stringify({
+    data: [{ index: 0, embedding: vector() }],
+    usage: { total_tokens: 23 },
+  });
+  const result = await embedWithVoyageDetailed(
+    config,
+    ['document'],
+    'document',
+    (async () => new Response(rawResponse)) as typeof fetch,
+  );
+  assert.equal(result.rawResponse, rawResponse);
+  assert.equal(
+    result.rawResponseSha256,
+    createHash('sha256').update(rawResponse).digest('hex'),
+  );
+  assert.deepEqual(result.usage, { totalTokens: 23 });
+  assert.deepEqual(result.vectors, [vector()]);
+});
+
+await test('detailed adapter requires exact nonnegative safe token usage', async () => {
+  for (const totalTokens of [undefined, -1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+    await assert.rejects(
+      embedWithVoyageDetailed(config, ['document'], 'document', (async () =>
+        Response.json({
+          data: [{ index: 0, embedding: vector() }],
+          usage: { total_tokens: totalTokens },
+        })) as typeof fetch),
+      /token usage/,
+    );
+  }
 });
 
 await test('adapter enforces input bounds before transport', async () => {
