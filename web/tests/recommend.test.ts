@@ -55,6 +55,34 @@ await test('Turkish wheelchair requirements reject unknown access before AI and 
   }
 });
 
+await test('hyphenated wheelchair requests fail closed before AI and fallback', async () => {
+  const input = validateInput({
+    message: 'Wheelchair-accessible concerts only, under 1000 TRY.',
+  });
+  for (const activeConfig of [null, config]) {
+    let calls = 0;
+    const result = await recommend(input, {
+      ...deps,
+      config: activeConfig,
+      candidates: async () => [
+        event,
+        {
+          ...event,
+          id: 'denied',
+          description: 'Not-wheelchair-accessible venue.',
+        },
+      ],
+      rank: async () => {
+        calls++;
+        throw new Error('Provider must not be called');
+      },
+    });
+    assert.equal(result.status, 'empty');
+    assert.equal(result.recommendations.length, 0);
+    assert.equal(calls, 0);
+  }
+});
+
 await test('Jev admission uses support probability while score only orders admitted events', () => {
   const makeRanked = (
     id: string,

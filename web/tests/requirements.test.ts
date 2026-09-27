@@ -832,3 +832,89 @@ await test('wheelchair access wording requires evidence and rejects explicit den
     false,
   );
 });
+
+await test('hyphenated wheelchair access requires evidence and preserves denial polarity', () => {
+  for (const separator of [
+    '-',
+    '\u2010',
+    '\u2011',
+    '\u2012',
+    '\u2013',
+    '\u2014',
+    '\u2015',
+    '\u2212',
+  ]) {
+    const wording = `wheelchair${separator}accessible`;
+    const requirements = deriveRequirements(`${wording} events only.`, []);
+    assert.deepEqual(requirements, [
+      { kind: 'accessibility', value: 'step_free', policy: 'require_support' },
+    ]);
+    assert.equal(
+      meetsRequirements(event('An evening performance.'), requirements),
+      false,
+    );
+    assert.equal(
+      meetsRequirements(event(`${wording} entrance.`), requirements),
+      true,
+    );
+    for (const denial of [
+      `Not ${wording}.`,
+      `not${separator}${wording}.`,
+      `non${separator}${wording}.`,
+      `No wheelchair${separator}access.`,
+    ]) {
+      assert.equal(
+        checkRequirements(event(denial), requirements)[0].status,
+        'contradicted',
+        denial,
+      );
+      assert.equal(
+        meetsRequirements(event(denial), requirements),
+        false,
+        denial,
+      );
+    }
+  }
+});
+
+await test('hyphenated accessibility follow-ups preserve Turkish requirements and waive only the named fact', () => {
+  const history: Message[] = [
+    {
+      role: 'user',
+      content: 'Tekerlekli sandalye erişimi ve erişilebilir tuvalet şart.',
+    },
+  ];
+  assert.deepEqual(
+    deriveRequirements(
+      'Wheelchair-accessible entry is not required now.',
+      history,
+    ),
+    [
+      {
+        kind: 'accessibility',
+        value: 'accessible_toilet',
+        policy: 'require_support',
+      },
+    ],
+  );
+  const requirements = deriveRequirements(
+    'Wheelchair\u2011accessible entry is mandatory.',
+    history,
+  );
+  assert.equal(
+    meetsRequirements(
+      event('Tekerlekli sandalye erişimi yok. Erişilebilir tuvalet vardır.'),
+      requirements,
+    ),
+    false,
+  );
+  assert.equal(
+    meetsRequirements(
+      event(
+        'Tekerlekli sandalye erişimi mevcuttur. Erişilebilir tuvalet vardır.',
+      ),
+      requirements,
+    ),
+    true,
+  );
+});
