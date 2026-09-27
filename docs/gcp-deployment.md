@@ -2,10 +2,11 @@
 
 GCP is the selected target as of September 27, 2026. After Google sign-in and
 explicit approval of the private staging proposal, the dedicated staging
-foundation was provisioned with a TRY 100 budget alert. Application deployment
-and data verification are separate steps; infrastructure creation is not a public
-launch. The existing Cloudflare staging deployment is retained for comparison
-and recovery.
+foundation was provisioned with a TRY 100 budget alert, and one private
+application revision was deployed, bootstrapped, and verified. See the
+[September 27 execution evidence](gcp-staging-execution-2026-09-27.md). This
+private staging execution is not a public launch. The existing Cloudflare staging
+deployment is retained for comparison and recovery.
 
 ## Architecture
 
@@ -72,7 +73,9 @@ The manual **Deploy GCP staging** workflow builds and checks a candidate before
 entering the protected `gcp-staging` GitHub environment. Configure required
 reviewers on that environment before use. Workload Identity Federation replaces
 downloaded service-account keys. Supply the infrastructure outputs as environment
-variables. Keep runtime, deployment and collection identities separate. Secret
+variables. The collector uses the separate reviewer-free, `master`-restricted
+`gcp-staging-collector` environment described below; keep runtime, deployment and
+collection identities separate. Secret
 Manager resources initially contain no versions; transfer existing ignored local
 credentials securely after account setup and pin their numeric versions for
 deployment. Do not print secret values, place them in Terraform variables/state,
@@ -96,19 +99,26 @@ correctly remain unready when its source data is stale.
 The legacy in-request `/api/admin/sync` returns 410 on GCP after authorization.
 Use the durable multi-provider collector pipeline: source imports followed by
 explicit `/api/admin/collection` publication. The Cloudflare fallback retains
-its legacy route. See [private GCP collection](gcp-collector.md) for the manual
+its legacy route. See [private GCP collection](gcp-collector.md) for the gated
 collector workflow. Cloud Run IAM uses `X-Serverless-Authorization`; the separate
 application sync token uses `Authorization`.
 
-No unattended schedule is enabled initially. After staging works, enable the
-approved schedule and independent monitoring deliberately, then collect 48 hours
-of evidence. An external free monitor cannot query a private IAM endpoint without
-an authentication bridge; the old Cloudflare monitor is not evidence of GCP
-uptime. Choose and verify that bridge before relying on external outage alerts.
+The six-hour collector schedule remains disabled unless the repository variable
+`GCP_STAGING_COLLECTION_ENABLED` is exactly `true` and
+`GCP_STAGING_COLLECTION_UNTIL` is a valid future canonical UTC timestamp no more
+than 60 hours away. Missing, malformed, expired, and overly distant deadlines
+fail closed; manual dispatch remains available without these variables. After a
+successful manual run, IAM verification, and cost review, set the deadline first
+and enable the schedule deliberately. See [private GCP collection](gcp-collector.md)
+for the exact activation and early-stop procedure. Collect 48 hours of actual
+scheduled evidence. Authenticated Cloud Monitoring now checks
+the private readiness endpoint through service-agent OIDC, and controlled email
+delivery was verified; see the execution evidence. This bounded verification and
+the old Cloudflare monitor do not establish the required 48-hour GCP uptime record.
 
 ## Cost and abuse controls
 
-The proposed staging profile uses request-based CPU, zero minimum instances,
+The deployed private staging profile uses request-based CPU, zero minimum instances,
 one maximum instance, one CPU, 1 GiB memory and concurrency 32. The default AI
 cap is 100 recommendation requests per day, shared across instances, with the
 existing burst and rolling user limits enforced transactionally in Firestore.

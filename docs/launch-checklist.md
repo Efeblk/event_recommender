@@ -1,8 +1,10 @@
 # Public beta launch sequence
 
-GCP is the selected target. No GCP deployment or public launch has happened as a
-result of the migration code. The historical Cloudflare evidence is retained,
-but does not qualify a different runtime or storage backend.
+GCP is the selected target. A private GCP staging revision has been deployed and
+verified; no public launch has happened. See the [September 27 private staging
+execution evidence](gcp-staging-execution-2026-09-27.md). The historical
+Cloudflare evidence is retained, but does not qualify the GCP runtime or storage
+backend.
 
 1. **Exact-revision verification:** pass web/collector tests, typecheck, lint,
    deployment validation, Node standalone startup and Linux container checks on
@@ -38,8 +40,9 @@ but does not qualify a different runtime or storage backend.
    readiness checks, then invite the first 20?50 testers. Verify privacy/data-use
    and source/price notices. Donation and ad integrations remain placeholders.
 
-Follow the free-first preference. The proposed demo scales to zero with maximum
-one instance; this is a cost control, not a guarantee of zero spend. Review region,
+Follow the free-first preference. The deployed private staging profile is
+configured for zero minimum instances and maximum one instance; this is a cost
+control, not a guarantee of zero spend. Review region,
 billing, storage retention and provider budgets after sign-in. Budget alerts are
 not spending caps. See [GCP deployment](gcp-deployment.md) for the current plan.
 
@@ -52,4 +55,4 @@ not spending caps. See [GCP deployment](gcp-deployment.md) for the current plan.
 - GitHub deployment artifacts: exact SHA, build hashes, non-secret configuration and provenance.
 - [September 27 readiness record](release-readiness-2026-09-27.md): deployed staging identity, confirmed CPU failure, local rate-limit checks and outstanding cloud gates. Historical observations do not replace rechecking the candidate revision.
 
-Do not mark cloud deployment, the 48-hour observation, live AI quality, restore drills or tester acceptance complete until each has its own recorded evidence.
+Do not mark the 48-hour observation, live AI quality, restore drills or tester acceptance complete until each has its own recorded evidence.

@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 import { requestJson } from "../remote.mjs";
+import { collectionGate } from "../schedule-gate.mjs";
 
 void test("Cloud Run IAM identity does not replace application authorization", async (t) => {
   let received;
@@ -44,13 +45,23 @@ void test("the Cloud Run identity header remains optional", async (t) => {
   assert.equal(received["x-serverless-authorization"], undefined);
 });
 
-void test("the GCP collector stays manual and uses a dedicated identity", async () => {
+void test("the GCP collector schedule is opt-in and uses a dedicated identity", async () => {
   const workflow = await readFile(
     resolve(import.meta.dirname, "../../.github/workflows/gcp-collector.yml"),
     "utf8",
   );
   assert.match(workflow, /^\s*workflow_dispatch:\s*$/m);
-  assert.doesNotMatch(workflow, /^\s*schedule:\s*$/m);
+  assert.match(workflow, /^\s*schedule:\s*$/m);
+  assert.match(workflow, /cron: '17 \*\/6 \* \* \*'/);
+  assert.match(
+    workflow,
+    /github\.event_name == 'workflow_dispatch' \|\| vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'/,
+  );
+  assert.match(workflow, /GCP_STAGING_COLLECTION_UNTIL/);
+  assert.match(workflow, /needs\.schedule_gate\.outputs\.run == 'true'/);
+  assert.match(workflow, /environment: gcp-staging-collector/);
+  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /--limit 100 --discovery-pages 20/);
   assert.match(workflow, /GCP_COLLECTOR_SERVICE_ACCOUNT/);
   assert.match(workflow, /GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER/);
   assert.match(workflow, /token_format: id_token/);
@@ -58,4 +69,37 @@ void test("the GCP collector stays manual and uses a dedicated identity", async 
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_restore\.outputs\.id_token \}\}/);
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_publish\.outputs\.id_token \}\}/);
   assert.doesNotMatch(workflow, /INDEX_EMBEDDINGS|index-embeddings/);
+});
+
+void test("the scheduled GCP collector deadline fails closed", () => {
+  const now = Date.parse("2026-09-27T10:00:00.000Z");
+  const gate = (values = {}) =>
+    collectionGate({ eventName: "schedule", enabled: "true", until: "", now, ...values });
+
+  assert.deepEqual(
+    collectionGate({ eventName: "workflow_dispatch", enabled: "", until: "", now }),
+    { run: true, reason: "manual" },
+  );
+  assert.deepEqual(gate({ enabled: "false" }), { run: false, reason: "disabled" });
+  assert.deepEqual(gate(), { run: false, reason: "invalid_deadline" });
+  assert.deepEqual(gate({ until: "2026-09-30" }), {
+    run: false,
+    reason: "invalid_deadline",
+  });
+  assert.deepEqual(gate({ until: "2026-09-31T10:00:00.000Z" }), {
+    run: false,
+    reason: "invalid_deadline",
+  });
+  assert.deepEqual(gate({ until: "2026-09-27T10:00:00.000Z" }), {
+    run: false,
+    reason: "expired",
+  });
+  assert.deepEqual(gate({ until: "2026-09-30T10:00:00.001Z" }), {
+    run: false,
+    reason: "window_exceeds_60h",
+  });
+  assert.deepEqual(gate({ until: "2026-09-29T22:00:00.000Z" }), {
+    run: true,
+    reason: "scheduled_window",
+  });
 });
