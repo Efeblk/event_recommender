@@ -110,7 +110,7 @@ const terms: Record<string, Term> = {
     positive:
       /\b(?:step[ -]?free|barrier[ -]?free|wheelchair access(?:ible)?|basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi)\b/,
     negative:
-      /\b(?:not|isn't|is not)\s+(?:step[ -]?free|wheelchair access(?:ible)?)|\b(?:basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi)\s+(?:degil(?:dir)?|yok|bulunmuyor|bulunmamaktadir|saglanmiyor)\b/,
+      /\b(?:not|no|non|isn't|is not)\s+(?:step[ -]?free|wheelchair access(?:ible)?)|\b(?:basamaksiz|engelsiz erisim|tekerlekli sandalye erisimi)\s+(?:degil(?:dir)?|yok|bulunmuyor|bulunmamaktadir|saglanmiyor)\b/,
   },
   accessible_toilet: {
     positive:
@@ -157,12 +157,20 @@ const activityEntries: Array<[string, RegExp]> = [
 ];
 
 function normalize(value: string) {
-  return value
-    .toLocaleLowerCase('tr-TR')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ı/g, 'i')
-    .replace(/[’']/g, "'");
+  return (
+    value
+      .toLocaleLowerCase('tr-TR')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/ı/g, 'i')
+      .replace(/[’']/g, "'")
+      // Normalize this compound in requests and source evidence alike. Include
+      // attached negation so "not-wheelchair-accessible" never becomes support.
+      .replace(
+      /\b(?:(?:not|no|non|isn't|is not)[\s\u2010-\u2015\u2212-]+)?wheelchair[\s\u2010-\u2015\u2212-]+access(?:ible)?\b/g,
+      (compound) => compound.replace(/[\u2010-\u2015\u2212-]+/g, ' '),
+      )
+  );
 }
 
 function isNegated(text: string, matchIndex: number, matchLength: number) {
