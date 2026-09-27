@@ -15,6 +15,7 @@ import {
   evaluationEvents,
   evaluationTime,
 } from '../evals/jev-cases.ts';
+import { applyJevLabelCorrections } from '../evals/jev-label-corrections.ts';
 import {
   candidateRecall,
   evaluationInputFingerprint,
@@ -40,7 +41,11 @@ if (values.live && values.replay)
   throw new Error('--live and --replay are mutually exclusive.');
 
 const model = process.env.TYPESAFE_MODEL || 'jev-1.13.0';
-const cases = evaluationCases.map((item) => {
+const labelPolicy = applyJevLabelCorrections(evaluationCases, evaluationEvents);
+const historicalLabelsById = new Map(
+  evaluationCases.map((item) => [item.id, item]),
+);
+const cases = labelPolicy.cases.map((item) => {
   const interpreted = interpretConstraints(
     item.message,
     item.filters,
@@ -118,6 +123,16 @@ function makeReport(
   const responseModels = [
     ...new Set(completed.flatMap((item) => item.model ?? [])),
   ];
+  const historicalEvaluations = completed.map((item) => {
+    const historical = historicalLabelsById.get(item.id);
+    if (!historical)
+      throw new Error(
+        `Missing historical label for evaluation case ${item.id}.`,
+      );
+    return evaluateRecommendationList(historical, item.acceptedIds);
+  });
+  const currentLabelSummary = summarizeEvaluations(completed);
+  const historicalLabelSummary = summarizeEvaluations(historicalEvaluations);
   return {
     schemaVersion: 2,
     evaluatedAt: new Date().toISOString(),
@@ -139,7 +154,16 @@ function makeReport(
         ) / positivePlan.length
       : null,
     candidateRecallNoMatchCases: 'not_applicable',
-    ...summarizeEvaluations(completed),
+    ...currentLabelSummary,
+    labelPolicy: labelPolicy.policy,
+    historicalLabelSummary: {
+      labelSource: 'unchanged-evals/jev-cases.ts',
+      ...historicalLabelSummary,
+    },
+    currentLabelSummary: {
+      labelSource: labelPolicy.policy.version,
+      ...currentLabelSummary,
+    },
     inputTokens: results.reduce(
       (sum, item) => sum + (item.usage?.inputTokens ?? 0),
       0,
@@ -226,13 +250,15 @@ if (!values.live) {
       usage: { inputTokens: 0, outputTokens: 0 },
       ranked: saved.ranking
         .filter(({ id }) => byId.has(id))
-        .map(({ id, score, confidence, probabilities, supportProbability }) => ({
-          event: byId.get(id)!,
-          score,
-          confidence,
-          probabilities: probabilities!,
-          supportProbability: supportProbability!,
-        })),
+        .map(
+          ({ id, score, confidence, probabilities, supportProbability }) => ({
+            event: byId.get(id)!,
+            score,
+            confidence,
+            probabilities: probabilities!,
+            supportProbability: supportProbability!,
+          }),
+        ),
     };
     const acceptedIds = selectJevEvents(item.candidates, ranking).map(
       ({ id }) => id,
@@ -310,13 +336,19 @@ if (!values.live) {
         latencyMs: Math.round(performance.now() - start),
         usage: ranking.usage,
         ranking: ranking.ranked.map(
-          ({ event, score, confidence, probabilities, supportProbability }) => ({
-          id: event.id,
-          score,
-          confidence,
-          probabilities,
-          supportProbability,
-        }),
+          ({
+            event,
+            score,
+            confidence,
+            probabilities,
+            supportProbability,
+          }) => ({
+            id: event.id,
+            score,
+            confidence,
+            probabilities,
+            supportProbability,
+          }),
         ),
       });
     } catch (error) {

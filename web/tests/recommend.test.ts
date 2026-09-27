@@ -479,6 +479,46 @@ await test('group total and category exclusion are enforced before Jev', async (
   assert.equal(result.recommendations.length, 1);
   assertRecommendedEvent(result.recommendations[0].event, theatre);
 });
+await test('strict per-person and group budgets exclude the boundary before Jev and fallback', async () => {
+  for (const [message, ceiling] of [
+    ['Sevgilimle kişi başı 1000 TL altı etkinlik', 1000],
+    ['Sevgilimle iki kişi toplam 1000 TL altı etkinlik', 500],
+  ] as const) {
+    const affordable = { ...event, id: 'affordable', price: ceiling - 1 };
+    const boundary = {
+      ...event,
+      id: 'boundary',
+      title: 'Sınırdaki Konser',
+      url: 'https://example.test/boundary',
+      price: ceiling,
+    };
+    for (const mode of ['jev', 'keyless', 'outage'] as const) {
+      let calls = 0;
+      const result = await recommend(validateInput({ message }), {
+        ...deps,
+        config: mode === 'keyless' ? null : config,
+        candidates: async () => [boundary, affordable],
+        rank: async (...args) => {
+          calls++;
+          assert.deepEqual(
+            args[2].map(({ id }) => id),
+            ['affordable'],
+          );
+          if (mode === 'outage') throw new Error('Provider unavailable');
+          return mockRank([3])(...args);
+        },
+      });
+      assert.equal(result.filters.maxPriceExclusive, true);
+      assert.equal(result.totalCandidates, 1);
+      assert.deepEqual(
+        result.recommendations.map(({ event }) => event.id),
+        ['affordable'],
+      );
+      assert.equal(calls, mode === 'keyless' ? 0 : 1);
+    }
+  }
+});
+
 await test('one bounded Jev request ranks text candidates and preserves their facts', async () => {
   const events = Array.from({ length: 30 }, (_, i) => ({
     ...event,

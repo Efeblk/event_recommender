@@ -13,6 +13,10 @@ import {
   evaluationEvents,
   evaluationTime,
 } from '../evals/jev-cases.ts';
+import {
+  applyJevLabelCorrections,
+  JEV_LABEL_POLICY_VERSION,
+} from '../evals/jev-label-corrections.ts';
 
 const positiveLabel = {
   acceptableRecommendationIds: ['drama'],
@@ -126,8 +130,7 @@ await test('replay snapshots reject duplicate and malformed saved scores', () =>
     supportProbability: 0.9,
   });
   assert.deepEqual(
-    validateReplaySnapshot(withProbabilities).cases[0].ranking[0]
-      .probabilities,
+    validateReplaySnapshot(withProbabilities).cases[0].ranking[0].probabilities,
     [0, 0.1, 0.7, 0.2],
   );
   Object.assign(withProbabilities.cases[0].ranking[0], {
@@ -185,5 +188,63 @@ await test('evaluation fingerprint tracks scored inputs but excludes labels and 
       evaluationCases,
     ),
     fingerprint,
+  );
+});
+
+await test('the versioned label overlay corrects exactly the guarded strict-budget case', () => {
+  const original = structuredClone(evaluationCases);
+  const originalFingerprint = evaluationInputFingerprint(
+    evaluationTime,
+    evaluationEvents,
+    evaluationCases,
+  );
+  const corrected = applyJevLabelCorrections(evaluationCases, evaluationEvents);
+  assert.equal(corrected.policy.version, JEV_LABEL_POLICY_VERSION);
+  assert.equal(corrected.policy.corrections.length, 1);
+  assert.deepEqual(evaluationCases, original);
+  assert.equal(
+    evaluationInputFingerprint(
+      evaluationTime,
+      evaluationEvents,
+      corrected.cases,
+    ),
+    originalFingerprint,
+  );
+
+  const historical = evaluationCases.find(({ id }) => id === 'budget')!;
+  const current = corrected.cases.find(({ id }) => id === 'budget')!;
+  assert.equal(
+    evaluateRecommendationList(historical, []).wholeListCorrect,
+    false,
+  );
+  assert.equal(evaluateRecommendationList(current, []).wholeListCorrect, true);
+  assert.deepEqual(current.acceptableRecommendationIds, []);
+  assert.equal(current.expectedNoMatch, true);
+  assert.deepEqual(
+    current.forbiddenRecommendationIds,
+    evaluationEvents.map(({ id }) => id),
+  );
+
+  for (const invalidCases of [
+    evaluationCases.filter(({ id }) => id !== 'budget'),
+    evaluationCases.map((item) =>
+      item.id === 'budget'
+        ? { ...item, message: `${item.message} changed` }
+        : item,
+    ),
+  ])
+    assert.throws(
+      () => applyJevLabelCorrections(invalidCases, evaluationEvents),
+      /guarded source evidence/i,
+    );
+  assert.throws(
+    () =>
+      applyJevLabelCorrections(
+        evaluationCases,
+        evaluationEvents.map((item) =>
+          item.id === 'acoustic' ? { ...item, price: 499 } : item,
+        ),
+      ),
+    /guarded source evidence/i,
   );
 });

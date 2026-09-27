@@ -73,6 +73,11 @@ export function validateFilters(value: unknown): Filters {
   )
     throw new Error('Bütçe 0–100.000 TL arasında olmalı.');
   if (
+    f.maxPriceExclusive != null &&
+    (typeof f.maxPriceExclusive !== 'boolean' || f.maxPrice == null)
+  )
+    throw new Error('Bütçe sınırı geçersiz.');
+  if (
     f.partySize != null &&
     (typeof f.partySize !== 'number' ||
       !Number.isInteger(f.partySize) ||
@@ -125,6 +130,8 @@ export function validateFilters(value: unknown): Filters {
   else if (f.district != null) throw new Error('İlçe geçersiz.');
   if (typeof f.partySize === 'number') result.partySize = f.partySize;
   if (typeof f.totalBudget === 'number') result.totalBudget = f.totalBudget;
+  if (typeof f.maxPriceExclusive === 'boolean')
+    result.maxPriceExclusive = f.maxPriceExclusive;
   for (const key of ['startTimeFrom', 'startTimeTo'] as const) {
     if (
       f[key] != null &&
@@ -244,7 +251,7 @@ function budgetIssue(q: string, previous: Filters): ConstraintIssue | null {
   if (/\bbutce(?:m|miz)?\s*-\s*\d/.test(q)) return 'budget_ambiguous';
   const currencyAmounts = [
     ...q.matchAll(
-      /(?:₺\s*\d[\d.,]*|\d[\d.,]*\s*(?:tl|try|turkish liras?|lira|₺))(?=\s|$|[.,!?])/g,
+      /(?:₺\s*\d[\d.,]*|\d[\d.,]*\s*(?:tl|try|turkish liras?|lira|₺))(?=\s|$|[.,!?"'’])/g,
     ),
   ];
   const bareBudget = q.match(
@@ -264,6 +271,11 @@ function budgetIssue(q: string, previous: Filters): ConstraintIssue | null {
     return previous.totalBudget != null ? null : 'budget_ambiguous';
   if (amounts.length > 1) return 'budget_ambiguous';
   if (!amounts.length) return null;
+  if (
+    currencyAmounts.length === 1 &&
+    isUnsupportedLowerBudget(q, currencyAmounts[0])
+  )
+    return 'constraint_ambiguous';
   const amount = parseMoneyAmount(amounts[0]);
   if (!Number.isFinite(amount) || amount < 0 || amount > 100000)
     return 'budget_ambiguous';
@@ -339,9 +351,36 @@ function partySize(q: string): number | null {
     /\b(?:with|together with)\s+(?:my\s+)?(?:girlfriend|boyfriend|wife|husband|partner)\b|\b(?:with|together with)\s+my\s+date\b|\b(?:sevgilimle|partnerimle|esimle|kiz arkadasimla|erkek arkadasimla)\b/.test(
       q,
     );
-  return attendingCompanion && !companionNotAttending && !mentionsExtraCompanions
+  return attendingCompanion &&
+    !companionNotAttending &&
+    !mentionsExtraCompanions
     ? 2
     : null;
+}
+
+function isExclusiveBudget(q: string, money: RegExpMatchArray) {
+  const start = money.index ?? 0;
+  const before = q.slice(Math.max(0, start - 24), start);
+  const after = q.slice(start + money[0].length, start + money[0].length + 24);
+  if (isUnsupportedLowerBudget(q, money)) return false;
+  return (
+    /\b(?:under|below|less than)\s*$/.test(before) ||
+    /^\s*(?:['’]?(?:den|dan|nin))?\s*(?:daha\s+)?(?:az|alti|altinda)\b/.test(
+      after,
+    )
+  );
+}
+
+function isUnsupportedLowerBudget(q: string, money: RegExpMatchArray) {
+  const start = money.index ?? 0;
+  const before = q.slice(Math.max(0, start - 32), start);
+  const after = q.slice(start + money[0].length, start + money[0].length + 32);
+  return (
+    /\b(?:not\s+(?:under|below)|no\s+less than)\s*$/.test(before) ||
+    /^\s*(?:['’]?(?:den|dan|nin))?\s*(?:daha\s+)?(?:az|alti|altinda)\s+degil\b/.test(
+      after,
+    )
+  );
 }
 
 function parseMoneyAmount(raw: string): number {
@@ -808,6 +847,7 @@ export function parseFilters(
     )
   ) {
     f.maxPrice = null;
+    delete f.maxPriceExclusive;
     delete f.totalBudget;
   } else {
     const prefixedMoney = q.match(/₺\s*(\d[\d.,]*)/);
@@ -821,7 +861,7 @@ export function parseFilters(
       q.match(
         /(?:bilet|fiyat)[^.!?]{0,24}?(\d[\d.,]*)['’]?(?:yi|i)?\s+(?:asmasin|gecmesin)/,
       );
-    if (money) {
+    if (money && !isUnsupportedLowerBudget(q, money)) {
       let amount = parseMoneyAmount(money[1]);
       const total =
         /\b(?:toplam(?=\b|\d)|toplamda\b|butun grup\b|hepimiz icin\b|total\b|altogether\b|for (?:the )?(?:whole )?group\b)/.test(
@@ -839,6 +879,8 @@ export function parseFilters(
         delete f.totalBudget;
       }
       f.maxPrice = amount;
+      if (isExclusiveBudget(q, money)) f.maxPriceExclusive = true;
+      else delete f.maxPriceExclusive;
     } else {
       const size = partySize(q);
       const sameTotal =
@@ -857,6 +899,7 @@ export function parseFilters(
       )
     ) {
       f.maxPrice = 0;
+      delete f.maxPriceExclusive;
       delete f.partySize;
       delete f.totalBudget;
     }
@@ -957,9 +1000,10 @@ export function interpretConstraints(
     : validateFilters(previous);
   const category = parseCategories(q, previousFilters);
   const district = parsedDistrict(q);
+  const budget = budgetIssue(q, previousFilters);
   let issue: ConstraintIssue | null = null;
   if (unsupportedLocation(q)) issue = 'unsupported_location';
-  else if (budgetIssue(q, previousFilters)) issue = 'budget_ambiguous';
+  else if (budget) issue = budget;
   else if (hasAmbiguousBareHourBound(q)) issue = 'constraint_ambiguous';
   else if (dateIssue(q, previousFilters, now)) issue = 'date_ambiguous';
   else if (district.negativeOnly) issue = 'constraint_ambiguous';
@@ -1016,7 +1060,10 @@ export function isEligible(
     (f.categories && !f.categories.includes(e.category as Category)) ||
     (f.excludedCategories ?? []).includes(e.category as Category) ||
     (f.maxPrice !== null &&
-      (e.price === null || e.currency !== 'TRY' || e.price > f.maxPrice))
+      (e.price === null ||
+        e.currency !== 'TRY' ||
+        e.price > f.maxPrice ||
+        (f.maxPriceExclusive === true && e.price === f.maxPrice)))
   )
     return false;
   if (f.dateFrom || f.dateTo) {

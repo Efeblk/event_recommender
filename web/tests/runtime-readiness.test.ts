@@ -24,6 +24,10 @@ await test('group filter summaries expose party and total budget independently',
     '4 kişi',
     'Toplam bütçe 1800 TL',
   ]);
+  assert.deepEqual(
+    groupFilterLabels({ ...group, maxPriceExclusive: true }, formatMoney),
+    ['4 kişi', 'Toplam bütçe 1800 TL altı'],
+  );
 
   const waived = { ...group, maxPrice: null, totalBudget: undefined };
   assert.equal(groupFilterCount(waived), 1);

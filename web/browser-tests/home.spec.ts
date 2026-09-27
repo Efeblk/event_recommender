@@ -258,6 +258,47 @@ test.describe('browser contracts', () => {
     expect(unhandled).toEqual([]);
   });
 
+  test('strict group budget labels and follow-up preserve the exclusive boundary', async ({
+    page,
+  }) => {
+    const unhandled = await mockShell(page);
+    const payloads: Record<string, unknown>[] = [];
+    await page.route('**/api/recommend', async (route) => {
+      payloads.push(route.request().postDataJSON());
+      await route.fulfill({
+        json: result({
+          filters: {
+            ...emptyFilters,
+            maxPrice: 500,
+            maxPriceExclusive: true,
+            partySize: 2,
+            totalBudget: 1000,
+          },
+        }),
+      });
+    });
+    await page.goto('/');
+    const textarea = page.getByLabel('Planını anlat');
+    await textarea.fill('Sevgilimle iki kişi toplam 1000 TL altı etkinlik');
+    await textarea.press('Enter');
+    const filters = page.getByLabel('Etkin filtreler');
+    await expect(
+      filters.getByText('₺500 altı (kişi başı)', { exact: true }),
+    ).toBeVisible();
+    await expect(
+      filters.getByText('Toplam bütçe ₺1.000 altı', { exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Başka seçenekler' }).click();
+    await expect.poll(() => payloads.length).toBe(2);
+    expect(payloads[1].filters).toMatchObject({
+      maxPrice: 500,
+      maxPriceExclusive: true,
+      partySize: 2,
+      totalBudget: 1000,
+    });
+    expect(unhandled).toEqual([]);
+  });
+
   test('Enter submits, Shift+Enter adds a newline, and follow-up carries history and exclusions', async ({
     page,
   }) => {
