@@ -6,12 +6,7 @@ import {
   type Category,
 } from './types.ts';
 import { hasSupportedEventFormat } from './event-format.ts';
-import {
-  CATEGORY_NEGATION,
-  isFullPreferenceReset,
-  positiveCategoryText,
-  requestedCategories,
-} from './intent.ts';
+import { categoryIntent, isFullPreferenceReset } from './intent.ts';
 export const normalize = (s: string) =>
   s
     .toLocaleLowerCase('tr-TR')
@@ -35,10 +30,12 @@ const istanbulTimeFormatter = new Intl.DateTimeFormat('en-GB', {
 function constraintText(message: string) {
   const text = normalize(message);
   if (
-    /\b(?:aciklama|description|metin|text|alinti|quote)\b/.test(text) &&
+    /\b(?:aciklama(?:da|sinda)?|description|metin|text|alinti|quote)\b/.test(
+      text,
+    ) &&
     /\b(?:talimat|instruction|veri|data)\b/.test(text)
   )
-    return text.replace(/['’“"][^'’”"]*['’”"]/g, ' ');
+    return text.replace(/(?:'[^']*'|‘[^’]*’|“[^”]*”|"[^"]*")/g, ' ');
   return text;
 }
 export function todayInIstanbul(now = new Date()): string {
@@ -168,18 +165,13 @@ export type ConstraintIssue =
   | 'unsupported_location'
   | 'constraint_ambiguous';
 
-const categoryTerms: Array<[Category, RegExp, RegExp]> = [
-  ['Stand-up', /\b(?:stand[ -]?up)\b/, /\b(?:stand[ -]?up|komedi|comedy)\b/],
+const categoryTerms: Array<[Category, RegExp]> = [
+  ['Stand-up', /\b(?:stand[ -]?up)\b/],
   [
     'Tiyatro',
     /\b(?:tiyatro(?:su(?:na|nda|nu)?)?|sahne oyunu|komedi oyunu|comedy play|theatre|theater)\b/,
-    /\b(?:tiyatro(?:ya|yu)?|sahne oyunu|theatre|theater)\b/,
   ],
-  [
-    'Konser',
-    /\b(?:konser|concert|music|muzik|caz|jazz|rock|akustik)\b/,
-    /\b(?:konser|concerts?)\b/,
-  ],
+  ['Konser', /\b(?:konser|concert|music|muzik|caz|jazz|rock|akustik)\b/],
 ];
 
 function parseCategories(q: string, previous: Filters) {
@@ -194,29 +186,14 @@ function parseCategories(q: string, previous: Filters) {
       ambiguous: false,
     };
 
-  const negated = new Set<Category>();
-  const clauses = q.split(/\b(?:ama|fakat|ancak|but)\b/);
-  for (const [candidate, , exclusionTerms] of categoryTerms) {
-    const suffix = CATEGORY_NEGATION;
-    const hardNegation = new RegExp(
-      `(${exclusionTerms.source})[^,.!?;]{0,60}\\s+${suffix}`,
-      'g',
-    );
-    if (clauses.some((clause) => hardNegation.test(clause)))
-      negated.add(candidate);
-    const englishNegation = new RegExp(
-      `\\b(?:no|without|excluding?|except)\\s+(?:any\\s+)?${exclusionTerms.source}`,
-      'g',
-    );
-    if (clauses.some((clause) => englishNegation.test(clause)))
-      negated.add(candidate);
-  }
+  const interpreted = categoryIntent(q);
+  const negated = new Set<Category>(interpreted.excludedCategories);
   for (const candidate of negated) {
     excluded.add(candidate);
     if (category === candidate) category = null;
   }
-  const positiveText = positiveCategoryText(q);
-  const distinct = requestedCategories(positiveText);
+  const positiveText = interpreted.positiveText;
+  const distinct = interpreted.requestedCategories;
   const hasChoice = /\b(?:veya|ya da|yahut|or)\b/.test(positiveText);
   if (distinct.length === 1) {
     category = distinct[0];

@@ -37,12 +37,157 @@ const theatrePlay =
 const tabletopGame =
   /\b(?:kutu|masa|kart|video|bilgisayar|konsol)\s+oyun(?:u|lari?)?\b/;
 export const CATEGORY_NEGATION =
-  '(?:istemiyorum|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disi|disinda|yerine|bosver)';
+  '(?:istemiyorum|istemiyoruz|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disi|disinda|disindaki|yerine|bosver)';
+
+const rejectionTerms = [
+  ['elektronik muzik', /\belektronik\s+muzik\b/, null],
+  ['cocuk tiyatrosu', /\bcocuk\s+tiyatro(?:su(?:na|nda|nu)?|ya|yu)?\b/, null],
+  ['cocuk etkinligi', /\bcocuk\s+etkinligi\b/, null],
+  ['cocuk oyunu', /\bcocuk\s+oyunu\b/, null],
+  ['sahne oyunu', /\bsahne\s+oyunu\b/, null],
+  ['stand-up', /\bstand[ -]?up\b/, 'Stand-up'],
+  ['akustik', /\bakustik\b/, null],
+  ['techno', /\btechno\b/, null],
+  ['rock', /\brock\b/, null],
+  ['jazz', /\bjazz\b/, null],
+  ['caz', /\bcaz\b/, null],
+  ['comedy', /\bcomedy\b/, null],
+  ['komedi', /\bkomedi\b/, null],
+  [
+    'konser',
+    /\b(?:konser(?:ler(?:e|i|in|den|de)?|e|i|in|den|de)?|concerts?)\b/,
+    'Konser',
+  ],
+  [
+    'tiyatro',
+    /\b(?:tiyatro(?:lar(?:a|i|in|dan|da)?|ya|yu|nun|dan|da|su(?:na|nda|nu)?)?|theatre|theater)\b/,
+    'Tiyatro',
+  ],
+  ['muzik', /\b(?:muzik|music)\b/, 'Konser'],
+] as const satisfies ReadonlyArray<readonly [string, RegExp, Category | null]>;
+
+export interface CategoryIntent {
+  positiveText: string;
+  requestedCategories: Category[];
+  excludedCategories: Category[];
+  rejectedTerms: string[];
+}
+
+function normalizedIntentText(message: string) {
+  return message
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i');
+}
+
+function rejectionAnalysis(message: string) {
+  const text = normalizedIntentText(message);
+  const rejected = new Set<string>();
+  const excluded = new Set<Category>();
+  const positiveClauses: string[] = [];
+  const clauses = text.split(/(\b(?:ama|fakat|ancak|but)\b|[,;.!?\n])/);
+  const suffix = new RegExp(
+    `\\b(?:gitmek|izlemek|dinlemek)?\\s*${CATEGORY_NEGATION}\\b`,
+  );
+  const englishPrefix =
+    /\b(?:anything\s+except|we do not want|we don't want|we dont want|do not want|don't want|dont want|no|not|without|excluding?|except)\s+(?:any\s+)?/;
+
+  for (const clause of clauses) {
+    if (/^(?:ama|fakat|ancak|but|,|;|\.|!|\?)$/.test(clause.trim())) {
+      positiveClauses.push(clause);
+      continue;
+    }
+    let masked = clause;
+    const suffixMatch = suffix.exec(clause);
+    if (suffixMatch) {
+      const beforeMarker = clause.slice(0, suffixMatch.index);
+      const lastPositive = Math.max(
+        beforeMarker.lastIndexOf(' istiyorum '),
+        beforeMarker.lastIndexOf(' olsun '),
+        beforeMarker.lastIndexOf(' please '),
+      );
+      const candidateStart = lastPositive >= 0 ? lastPositive + 1 : 0;
+      const candidate = beforeMarker.slice(candidateStart);
+      let first = Number.POSITIVE_INFINITY;
+      for (const [term, pattern, category] of rejectionTerms) {
+        const match = pattern.exec(candidate);
+        if (!match) continue;
+        const matchStart = match.index ?? 0;
+        const tail = candidate.slice(matchStart + match[0].length);
+        const coordinatedTail =
+          /^\s*(?:da|de)?\s*$|^\s*(?:ve|veya|ya da|and|or|,)\s+(?:cocuk\s+etkinligi|cocuk\s+tiyatro(?:su(?:na|nda|nu)?|ya|yu)?|cocuk\s+oyunu|konser(?:ler(?:e|i|in|den|de)?|e|i|in|den|de)?|concerts?|muzik|music|tiyatro(?:lar|ya|yu|su(?:na|nda|nu)?)?|theatre|theater|stand[ -]?up)\s*$/.test(
+            tail,
+          );
+        const genreBeforeConcert =
+          /^(?:rock|caz|jazz|akustik|techno)$/i.test(term) &&
+          /^\s+konser(?:ler(?:e|i|in|den|de)?|e|i|in|den|de)?\s*$/.test(tail);
+        if (!coordinatedTail && !genreBeforeConcert) continue;
+        if (
+          (term === 'muzik' && /\belektronik\s+muzik\b/.test(candidate)) ||
+          (term === 'tiyatro' && /\bcocuk\s+tiyatro/.test(candidate)) ||
+          (term === 'konser' &&
+            /\b(?:rock|caz|jazz|akustik|techno)\s+konser/.test(candidate))
+        )
+          continue;
+        rejected.add(term.startsWith('cocuk ') ? 'cocuk' : term);
+        if (category) excluded.add(category);
+        first = Math.min(first, candidateStart + matchStart);
+      }
+      if (Number.isFinite(first))
+        masked =
+          clause.slice(0, first) +
+          ' ' +
+          clause.slice(suffixMatch.index + suffixMatch[0].length);
+    }
+
+    const englishList = masked.match(
+      new RegExp(
+        `${englishPrefix.source}([^,;.!]+?)(?=\\b(?:please|recommend|show|find)\\b|[,;.!]|$)`,
+        'i',
+      ),
+    );
+    if (englishList) {
+      for (const [term, pattern, category] of rejectionTerms) {
+        if (!pattern.test(englishList[1])) continue;
+        if (
+          (term === 'muzik' && /\belektronik\s+muzik\b/.test(englishList[1])) ||
+          (term === 'tiyatro' && /\bcocuk\s+tiyatro/.test(englishList[1])) ||
+          (term === 'konser' &&
+            /\b(?:rock|jazz|acoustic|techno)\s+concerts?\b/.test(
+              englishList[1],
+            ))
+        )
+          continue;
+        rejected.add(term.startsWith('cocuk ') ? 'cocuk' : term);
+        if (category) excluded.add(category);
+      }
+      masked = masked.replace(englishList[0], ' ');
+    }
+    for (const [term, pattern, category] of rejectionTerms) {
+      const source = pattern.source.replace(/^\\b|\\b$/g, '');
+      const prefixed = new RegExp(
+        `${englishPrefix.source}(?:${source})\\b`,
+        'g',
+      );
+      if (!prefixed.test(masked)) continue;
+      rejected.add(term.startsWith('cocuk ') ? 'cocuk' : term);
+      if (category) excluded.add(category);
+      masked = masked.replace(prefixed, ' ');
+    }
+    positiveClauses.push(masked);
+  }
+  return {
+    positiveText: positiveClauses.join(' '),
+    excludedCategories: [...excluded],
+    rejectedTerms: [...rejected],
+  };
+}
 
 const categoryPatterns: Array<[Category, RegExp]> = [
   [
     'Konser',
-    /\b(?:konser(?:de|e|i|ler)?|concerts?|music|muzik|rock|caz|jazz|akustik|techno|elektronik)\b/,
+    /\b(?:konser(?:ler(?:e|i|in|den|de)?|e|i|in|den|de)?|concerts?|music|muzik|rock|caz|jazz|akustik|techno|elektronik)\b/,
   ],
   [
     'Tiyatro',
@@ -64,8 +209,8 @@ export function requestedCategories(normalizedMessage: string): Category[] {
 }
 
 export function positiveCategoryText(normalizedMessage: string) {
-  return normalizedMessage
-    .split(/(\b(?:ama|fakat|ancak|but)\b)/)
+  return rejectionAnalysis(normalizedMessage)
+    .positiveText.split(/(\b(?:ama|fakat|ancak|but)\b)/)
     .map((clause) =>
       clause
         .replace(
@@ -76,16 +221,56 @@ export function positiveCategoryText(normalizedMessage: string) {
           ' ',
         )
         .replace(
-          new RegExp(
-            `(?:^|[,.!?;]\\s*)[^,.!?;\\n]{0,80}\\s+${CATEGORY_NEGATION}\\b`,
-            'gu',
-          ),
-          ' ',
-        )
-        .replace(
           /\b(?:no|without|excluding?|except)\s+(?:any\s+)?(?:concerts?|music|theatre|theater|plays?|stand[ -]?up)(?:\s*(?:and|or)\s*(?:children(?:['’]s)?\s+)?(?:shows?|concerts?|music|theatre|theater|plays?|stand[ -]?up))*/g,
           ' ',
         ),
     )
     .join(' ');
+}
+
+export function categoryIntent(message: string): CategoryIntent {
+  const termCategory = (term: string): Category | null =>
+    term === 'konser' || term === 'muzik'
+      ? 'Konser'
+      : term === 'tiyatro'
+        ? 'Tiyatro'
+        : term === 'stand-up'
+          ? 'Stand-up'
+          : null;
+  const categoryState = new Map<Category, 'positive' | 'negative'>();
+  const rejected = new Set<string>();
+  const positiveParts: string[] = [];
+  for (const clause of normalizedIntentText(message).split(
+    /\b(?:ama|fakat|ancak|but)\b|[,;.!?\n]/,
+  )) {
+    const analysis = rejectionAnalysis(clause);
+    positiveParts.push(analysis.positiveText);
+    for (const category of analysis.excludedCategories)
+      categoryState.set(category, 'negative');
+    for (const term of analysis.rejectedTerms) rejected.add(term);
+    const positive = requestedCategories(analysis.positiveText);
+    for (const category of positive) categoryState.set(category, 'positive');
+    for (const term of rejected) {
+      const category = termCategory(term);
+      if (category && positive.includes(category)) rejected.delete(term);
+      else if (
+        new RegExp(
+          `\\b${term.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}\\b`,
+        ).test(analysis.positiveText)
+      )
+        rejected.delete(term);
+    }
+  }
+  for (const category of requestedCategories(positiveParts.join(' ')))
+    if (!categoryState.has(category)) categoryState.set(category, 'positive');
+  return {
+    positiveText: positiveParts.join(' '),
+    requestedCategories: [...categoryState]
+      .filter(([, state]) => state === 'positive')
+      .map(([category]) => category),
+    excludedCategories: [...categoryState]
+      .filter(([, state]) => state === 'negative')
+      .map(([category]) => category),
+    rejectedTerms: [...rejected],
+  };
 }
