@@ -64,6 +64,41 @@ await test('Jev compares candidates through explicit state paths, with bounded i
     ),
   );
 });
+await test('Jev criteria require program and audience fit for partner outings', () => {
+  const childDirected = {
+    ...candidates[0],
+    id: 'child-character-show',
+    title: 'Character Birthday Show',
+    description:
+      'A character birthday celebration with familiar songs, dancing, and dental-health instruction for children. All ages require a ticket.',
+  };
+  const body = buildJevRequest(
+    'jev-1.13.0',
+    {
+      ...input,
+      message: 'Bu cumartesi sevgilimle gidebileceğim konser dışı etkinlik',
+    },
+    [childDirected],
+  );
+  const criteria = body.questions.candidate_0.criteria;
+  assert.match(criteria[1], /program and intended audience are a weak fit/);
+  assert.match(
+    criteria[1],
+    /predominantly child-directed educational or character show/,
+  );
+  assert.match(
+    criteria[1],
+    /all-age ticket rule alone does not establish adult-program relevance/,
+  );
+  assert.match(criteria[1], /explicitly names that event or program/);
+  assert.match(criteria[2], /intended audience that fits/);
+  assert.match(
+    criteria[2],
+    /positive evidence of the user's audience preference/,
+  );
+  assert.match(criteria[2], /never overrides a mandatory requirement/);
+  assert.equal(body.state.candidates[0].description, childDirected.description);
+});
 await test('Jev can reorder only supplied events and preserves authoritative event facts', () => {
   const r = parseJevRanking(response(), candidates);
   assert.deepEqual(

@@ -519,6 +519,45 @@ await test('reviewed Efsahne titles merge offers and retain a separate show iden
   assert.notEqual(exact.canonicalShowKey, infinitiSession.canonicalShowKey);
 });
 
+await test('reviewed Efsahne Biletix title merges only the exact Bubilet session', () => {
+  const biletix = event({
+    id: '54af6e50c2cbcde862624d66',
+    title: 'Stand Up Gecesi - Taksim & Beyoğlu',
+    description: "Taksim Stand Up Gecesi, Efsahne Beyoğlu'nda sizlerle..",
+    venue: 'Efsahne Beyoğlu',
+    startsAt: '2026-10-03T16:00:00.000Z',
+    price: null,
+    source: 'biletix',
+    url: 'https://www.biletix.com/etkinlik/5MM82/ISTANBUL/tr',
+  });
+  const bubilet = event({
+    ...biletix,
+    id: 'a67d713db54596e4818c947f',
+    title: 'Beyoğlu- Taksim- Stand Up Gecesi',
+    description: 'Beyoğlu- Taksim- Stand Up Gecesi',
+    price: 250,
+    source: 'bubilet',
+    url: 'https://www.bubilet.com.tr/istanbul/etkinlik/beyoglu-taksim-stand-up-gecesi',
+  });
+
+  const merged = mergeEventSessions([biletix, bubilet]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].price, 250);
+  assert.deepEqual(
+    new Set(merged[0].offers?.map((offer) => offer.url)),
+    new Set([biletix.url, bubilet.url]),
+  );
+  assert.ok(merged[0].mergedIds?.includes(biletix.id));
+  assert.ok(merged[0].mergedIds?.includes(bubilet.id));
+
+  for (const different of [
+    { ...bubilet, startsAt: '2026-10-03T17:30:00.000Z' },
+    { ...bubilet, venue: 'İnfiniti Sahne' },
+    { ...bubilet, title: 'Beyoğlu Açık Mikrofon Stand Up Gecesi' },
+  ])
+    assert.equal(mergeEventSessions([biletix, different]).length, 2);
+});
+
 await test('fills a missing address only from consistent exact-session source facts', () => {
   const primary = event({ address: '' });
   const secondary = event({
