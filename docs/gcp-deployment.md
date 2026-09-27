@@ -1,10 +1,11 @@
 # GCP deployment
 
-GCP is the selected target as of September 27, 2026. This migration is prepared
-locally; it has not created resources or deployed to Google Cloud. Google CLI
-sign-in and an account read completed on September 27, 2026, but no GCP resources
-were created and billing was not activated. The existing Cloudflare staging
-deployment is retained for comparison and recovery.
+GCP is the selected target as of September 27, 2026. After Google sign-in and
+explicit approval of the private staging proposal, the dedicated staging
+foundation was provisioned with a TRY 100 budget alert. Application deployment
+and data verification are separate steps; infrastructure creation is not a public
+launch. The existing Cloudflare staging deployment is retained for comparison
+and recovery.
 
 ## Architecture
 

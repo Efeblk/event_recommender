@@ -25,9 +25,14 @@ resource "google_billing_budget" "staging" {
     threshold_percent = 1
     spend_basis       = "FORECASTED_SPEND"
   }
-  all_updates_rule {
-    monitoring_notification_channels = var.budget_notification_channels
-    disable_default_iam_recipients   = false
+  # Google omits an all-default rule from its response. Only emit this block
+  # when custom channels exist, avoiding perpetual drift for IAM-only alerts.
+  dynamic "all_updates_rule" {
+    for_each = length(var.budget_notification_channels) > 0 ? [true] : []
+    content {
+      monitoring_notification_channels = var.budget_notification_channels
+      disable_default_iam_recipients   = false
+    }
   }
   depends_on = [google_project_service.required]
 }
