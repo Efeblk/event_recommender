@@ -499,6 +499,104 @@ await test('inflected Turkish and English group budgets share one basis policy',
   );
 });
 
+await test('an attending romantic companion makes an unspecified budget basis ambiguous', () => {
+  for (const message of [
+    '1000 tl altı sevgilimle gidebileceğim etkinlik',
+    'events under 1000 TRY with my girlfriend',
+  ]) {
+    const result = interpretConstraints(message, emptyFilters, now);
+    assert.equal(result.issue, 'budget_ambiguous', message);
+    assert.deepEqual(result.filters, emptyFilters, message);
+  }
+
+  assert.deepEqual(
+    interpretConstraints(
+      'Sevgilimle kişi başı 1000 TL altı etkinlik',
+      emptyFilters,
+      now,
+    ).filters,
+    { ...emptyFilters, maxPrice: 1000 },
+  );
+  assert.deepEqual(
+    interpretConstraints(
+      'Sevgilimle ikimiz için toplam 1000 TL',
+      emptyFilters,
+      now,
+    ).filters,
+    {
+      ...emptyFilters,
+      maxPrice: 500,
+      partySize: 2,
+      totalBudget: 1000,
+    },
+  );
+
+  for (const message of [
+    'Üç kişi sevgilimle toplam 1500 TL bütçeyle gideceğiz',
+    'Three people with my girlfriend, 1500 TRY total',
+  ]) {
+    assert.deepEqual(interpretConstraints(message, emptyFilters, now), {
+      filters: {
+        ...emptyFilters,
+        maxPrice: 500,
+        partySize: 3,
+        totalBudget: 1500,
+      },
+      issue: null,
+    });
+  }
+});
+
+await test('relationship mentions do not imply an attending companion', () => {
+  for (const message of [
+    'two actors in a relationship-themed play under 1000 TRY',
+    'events under 1000 TRY with date 2026-10-10',
+    'my girlfriend is not coming, find me an event under 1000 TRY',
+    'without my girlfriend, an event under 1000 TRY',
+    'not with my girlfriend, an event under 1000 TRY',
+    "I don't want to go with my girlfriend, events under 1000 TRY",
+    'sevgilim gelmiyor, 1000 TL altı etkinlik',
+    'I broke up with my girlfriend, event under 1000 TRY',
+    'sevgilimle ayrıldık, 1000 TL altı etkinlik',
+    'sevgilimle kavga ettim, 1000 TL altı etkinlik',
+  ]) {
+    const result = interpretConstraints(message, emptyFilters, now);
+    assert.equal(result.issue, null, message);
+    assert.equal(result.filters.maxPrice, 1000, message);
+    assert.equal(result.filters.partySize, undefined, message);
+  }
+});
+
+await test('extra companions prevent an exact two-person inference', () => {
+  for (const message of [
+    'with my girlfriend and two friends, total 1000 TRY',
+    'sevgilimle ve arkadaşlarımla toplam 1000 TL',
+    'sevgilimle ve bir arkadaşımla toplam 1000 TL',
+    'sevgilimle ve iki arkadaşımla toplam 1000 TL',
+  ]) {
+    const result = interpretConstraints(message, emptyFilters, now);
+    assert.equal(result.issue, 'budget_ambiguous', message);
+    assert.deepEqual(result.filters, emptyFilters, message);
+  }
+
+  assert.deepEqual(
+    interpretConstraints(
+      'four people with my girlfriend and two friends, total 1000 TRY',
+      emptyFilters,
+      now,
+    ),
+    {
+      filters: {
+        ...emptyFilters,
+        maxPrice: 250,
+        partySize: 4,
+        totalBudget: 1000,
+      },
+      issue: null,
+    },
+  );
+});
+
 await test('group pronouns convert explicit totals to per-person budgets', () => {
   for (const [message, expected] of [
     ['İkimiz için toplam1000TL', 500],

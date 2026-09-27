@@ -104,6 +104,55 @@ async function mockShell(page: Page, donationUrl: string | null = null) {
 }
 
 test.describe('browser contracts', () => {
+  test('recommendation controls wait for hydration before accepting input', async ({
+    page,
+  }) => {
+    const unhandled = await mockShell(page);
+    let recommendationCalls = 0;
+    await page.route('**/api/recommend', async (route) => {
+      recommendationCalls += 1;
+      await route.fulfill({ json: result() });
+    });
+
+    let releaseScripts!: () => void;
+    const scriptsReleased = new Promise<void>((resolve) => {
+      releaseScripts = resolve;
+    });
+    let sawScript!: () => void;
+    const scriptRequested = new Promise<void>((resolve) => {
+      sawScript = resolve;
+    });
+    let firstScript = true;
+    await page.route('**/page-*.js', async (route) => {
+      if (firstScript) {
+        firstScript = false;
+        sawScript();
+      }
+      await scriptsReleased;
+      await route.continue();
+    });
+
+    const navigation = page.goto('/');
+    await scriptRequested;
+    const textarea = page.getByLabel('Planını anlat');
+    await expect(textarea).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Planımı bul' })).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: 'Bu hafta sonu bir konser' }),
+    ).toBeDisabled();
+
+    releaseScripts();
+    await navigation;
+    await expect(textarea).toBeEnabled();
+    await textarea.fill('Bu hafta sonu konser');
+    await textarea.press('Enter');
+    await expect.poll(() => recommendationCalls).toBe(1);
+    await expect(
+      page.getByRole('button', { name: /Başka seçenekler/ }),
+    ).toBeVisible();
+    expect(unhandled).toEqual([]);
+  });
+
   test('hydrates, renders merged ticket offers, privacy, and placeholders', async ({
     page,
   }) => {

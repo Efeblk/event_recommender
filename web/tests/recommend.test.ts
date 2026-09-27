@@ -325,6 +325,8 @@ await test('recommendations show distinct exact titles across venues without mer
 await test('ambiguous constraints and unsupported cities never reach retrieval or AI', async () => {
   for (const [message, status] of [
     ['Toplam bütçem 800 TL', 'needs_input'],
+    ['1000 tl altı sevgilimle gidebileceğim etkinlik', 'needs_input'],
+    ['events under 1000 TRY with my girlfriend', 'needs_input'],
     ['Ankara konserleri', 'unsupported_location'],
     ['Ayın ortasında konser', 'needs_input'],
   ]) {
