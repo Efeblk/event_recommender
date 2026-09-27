@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import type { Readable } from 'node:stream';
 import type {
   BlobStore,
   ControlStore,
@@ -8,6 +9,7 @@ import type {
 const DEFAULT_MAX_BLOB_BYTES = 128 * 1024 * 1024;
 const MAX_CONFIGURABLE_BLOB_BYTES = 128 * 1024 * 1024;
 const RESOURCE_ERROR = 'GCP storage operation failed.';
+const CLOSED_STREAM_CHECK_MS = 250;
 type Environment = Readonly<Record<string, string | undefined>>;
 
 type Data = Record<string, unknown>;
@@ -51,7 +53,7 @@ interface FileMetadata {
 
 interface FileLike {
   getMetadata(): Promise<[FileMetadata]>;
-  createReadStream(options?: { validation?: 'crc32c' | false }): NodeJS.ReadableStream;
+  createReadStream(options?: { validation?: 'crc32c' | false }): Readable;
   save(
     body: string,
     options: {
@@ -184,12 +186,56 @@ async function readBounded(
   const chunks: Buffer[] = [];
   let bytes = 0;
   try {
-    for await (const value of pinned.createReadStream({ validation: 'crc32c' })) {
-      const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
-      bytes += chunk.length;
-      if (bytes > maxBytes || bytes > declared) storageFailure();
-      chunks.push(chunk);
-    }
+    const stream = pinned.createReadStream({ validation: 'crc32c' });
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      let closeCheck: ReturnType<typeof setTimeout> | undefined;
+      const cleanup = () => {
+        if (closeCheck) clearTimeout(closeCheck);
+        stream.removeListener('data', onData);
+        stream.removeListener('end', onEnd);
+        stream.removeListener('error', onError);
+      };
+      const settle = (error?: unknown) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (error) reject(error);
+        else resolve();
+      };
+      const onData = (value: unknown) => {
+        const chunk = Buffer.isBuffer(value)
+          ? value
+          : Buffer.from(value as Uint8Array);
+        bytes += chunk.length;
+        if (bytes > maxBytes || bytes > declared) {
+          stream.destroy();
+          settle(new Error(RESOURCE_ERROR));
+          return;
+        }
+        chunks.push(chunk);
+      };
+      const onEnd = () => settle();
+      const onError = (error: unknown) => settle(error);
+      const checkClosed = () => {
+        if (settled) return;
+        if (stream.closed) {
+          settle(new Error(RESOURCE_ERROR));
+          return;
+        }
+        closeCheck = setTimeout(checkClosed, CLOSED_STREAM_CHECK_MS);
+        closeCheck.unref();
+      };
+
+      stream.once('error', onError);
+      stream.once('end', onEnd);
+      // The SDK pipeline reports premature closes as errors. Polling only
+      // preserves the broader Readable contract for a bare close without an
+      // error, without adding an eleventh `close` listener to SDK streams.
+      closeCheck = setTimeout(checkClosed, CLOSED_STREAM_CHECK_MS);
+      closeCheck.unref();
+      stream.on('data', onData);
+    });
   } catch {
     storageFailure();
   }
