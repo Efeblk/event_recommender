@@ -41,6 +41,11 @@ export interface RuntimeEnv extends ProviderEnv {
   VOYAGE_MODEL?: string;
   VOYAGE_DIMENSIONS?: string;
 }
+export async function auditedVoyageIndex(..._args: unknown[]): Promise<never> {
+  throw new Error(
+    'Audited collection indexing requires the GCP staging runtime',
+  );
+}
 export function runtime() {
   return env as unknown as RuntimeEnv;
 }

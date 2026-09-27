@@ -11,14 +11,24 @@ import { embeddingText } from './ai.ts';
 import { embeddingCacheKey, type EmbeddingConfig } from './providers.ts';
 import type { EventRecord } from './types.ts';
 import type { HighLevelStore } from './storage-contract.ts';
+import { indexAuditedBatch, type AuditedIndexInput } from './audited-index.ts';
+import type { VoyageConfig } from './voyage.ts';
+import type { Lease } from './storage-contract.ts';
 export type { RateLimitResult } from './rate-limit.ts';
 
 export function runtime() {
   return env;
 }
 let instance: Promise<HighLevelStore> | undefined;
+let clients: ReturnType<typeof createGcpClients> | undefined;
+function storageClients() {
+  return (clients ??= createGcpClients(env).catch((error) => {
+    clients = undefined;
+    throw error;
+  }));
+}
 function store() {
-  return (instance ??= createGcpClients(env)
+  return (instance ??= storageClients()
     .then((clients) =>
       createGcpStore({ ...clients, namespace: env.DEPLOYMENT_ENV }),
     )
@@ -26,6 +36,21 @@ function store() {
       instance = undefined;
       throw error;
     }));
+}
+export async function auditedVoyageIndex(
+  config: VoyageConfig,
+  input: AuditedIndexInput,
+  lease: Lease,
+) {
+  return indexAuditedBatch(config, input, lease, {
+    ...(await storageClients()),
+    store: await store(),
+    namespace: env.DEPLOYMENT_ENV ?? '',
+    revision: env.DEPLOYMENT_SHA ?? '',
+    secrets: [env.SYNC_TOKEN, env.TYPESAFE_API_KEY, env.VOYAGE_API_KEY].filter(
+      (v): v is string => Boolean(v),
+    ),
+  });
 }
 export const candidates: HighLevelStore['candidates'] = async (...args) =>
   (await store()).candidates(...args);
