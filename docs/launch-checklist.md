@@ -6,6 +6,10 @@ execution evidence](gcp-staging-execution-2026-09-27.md). The historical
 Cloudflare evidence is retained, but does not qualify the GCP runtime or storage
 backend.
 
+The [subsequent staging validation](gcp-staging-validation-2026-09-27.md)
+records completed embedding, recommendation/source, rollback and full-restore
+checks, with the unattended observation and other public-release gates still open.
+
 1. **Exact-revision verification:** pass web/collector tests, typecheck, lint,
    deployment validation, Node standalone startup and Linux container checks on
    the candidate revision. Keep the Cloudflare build/smoke green for recovery.
@@ -41,7 +45,7 @@ backend.
    and source/price notices. Donation and ad integrations remain placeholders.
 
 Follow the free-first preference. The deployed private staging profile is
-configured for zero minimum instances and maximum one instance; this is a cost
+configured for zero minimum instances and maximum one instance per revision; this is a cost
 control, not a guarantee of zero spend. Review region,
 billing, storage retention and provider budgets after sign-in. Budget alerts are
 not spending caps. See [GCP deployment](gcp-deployment.md) for the current plan.

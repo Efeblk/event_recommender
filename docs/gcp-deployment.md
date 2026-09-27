@@ -8,6 +8,10 @@ application revision was deployed, bootstrapped, and verified. See the
 private staging execution is not a public launch. The existing Cloudflare staging
 deployment is retained for comparison and recovery.
 
+The [September 27 validation record](gcp-staging-validation-2026-09-27.md)
+records the subsequent embedding completion, live recommendation/source review,
+rollback, full isolated restore, bounded capacity checks and remaining gates.
+
 ## Architecture
 
 | Component | Service | Stored data |
@@ -119,7 +123,8 @@ the old Cloudflare monitor do not establish the required 48-hour GCP uptime reco
 ## Cost and abuse controls
 
 The deployed private staging profile uses request-based CPU, zero minimum instances,
-one maximum instance, one CPU, 1 GiB memory and concurrency 32. The default AI
+one maximum instance per revision, one CPU, 1 GiB memory and concurrency 32. This
+revision setting is not a service-wide hard spending cap. The default AI
 cap is 100 recommendation requests per day, shared across instances, with the
 existing burst and rolling user limits enforced transactionally in Firestore.
 IAM keeps staging private. `BIPLAN_CLIENT_IP_MODE=shared` deliberately puts
