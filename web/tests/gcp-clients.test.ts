@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { Readable } from 'node:stream';
+import { PassThrough, Readable, Transform, pipeline } from 'node:stream';
 import test from 'node:test';
 import {
   createGcpClients,
@@ -248,12 +248,12 @@ void test('blob reads reject declared and streamed oversized objects', async () 
 
   const streamed = storageFake({ changing: { body: '1234', generation: '1' } });
   const baseBucket = streamed.storage.bucket('x');
+  const overflowStream = Readable.from([Buffer.from('12345')]);
   const storage: StorageLike = {
     bucket: () => ({
       file(key, options) {
         const file = baseBucket.file(key, options);
-        if (options?.generation)
-          file.createReadStream = () => Readable.from([Buffer.from('12345')]);
+        if (options?.generation) file.createReadStream = () => overflowStream;
         return file;
       },
     }),
@@ -263,6 +263,126 @@ void test('blob reads reject declared and streamed oversized objects', async () 
     storage,
   }).blobs;
   await assert.rejects(streamedBlobs.get('changing'), /GCP storage operation failed/);
+  assert.equal(overflowStream.destroyed, true);
+});
+
+void test('blob reads consume SDK-style pipelines without listener warnings', async () => {
+  const output = new PassThrough();
+  const source = new PassThrough();
+  const validator = new Transform({
+    transform(chunk, _encoding, callback) {
+      callback(null, chunk);
+    },
+  });
+  pipeline(source, validator, output, () => undefined);
+
+  // The Storage SDK returns the output of a validation pipeline. Retry cleanup
+  // can leave it close to EventEmitter's default listener threshold.
+  while (output.listenerCount('error') < 9) output.on('error', () => undefined);
+  while (output.listenerCount('close') < 10) output.on('close', () => undefined);
+
+  const warnings: Error[] = [];
+  const onWarning = (warning: Error & { emitter?: unknown }) => {
+    if (warning.name === 'MaxListenersExceededWarning' && warning.emitter === output)
+      warnings.push(warning);
+  };
+  process.on('warning', onWarning);
+  try {
+    const base = storageFake({ piped: { body: 'hello', generation: '1' } });
+    const baseBucket = base.storage.bucket('x');
+    const storage: StorageLike = {
+      bucket: () => ({
+        file(key, options) {
+          const file = baseBucket.file(key, options);
+          if (options?.generation) file.createReadStream = () => output;
+          return file;
+        },
+      }),
+    };
+    const reading = createGcpStores(config, {
+      firestore: firestoreFake().firestore,
+      storage,
+    }).blobs.get('piped');
+    source.end('hello');
+    assert.deepEqual(await reading, { body: 'hello', bytes: 5 });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    assert.deepEqual(warnings, []);
+  } finally {
+    process.removeListener('warning', onWarning);
+  }
+});
+
+void test('blob reads reject SDK checksum failures and premature closes', async () => {
+  async function expectPipelineFailure(kind: 'checksum' | 'close') {
+    const output = new PassThrough();
+    const source = new PassThrough();
+    const validator = new Transform({
+      transform(chunk, _encoding, callback) {
+        callback(null, chunk);
+      },
+      flush(callback) {
+        callback(kind === 'checksum' ? new Error('checksum mismatch') : null);
+      },
+    });
+    pipeline(source, validator, output, () => undefined);
+    const base = storageFake({ object: { body: 'hello', generation: '1' } });
+    const baseBucket = base.storage.bucket('x');
+    const storage: StorageLike = {
+      bucket: () => ({
+        file(key, options) {
+          const file = baseBucket.file(key, options);
+          if (options?.generation) file.createReadStream = () => output;
+          return file;
+        },
+      }),
+    };
+    const reading = createGcpStores(config, {
+      firestore: firestoreFake().firestore,
+      storage,
+    }).blobs.get('object');
+    source.write('hello');
+    if (kind === 'close') source.destroy();
+    else source.end();
+    await assert.rejects(reading, /GCP storage operation failed/);
+  }
+
+  await expectPipelineFailure('checksum');
+  await expectPipelineFailure('close');
+});
+
+void test('blob reads reject a bare returned stream closed without an error', async () => {
+  const stream = new PassThrough();
+  const base = storageFake({ object: { body: 'hello', generation: '1' } });
+  const baseBucket = base.storage.bucket('x');
+  const storage: StorageLike = {
+    bucket: () => ({
+      file(key, options) {
+        const file = baseBucket.file(key, options);
+        if (options?.generation) file.createReadStream = () => stream;
+        return file;
+      },
+    }),
+  };
+  const reading = createGcpStores(config, {
+    firestore: firestoreFake().firestore,
+    storage,
+  }).blobs.get('object');
+  stream.write('hello');
+  stream.destroy();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await assert.rejects(
+      Promise.race([
+        reading,
+        new Promise<never>((_resolve, reject) => {
+          timeout = setTimeout(() => reject(new Error('read timed out')), 1_000);
+        }),
+      ]),
+      /GCP storage operation failed/,
+    );
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
 });
 
 void test('immutable puts use create-only precondition and verify retry collisions', async () => {
