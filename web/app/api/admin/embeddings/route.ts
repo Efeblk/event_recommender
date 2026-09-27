@@ -4,7 +4,7 @@ import {
   voyageDocumentCoverage,
   voyageIndexStatus,
 } from '@/lib/voyage-index';
-import { voyageConfigFrom } from '@/lib/voyage';
+import { voyageCacheKey, voyageConfigFrom } from '@/lib/voyage';
 
 async function authorized(request: Request) {
   const token = runtime().SYNC_TOKEN;
@@ -35,6 +35,7 @@ export async function GET(request: Request) {
     }
     return Response.json({
       configured: true,
+      profile: voyageCacheKey(voyage),
       ...(await voyageIndexStatus(voyage)),
     });
   } catch {

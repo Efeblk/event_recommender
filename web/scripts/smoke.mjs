@@ -193,7 +193,10 @@ try {
   assert.ok(Number(burstLimited.headers.get('retry-after')) <= 60);
   const burstBody = await burstLimited.json();
   assert.equal(burstBody.code, 'rate_limited');
-  assert.equal(burstBody.retryAfter, Number(burstLimited.headers.get('retry-after')));
+  assert.equal(
+    burstBody.retryAfter,
+    Number(burstLimited.headers.get('retry-after')),
+  );
   assert.equal((await limitedRequest('192.0.2.11')).status, 503);
   const limitRows = await env.DB.prepare(
     "SELECT key,count FROM request_limits WHERE key LIKE 'ip-minute:%'",
@@ -811,6 +814,7 @@ try {
   });
   assert.deepEqual(await cachedCoverage.json(), {
     configured: true,
+    profile,
     eligible: 3,
     documents: 3,
     indexed: 3,

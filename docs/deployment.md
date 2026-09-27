@@ -136,6 +136,31 @@ requests:
 npm run embeddings:index -- --live --origin http://127.0.0.1:3001 --allow-loopback-http
 ```
 
+A private Cloud Run target requires two independent credentials:
+`SYNC_TOKEN` for the application and a short-lived audience-bound
+`SERVERLESS_ID_TOKEN` for Cloud Run IAM. Live Cloud Run indexing also requires
+explicit profile, pending-count, batch, token-usage, and evidence-file bounds:
+
+```sh
+npm run embeddings:index -- --live --origin https://SERVICE.run.app \
+  --expected-profile 'voyage-embedding-v1|endpoint=https://api.voyageai.com/v1/embeddings|model=voyage-4-large|dimensions=1024|input_type=document|text_profile=event-title-category-venue-description-v1' \
+  --expected-pending "$PENDING_COUNT" --max-batches "$BATCH_LIMIT" \
+  --max-total-tokens "$TOKEN_LIMIT" \
+  --interval-ms 1000 --report work/voyage-index-UNIQUE.jsonl
+```
+
+Set those three shell variables from a reviewed proposal based on the immediately
+preceding read-only status check. The report path must be a new
+file under ignored `web/work`. The command never retries. `max-batches` bounds
+calls before they are made. `max-total-tokens` stops after a successful response
+reports cumulative usage, so it cannot undo tokens already consumed by that
+response. The report is an append-only JSON Lines journal. It flushes its
+provenance before the first request, each attempt before sending it, and each
+successful batch receipt before applying later guards. This preserves completed
+batch hashes and usage after interruption, plus a safe partial failure record.
+Raw Voyage responses remain internal to the adapter and are not returned by the
+admin route.
+
 For collection automation, set the optional protected-environment variable
 `INDEX_EMBEDDINGS=true`. Leave it unset until Voyage credentials and the target
 catalog are ready. Indexing calls do not consume the recommendation request cap.
