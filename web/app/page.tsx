@@ -695,8 +695,7 @@ export default function Home() {
           </div>
           {result?.status === 'results' && (
             <p className="recommendation-hint">
-              Her seferinde en fazla 2 öneri gösteriyoruz. Diğer seçenekler için
-              “Başka seçenekler”i deneyebilirsin.
+              Diğer seçenekleri görmek için “Başka seçenekler”i deneyebilirsin.
             </p>
           )}
           {result?.notice && result.status === 'results' && (
