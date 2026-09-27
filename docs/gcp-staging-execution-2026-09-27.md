@@ -126,7 +126,7 @@ Six listing traversals reached `exhausted`; Biletinial stand-up stopped at `shor
 
 The post-collection embedding status reports 3,723 eligible merged sessions, 2,083 distinct eligible documents, 1,535 indexed documents, and 548 pending documents. This replaces the earlier bootstrap coverage count for the refreshed catalog; no new vectors were generated.
 
-Draft [PR #7](https://github.com/Efeblk/event_recommender/pull/7) separately prepares a six-hour collector schedule with a repository-variable opt-in and dedicated collector environment. It remains draft, disabled by default, unmerged, and unapplied; this execution did not create that environment or enable the schedule.
+Draft [PR #7](https://github.com/Efeblk/event_recommender/pull/7) separately prepares a six-hour collector schedule with a dedicated collector environment. Scheduled runs require both an exact repository-variable opt-in and a valid future UTC deadline no more than 60 hours away; manual dispatch remains available independently. The PR remains draft, disabled by default, unmerged, and unapplied; this execution did not create that environment or enable the schedule.
 
 ## Evidence limitations and remaining release gates
 

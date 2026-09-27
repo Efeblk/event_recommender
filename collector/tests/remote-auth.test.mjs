@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 import { requestJson } from "../remote.mjs";
+import { collectionGate } from "../schedule-gate.mjs";
 
 void test("Cloud Run IAM identity does not replace application authorization", async (t) => {
   let received;
@@ -56,6 +57,8 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
     workflow,
     /github\.event_name == 'workflow_dispatch' \|\| vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'/,
   );
+  assert.match(workflow, /GCP_STAGING_COLLECTION_UNTIL/);
+  assert.match(workflow, /needs\.schedule_gate\.outputs\.run == 'true'/);
   assert.match(workflow, /environment: gcp-staging-collector/);
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /--limit 100 --discovery-pages 20/);
@@ -66,4 +69,37 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_restore\.outputs\.id_token \}\}/);
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_publish\.outputs\.id_token \}\}/);
   assert.doesNotMatch(workflow, /INDEX_EMBEDDINGS|index-embeddings/);
+});
+
+void test("the scheduled GCP collector deadline fails closed", () => {
+  const now = Date.parse("2026-09-27T10:00:00.000Z");
+  const gate = (values = {}) =>
+    collectionGate({ eventName: "schedule", enabled: "true", until: "", now, ...values });
+
+  assert.deepEqual(
+    collectionGate({ eventName: "workflow_dispatch", enabled: "", until: "", now }),
+    { run: true, reason: "manual" },
+  );
+  assert.deepEqual(gate({ enabled: "false" }), { run: false, reason: "disabled" });
+  assert.deepEqual(gate(), { run: false, reason: "invalid_deadline" });
+  assert.deepEqual(gate({ until: "2026-09-30" }), {
+    run: false,
+    reason: "invalid_deadline",
+  });
+  assert.deepEqual(gate({ until: "2026-09-31T10:00:00.000Z" }), {
+    run: false,
+    reason: "invalid_deadline",
+  });
+  assert.deepEqual(gate({ until: "2026-09-27T10:00:00.000Z" }), {
+    run: false,
+    reason: "expired",
+  });
+  assert.deepEqual(gate({ until: "2026-09-30T10:00:00.001Z" }), {
+    run: false,
+    reason: "window_exceeds_60h",
+  });
+  assert.deepEqual(gate({ until: "2026-09-29T22:00:00.000Z" }), {
+    run: true,
+    reason: "scheduled_window",
+  });
 });

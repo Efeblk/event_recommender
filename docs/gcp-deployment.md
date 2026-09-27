@@ -104,9 +104,14 @@ collector workflow. Cloud Run IAM uses `X-Serverless-Authorization`; the separat
 application sync token uses `Authorization`.
 
 The six-hour collector schedule remains disabled unless the repository variable
-`GCP_STAGING_COLLECTION_ENABLED` is exactly `true`. After a successful manual run,
-IAM verification, and cost review, enable that variable deliberately and collect
-48 hours of actual scheduled evidence. Authenticated Cloud Monitoring now checks
+`GCP_STAGING_COLLECTION_ENABLED` is exactly `true` and
+`GCP_STAGING_COLLECTION_UNTIL` is a valid future canonical UTC timestamp no more
+than 60 hours away. Missing, malformed, expired, and overly distant deadlines
+fail closed; manual dispatch remains available without these variables. After a
+successful manual run, IAM verification, and cost review, set the deadline first
+and enable the schedule deliberately. See [private GCP collection](gcp-collector.md)
+for the exact activation and early-stop procedure. Collect 48 hours of actual
+scheduled evidence. Authenticated Cloud Monitoring now checks
 the private readiness endpoint through service-agent OIDC, and controlled email
 delivery was verified; see the execution evidence. This bounded verification and
 the old Cloudflare monitor do not establish the required 48-hour GCP uptime record.

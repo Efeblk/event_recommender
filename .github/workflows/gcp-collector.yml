@@ -7,18 +7,41 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 concurrency:
   group: gcp-event-collection-staging
   cancel-in-progress: false
 
 jobs:
-  collect:
+  schedule_gate:
     if: github.event_name == 'workflow_dispatch' || vars.GCP_STAGING_COLLECTION_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - id: gate
+        name: Enforce bounded scheduled-collection window
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COLLECTION_ENABLED: ${{ vars.GCP_STAGING_COLLECTION_ENABLED }}
+          COLLECTION_UNTIL: ${{ vars.GCP_STAGING_COLLECTION_UNTIL }}
+        run: node collector/schedule-gate.mjs >> "$GITHUB_OUTPUT"
+
+  collect:
+    needs: schedule_gate
+    if: needs.schedule_gate.outputs.run == 'true'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
     env:
       BIPLAN_URL: ${{ vars.BIPLAN_URL }}
     steps:

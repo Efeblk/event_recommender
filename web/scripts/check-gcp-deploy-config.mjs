@@ -94,10 +94,21 @@ assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \
 assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:$/m);
 assert.match(
   collectorWorkflow,
-  /^\s{4}if: github\.event_name == 'workflow_dispatch' \|\| vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'$/m,
+  /^\s{2}schedule_gate:\n\s{4}if: github\.event_name == 'workflow_dispatch' \|\| vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'$/m,
 );
+const collectorGate = collectorWorkflow.slice(
+  collectorWorkflow.indexOf('  schedule_gate:'),
+  collectorWorkflow.indexOf('  collect:'),
+);
+const collectorJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  collect:'));
+assert.match(collectorGate, /GCP_STAGING_COLLECTION_UNTIL/);
+assert.match(collectorGate, /node collector\/schedule-gate\.mjs/);
+assert.doesNotMatch(collectorGate, /environment:|id-token: write|secrets\./);
+assert.match(collectorJob, /needs: schedule_gate/);
+assert.match(collectorJob, /if: needs\.schedule_gate\.outputs\.run == 'true'/);
 assert.match(collectorWorkflow, /^\s{4}environment: gcp-staging-collector$/m);
 assert.doesNotMatch(collectorWorkflow, /^\s{4}environment: gcp-staging$/m);
+assert.match(collectorJob, /id-token: write/);
 assert.match(collectorWorkflow, /ref: \$\{\{ github\.sha \}\}/);
 assert.match(collectorWorkflow, /--limit 100 --discovery-pages 20/);
 assert.match(collectorWorkflow, /cancel-in-progress: false/);
