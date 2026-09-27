@@ -1,9 +1,9 @@
 # Private GCP staging proposal — September 27, 2026
 
-Status: prepared for review; no project creation, billing link, GCP resource
-creation, secret transfer or deployment has been performed. Google CLI sign-in
-and read-only account checks succeeded. The integrated browser is unavailable,
-so remaining trial credits have not been verified.
+Status: historical approved proposal. The authorized private staging execution is
+recorded separately in [the dated execution evidence](gcp-staging-execution-2026-09-27.md).
+The scope and cost assumptions below are preserved as the decision record; consult
+the execution evidence for actual results, limitations, and outstanding gates.
 
 ## Target and boundaries
 
