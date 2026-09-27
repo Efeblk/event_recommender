@@ -49,6 +49,8 @@ jobs:
       - run: npm run test:deploy:gcp
       - name: Check frozen conversational release constraints without API calls
         run: node --experimental-strip-types scripts/check-release-cases.mjs
+      - name: Check structured input fixture and API contract without API calls
+        run: npm run test:input-intent
       - name: Replay Jev scores and check every recommendation without API calls
         run: node --experimental-strip-types scripts/evaluate-jev.ts
       - run: npm run typecheck

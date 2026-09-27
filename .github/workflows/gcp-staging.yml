@@ -6,6 +6,14 @@ on:
         description: Exact 40-character commit SHA to prepare and deploy
         required: true
         type: string
+      input_interpreter:
+        description: Structured input requires reviewed live evaluation evidence
+        required: true
+        type: choice
+        default: rules
+        options:
+          - rules
+          - jev-v1
 permissions:
   contents: read
 concurrency:
@@ -60,6 +68,7 @@ jobs:
           npm test --prefix ../collector
           npm run test:deploy-config
           npm run test:deploy:gcp
+          npm run test:input-intent
           node --experimental-strip-types scripts/check-release-cases.mjs
           node --experimental-strip-types scripts/evaluate-jev.ts
       - name: Build and smoke Node server
@@ -121,6 +130,7 @@ jobs:
     env:
       EXPECTED_SHA: ${{ inputs.expected_sha }}
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      INPUT_INTERPRETER: ${{ inputs.input_interpreter || 'rules' }}
       GCP_REGION: ${{ vars.GCP_REGION }}
       GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
       GCP_ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.GCP_ARTIFACT_REGISTRY_REPOSITORY }}
@@ -141,6 +151,7 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$GCP_PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
+          [[ "$INPUT_INTERPRETER" == 'rules' || "$INPUT_INTERPRETER" == 'jev-v1' ]]
           [[ "$GCP_REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
           [[ "$GCP_CLOUD_RUN_SERVICE" =~ ^[a-z][a-z0-9-]{1,61}[a-z0-9]$ && "$GCP_CLOUD_RUN_SERVICE" == *staging* ]]
           [[ "$GCP_ARTIFACT_REGISTRY_REPOSITORY" =~ ^[a-z][a-z0-9._-]{1,61}[a-z0-9]$ ]]
@@ -190,7 +201,7 @@ jobs:
         run: |
           set -euo pipefail
           gcloud run deploy "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --image "$IMAGE_REF" --service-account "$GCP_RUNTIME_SERVICE_ACCOUNT" --no-allow-unauthenticated --min-instances 0 --max-instances 1 --concurrency 32 --cpu 1 --cpu-throttling --no-cpu-boost --memory 1Gi --timeout 300 \
-            --set-env-vars "BIPLAN_RUNTIME=node,BIPLAN_GCP_PROJECT=$GCP_PROJECT_ID,GCP_STORAGE_BUCKET=$GCP_COLLECTION_BUCKET,FIRESTORE_DATABASE=$GCP_FIRESTORE_DATABASE,DEPLOYMENT_ENV=staging,DEPLOYMENT_SHA=$EXPECTED_SHA,BIPLAN_CLIENT_IP_MODE=shared,AI_DAILY_LIMIT=100,VOYAGE_DIMENSIONS=1024" \
+            --set-env-vars "BIPLAN_RUNTIME=node,BIPLAN_GCP_PROJECT=$GCP_PROJECT_ID,GCP_STORAGE_BUCKET=$GCP_COLLECTION_BUCKET,FIRESTORE_DATABASE=$GCP_FIRESTORE_DATABASE,DEPLOYMENT_ENV=staging,DEPLOYMENT_SHA=$EXPECTED_SHA,BIPLAN_CLIENT_IP_MODE=shared,AI_DAILY_LIMIT=100,VOYAGE_DIMENSIONS=1024,INPUT_INTERPRETER=$INPUT_INTERPRETER" \
             --set-secrets "SYNC_TOKEN=$GCP_SYNC_TOKEN_SECRET:$GCP_SYNC_TOKEN_SECRET_VERSION,TYPESAFE_API_KEY=$GCP_TYPESAFE_API_KEY_SECRET:$GCP_TYPESAFE_API_KEY_SECRET_VERSION,VOYAGE_API_KEY=$GCP_VOYAGE_API_KEY_SECRET:$GCP_VOYAGE_API_KEY_SECRET_VERSION" --quiet
       - id: service
         name: Resolve private service URL
@@ -222,7 +233,7 @@ jobs:
           IMAGE_REF: ${{ steps.image.outputs.ref }}
         run: |
           mkdir -p deploy-provenance
-          node -e "const fs=require('node:fs');fs.writeFileSync('deploy-provenance/gcp-staging.json',JSON.stringify({schemaVersion:1,environment:'staging',revision:process.env.EXPECTED_SHA,image:process.env.IMAGE_REF,service:process.env.GCP_CLOUD_RUN_SERVICE,region:process.env.GCP_REGION,runId:process.env.GITHUB_RUN_ID,runAttempt:process.env.GITHUB_RUN_ATTEMPT},null,2)+'\n')"
+          node -e "const fs=require('node:fs');fs.writeFileSync('deploy-provenance/gcp-staging.json',JSON.stringify({schemaVersion:1,environment:'staging',revision:process.env.EXPECTED_SHA,image:process.env.IMAGE_REF,service:process.env.GCP_CLOUD_RUN_SERVICE,region:process.env.GCP_REGION,inputInterpreter:process.env.INPUT_INTERPRETER,runId:process.env.GITHUB_RUN_ID,runAttempt:process.env.GITHUB_RUN_ATTEMPT},null,2)+'\n')"
       - uses: actions/upload-artifact@v4
         with:
           name: gcp-staging-deployment-${{ inputs.expected_sha }}

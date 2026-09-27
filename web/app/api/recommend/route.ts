@@ -53,6 +53,9 @@ export async function POST(request: Request) {
   }
   try {
     const config = jevConfigFrom(runtime());
+    const inputInterpreter = runtime().INPUT_INTERPRETER || 'rules';
+    if (inputInterpreter !== 'rules' && inputInterpreter !== 'jev-v1')
+      throw new Error('Invalid input interpreter configuration.');
     const embeddingConfig = voyageConfigFrom(runtime());
     const paid = Boolean(config || embeddingConfig);
     const requestLimit = await requestRateLimit(request, paid);
@@ -86,6 +89,7 @@ export async function POST(request: Request) {
         config,
         embeddingConfig,
         vectors: voyageVectorsFor,
+        inputInterpreter,
       }),
       { headers: { 'Cache-Control': 'no-store' } },
     );

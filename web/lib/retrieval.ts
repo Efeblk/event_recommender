@@ -13,6 +13,7 @@ import {
 import type { Category } from './types.ts';
 import { hybridRank, type SemanticRanking } from './hybrid.ts';
 import { displayShowIdentity } from './event-merge.ts';
+import { intentQuery, type IntentState } from './input-state.ts';
 
 export interface SearchContext {
   query: string;
@@ -250,11 +251,27 @@ function calmMoodShortlistCoverage(
   message: string,
   history: Message[],
   limit: number,
+  intent?: IntentState,
 ) {
-  if (!requestsCalmOptionalMood(message, history) || limit < 2) return null;
-  const requestedChildEvent = /\bcocuk(?:lar|lara|larin)?\b/.test(
-    normalize(message),
-  );
+  const calm = intent
+    ? intent.preferences.mood === 'calm'
+    : requestsCalmOptionalMood(message, history);
+  if (!calm || limit < 2) return null;
+  const requestedChildEvent = intent
+    ? intent.requirements.some(
+        (requirement) =>
+          requirement.kind === 'audience' &&
+          requirement.policy === 'require_support' &&
+          requirement.value
+            .split('|')
+            .some(
+              (value) =>
+                value === 'children' ||
+                value === 'family_friendly' ||
+                value.startsWith('age:'),
+            ),
+      )
+    : /\bcocuk(?:lar|lara|larin)?\b/.test(normalize(message));
   const seenTags = new Set<string>();
   const supplements: EventRecord[] = [];
   for (const event of ranked) {
@@ -307,13 +324,16 @@ function eligibleForContext(event: EventRecord, context: SearchContext) {
 }
 
 function hasChildAudienceEvidence(event: EventRecord) {
-  const description = normalize(event.description);
-  const withoutNegatedChildClaims = description.replace(
-    /\bcocuk(?:lar|lara|larin)?\b[^.!?\n]{0,36}\b(?:degil(?:dir)?|degildir|icermez|yok)\b/g,
-    ' ',
-  );
+  const withoutNegatedChildClaims = [event.title, event.description]
+    .map((value) =>
+      normalize(value).replace(
+        /\b(?:cocuk(?:lar|lara|larin)?|children|kids?)\b[^.!?\n]{0,36}\b(?:degil(?:dir)?|degildir|icermez|yok|not|isn't|is not)\b/g,
+        ' ',
+      ),
+    )
+    .join(' ');
   return (
-    /\b(?:cocuk(?:lar|lara|larin)?\s+(?:icin|oyunu|tiyatrosu)|cocuklara\s+yonelik)\b/.test(
+    /\b(?:cocuk(?:lar|lara|larin)?\s+(?:icin|oyunu|tiyatrosu|muzikali|sirki|stand[ -]?up)|cocuklara\s+yonelik|(?:children|kids?)['’s]*\s+(?:show|theatre|theater|musical|circus|comedy)|(?:show|theatre|theater|musical|circus|comedy)\s+for\s+(?:children|kids?))\b/.test(
       withoutNegatedChildClaims,
     ) ||
     /\b\d{1,2}\s*[–-]\s*\d{1,2}\s*yas\b[^.!?\n]{0,40}\bcocuk(?:lar|lara|larin)?\b/.test(
@@ -321,8 +341,50 @@ function hasChildAudienceEvidence(event: EventRecord) {
     ) ||
     /\bcocuk(?:lar|lara|larin)?\b[^.!?\n]{0,32}\b(?:aileleri|aileler)\b[^.!?\n]{0,16}\bicin\b/.test(
       withoutNegatedChildClaims,
+    ) ||
+    /\b(?:merhaba\s+cocuklar|(?:cocuklar|minik\s+(?:seyirciler|izleyiciler))[^.!?\n]{0,64}(?:davet|bekliyor|bulusuyor|katil))\b/.test(
+      withoutNegatedChildClaims,
     )
   );
+}
+
+function requestsChildAudience(intent: IntentState) {
+  return intent.requirements.some(
+    (requirement) =>
+      requirement.kind === 'audience' &&
+      requirement.policy === 'require_support' &&
+      requirement.value
+        .split('|')
+        .some(
+          (value) =>
+            value === 'children' ||
+            value === 'family_friendly' ||
+            value.startsWith('age:'),
+        ),
+  );
+}
+
+/**
+ * A partner outing is a soft relevance signal. Keep every eligible event, but
+ * place programs whose source description explicitly targets children after
+ * the other ranked options unless the request itself asks for children.
+ */
+function demoteChildDirectedPartnerResults(
+  ranked: EventRecord[],
+  intent?: IntentState,
+) {
+  if (
+    intent?.preferences.companion !== 'partner' ||
+    requestsChildAudience(intent)
+  )
+    return ranked;
+  const adultOrUnspecified: EventRecord[] = [];
+  const childDirected: EventRecord[] = [];
+  for (const event of ranked)
+    (hasChildAudienceEvidence(event) ? childDirected : adultOrUnspecified).push(
+      event,
+    );
+  return [...adultOrUnspecified, ...childDirected];
 }
 
 function rankedCandidates(
@@ -330,16 +392,32 @@ function rankedCandidates(
   message: string,
   history: Message[],
   semantic?: SemanticRanking,
+  intent?: IntentState,
 ) {
-  const context = searchContext(message, history);
+  const context: SearchContext = intent
+    ? {
+        query: intentQuery(intent),
+        history: [],
+        rejectedTerms: [],
+        reset: false,
+        category: null,
+      }
+    : searchContext(message, history);
   // Rank sessions before selecting a representative for each production.
-  const allowed = events.filter((event) => eligibleForContext(event, context));
+  // The structured path has already applied validated filters and source
+  // requirements. Do not infer constraints again from its query or old turns.
+  const allowed = intent
+    ? events
+    : events.filter((event) => eligibleForContext(event, context));
   return {
     context,
     ranked: uniqueEvents(
-      semantic
+      demoteChildDirectedPartnerResults(
+        semantic
         ? hybridRank(allowed, context.query, semantic)
         : rankEvents(allowed, context.query),
+        intent,
+      ),
       allowed.length,
     ),
   };
@@ -351,6 +429,7 @@ export function shortlistEvents(
   history: Message[],
   limit = 16,
   semantic?: SemanticRanking,
+  intent?: IntentState,
 ): EventRecord[] {
   if (limit <= 0) return [];
   const { context, ranked } = rankedCandidates(
@@ -358,6 +437,7 @@ export function shortlistEvents(
     message,
     history,
     semantic,
+    intent,
   );
   const diverseRanked = diverseEvents(ranked, ranked.length);
   if (semantic)
@@ -367,6 +447,7 @@ export function shortlistEvents(
         message,
         context.history,
         limit,
+        intent,
       ) ?? diverseRanked.slice(0, limit)
     );
   const selected: EventRecord[] = [];
@@ -395,10 +476,11 @@ export function fallbackEvents(
   history: Message[],
   limit = 5,
   semantic?: SemanticRanking,
+  intent?: IntentState,
 ): EventRecord[] {
   if (limit <= 0) return [];
   return diverseEvents(
-    rankedCandidates(events, message, history, semantic).ranked,
+    rankedCandidates(events, message, history, semantic, intent).ranked,
     limit,
   );
 }

@@ -37,6 +37,7 @@ export interface RuntimeEnv extends ProviderEnv {
   DEPLOYMENT_SHA?: string;
   TYPESAFE_API_KEY?: string;
   TYPESAFE_MODEL?: string;
+  INPUT_INTERPRETER?: string;
   VOYAGE_API_KEY?: string;
   VOYAGE_MODEL?: string;
   VOYAGE_DIMENSIONS?: string;

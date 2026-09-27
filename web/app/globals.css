@@ -529,9 +529,13 @@ button:focus-visible {
 }
 .result-tools {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   margin-top: 28px;
+}
+.clarification-actions {
+  margin: 20px 0;
 }
 .empty-state {
   border: 1px dashed #bdc7ba;

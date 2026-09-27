@@ -753,7 +753,9 @@ export function checkRequirements(
     if (
       requirement.value === 'romantic' ||
       requirement.value === 'uncrowded' ||
-      requirement.value === 'alcohol_free'
+      requirement.value === 'alcohol_free' ||
+      requirement.value === 'quiet' ||
+      requirement.value === 'seated'
     ) {
       return {
         requirement,

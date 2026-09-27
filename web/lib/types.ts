@@ -1,3 +1,5 @@
+import type { IntentState } from './input-state.ts';
+
 export type Category = 'Konser' | 'Tiyatro' | 'Stand-up';
 export interface EventOffer {
   id: string;
@@ -64,6 +66,17 @@ export interface Message {
 export interface Recommendation {
   event: EventRecord;
 }
+/** Unresolved user text is separate from the atomically committed intent. */
+export interface PendingInput {
+  message: string;
+  reason:
+    | 'budget_ambiguous'
+    | 'date_ambiguous'
+    | 'constraint_ambiguous'
+    | 'unsupported_location'
+    | 'unsupported_constraint'
+    | 'interpreter_unavailable';
+}
 export interface SearchResult {
   recommendations: Recommendation[];
   filters: Filters;
@@ -71,6 +84,11 @@ export interface SearchResult {
   status: 'results' | 'empty' | 'needs_input' | 'unsupported_location';
   notice: string | null;
   totalCandidates: number;
+  intentState?: IntentState;
+  pendingInput?: PendingInput;
+  excludedIds?: string[];
+  clarification?: { label: string; message: string }[];
+  resetRequired?: boolean;
 }
 export const emptyFilters: Filters = {
   dateFrom: null,
