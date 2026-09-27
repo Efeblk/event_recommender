@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "kind": "free-demo-capacity-evidence",
+  "recordedDate": "2026-09-27",
+  "profile": "free",
+  "capacityProbe": {
+    "worker": "biplan-staging-capacity-probe",
+    "testedVersionId": "d265f89d-9083-4c91-8678-4a841de2c947",
+    "configuredCpuLimit": null,
+    "bindings": [],
+    "aiProviderCalls": 0,
+    "cleanup": {
+      "testedVersionVerifiedBeforeDelete": true,
+      "deleteStatus": 200,
+      "verificationStatus": 404,
+      "temporaryWorkerRemoved": true,
+      "evidence": "web/work/free-capacity-probe/cleanup-evidence.json"
+    },
+    "requests": [
+      {
+        "case": "cold-max-history",
+        "httpStatus": 200,
+        "candidateCount": 16,
+        "historyTurns": 6,
+        "historyCharactersPerTurn": 2000,
+        "payloadByteSize": 86228,
+        "cpuTimeMs": 51,
+        "wallTimeMs": 55,
+        "outcome": "ok",
+        "exceptions": []
+      },
+      {
+        "case": "minimal-history",
+        "httpStatus": 200,
+        "candidateCount": 16,
+        "historyTurns": 0,
+        "payloadByteSize": 78855,
+        "cpuTimeMs": 9,
+        "wallTimeMs": 10,
+        "outcome": "ok",
+        "exceptions": []
+      }
+    ],
+    "interpretation": "The cold 51 ms invocation was elastically accepted on the Free profile. Two successful requests do not establish a guaranteed allowance or production capacity."
+  },
+  "mainStaging": {
+    "revision": "4de58c1d9a0dd499efa373a6092d0ec06e2bd6fd",
+    "eventsRead": {
+      "path": "/api/events",
+      "httpStatus": 503,
+      "cpuTimeMs": 10,
+      "wallTimeMs": 366,
+      "outcome": "exceededCpu",
+      "exception": "Worker exceeded CPU time limit."
+    },
+    "healthRead": {
+      "path": "/api/health",
+      "httpStatus": 200,
+      "cpuTimeMs": 3,
+      "wallTimeMs": 63,
+      "outcome": "ok"
+    },
+    "laterRateChangesLive": false
+  },
+  "d1VectorProbe": {
+    "readOnly": true,
+    "httpStatus": 200,
+    "success": true,
+    "resultCount": 1718,
+    "elapsedMs": 1981.445,
+    "databaseDurationMs": 1330.4451,
+    "rowsRead": 5282487,
+    "rowsWritten": 0,
+    "quotaInterpretation": "The read volume likely consumed the configured Free daily read allowance. No quota-exceeded response was captured, so exhaustion is not proven and further D1 probes stopped."
+  },
+  "collection": {
+    "runId": 36271239817,
+    "conclusion": "success",
+    "checkpointed": true,
+    "canonicalReadback": true,
+    "savedAt": "2026-09-26T21:30:14.188Z",
+    "canonicalRecords": 4595,
+    "collectedEvents": 4370,
+    "carriedRecords": 308,
+    "incompleteListings": 1,
+    "legacyUndefinedSourceRecords": 1,
+    "legacyExpiredUndefinedSourceRecords": 1,
+    "allRecordsFresh": false,
+    "soakRequirementMet": false
+  },
+  "release": {
+    "pr": 5,
+    "sourceRevision": "7c9d22755d563bf38b3544a227ad6b581f8a9f4f",
+    "coreChecks": {
+      "total": 5,
+      "green": 5
+    },
+    "mergeCommitPrefix": "010a",
+    "preparedArtifact": {
+      "runId": 36274065783,
+      "artifactId": 10917195288,
+      "compiledFiles": 95,
+      "manifestSha256": "bf7f897f27de55cba15994c95daa03dd25795d664a16480049461adc06192243",
+      "secretScanPassed": true,
+      "published": false,
+      "state": "pending_protected_deployment_approval"
+    }
+  },
+  "monitoring": {
+    "service": "UptimeRobot",
+    "activationRequested": true,
+    "activationConfirmed": false,
+    "monitorActive": null
+  },
+  "decisionState": {
+    "demoPreference": "free",
+    "awsGcpComparisonRequested": true,
+    "hostingDecisionMade": false,
+    "newAlternativeHostingDeployment": false,
+    "paidPlanSelected": false,
+    "billingChanged": false
+  },
+  "experiments": {
+    "fullProjectionOrVectorSqlDeployed": false,
+    "unfinishedPreparedWorkArchived": true,
+    "localReferencePaths": [
+      "web/work/free-demo-prepared-retrieval.patch",
+      "web/work/sql-retrieval-paused-draft.ts.txt",
+      "web/work/sql-vector-reference"
+    ]
+  },
+  "sources": [
+    "web/work/free-capacity-probe/live-evidence.json",
+    "web/work/staging-public-read-evidence.json",
+    "web/work/free-vector-spike-output/cloudflare-d1-probe.json",
+    "web/work/collector-run-36271239817/output/publication.json",
+    "web/work/collector-run-36271239817/output/soak-evidence.json",
+    "web/work/staging-candidate-7c9d227/independent-verification.json",
+    "web/work/uptimerobot-activation-request.json"
+  ],
+  "privacy": "No secrets, authorization headers, IP addresses, email addresses, or raw request headers are included."
+}

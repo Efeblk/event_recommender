@@ -1,4 +1,4 @@
-import { database, digest, runtime } from '@/lib/store';
+import { digest, runtime, acquireLease, releaseLease } from '@/lib/store';
 import {
   indexVoyageBatch,
   voyageDocumentCoverage,
@@ -63,21 +63,17 @@ export async function POST(request: Request) {
       { status: 503 },
     );
 
-  const db = await database();
-  const now = Date.now();
-  const lease = `${now + 300000}:${crypto.randomUUID()}`;
-  const lock = await db
-    .prepare(
-      "INSERT INTO metadata(key,value) VALUES('voyage_index_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE CAST(value AS INTEGER)<? RETURNING value",
-    )
-    .bind(lease, now)
-    .first();
-  if (!lock)
-    return Response.json({ error: 'Embedding index already running' }, { status: 409 });
+  let lease;
   try {
+    lease = await acquireLease('voyage_index_lock');
+    if (!lease)
+      return Response.json(
+        { error: 'Embedding index already running' },
+        { status: 409 },
+      );
     return Response.json({
       configured: true,
-      ...(await indexVoyageBatch(voyage, 32)),
+      ...(await indexVoyageBatch(voyage, lease, 32)),
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
@@ -90,12 +86,7 @@ export async function POST(request: Request) {
     );
   } finally {
     try {
-      await db
-        .prepare(
-          "DELETE FROM metadata WHERE key='voyage_index_lock' AND value=?",
-        )
-        .bind(lease)
-        .run();
+      if (lease) await releaseLease(lease);
     } catch {
       // The bounded lease releases itself if cleanup is unavailable.
     }

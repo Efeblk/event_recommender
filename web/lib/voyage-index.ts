@@ -1,16 +1,19 @@
 import { emptyFilters, type EventRecord } from './types.ts';
-import { candidates, database, digest } from './store.ts';
+import {
+  candidates,
+  digest,
+  voyageVectorsByHash,
+  saveVoyageVectors,
+} from './store.ts';
 import {
   embedWithVoyage,
   voyageCacheKey,
   voyageDocumentText,
   type VoyageConfig,
 } from './voyage.ts';
-import { validVector } from './providers.ts';
+import type { Lease } from './storage-contract.ts';
 
 export { voyageDocumentText } from './voyage.ts';
-
-const LOOKUP_PAGE = 200;
 
 async function hashesFor(events: EventRecord[]) {
   return Promise.all(
@@ -22,28 +25,7 @@ async function hashesFor(events: EventRecord[]) {
 }
 
 async function vectorsByHash(hashes: string[], config: VoyageConfig) {
-  const vectors = new Map<string, number[]>();
-  if (!hashes.length) return vectors;
-  const db = await database();
-  const profile = voyageCacheKey(config);
-  for (let offset = 0; offset < hashes.length; offset += LOOKUP_PAGE) {
-    const page = hashes.slice(offset, offset + LOOKUP_PAGE);
-    const rows = await db
-      .prepare(
-        'SELECT hash,vector FROM voyage_embeddings WHERE profile=? AND hash IN (SELECT value FROM json_each(?))',
-      )
-      .bind(profile, JSON.stringify(page))
-      .all<{ hash: string; vector: string }>();
-    for (const row of rows.results) {
-      try {
-        const vector: unknown = JSON.parse(row.vector);
-        if (validVector(vector, config.dimensions)) vectors.set(row.hash, vector);
-      } catch {
-        // Corrupt cache rows are ordinary misses and can be replaced by indexing.
-      }
-    }
-  }
-  return vectors;
+  return voyageVectorsByHash(voyageCacheKey(config), hashes, config.dimensions);
 }
 
 export async function voyageVectorsFor(
@@ -104,6 +86,7 @@ export async function voyageIndexStatus(
 
 export async function indexVoyageBatch(
   config: VoyageConfig,
+  lease: Lease,
   limit = 32,
   now = new Date(),
 ) {
@@ -123,16 +106,13 @@ export async function indexVoyageBatch(
       batch.map((document) => document.text),
       'document',
     );
-    const db = await database();
-    const profile = voyageCacheKey(config);
-    await db.batch(
-      batch.map((document, index) =>
-        db
-          .prepare(
-            'INSERT INTO voyage_embeddings(profile,hash,vector) VALUES(?,?,?) ON CONFLICT(profile,hash) DO UPDATE SET vector=excluded.vector',
-          )
-          .bind(profile, document.hash, JSON.stringify(vectors[index])),
-      ),
+    await saveVoyageVectors(
+      voyageCacheKey(config),
+      batch.map((document, index) => ({
+        hash: document.hash,
+        vector: vectors[index],
+      })),
+      lease,
     );
   }
   return {

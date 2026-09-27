@@ -30,9 +30,12 @@ export async function readJson(response, limit = 20_000_000) {
   return text ? JSON.parse(text) : null;
 }
 
-export async function requestJson(endpoint, { token, method = "GET", body, timeout = 60_000 } = {}) {
+export async function requestJson(endpoint, { token, serverlessToken = process.env.SERVERLESS_ID_TOKEN, method = "GET", body, timeout = 60_000 } = {}) {
   const headers = { Accept: "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
+  // Cloud Run consumes this header for IAM while leaving Authorization for
+  // the application's independent sync-token check.
+  if (serverlessToken) headers["X-Serverless-Authorization"] = `Bearer ${serverlessToken}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (process.env.SITES_ACCESS_TOKEN) headers["OAI-Sites-Authorization"] = `Bearer ${process.env.SITES_ACCESS_TOKEN}`;
   const response = await fetch(endpoint, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), redirect: "error", signal: AbortSignal.timeout(timeout) });

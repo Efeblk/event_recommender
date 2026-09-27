@@ -1,4 +1,10 @@
-# Cloudflare deployment
+# Deployment
+
+GCP is the selected target. Start with [GCP deployment](gcp-deployment.md).
+The Cloudflare instructions below are retained for the existing staging fallback;
+they do not deploy the chosen GCP architecture.
+
+## Cloudflare fallback deployment
 
 The web application deploys as a Cloudflare Worker with D1 (`DB`) and R2
 (`COLLECTION_STATE`) bindings. Staging and production use separate Cloudflare
