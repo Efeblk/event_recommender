@@ -40,6 +40,8 @@ GitHub permits manual dispatch only when the workflow file exists on the default
 
 Requires Terraform 1.7 or newer, below 2.0. The Google provider is pinned to `8.4.0`, and its dependency lock file is committed. Initialization downloads the signed provider; mocked tests make no GCP calls.
 
+The provider explicitly uses the selected staging project for API quota attribution. This is required for account-level Budget API calls with a local Google user token; the credentials' default quota project must not select an unrelated project. The provisioning identity needs `serviceusage.services.use` on the staging project. Keep any `GOOGLE_CLOUD_QUOTA_PROJECT` environment override unset or set to that same project.
+
 ```powershell
 terraform -chdir=infra/gcp init -backend=false
 terraform -chdir=infra/gcp fmt -check -recursive
