@@ -55,6 +55,40 @@ await test('reviewed Kütüphanedeki Ceset titles combine offers only for the sa
     assert.equal(mergeEventSessions([base, different]).length, 2);
 });
 
+await test('reviewed Çiftler Çiftler alias preserves offers without merging different sessions or adaptations', () => {
+  const first = event({
+    title: 'Çiftler Çiftler',
+    description: 'Çiftler Çiftler Tiyatro Oyunu, Altı Üstü Kabare.',
+    category: 'Tiyatro',
+    venue: 'Altı Üstü Kabare',
+    startsAt: '2026-10-02T17:30:00.000Z',
+    price: 850,
+  });
+  const second = event({
+    ...first,
+    id: 'bubilet:ciftler',
+    source: 'bubilet',
+    title: 'Çiftler Çiftler Oyunu',
+    url: 'https://bubilet.example/ciftler',
+    price: 900,
+  });
+  const merged = mergeEventSessions([first, second]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].price, 850);
+  assert.deepEqual(
+    new Set(merged[0].offers?.map(({ url }) => url)),
+    new Set([first.url, second.url]),
+  );
+  assert.ok(merged[0].mergedIds?.includes(first.id));
+  assert.ok(merged[0].mergedIds?.includes(second.id));
+  for (const other of [
+    { ...second, startsAt: '2026-10-03T17:30:00.000Z' },
+    { ...second, venue: 'Başka Sahne' },
+    { ...second, title: 'Çiftler Çiftler - Başka Uyarlama' },
+  ])
+    assert.equal(mergeEventSessions([first, other]).length, 2);
+});
+
 await test('merges the screenshot category and curated venue conflict', () => {
   const result = mergeEventSessions([
     event({ category: 'Tiyatro', description: 'Metin Zakoğlu gösterisi' }),

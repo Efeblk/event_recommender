@@ -58,6 +58,9 @@ const TITLE_ALIASES = [
   // explicitly name the longer Bubilet title (September 2026 snapshot).
   ['Kütüphanedeki Ceset', 'Kütüphanedeki Ceset Tiyatro Oyunu'],
   ['Suç ve Ceza', 'Suç ve Ceza Oyunu'],
+  // Biletinial/Bubilet list the same Altı Üstü Kabare show and matching
+  // October 2–3, 2026 sessions; preserve both offers on each matched session.
+  ['Çiftler Çiftler', 'Çiftler Çiftler Oyunu'],
   [
     'Kadıköy Stand-up Gecesi',
     'Kadıköy Stand Up Gecesi Cuma 20:00',
