@@ -13,6 +13,7 @@ import { maskLiteralTitles, maskPriorInterests } from './input-literals.ts';
 import { buildInputPlanAuditRequest, parseInputPlanAuditResponse, type InputPlanProposal } from './input-plan-audit.ts';
 import { EXPERIENCES, EXPERIENCE_VALUES, type Experience } from './input-experiences.ts';
 import { isStandaloneInputReset } from './input-reset.ts';
+import { interpretConstraints } from './search.ts';
 
 export type InputIssue =
   | null
@@ -735,6 +736,23 @@ function fastPath(input: InterpreterInput): InterpretedInput | null {
     const state = emptyIntentState(); return { state, action: 'reset', issue: null, query: intentQuery(state), origin: 'fast-path' };
   }
   if (!input.unresolvedRequest && /^(?:alternatif(?:ler)?|baska(?:larini)? goster|baska secenekler(?: goster)?|ayni kosullarda baska etkinlikler bul|show (?:me )?alternatives?|something else)[.!]?$/u.test(q)) return { state: previous, action: 'alternatives', issue: null, query: intentQuery(previous), origin: 'fast-path' };
+  const effectiveRequest = input.unresolvedRequest
+    ? `${input.unresolvedRequest}\n${input.message}`
+    : input.message;
+  // A bare ceiling for multiple attendees has exactly two supported meanings.
+  // Stop before paid interpretation so neither basis nor partial preferences
+  // are committed; the unresolved request carries them into the clarification.
+  if (
+    interpretConstraints(effectiveRequest, previous.filters, input.now).issue ===
+    'budget_ambiguous'
+  )
+    return {
+      state: previous,
+      action: 'search',
+      issue: 'budget_ambiguous',
+      query: intentQuery(previous),
+      origin: 'fast-path',
+    };
   return null;
 }
 

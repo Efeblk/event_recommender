@@ -100,6 +100,46 @@ void test('budget correction resolves ambiguous original message without mutatin
   }, previous), { message: correction, previous, now });
   assert.equal(resolved.state.filters.maxPrice, 1000);
   assert.equal(resolved.state.preferences.companion, 'partner');
+
+  const totalCorrection = `${ambiguous}\nBütçe toplam.`;
+  const total = parseInputInterpreterResponse(responseFor(totalCorrection, {
+    budget: 'a0', budget_basis: 'group_total', companion: 'set:partner',
+  }, previous), { message: totalCorrection, previous, now });
+  assert.equal(total.state.filters.maxPrice, 500);
+  assert.equal(total.state.filters.totalBudget, 1000);
+  assert.equal(total.state.filters.partySize, 2);
+  assert.equal(total.state.preferences.companion, 'partner');
+});
+
+void test('exact romantic companion bare budget takes the typed clarification fast path', async () => {
+  const previous = emptyIntentState();
+  let providerCalls = 0;
+  const result = await interpretInput({
+    message: 'Kız arkadaşımla gideceğim bir etkinlik arıyorum, bütçem en fazla 1000 TL.',
+    previous,
+    now,
+  }, {
+    config: { apiKey: 'unused-fast-path-key', model: 'jev-test' },
+    fetcher: async () => { providerCalls++; throw new Error('must not call provider'); },
+  });
+  assert.equal(providerCalls, 0);
+  assert.equal(result.issue, 'budget_ambiguous');
+  assert.equal(result.origin, 'fast-path');
+  assert.deepEqual(result.state, previous);
+
+  const explicitBasis = await interpretInput({
+    message: 'kişi başı maks 2000tl olan kız arkadaşımla gideceğim etkinlik',
+    previous,
+    now,
+  }, {
+    config: { apiKey: 'unused-fast-path-key', model: 'jev-test' },
+    fetcher: async () => {
+      providerCalls++;
+      return new Response('', { status: 500 });
+    },
+  });
+  assert.equal(providerCalls, 1);
+  assert.equal(explicitBasis.issue, 'interpreter_unavailable');
 });
 
 void test('malformed distributions reject the entire patch', () => {
