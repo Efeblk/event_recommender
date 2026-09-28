@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { mergeEventSessions } from '../lib/event-merge.ts';
+import { displayShowIdentity, mergeEventSessions } from '../lib/event-merge.ts';
 import { diverseEvents } from '../lib/retrieval.ts';
 import { uniqueEvents } from '../lib/search.ts';
 import type { EventRecord } from '../lib/types.ts';
@@ -1061,4 +1061,85 @@ await test('Fabrikafa aliases reject mismatched programmes, sessions, locations,
   const child = event({ ...specific, id: 'child', description: 'Yalnızca 6 ile 9 yaş çocuklar için uygulamalı atölye çalışması.' });
   const adult = event({ ...bare, id: 'adult', description: 'Yalnızca yetişkinler için, 18+ uygulamalı atölye çalışması.' });
   assert.equal(mergeEventSessions([child, adult]).length, 2);
+});
+
+await test('reviewed İstanbul Workshops venue programmes retain all three provider offers', () => {
+  const families = [
+    {
+      name: 'mosaic',
+      startsAt: '2026-09-29T06:00:00.000Z',
+      venue: 'Bağımsız Sanat Vakfı',
+      address: 'Hobyar, Ankara Cd. No;3, 34110 Fatih/İstanbul',
+      districts: ['', 'FATİH', 'İstanbul Avrupa'],
+      titles: ['İstanbul Workshops Mozaik Lamba Atölyesi', 'Mozaik Lamba Atölyesi', 'Mozaik Lamba Atölyesi'],
+      ids: ['f4e3903c7c12c69187b6783d', '9a9f7fe9a29d65da02e39563', 'b09c3f5ea664184af8be6211'],
+      urls: ['https://www.bubilet.com.tr/istanbul/etkinlik/istanbul-workshops-mozaik-lamba-atolyesi', 'https://www.biletix.com/etkinlik/5IW59/ISTANBUL/tr', 'https://biletinial.com/tr-tr/egitim/mozaik-lamba-atolyesi-'],
+      price: 1400,
+    },
+    {
+      name: 'ceramic',
+      startsAt: '2026-09-30T14:00:00.000Z',
+      venue: 'Atölye Sahi',
+      address: 'Aziz Mahmut Hüdayi Caddesi, Gülfem Sk. No:17A, 34762 Üsküdar/İstanbul',
+      districts: ['', 'ÜSKÜDAR', 'İstanbul Anadolu'],
+      titles: ['İstanbul Workshops Seramik Atölyesi (Tek Seans Workshop)', 'Seramik Atölyesi', 'Seramik Atölyesi ( Tek Seans Workshop )'],
+      ids: ['629211d2f0b6a8da6fcb60a6', '8d7e596b4bc2d1cd954fe87a', '02b79c21660eb8964fc6c42c'],
+      urls: ['https://www.bubilet.com.tr/istanbul/etkinlik/istanbul-workshops-seramik-atolyesi-tek-seans-workshop-', 'https://www.biletix.com/etkinlik/5IW66/ISTANBUL/tr', 'https://biletinial.com/tr-tr/egitim/seramik-atolyesi-tek-seans-workshop-'],
+      price: 1500,
+    },
+  ] as const;
+  const sources = ['bubilet', 'biletix', 'biletinial'] as const;
+  for (const family of families) {
+    const records = sources.map((source, index) => event({
+      id: family.ids[index], source, title: family.titles[index],
+      category: 'Workshop', description: family.name === 'ceramic' && index === 1
+        ? 'Seramik Workshop (Tek Oturumluk Deneyim). Etkinlik 2 saat sürmektedir.'
+        : 'Uygulamalı tek seans atölye çalışması.',
+      venue: family.venue, city: 'İstanbul', district: family.districts[index],
+      address: index === 0 ? family.address : '', startsAt: family.startsAt,
+      price: family.price, url: family.urls[index], sourceSessionIds: [`${family.name}-${index}`],
+    }));
+    const merged = mergeEventSessions(records);
+    assert.equal(merged.length, 1, family.name);
+    assert.equal(merged[0].offers?.length, 3, family.name);
+    assert.deepEqual(new Set(merged[0].offers?.map(({ id, url, price, sourceSessionIds }) =>
+      `${id}|${url}|${price}|${sourceSessionIds?.[0]}`)), new Set(records.map((record, index) =>
+      `${record.id}|${record.url}|${family.price}|${family.name}-${index}`)));
+    assert.deepEqual(mergeEventSessions(merged), merged);
+    assert.deepEqual(mergeEventSessions([...records].reverse()), merged);
+  }
+});
+
+await test('reviewed İstanbul Workshops venue aliases reject weak or contradictory evidence', () => {
+  const sahiAddress = 'Aziz Mahmut Hüdayi Caddesi, Gülfem Sk. No:17A, 34762 Üsküdar/İstanbul';
+  const single = event({ id: 'single', title: 'Seramik Atölyesi', category: 'Workshop', description: 'Seramik Workshop (Tek Oturumluk Deneyim). Etkinlik 2 saat sürmektedir.', venue: 'Atölye Sahi', district: 'ÜSKÜDAR', address: '', startsAt: '2026-09-30T14:00:00.000Z', price: 1500 });
+  const prefixed = event({ ...single, id: 'prefixed', source: 'bubilet', title: 'İstanbul Workshops Seramik Atölyesi (Tek Seans Workshop)', district: '', address: sahiAddress });
+  assert.equal(mergeEventSessions([single, prefixed]).length, 1);
+  for (const other of [
+    { ...prefixed, title: 'Seramik Atölyesi (Aylık Kurs)', price: 6000 },
+    { ...prefixed, startsAt: '2026-09-30T15:00:00.000Z' },
+    { ...prefixed, venue: 'Başka Atölye' },
+    { ...prefixed, address: '' },
+    { ...prefixed, address: 'Başka Sokak No:17A, Üsküdar/İstanbul' },
+    { ...prefixed, district: 'Kadıköy' },
+    { ...prefixed, city: 'Ankara' },
+    { ...prefixed, category: 'Eğitim' },
+  ]) assert.equal(mergeEventSessions([single, other]).length, 2);
+
+  const genericUnknown = { ...single, id: 'generic-unknown', description: '' };
+  const genericMonthly = { ...single, id: 'generic-monthly', description: 'Seramik atölyesi aylık kurs programıdır.', price: 6000 };
+  const genericNegated = { ...single, id: 'generic-negated', description: 'Bu etkinlik tek seans değildir; dört haftalık eğitimdir.' };
+  assert.equal(mergeEventSessions([prefixed, genericUnknown]).length, 2);
+  assert.equal(mergeEventSessions([prefixed, genericMonthly]).length, 2);
+  assert.equal(mergeEventSessions([prefixed, genericNegated]).length, 2);
+
+  const child = { ...single, id: 'child', description: 'Seramik Workshop (Tek Oturumluk Deneyim). Yalnızca 6 ile 9 yaş çocuklar için uygulamalı atölye çalışması.' };
+  const adult = { ...prefixed, id: 'adult', description: 'Yalnızca yetişkinler için, 18+ uygulamalı atölye çalışması.' };
+  assert.equal(mergeEventSessions([child, adult]).length, 2);
+
+  const elsewhere = { ...single, id: 'elsewhere', venue: 'Kadıköy Sanat Atölyesi', district: 'Kadıköy' };
+  assert.notEqual(displayShowIdentity(single), displayShowIdentity(elsewhere));
+  const mosaicPrefixWithoutAddress = event({ title: 'İstanbul Workshops Mozaik Lamba Atölyesi', category: 'Workshop', venue: 'Bağımsız Sanat Vakfı', district: 'FATİH', address: '' });
+  const mosaicBare = event({ id: 'mosaic-bare', title: 'Mozaik Lamba Atölyesi', category: 'Workshop', venue: 'Bağımsız Sanat Vakfı', district: 'FATİH', address: '' });
+  assert.equal(mergeEventSessions([mosaicPrefixWithoutAddress, mosaicBare]).length, 2);
 });
