@@ -11,6 +11,9 @@ export const MAX_IMPORT_EVENTS = 2000;
 export const MAX_IMPORT_BYTES = 3_500_000;
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_D1_QUERY_BUDGET = 50;
+// Full-catalog checkpoint assembly measured over 60 seconds; keep its budget
+// below the 300-second server timeout and sync lease without changing other requests.
+export const CHECKPOINT_SAVE_TIMEOUT_MS = 240_000;
 
 function estimatedUpsertStatements(events, bytes) {
   // Cloudflare starts a new statement at either 100 rows or 500 kB. Adding
@@ -109,7 +112,7 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   const refreshedBySource = Object.fromEntries(expectedSources.map((source) => [source, report.pages.filter((page) => page.source === source).length]));
   const missingSources = expectedSources.filter((source) => refreshedBySource[source] === 0);
   const summary = { ...report.summary, missingSources, sourceHealth: { refreshedPages: refreshedBySource } };
-  const saved = await requestJson(collectionEndpoint, { token, method: "POST", body: { schemaVersion: 1, report: { finishedAt: report.finishedAt, summary } } });
+  const saved = await requestJson(collectionEndpoint, { token, method: "POST", body: { schemaVersion: 1, report: { finishedAt: report.finishedAt, summary } }, timeout: CHECKPOINT_SAVE_TIMEOUT_MS });
   if (!saved.response.ok) throw new Error(`Checkpoint save returned HTTP ${saved.response.status}.`);
   if (saved.result?.schemaVersion !== 1 || typeof saved.result.savedAt !== "string" || !Number.isFinite(Date.parse(saved.result.savedAt)) || !Number.isInteger(saved.result.events) || saved.result.events < 0 || saved.result.events > 20_000)
     throw new Error("Checkpoint save returned an invalid receipt.");

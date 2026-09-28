@@ -6,7 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { MAX_CHECKPOINT_BYTES, restoreCheckpoint } from "../checkpoint.mjs";
 import { checkReady } from "../monitor.mjs";
-import { MAX_IMPORT_EVENTS, MAX_IMPORT_PAGES, MAX_SOURCE_PAGE_EVENTS, prepareImportPages, publish } from "../publish.mjs";
+import { CHECKPOINT_SAVE_TIMEOUT_MS, MAX_IMPORT_EVENTS, MAX_IMPORT_PAGES, MAX_SOURCE_PAGE_EVENTS, prepareImportPages, publish } from "../publish.mjs";
 import { buildSoakEvidence } from "../soak-report.mjs";
 import { verifySoakEvidence } from "../soak-verify.mjs";
 
@@ -57,6 +57,12 @@ test("malformed bootstrap and remote snapshots are rejected", async (t) => {
 });
 
 test("checkpoint publish reads canonical state back to disk", async (t) => {
+  const timeout = AbortSignal.timeout.bind(AbortSignal);
+  const deadlines = [];
+  t.mock.method(AbortSignal, "timeout", (milliseconds) => {
+    deadlines.push(milliseconds);
+    return timeout(milliseconds);
+  });
   const canonical = { schemaVersion: 1, savedAt: "2026-09-22T10:00:00.000Z", events: [{ id: "canonical" }], report: { finishedAt: "2026-09-22T09:59:00.000Z", summary: { events: 1 } } };
   const calls = [];
   let checkpointBody;
@@ -81,6 +87,49 @@ test("checkpoint publish reads canonical state back to disk", async (t) => {
   assert.deepEqual(calls, ["POST /api/admin/import", "POST /api/admin/collection", "GET /api/admin/collection", "GET /api/health"]);
   assert.deepEqual(checkpointBody.report.summary.missingSources, ["bubilet"]);
   assert.deepEqual(checkpointBody.report.summary.sourceHealth.refreshedPages, { biletix: 1, bubilet: 0 });
+  assert.deepEqual(deadlines, [60_000, CHECKPOINT_SAVE_TIMEOUT_MS, 30_000, 15_000]);
+});
+
+test("an ambiguous checkpoint timeout never reads back or overwrites the local snapshot", async (t) => {
+  const calls = [];
+  const timeout = AbortSignal.timeout.bind(AbortSignal);
+  const checkpointAbort = new AbortController();
+  t.mock.method(AbortSignal, "timeout", (milliseconds) =>
+    milliseconds === CHECKPOINT_SAVE_TIMEOUT_MS ? checkpointAbort.signal : timeout(milliseconds));
+  const remote = await fixture((request, response) => {
+    calls.push(`${request.method} ${request.url}`);
+    if (request.url === "/api/admin/import")
+      return json(response, 200, { imported: 1, skipped: 0 });
+    if (request.method === "POST" && request.url === "/api/admin/collection") {
+      request.resume();
+      request.on("aborted", () => response.destroy());
+      queueMicrotask(() => checkpointAbort.abort(new DOMException("Checkpoint timed out", "TimeoutError")));
+      return;
+    }
+    json(response, 500, { error: "unexpected_request" });
+  });
+  t.after(remote.close);
+  const dir = await mkdtemp(join(tmpdir(), "publish-timeout-"));
+  const snapshot = join(dir, "events.json");
+  const original = [{ id: "preserved-local-snapshot" }];
+  await writeFile(snapshot, JSON.stringify(original));
+  const report = {
+    schemaVersion: 1,
+    finishedAt: "2026-09-28T18:00:00.000Z",
+    summary: { events: 1, sources: { biletix: 1 } },
+    pages: [{
+      source: "biletix",
+      url: "https://source.test/a",
+      events: [{ id: "submitted", startsAt: "2026-09-29T18:00:00.000Z" }],
+    }],
+  };
+
+  await assert.rejects(
+    publish({ origin: remote.origin, token: "secret", report, checkpoint: true, snapshot, allowLoopbackHttp: true, now: () => new Date("2026-09-28T18:00:00.000Z") }),
+    /aborted|timeout/i,
+  );
+  assert.deepEqual(calls, ["POST /api/admin/import", "POST /api/admin/collection"]);
+  assert.deepEqual(JSON.parse(await readFile(snapshot, "utf8")), original);
 });
 
 test("checkpoint restore uses the shared 32 MiB boundary", () => {
