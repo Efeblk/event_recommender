@@ -247,11 +247,18 @@ function conflictingVisibleSessions($, nodes) {
  * into a false empty result. Every leaf Event must be structurally usable and
  * either past or explicitly located outside Istanbul.
  */
+function conclusivelyOccurredBiletinialDetail($) {
+  const title = clean($(".yds_cinema_details_info_title h1").first().text());
+  const status = $(".yds_cinema_details_buttons > button.goseances");
+  const hasSessionEvidence = $("[itemprop='startDate'], button.seanceSelect[data-title], .yn_cinema_salon_info button[data-title]").length > 0;
+  return Boolean(title) && status.length === 1 && clean(status.first().text()) === "Bu Etkinlik Ger\u00e7ekle\u015fti" && !hasSessionEvidence;
+}
+
 export function canRetireBiletinialDetail($, now = new Date()) {
   const leaves = jsonLdNodes($).filter((node) =>
     [node?.["@type"]].flat().some((type) => typeof type === "string" && type.endsWith("Event")) &&
     !(Array.isArray(node.subEvent) && node.subEvent.length));
-  if (!leaves.length) return false;
+  if (!leaves.length) return conclusivelyOccurredBiletinialDetail($);
   return leaves.every((node) => {
     const address = node.location?.address;
     const cityEvidence = clean(`${address?.addressLocality ?? ""} ${address?.addressRegion ?? ""}`);
@@ -277,6 +284,7 @@ export async function extractBiletinial($, url, fallbackCategory, now = new Date
       if (typeof options.get !== "function") throw new Error("cinema_sessions_require_public_contract");
       return extractCinemaSessions($, canonical, movie, fallbackCategory, now, options);
     }
+    if (conclusivelyOccurredBiletinialDetail($)) return [];
     throw new Error("schema_missing");
   }
   // Keep the shared source parser as the single contract for nested JSON-LD,
@@ -307,7 +315,7 @@ async function extractCinemaSessions($, canonical, movie, fallbackCategory, now,
   const langId = html.match(/\bvar\s+langId\s*=\s*['"]?(\d+)['"]?\s*;/)?.[1];
   const countryCode = html.match(/\bvar\s+countryCode\s*=\s*['"]([a-z]{2})['"]\s*;/i)?.[1];
   if (!eventId || !langId || !countryCode) throw new Error("cinema_contract_missing");
-  const datesUrl = new URL("/details/GetDateListForCity", BILETINIAL_ORIGIN);
+  const datesUrl = new URL("/tr-tr/details/GetDateListForCity", BILETINIAL_ORIGIN);
   for (const [key, value] of Object.entries({ eventId, langId, cityId: 147 })) datesUrl.searchParams.set(key, String(value));
   const dateHtml = await options.get(datesUrl.toString()), date$ = load(dateHtml);
   const dates = [...new Set(date$("[data-date]").map((_i, el) => date$(el).attr("data-date")).get())]

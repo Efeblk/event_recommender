@@ -534,6 +534,11 @@ try {
   assert.equal(retiredImport.status, 200);
   await retiredImport.arrayBuffer();
   assert.equal((await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url=?').bind(bulk[0].url).first()).count, 0);
+  const bulkStatusKey = `source_status:${createHash('sha256').update(bulk[0].url).digest('hex')}`;
+  assert.deepEqual(JSON.parse((await env.DB.prepare('SELECT value FROM metadata WHERE key=?').bind(bulkStatusKey).first()).value), {
+    checkedAt: retiredAt,
+    kind: 'retired',
+  });
   const oldReplay = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: bulk }] }, true);
   assert.equal(oldReplay.status, 200);
   assert.equal((await oldReplay.json()).skipped, 1);
@@ -544,6 +549,53 @@ try {
   const reactivated = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: reinstated }] }, true);
   assert.equal(reactivated.status, 200);
   assert.equal((await reactivated.json()).imported, 101);
+  // Quarantine is a separate, evidenced empty state. It removes only this
+  // source, retains its distinct state and watermark, and requires newer verification.
+  const otherProviderCount = (await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url<>?').bind(bulk[0].url).first()).count;
+  const quarantinedAt = new Date(Date.parse(retiredAt) + 2000).toISOString();
+  const quarantined = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{
+      url: bulk[0].url,
+      events: [],
+      quarantinedAt,
+      quarantineReason: 'session_time_conflict',
+    }],
+  }, true);
+  assert.equal(quarantined.status, 200);
+  await quarantined.arrayBuffer();
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url=?').bind(bulk[0].url).first()).count, 0);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url<>?').bind(bulk[0].url).first()).count, otherProviderCount);
+  assert.deepEqual(JSON.parse((await env.DB.prepare('SELECT value FROM metadata WHERE key=?').bind(bulkStatusKey).first()).value), {
+    checkedAt: quarantinedAt,
+    kind: 'quarantined',
+  });
+  const quarantineOldReplay = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{ url: bulk[0].url, events: reinstated }],
+  }, true);
+  assert.equal(quarantineOldReplay.status, 200);
+  assert.equal((await quarantineOldReplay.json()).skipped, 1);
+  const quarantineEqualReplay = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{ url: bulk[0].url, events: bulk.map(event => ({ ...event, checkedAt: quarantinedAt })) }],
+  }, true);
+  assert.equal(quarantineEqualReplay.status, 200);
+  assert.equal((await quarantineEqualReplay.json()).skipped, 1);
+  const verifiedAfterQuarantine = bulk.map(event => ({
+    ...event,
+    checkedAt: new Date(Date.parse(quarantinedAt) + 1000).toISOString(),
+  }));
+  const quarantineReactivated = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{ url: bulk[0].url, events: verifiedAfterQuarantine }],
+  }, true);
+  assert.equal(quarantineReactivated.status, 200);
+  assert.equal((await quarantineReactivated.json()).imported, 101);
+  assert.deepEqual(JSON.parse((await env.DB.prepare('SELECT value FROM metadata WHERE key=?').bind(bulkStatusKey).first()).value), {
+    checkedAt: verifiedAfterQuarantine[0].checkedAt,
+    kind: 'active',
+  });
   // Durable checkpoints must contain the canonical published DB, never a
   // caller-provided snapshot. R2 and D1 here are both disposable local bindings.
   const checkpointRequest = (body, authenticated = true) =>

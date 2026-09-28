@@ -194,6 +194,7 @@ test("cinema follows the observed public date and session HTML contracts seriall
   };
   const events = await extractBiletinial($, "https://biletinial.com/tr-tr/sinema/film", "Sinema", new Date("2026-09-28T00:00:00Z"), { get });
   assert.equal(events.length, 2); assert.equal(calls.length, 3);
+  assert.equal(new URL(calls[0]).pathname, "/tr-tr/details/GetDateListForCity");
   assert.ok(calls[0].includes("eventId=1025") && calls[0].includes("cityId=147"));
   assert.equal(events[0].venue, "Atlas 1948"); assert.equal(events[0].price, null);
 });
@@ -201,6 +202,20 @@ test("cinema follows the observed public date and session HTML contracts seriall
 test("unqualified Event datetimes are rejected", async () => {
   const node = { "@context": "https://schema.org", "@type": "Event", name: "Etkinlik", description: "", startDate: "2026-10-01T18:00:00", location: { name: "Mekan", address: { addressRegion: "İstanbul" } } };
   await assert.rejects(() => extractBiletinial(load(`<script type="application/ld+json">${JSON.stringify(node)}</script>`), "https://biletinial.com/tr-tr/egitim/a", "Eğitim"), /no_verified_istanbul_sessions/);
+});
+
+test("explicit main-detail occurred status retires end to end without retiring ambiguous pages", async () => {
+  const occurred = '<div class="yds_cinema_details_info_title"><h1>Past Event</h1></div><div class="yds_cinema_details_buttons"><button class="goseances">Bu Etkinlik Ger&ccedil;ekle&#351;ti</button></div>';
+  const url = "https://biletinial.com/tr-tr/muzik/past-event";
+  assert.deepEqual(await extractBiletinial(load(occurred), url, "Konser"), []);
+  await assert.rejects(() => extractBiletinial(load(occurred.replace("Bu Etkinlik Ger&ccedil;ekle&#351;ti", "&Ccedil;ok Yak&#305;nda")), url, "Konser"), /schema_missing/);
+  await assert.rejects(() => extractBiletinial(load('<aside><button class="goseances">Bu Etkinlik Ger&ccedil;ekle&#351;ti</button></aside><h1>Sidebar</h1>'), url, "Konser"), /schema_missing/);
+  await assert.rejects(() => extractBiletinial(load(occurred + '<button class="seanceSelect" data-title="123">20:00</button>'), url, "Konser"), /schema_missing/);
+  const active = { "@type": "Event", name: "Active", startDate: "2026-10-01T18:00:00+03:00", location: { name: "Venue", address: { addressLocality: "istanbul" } } };
+  const html = '<script type="application/ld+json">' + JSON.stringify(active) + '</script>' + occurred;
+  const events = await extractBiletinial(load(html), url, "Konser", new Date("2026-09-28T00:00:00Z"));
+  assert.equal(events.length, 1);
+  assert.equal(canRetireBiletinialDetail(load(html), new Date("2026-09-28T00:00:00Z")), false);
 });
 
 test("retires only conclusively past or explicitly other-city leaf Events", async () => {
