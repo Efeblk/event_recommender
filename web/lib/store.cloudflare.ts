@@ -247,11 +247,13 @@ export async function catalogStatus(now = new Date()) {
       : null,
   };
 }
-export async function replaceSource(url: string, items: EventRecord[], checkedAt?: string) {
+export async function replaceSource(url: string, items: EventRecord[], checkedAt?: string, kind: 'active' | 'retired' | 'quarantined' = 'active') {
   const db = await database();
   const timestamp = checkedAt ? [db.prepare(
     'INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE excluded.value>=metadata.value',
-  ).bind(`source_checked:${await digest(url)}`, checkedAt)] : [];
+  ).bind(`source_checked:${await digest(url)}`, checkedAt), db.prepare(
+    'INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+  ).bind(`source_status:${await digest(url)}`, JSON.stringify({ checkedAt, kind }))] : [];
   await db.batch([
     db
       .prepare(
@@ -417,7 +419,7 @@ export async function importPages(pages: SourcePage[], lease: Lease) {
     skipped = 0;
   for (const page of pages) {
     await assertLease(lease);
-    const { checked, latest } = sourcePageTimes(page);
+    const { checked, latest, kind } = sourcePageTimes(page);
     const old = await db
       .prepare(
         'SELECT MAX(checked) AS checked, SUM(active) AS active FROM (SELECT MAX(checked_at) AS checked, COUNT(*) AS active FROM events WHERE source_url=? UNION ALL SELECT value AS checked, 0 AS active FROM metadata WHERE key=?)',
@@ -450,7 +452,7 @@ export async function importPages(pages: SourcePage[], lease: Lease) {
         ).slice(0, 24),
       });
     }
-    await replaceSource(page.url, items, latest);
+    await replaceSource(page.url, items, latest, kind);
     imported += items.length;
   }
   return { imported, skipped };

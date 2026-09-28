@@ -51,7 +51,7 @@ export function validateImport(
     urls = new Set<string>();
   let count = 0;
   return payload.pages.map((raw: unknown) => {
-    const page = raw as { url?: unknown; events?: unknown; retiredAt?: unknown } | null;
+    const page = raw as { url?: unknown; events?: unknown; retiredAt?: unknown; quarantinedAt?: unknown; quarantineReason?: unknown } | null;
     const source = sourceOf(page?.url);
     if (
       !page ||
@@ -65,13 +65,24 @@ export function validateImport(
     urls.add(page.url);
     const url = page.url;
     if (!page.events.length) {
+      const quarantined = page.quarantinedAt !== undefined || page.quarantineReason !== undefined;
+      if (page.retiredAt !== undefined && quarantined) throw new Error('Invalid empty source page');
+      if (quarantined) {
+        const stamp = typeof page.quarantinedAt === 'string' ? Date.parse(page.quarantinedAt) : NaN;
+        if (page.quarantineReason !== 'session_time_conflict' || !Number.isFinite(stamp) ||
+            new Date(stamp).toISOString() !== page.quarantinedAt || stamp > now.getTime() + 300000 ||
+            stamp < now.getTime() - 72 * 3600000)
+          throw new Error('Invalid source quarantine');
+        return { url, events: [], quarantinedAt: page.quarantinedAt as string, quarantineReason: 'session_time_conflict' };
+      }
       const retired = typeof page.retiredAt === 'string' ? Date.parse(page.retiredAt) : NaN;
       if (!Number.isFinite(retired) || new Date(retired).toISOString() !== page.retiredAt ||
           retired > now.getTime() + 300000 || retired < now.getTime() - 72 * 3600000)
         throw new Error('Invalid source retirement');
       return { url, events: [], retiredAt: page.retiredAt as string };
     }
-    if (page.retiredAt !== undefined) throw new Error('Nonempty retired source');
+    if (page.retiredAt !== undefined || page.quarantinedAt !== undefined || page.quarantineReason !== undefined)
+      throw new Error('Nonempty inactive source');
     const events = page.events.map((rawEvent: unknown) => {
       const e = rawEvent as Record<string, unknown> | null;
       if (!e || ++count > 2000) throw new Error('Invalid event');

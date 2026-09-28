@@ -169,6 +169,10 @@ export function expandBiletinialSessions(items, category, now = new Date()) {
       continue;
     }
     for (const raw of sessions) {
+      if (!/(?:Z|[+-]\d{2}:\d{2})$/.test(raw)) {
+        unresolved.push({ item, session: raw, reason: "ambiguous_session_timezone" });
+        continue;
+      }
       const time = Date.parse(raw);
       if (!Number.isFinite(time) || time < now.getTime() || !venue) { unresolved.push({ item, session: raw, reason: "invalid_session" }); continue; }
       const startsAt = new Date(time).toISOString();
@@ -207,6 +211,36 @@ const explicitZonedDate = (value) => typeof value === "string" &&
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?.*(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
   Number.isFinite(Date.parse(value));
 const istanbulText = (value) => clean(value).normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("tr-TR").includes("istanbul");
+const sessionText = (value) => clean(value).normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("tr-TR").replace(/[^a-z0-9]+/g, " ").trim();
+const istanbulClock = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Istanbul", year: "numeric", month: "2-digit", day: "2-digit",
+  hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+const istanbulWallTime = (value) => {
+  const parts = Object.fromEntries(istanbulClock.formatToParts(new Date(value)).map(({ type, value: part }) => [type, part]));
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};
+
+function conflictingVisibleSessions($, nodes) {
+  const visible = new Map();
+  $(".ed-biletler__sehir__gun[itemscope]").each((_index, row) => {
+    const current = $(row), start = clean(current.find("[itemprop='startDate'][content]").first().attr("content"));
+    const title = clean(current.find("[itemprop='name'][content]").first().attr("content"));
+    const location = current.find("[itemprop='location']").first();
+    const venue = clean(location.attr("title") || location.find("[itemprop='name']").first().text());
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(start) || !title || !venue) return;
+    const key = `${sessionText(title)}|${sessionText(venue)}|${start.slice(0, 10)}`;
+    const times = visible.get(key) || new Set();
+    times.add(start.slice(11, 16)); visible.set(key, times);
+  });
+  return new Set(nodes.filter((node) => {
+    if (!explicitZonedDate(node?.startDate)) return false;
+    const local = istanbulWallTime(node.startDate);
+    const key = `${sessionText(node.name)}|${sessionText(node.location?.name)}|${local.slice(0, 10)}`;
+    const times = visible.get(key);
+    return times?.size && !times.has(local.slice(11, 16));
+  }).map((node) => `${sessionText(node.name)}|${sessionText(node.location?.name)}|${new Date(node.startDate).toISOString()}`));
+}
 
 /**
  * Proves that a detail may be retired without turning malformed source data
@@ -249,6 +283,9 @@ export async function extractBiletinial($, url, fallbackCategory, now = new Date
   // multiple offers, event status, strict timezone and Istanbul evidence.
   const sourceCategory = canonical.pathname.split('/')[2];
   const parsed = await parseEvents($.html(), canonical.origin + canonical.pathname, fallbackCategory || legacyCategory.get(sourceCategory) || "Diğer", now);
+  const conflicts = conflictingVisibleSessions($, nodes);
+  const parsedConflict = parsed.some((event) => conflicts.has(`${sessionText(event.title)}|${sessionText(event.venue)}|${event.startsAt}`));
+  if (parsedConflict) throw new Error("session_time_conflict");
   const events = parsed.map((event) => ({
     ...event,
     category: typeof options.categoryForEvent === "function"

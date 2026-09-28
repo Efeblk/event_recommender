@@ -304,6 +304,19 @@ const crawler = new BasicCrawler(
       try {
         events = await extract($, source, request.url, category, new Date(), { get });
       } catch (error) {
+        if (error.message === 'session_time_conflict') {
+          // Source evidence disproves the cached session time. Keep this distinct
+          // from a verified retirement and from ordinary fetch/parser failures.
+          const checkedAt = new Date().toISOString();
+          const provenance = { contentHash: sha(html), parserVersion: '5' };
+          recordCoverageAttempt(coverage, request.url, { success: false, quarantined: true, failure: error.message }, checkedAt);
+          checkpointCoverageEvents(coverage, request.url, [], checkedAt, provenance);
+          upsertReportPage({ source, url: request.url, checkedAt, quarantinedAt: checkedAt, quarantineReason: error.message, ...provenance, events: [] });
+          report.quarantined.push({ source, url: request.url, errors: [error.message], checkedAt });
+          report.failures.push({ source, url: request.url, reason: error.message, attempts: request.retryCount + 1 });
+          await saveCoverage();
+          return;
+        }
         throw new NonRetryableError(error.message);
       }
       const { accepted, quarantined: pageQuarantine, complete: pageComplete } =

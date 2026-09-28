@@ -28,6 +28,7 @@ interface SourceHead {
   hash: string;
   checkedAt: string;
   events: number;
+  kind?: 'active' | 'retired' | 'quarantined';
 }
 interface CatalogHead {
   revision: string;
@@ -330,13 +331,15 @@ export function createGcpStore(options: {
       let imported = 0,
         skipped = 0;
       for (const page of pages) {
-        const { checked, latest } = sourcePageTimes(page);
+        const { checked, latest, kind } = sourcePageTimes(page);
         const sourceHash = await digest(page.url);
         const path = `${base}/sources/${sourceHash}`;
         const body = JSON.stringify({
           url: page.url,
           events: page.events,
           ...(page.retiredAt ? { retiredAt: page.retiredAt } : {}),
+          ...(page.quarantinedAt ? { quarantinedAt: page.quarantinedAt } : {}),
+          ...(page.quarantineReason ? { quarantineReason: page.quarantineReason } : {}),
         } satisfies SourcePage);
         if (bytes(body) > MAX_SOURCE_BYTES)
           throw new Error('Source page exceeds limit');
@@ -361,6 +364,7 @@ export function createGcpStore(options: {
             hash,
             checkedAt: latest,
             events: page.events.length,
+            kind,
           });
           return true;
         });
@@ -444,6 +448,7 @@ export function createGcpStore(options: {
             throw new Error('Invalid source page object');
           const times = sourcePageTimes(page);
           if (times.latest !== source.checkedAt) throw new Error('Source page timestamp mismatch');
+          if (source.kind && times.kind !== source.kind) throw new Error('Source page kind mismatch');
           for (const event of page.events) {
             if (event.url !== source.url || ids.has(event.id))
               throw new Error('Conflicting source event identity');

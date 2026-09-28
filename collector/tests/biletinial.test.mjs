@@ -88,6 +88,23 @@ test("expands all supplied sessions and quarantines open or invalid rows", () =>
   assert.equal(result.events[0].price, null); assert.equal(result.events[0].availability, "unknown");
 });
 
+test("offset-free listing sessions are quarantined independently of host timezone", () => {
+  const item = { ...listingFixture.items[0], seances: [["2026-10-01T18:00:00"]] };
+  const prior = process.env.TZ;
+  try {
+    const results = ["UTC", "Europe/Istanbul", "America/New_York"].map((timezone) => {
+      process.env.TZ = timezone;
+      return expandBiletinialSessions([item], "Workshop", new Date("2026-09-28T00:00:00Z"));
+    });
+    assert.ok(results.every(({ events }) => events.length === 0));
+    assert.deepEqual(results.map(({ unresolved }) => unresolved[0].reason), [
+      "ambiguous_session_timezone", "ambiguous_session_timezone", "ambiguous_session_timezone",
+    ]);
+  } finally {
+    if (prior === undefined) delete process.env.TZ; else process.env.TZ = prior;
+  }
+});
+
 test("detail extraction keeps every verified Istanbul Event and rejects other-city sessions", async () => {
   const schema = (city, date) => ({ "@context": "https://schema.org", "@type": "Event", name: "Atölye", description: "Katılımcı atölyesi", startDate: date, url: "https://biletinial.com/tr-tr/egitim/atolye", location: { "@type": "Place", name: "Mekan", address: { "@type": "PostalAddress", addressRegion: city, addressLocality: city, streetAddress: "Adres" } }, offers: { "@type": "Offer", price: 500, priceCurrency: "TRY", availability: "https://schema.org/InStock" } });
   const $ = load(`<script type="application/ld+json">${JSON.stringify([schema("İstanbul Anadolu", "2026-10-01T18:00:00+03:00"), schema("İstanbul Avrupa", "2026-10-02T18:00:00+03:00"), schema("İzmir", "2026-10-03T18:00:00+03:00")])}</script>`);
@@ -106,6 +123,39 @@ test("detail extraction delegates nested sessions, offers and status to the shar
   const events = await extractBiletinial(load(`<script type="application/ld+json">${JSON.stringify(graph)}</script>`), "https://biletinial.com/tr-tr/egitim/cocuk-atolyesi", "Eğitim", new Date("2026-09-28T00:00:00Z"));
   assert.deepEqual(events.map(({ price, availability }) => [price, availability]), [[500, "available"], [100, "cancelled"], [null, "sold_out"]]);
   assert.ok(events.every((event) => event.sourceVersion === "4"));
+});
+
+test("detail extraction quarantines a same-title same-venue visible session conflict", async () => {
+  const session = (startDate) => ({ "@type": "Event", name: "Aslında Kaşık Yok", description: "Oyun", startDate, location: { name: "Mecidiyeköy Büyük Sahne", address: { addressLocality: "İstanbul" } }, offers: { price: 120.01, priceCurrency: "TRY", availability: "https://schema.org/InStock" } });
+  const schema = { "@context": "https://schema.org", "@graph": [session("2026-10-03T23:00:00+03:00"), session("2026-10-04T20:00:00+03:00")] };
+  const visible = `<div class="ed-biletler__sehir__gun" itemscope><div itemprop="name" content="Aslında Kaşık Yok"><time itemprop="startDate" content="2026-10-03T20:00"></time><a itemprop="location" title="Mecidiyeköy Büyük Sahne"><address itemprop="name">Mecidiyeköy Büyük Sahne</address></a></div></div><div class="ed-biletler__sehir__gun" itemscope><div itemprop="name" content="Aslında Kaşık Yok"><time itemprop="startDate" content="2026-10-04T20:00"></time><a itemprop="location" title="Mecidiyeköy Büyük Sahne"></a></div></div>`;
+  const $ = load(`<script type="application/ld+json">${JSON.stringify(schema)}</script>${visible}`);
+  await assert.rejects(() => extractBiletinial($, "https://biletinial.com/tr-tr/tiyatro/aslinda-kasik-yok", "Tiyatro", new Date("2026-09-28T00:00:00Z")), /session_time_conflict/);
+});
+
+test("visible sessions do not conflict with unrelated dates, titles or venues", async () => {
+  const schema = { "@context": "https://schema.org", "@type": "Event", name: "Etkinlik", description: "Program", startDate: "2026-10-03T20:00:00+03:00", location: { name: "Mekan A", address: { addressLocality: "İstanbul" } }, offers: { price: 100, priceCurrency: "TRY", availability: "https://schema.org/InStock" } };
+  const rows = `<div class="ed-biletler__sehir__gun" itemscope><div itemprop="name" content="Başka Etkinlik"><time itemprop="startDate" content="2026-10-03T19:00"></time><a itemprop="location" title="Mekan A"></a></div></div><div class="ed-biletler__sehir__gun" itemscope><div itemprop="name" content="Etkinlik"><time itemprop="startDate" content="2026-10-04T19:00"></time><a itemprop="location" title="Mekan A"></a></div></div>`;
+  const events = await extractBiletinial(load(`<script type="application/ld+json">${JSON.stringify(schema)}</script>${rows}`), "https://biletinial.com/tr-tr/tiyatro/etkinlik", "Tiyatro", new Date("2026-09-28T00:00:00Z"));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].startsAt, "2026-10-03T17:00:00.000Z");
+});
+
+test("visible Istanbul wall time agrees with an equivalent Z timestamp", async () => {
+  const schema = { "@context": "https://schema.org", "@type": "Event", name: "Etkinlik", description: "Program", startDate: "2026-10-03T20:00:00Z", location: { name: "Mekan A", address: { addressLocality: "İstanbul" } }, offers: { price: 100, priceCurrency: "TRY", availability: "https://schema.org/InStock" } };
+  const row = `<div class="ed-biletler__sehir__gun" itemscope><div itemprop="name" content="Etkinlik"><time itemprop="startDate" content="2026-10-03T23:00"></time><a itemprop="location" title="Mekan A"></a></div></div>`;
+  const events = await extractBiletinial(load(`<script type="application/ld+json">${JSON.stringify(schema)}</script>${row}`), "https://biletinial.com/tr-tr/tiyatro/etkinlik", "Tiyatro", new Date("2026-09-28T00:00:00Z"));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].startsAt, "2026-10-03T20:00:00.000Z");
+});
+
+test("conflicting aggregate metadata cannot quarantine its valid nested session", async () => {
+  const session = { "@type": "Event", name: "Etkinlik", description: "Program", startDate: "2026-10-03T20:00:00+03:00", location: { name: "Mekan A", address: { addressLocality: "İstanbul" } }, offers: { price: 100, priceCurrency: "TRY", availability: "https://schema.org/InStock" } };
+  const aggregate = { "@context": "https://schema.org", "@type": "Event", name: "Etkinlik", startDate: "2026-10-03T23:00:00+03:00", location: { name: "Mekan A" }, subEvent: [session] };
+  const row = `<div class="ed-biletler__sehir__gun" itemscope><div itemprop="name" content="Etkinlik"><time itemprop="startDate" content="2026-10-03T20:00"></time><a itemprop="location" title="Mekan A"></a></div></div>`;
+  const events = await extractBiletinial(load(`<script type="application/ld+json">${JSON.stringify(aggregate)}</script>${row}`), "https://biletinial.com/tr-tr/tiyatro/etkinlik", "Tiyatro", new Date("2026-09-28T00:00:00Z"));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].startsAt, "2026-10-03T17:00:00.000Z");
 });
 
 test("Movie metadata without public venue sessions is never fabricated", async () => {

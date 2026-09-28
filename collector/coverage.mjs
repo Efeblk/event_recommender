@@ -64,12 +64,14 @@ export function fairCoverageOrder(state, selectedSources, now = new Date().toISO
   return ordered;
 }
 
-export function recordCoverageAttempt(state, url, { success, failure = null, retired = false }, now = new Date().toISOString()) {
+export function recordCoverageAttempt(state, url, { success, failure = null, retired = false, quarantined = false }, now = new Date().toISOString()) {
   const entry = state.entries.find((candidate) => candidate.url === url);
   if (!entry) return;
+  if (quarantined && (success || retired || failure !== 'session_time_conflict')) throw new Error('Invalid source quarantine');
   entry.attempts += 1; entry.lastAttemptAt = now;
-  if (success) { entry.lastSuccessAt = now; entry.failure = null; entry.retiredAt = null; }
-  else if (retired) { entry.lastFailureAt = now; entry.failure = null; entry.retiredAt = now; }
+  if (success) { entry.lastSuccessAt = now; entry.failure = null; entry.retiredAt = null; entry.quarantinedAt = null; entry.quarantineReason = null; }
+  else if (retired) { entry.lastFailureAt = now; entry.failure = null; entry.retiredAt = now; entry.quarantinedAt = null; entry.quarantineReason = null; }
+  else if (quarantined) { entry.lastFailureAt = now; entry.failure = failure; entry.retiredAt = null; entry.quarantinedAt = now; entry.quarantineReason = failure; }
   else { entry.lastFailureAt = now; entry.failure = failure ?? 'unknown'; }
   state.updatedAt = now;
 }
@@ -81,7 +83,7 @@ export function checkpointCoverageEvents(state, url, events, now = new Date().to
     entry.eventsCheckpointAt = now;
     entry.eventsCheckpointUrl = entry.url;
     entry.eventsCheckpointSource = entry.source;
-    entry.eventsCheckpointStatus = events.length ? 'active' : 'retired';
+    entry.eventsCheckpointStatus = events.length ? 'active' : entry.quarantinedAt === now ? 'quarantined' : 'retired';
     if (typeof provenance.contentHash === 'string') entry.eventsCheckpointContentHash = provenance.contentHash;
     else delete entry.eventsCheckpointContentHash;
     if (typeof provenance.parserVersion === 'string') entry.eventsCheckpointParserVersion = provenance.parserVersion;
@@ -102,10 +104,15 @@ export function unpublishedCoveragePages(snapshot, state, validate = () => [], n
   const snapshotInventory = inventoryByUrl(snapshot);
   const snapshotEvents = eventsByUrl(snapshot);
   return [...recoverableCoverageEntries(snapshot, state, validate, now).values()]
-    .filter((entry) => entry.status === 'retired' || entry.events.length > 0)
+    .filter((entry) => entry.status === 'retired' || entry.status === 'quarantined' || entry.events.length > 0)
     .filter((entry) => {
       const current = snapshotInventory.get(entry.url) ?? new Set();
-      if (entry.status === 'retired') return current.size > 0;
+      // An empty snapshot is not proof that its remote watermark was published.
+      // Replay explicit empty states until a newer verified source page replaces them.
+      // Beyond the import freshness window, an older active replay is itself
+      // inadmissible. Keep the durable state but do not send an expired marker.
+      if (entry.status === 'retired' || entry.status === 'quarantined')
+        return Date.parse(entry.checkpointAt) >= now.getTime() - 72 * 3600000;
       const cached = new Set(entry.events.map((event) => `${event.id}|${event.checkedAt}`));
       return current.size !== cached.size || [...cached].some((key) => !current.has(key)) ||
         comparablePage(snapshotEvents.get(entry.url) ?? []) !== comparablePage(entry.events);
@@ -115,6 +122,7 @@ export function unpublishedCoveragePages(snapshot, state, validate = () => [], n
       url: entry.url,
       checkedAt: entry.checkpointAt,
       ...(entry.status === 'retired' ? { retiredAt: entry.checkpointAt } : {}),
+      ...(entry.status === 'quarantined' ? { quarantinedAt: entry.checkpointAt, quarantineReason: entry.quarantineReason } : {}),
       ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
       ...(entry.parserVersion ? { parserVersion: entry.parserVersion } : {}),
       events: entry.events.map((event) => ({ ...event })),
@@ -178,7 +186,10 @@ function recoverableCoverageEntries(snapshot, state, validate, now) {
       checkpointAt >= successAt && checkpointAt - successAt <= sequencingToleranceMs;
     const retired = entry.eventsCheckpointStatus === 'retired' && entry.events.length === 0 && Number.isFinite(retiredAt) &&
       checkpointAt === retiredAt;
-    if (!active && !retired) continue;
+    const quarantined = entry.eventsCheckpointStatus === 'quarantined' && entry.events.length === 0 &&
+      Number.isFinite(Date.parse(entry.quarantinedAt)) && checkpointAt === Date.parse(entry.quarantinedAt) &&
+      entry.quarantineReason === 'session_time_conflict';
+    if (!active && !retired && !quarantined) continue;
     const recoverableEvents = entry.events.filter((event) => {
       const startsAt = Date.parse(event?.startsAt);
       return !Number.isFinite(startsAt) || startsAt >= current;
@@ -191,6 +202,7 @@ function recoverableCoverageEntries(snapshot, state, validate, now) {
       source: entry.source,
       checkpointAt: entry.eventsCheckpointAt,
       status: entry.eventsCheckpointStatus,
+      quarantineReason: entry.quarantineReason ?? null,
       events: recoverableEvents.map((event) => ({ ...event })),
       contentHash: typeof entry.eventsCheckpointContentHash === 'string' ? entry.eventsCheckpointContentHash : null,
       parserVersion: typeof entry.eventsCheckpointParserVersion === 'string' ? entry.eventsCheckpointParserVersion : null,

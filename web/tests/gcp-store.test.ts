@@ -244,6 +244,42 @@ await test('verified retirement removes a source and older imports cannot resurr
   assert.deepEqual((await f.store.candidates(emptyFilters)).map(item => item.id).sort(), ['one', 'survivor']);
 });
 
+await test('source quarantine removes only the conflicting provider until newer verified evidence returns', async () => {
+  const f = fixture(), lease = await syncLease(f.store), original = event();
+  const corroborating = event('other-provider', {
+    title: original.title,
+    startsAt: original.startsAt,
+    venue: original.venue,
+    url: 'https://www.biletix.com/etkinlik/ABC123/ISTANBUL/tr',
+    source: 'biletix',
+  });
+  await f.store.importPages([page(original), page(corroborating)], lease);
+  await f.store.publishCheckpoint(report(), lease);
+  f.advance(1000);
+  const quarantinedAt = new Date(instant + 1000).toISOString();
+  await f.store.importPages([{
+    url: original.url,
+    events: [],
+    quarantinedAt,
+    quarantineReason: 'session_time_conflict',
+  }], lease);
+  assert.ok([...f.blobs.objects.values()].some(body => {
+    const saved = JSON.parse(body) as SourcePage;
+    return saved.url === original.url && saved.quarantinedAt === quarantinedAt &&
+      saved.quarantineReason === 'session_time_conflict' && saved.events.length === 0;
+  }));
+  await f.store.publishCheckpoint(report(1000), lease);
+  assert.deepEqual((await f.store.candidates(emptyFilters)).map(item => item.id), ['other-provider']);
+  assert.deepEqual(await f.store.importPages([page(original)], lease), { imported: 0, skipped: 1 });
+  assert.deepEqual(await f.store.importPages([page({ ...original, checkedAt: quarantinedAt })], lease), { imported: 0, skipped: 1 });
+  f.advance(1000);
+  await f.store.importPages([page({ ...original, checkedAt: new Date(instant + 2000).toISOString() })], lease);
+  await f.store.publishCheckpoint(report(2000), lease);
+  const restored = await f.store.candidates(emptyFilters);
+  assert.equal(restored.length, 1);
+  assert.deepEqual(restored[0].offers?.map(offer => offer.source).sort(), ['biletix', 'bubilet']);
+});
+
 await test('an older report cannot publish a newer staged source or replace the prior publication', async () => {
   const f = fixture();
   const lease = await syncLease(f.store);

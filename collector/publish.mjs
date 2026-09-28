@@ -13,6 +13,11 @@ export function prepareImportPages(pages, now = new Date()) {
   const omittedExpiredIds = [];
   const prepared = [];
   for (const page of pages) {
+    if ((page.retiredAt !== undefined && page.quarantinedAt !== undefined) ||
+        (page.events.length && (page.retiredAt !== undefined || page.quarantinedAt !== undefined || page.quarantineReason !== undefined)) ||
+        (page.quarantinedAt !== undefined && page.quarantineReason !== 'session_time_conflict') ||
+        (page.quarantineReason !== undefined && page.quarantinedAt === undefined))
+      throw new Error('Invalid empty source state');
     const events = page.events.filter((event) => {
       const expired = Number.isFinite(Date.parse(event.startsAt)) && Date.parse(event.startsAt) < cutoff;
       if (expired) omittedExpiredIds.push(event.id);
@@ -21,6 +26,8 @@ export function prepareImportPages(pages, now = new Date()) {
     if (events.length) prepared.push({ url: page.url, events });
     else if (page.events.length === 0 && page.retiredAt)
       prepared.push({ url: page.url, events: [], retiredAt: page.retiredAt });
+    else if (page.events.length === 0 && page.quarantinedAt)
+      prepared.push({ url: page.url, events: [], quarantinedAt: page.quarantinedAt, quarantineReason: page.quarantineReason });
   }
   return { pages: prepared, omittedExpiredIds };
 }

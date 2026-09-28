@@ -73,6 +73,17 @@ await test('import accepts only fresh explicit source retirements', () => {
     assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, retiredAt }] }, now));
   assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, events: [event] }] }, now));
 });
+await test('import accepts only fresh, exclusive session-time quarantines', () => {
+  const quarantine = { url: event.url, events: [], quarantinedAt: now.toISOString(), quarantineReason: 'session_time_conflict' };
+  assert.deepEqual(validateImport({ schemaVersion: 1, pages: [quarantine] }, now), [quarantine]);
+  for (const change of [
+    { quarantineReason: 'other' },
+    { quarantinedAt: undefined },
+    { quarantinedAt: 'invalid' },
+    { retiredAt: now.toISOString() },
+    { events: [event] },
+  ]) assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...quarantine, ...change }] }, now));
+});
 await test('unknown offer availability remains unknown and ineligible', async () => {
   const node = {
     '@type': 'Event',
