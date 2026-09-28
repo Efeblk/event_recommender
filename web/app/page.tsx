@@ -439,6 +439,14 @@ export default function Home() {
         return;
       }
       if (!response.ok) throw new Error(data.error || 'Arama tamamlanamadı.');
+      if (data.pendingInput?.reason === 'interpreter_unavailable') {
+        setError(
+          data.notice ||
+            'Araman şu anda yorumlanamadı. Birazdan tekrar deneyebilirsin.',
+        );
+        setRetryAction({ kind: 'search', attempt });
+        return;
+      }
       setResult(data);
       setFilters(data.filters);
       setIntentState(data.intentState);

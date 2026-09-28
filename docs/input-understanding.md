@@ -122,6 +122,14 @@ Clarification or interpretation failure stops before retrieval/embedding/ranking
 Provider calls have deadlines and no automatic retries. Document embeddings are
 reused; interpretation does not regenerate them.
 
+Interpreter failures log only their stage, fixed failure code, HTTP status when
+available, and elapsed milliseconds. Logs exclude user text, credentials and
+provider response bodies. A service failure preserves the current UI state and
+offers an explicit retry of the original request; it does not ask the user to
+clarify their wording or append the same failed input again. Complete standalone
+reset commands work without calling Jev, including when a prior clarification
+is unresolved. Reset followed by a new search still requires interpretation.
+
 `AI_DAILY_LIMIT` counts application requests, not provider calls or money. Measure
 actual usage before enabling the feature; the interpretation rounds change the cost
 per search. Disabling the feature is a runtime configuration rollback, separate

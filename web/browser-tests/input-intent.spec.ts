@@ -349,7 +349,7 @@ test.describe('clarification layout', () => {
   }
 });
 
-test('typed clarification retains pending text and alternative IDs through retry, then clears pending on success', async ({
+test('typed clarification retains pending text and alternative IDs through semantic-failure retry, then clears pending on success', async ({
   page,
 }) => {
   await mockShell(page);
@@ -371,8 +371,15 @@ test('typed clarification retains pending text and alternative IDs through retry
     }
     if (bodies.length === 3)
       return route.fulfill({
-        status: 503,
-        json: { error: 'Temporary failure.' },
+        json: response({
+          recommendations: [],
+          status: 'needs_input',
+          notice: 'Temporary interpreter failure.',
+          pendingInput: {
+            message: 'kişi başı',
+            reason: 'interpreter_unavailable',
+          },
+        }),
       });
     return route.fulfill({ json: response({ excludedIds: [] }) });
   });
@@ -392,7 +399,9 @@ test('typed clarification retains pending text and alternative IDs through retry
     }),
   ).toBeVisible();
   await submit(page, 'ki\u015fi ba\u015f\u0131');
-  await expect(page.getByRole('alert')).toContainText('Temporary failure.');
+  await expect(page.getByRole('alert')).toContainText(
+    'Temporary interpreter failure.',
+  );
   expect(JSON.parse(bodies[2])).toMatchObject({
     message: 'ki\u015fi ba\u015f\u0131',
     pendingInput,
@@ -412,6 +421,59 @@ test('typed clarification retains pending text and alternative IDs through retry
   await submit(page, 'Pazar olsun');
   await expect.poll(() => bodies.length).toBe(5);
   expect(JSON.parse(bodies[4]).pendingInput).toBeUndefined();
+});
+
+test('interpreter outage keeps the committed plan and retries the identical request only on click', async ({
+  page,
+}) => {
+  await mockShell(page);
+  const bodies: string[] = [];
+  await page.route('**/api/recommend', async (route) => {
+    bodies.push(route.request().postData() ?? '');
+    if (bodies.length === 1) return route.fulfill({ json: response() });
+    if (bodies.length === 2) {
+      return route.fulfill({
+        json: response({
+          recommendations: [],
+          status: 'needs_input',
+          notice: 'Plan yorumlayıcısı şu anda kullanılamıyor.',
+          pendingInput: {
+            message: 'Kadıköy olsun',
+            reason: 'interpreter_unavailable',
+          },
+        }),
+      });
+    }
+    return route.fulfill({ json: response() });
+  });
+
+  await page.goto('/');
+  await submit(page, 'Cumartesi sakin bir caz konseri');
+  await expect(page.getByText('Etkinlik one', { exact: true })).toBeVisible();
+  await submit(page, 'Kadıköy olsun');
+
+  await expect(page.getByRole('alert')).toContainText(
+    'Plan yorumlayıcısı şu anda kullanılamıyor.',
+  );
+  await expect(page.getByText('Etkinlik one', { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('button', { name: 'Aramayı düzenle', exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByLabel('Anlaşılan plan')).toContainText('Konser');
+  await page.waitForTimeout(100);
+  expect(bodies).toHaveLength(2);
+
+  const failedRequest = JSON.parse(bodies[1]);
+  expect(failedRequest).toMatchObject({
+    message: 'Kadıköy olsun',
+    filters: baseState.filters,
+    intentState: baseState,
+    alternativeIds: ['one', 'production-one', 'show-one'],
+  });
+  expect(failedRequest.pendingInput).toBeUndefined();
+  await page.getByRole('button', { name: 'Yeniden dene', exact: true }).click();
+  await expect.poll(() => bodies.length).toBe(3);
+  expect(bodies[2]).toBe(bodies[1]);
 });
 
 test('reset clears unresolved input as well as committed intent', async ({

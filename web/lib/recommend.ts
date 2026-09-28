@@ -204,7 +204,7 @@ const issueNotices = {
   unsupported_constraint:
     'Bu zorunlu koşulu mevcut etkinlik bilgileriyle güvenilir biçimde değerlendiremiyoruz. Koşulu değiştirerek yeniden arayabilirsin.',
   interpreter_unavailable:
-    'İsteğini şu anda güvenilir biçimde anlayamadık. Koşulların korunuyor; isteğini daha açık yazarak yeniden deneyebilirsin.',
+    'Arama hizmeti isteğini şu anda işleyemiyor. İsteğin ve önceki koşulların korunuyor; biraz sonra yeniden deneyebilirsin.',
 };
 
 export async function recommend(

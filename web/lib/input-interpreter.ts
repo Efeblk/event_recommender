@@ -12,6 +12,7 @@ import { buildInputCandidates, type InputCandidatePool, type Span } from './inpu
 import { maskLiteralTitles, maskPriorInterests } from './input-literals.ts';
 import { buildInputPlanAuditRequest, parseInputPlanAuditResponse, type InputPlanProposal } from './input-plan-audit.ts';
 import { EXPERIENCES, EXPERIENCE_VALUES, type Experience } from './input-experiences.ts';
+import { isStandaloneInputReset } from './input-reset.ts';
 
 export type InputIssue =
   | null
@@ -41,6 +42,16 @@ export interface InterpreterOptions {
   config: JevConfig | null;
   fetcher?: typeof fetch;
   timeoutMs?: number;
+  onFailure?: (failure: InputInterpreterFailure) => void;
+}
+
+export type InputInterpreterFailureStage = 'proposal_request' | 'proposal_parse' | 'audit_request' | 'audit_parse';
+export type InputInterpreterFailureCode = 'timeout' | 'http' | 'network' | 'response_size' | 'request_size' | 'invalid_response' | 'internal';
+export interface InputInterpreterFailure {
+  stage: InputInterpreterFailureStage;
+  code: InputInterpreterFailureCode;
+  httpStatus?: number;
+  elapsedMs: number;
 }
 
 /** Stable operational limits for evaluation reports and benchmark tooling. */
@@ -705,7 +716,7 @@ const canonicalRequirementPreference: Record<string, string> = {
 
 function fastPath(input: InterpreterInput): InterpretedInput | null {
   const previous = validateIntentState(input.previous), q = fold(input.message.trim());
-  if (/^(?:sifirla|sıfırla|reset|bastan basla|baştan başla|onceki kosullari unut|önceki koşulları unut)[.!]?$/u.test(q)) {
+  if (isStandaloneInputReset(input.message)) {
     const state = emptyIntentState(); return { state, action: 'reset', issue: null, query: intentQuery(state), origin: 'fast-path' };
   }
   if (!input.unresolvedRequest && /^(?:alternatif(?:ler)?|baska(?:larini)? goster|baska secenekler(?: goster)?|ayni kosullarda baska etkinlikler bul|show (?:me )?alternatives?|something else)[.!]?$/u.test(q)) return { state: previous, action: 'alternatives', issue: null, query: intentQuery(previous), origin: 'fast-path' };
@@ -718,20 +729,25 @@ export async function interpretInput(input: InterpreterInput, options: Interpret
   const previous = validateIntentState(input.previous);
   const unavailable = (): InterpretedInput => ({ state: previous, action: 'search', issue: 'interpreter_unavailable', query: intentQuery(previous), origin: 'jev' });
   if (!options.config?.apiKey.trim()) return unavailable();
+  let stage: InputInterpreterFailureStage = 'proposal_request';
+  const started = performance.now();
   try {
     return await withDeadline(options.timeoutMs ?? 8000, 'Input interpreter timed out.', async (signal) => {
-      const request = async (body: unknown) => {
+      const request = async (body: unknown, requestStage: 'proposal_request' | 'audit_request') => {
+        stage = requestStage;
         const serialized = JSON.stringify(body);
-        if (bytes(serialized) > 48_000) throw new Error('Interpreter input is too large.');
+        if (bytes(serialized) > 48_000) throw new InterpreterFailureError('request_size');
         const response = await (options.fetcher ?? fetch)('https://api.typesafe.ai/v1/systemone', { method: 'POST', headers: { Authorization: `Bearer ${options.config!.apiKey}`, 'Content-Type': 'application/json' }, body: serialized, redirect: 'manual', signal });
-        if (!response.ok) { await response.body?.cancel(); throw new Error(`Interpreter request failed (HTTP ${response.status}).`); }
-        const reader = response.body?.getReader(); if (!reader) throw new Error('Missing interpreter response.');
+        if (!response.ok) { await response.body?.cancel(); throw new InterpreterFailureError('http', response.status); }
+        const reader = response.body?.getReader(); if (!reader) throw new InterpreterFailureError('invalid_response');
         const chunks: Uint8Array[] = []; let size = 0;
-        try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > 128_000) throw new Error('Interpreter response is too large.'); chunks.push(value); } } finally { await reader.cancel(); reader.releaseLock(); }
+        try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > 128_000) throw new InterpreterFailureError('response_size'); chunks.push(value); } } finally { await reader.cancel(); reader.releaseLock(); }
         const buffer = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.length; }
-        return JSON.parse(new TextDecoder().decode(buffer));
+        try { return JSON.parse(new TextDecoder().decode(buffer)); }
+        catch { throw new InterpreterFailureError('invalid_response'); }
       };
-      const rawProposal = await request(buildInputInterpreterRequest(options.config!.model, input));
+      const rawProposal = await request(buildInputInterpreterRequest(options.config!.model, input), 'proposal_request');
+      stage = 'proposal_parse';
       const contract = buildInputInterpreterRequest(options.config!.model, input);
       const contractQuestions = contract.questions as Record<string, { criteria: Record<string, string> }>;
       const firstAnswers = record(record(rawProposal).answers);
@@ -772,12 +788,61 @@ export async function interpretInput(input: InterpreterInput, options: Interpret
       if (activePaidBudget && decisions.get('budget_basis')!.choice === 'group_total' && !selectedParty && !inheritedParty && companion.choice === 'set:partner' && (companion.probability < 0.55 || companion.confidence < 0.1)) return stop('budget_ambiguous');
       const proposal = parseInputInterpreterProposal(rawProposal, input);
       if (!proposal.plans.length) return { state: previous, action: actionChoice, issue: 'constraint_ambiguous', query: intentQuery(previous), origin: 'jev' };
-      const rawAudit = await request(buildInputPlanAuditRequest(options.config!.model, input, proposal));
+      stage = 'audit_request';
+      const rawAudit = await request(buildInputPlanAuditRequest(options.config!.model, input, proposal), 'audit_request');
+      stage = 'audit_parse';
       const audit = parseInputPlanAuditResponse(rawAudit, proposal);
       if (!audit.planId) return { state: previous, action: proposal.plans[0].result.action, issue: audit.issue, query: intentQuery(previous), origin: 'jev' };
       const selected = proposal.plans.find((plan) => plan.id === audit.planId);
       if (!selected) throw new Error('Audit selected an unknown plan.');
       return selected.result;
     });
-  } catch { return unavailable(); }
+  } catch (error) {
+    reportInputInterpreterFailure(options.onFailure, {
+      stage,
+      code: interpreterFailureCode(error, stage),
+      ...(error instanceof InterpreterFailureError && error.httpStatus !== undefined ? { httpStatus: error.httpStatus } : {}),
+      elapsedMs: Math.max(0, Math.round(performance.now() - started)),
+    });
+    return unavailable();
+  }
+}
+
+class InterpreterFailureError extends Error {
+  readonly code: InputInterpreterFailureCode;
+  readonly httpStatus?: number;
+  constructor(code: InputInterpreterFailureCode, httpStatus?: number) {
+    super(code);
+    this.code = code;
+    this.httpStatus = httpStatus;
+  }
+}
+
+function interpreterFailureCode(error: unknown, stage: InputInterpreterFailureStage): InputInterpreterFailureCode {
+  if (error instanceof InterpreterFailureError) return error.code;
+  if (error instanceof Error && error.message === 'Input interpreter timed out.') return 'timeout';
+  if (
+    error instanceof Error &&
+    (error.message === 'Interpreter input is too large.' ||
+      error.message === 'Input-plan audit is too large.' ||
+      error.message === 'Interpreter message must contain 1-1,200 characters.' ||
+      error.message === 'Unresolved interpreter request must contain at most 1,200 characters.')
+  )
+    return 'request_size';
+  if (error instanceof TypeError) return stage.endsWith('_request') ? 'network' : 'invalid_response';
+  if (error instanceof SyntaxError) return 'invalid_response';
+  return stageParseFailure(error) ? 'invalid_response' : 'internal';
+}
+
+function stageParseFailure(error: unknown) {
+  return error instanceof Error && /answer|choice|confidence|distribution|probabilit|response|plan/i.test(error.message);
+}
+
+function reportInputInterpreterFailure(observer: InterpreterOptions['onFailure'], failure: InputInterpreterFailure) {
+  try {
+    if (observer) observer(failure);
+    else console.warn(JSON.stringify({ event: 'input_interpreter_failure', ...failure }));
+  } catch {
+    // Observability must never change fail-closed behavior.
+  }
 }
