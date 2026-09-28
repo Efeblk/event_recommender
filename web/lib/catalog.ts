@@ -1,6 +1,8 @@
 import type { EventRecord } from './types.ts';
 import { CATEGORIES } from './types.ts';
 import type { SourcePage } from './storage-contract.ts';
+export const MAX_SOURCE_PAGE_EVENTS = 1000;
+export const MAX_IMPORT_ENVELOPE_EVENTS = 2000;
 export function sourceOf(raw: unknown): EventRecord['source'] | null {
   if (typeof raw !== 'string') return null;
   try {
@@ -59,7 +61,7 @@ export function validateImport(
       typeof page.url !== 'string' ||
       urls.has(page.url) ||
       !Array.isArray(page.events) ||
-      page.events.length > 300
+      page.events.length > MAX_SOURCE_PAGE_EVENTS
     )
       throw new Error('Invalid source page');
     urls.add(page.url);
@@ -85,7 +87,7 @@ export function validateImport(
       throw new Error('Nonempty inactive source');
     const events = page.events.map((rawEvent: unknown) => {
       const e = rawEvent as Record<string, unknown> | null;
-      if (!e || ++count > 2000) throw new Error('Invalid event');
+      if (!e || ++count > MAX_IMPORT_ENVELOPE_EVENTS) throw new Error('Invalid event');
       const limits: Record<string, number> = {
         id: 100,
         title: 250,

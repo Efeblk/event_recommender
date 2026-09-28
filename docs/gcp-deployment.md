@@ -41,7 +41,7 @@ Voyage caches retain their exact endpoint, model, dimension, document profile an
 document hash. A changed key alone does not invalidate vectors. Each indexing
 batch publishes a whole immutable vector snapshot; this is suitable for the
 current catalog but must be measured before growing the index. Catalogs are
-bounded at 20 MiB/20,000 records, vector objects at 128 MiB/20,000 entries.
+bounded at 32 MiB/20,000 records, vector objects at 128 MiB/20,000 entries.
 
 ## Prepare and review
 

@@ -4,13 +4,15 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { atomicJson, endpointFor, requestJson, validateCollection, validateEventArray } from "./remote.mjs";
 
+export const MAX_CHECKPOINT_BYTES = 32 * 1024 * 1024;
+
 export async function restoreCheckpoint({ origin, token, output, fallback, allowLoopbackHttp = false }) {
   const endpoint = endpointFor(origin, "/api/admin/collection", allowLoopbackHttp);
   const { response, result } = await requestJson(endpoint, { token, timeout: 30_000 });
   if (response.status === 404) {
     if (!fallback) throw new Error("No durable checkpoint exists and no bootstrap snapshot was supplied.");
     const contents = await readFile(fallback);
-    if (contents.byteLength > 20_000_000) throw new Error("Bootstrap snapshot exceeds the 20 MB limit.");
+    if (contents.byteLength > MAX_CHECKPOINT_BYTES) throw new Error("Bootstrap snapshot exceeds the 32 MiB limit.");
     await atomicJson(output, validateEventArray(JSON.parse(contents.toString("utf8")), "Bootstrap snapshot"));
     return { status: "bootstrap", events: null };
   }

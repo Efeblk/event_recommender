@@ -9,7 +9,9 @@ export function endpointFor(origin, pathname, allowLoopbackHttp = false) {
   return endpoint;
 }
 
-export async function readJson(response, limit = 20_000_000) {
+export const MAX_REMOTE_JSON_BYTES = 32 * 1024 * 1024;
+
+export async function readJson(response, limit = MAX_REMOTE_JSON_BYTES) {
   const reader = response.body?.getReader();
   if (!reader) return null;
   const chunks = [];

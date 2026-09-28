@@ -73,6 +73,32 @@ await test('import accepts only fresh explicit source retirements', () => {
     assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, retiredAt }] }, now));
   assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, events: [event] }] }, now));
 });
+await test('import retains an atomic 314-session page within bounded page and envelope limits', () => {
+  const sessions = Array.from({ length: 314 }, (_, index) => ({
+    ...event,
+    id: `session-${index}`,
+    startsAt: new Date(Date.parse(event.startsAt) + index * 60000).toISOString(),
+  }));
+  const [page] = validateImport({ schemaVersion: 1, pages: [{ url: event.url, events: sessions }] }, now);
+  assert.equal(page.events.length, 314);
+  assert.deepEqual(page.events.map(item => item.id), sessions.map(item => item.id));
+
+  const oversized = Array.from({ length: 1001 }, (_, index) => ({ ...event, id: `oversized-${index}` }));
+  assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ url: event.url, events: oversized }] }, now), /Invalid source page/);
+
+  const pages = Array.from({ length: 3 }, (_, pageIndex) => {
+    const url = `https://www.bubilet.com.tr/istanbul/etkinlik/envelope-${pageIndex}`;
+    return {
+      url,
+      events: Array.from({ length: 667 }, (_, eventIndex) => ({
+        ...event,
+        id: `envelope-${pageIndex}-${eventIndex}`,
+        url,
+      })),
+    };
+  });
+  assert.throws(() => validateImport({ schemaVersion: 1, pages }, now), /Invalid event/);
+});
 await test('import accepts only fresh, exclusive session-time quarantines', () => {
   const quarantine = { url: event.url, events: [], quarantinedAt: now.toISOString(), quarantineReason: 'session_time_conflict' };
   assert.deepEqual(validateImport({ schemaVersion: 1, pages: [quarantine] }, now), [quarantine]);

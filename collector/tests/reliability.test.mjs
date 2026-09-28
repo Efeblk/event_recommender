@@ -4,9 +4,9 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { restoreCheckpoint } from "../checkpoint.mjs";
+import { MAX_CHECKPOINT_BYTES, restoreCheckpoint } from "../checkpoint.mjs";
 import { checkReady } from "../monitor.mjs";
-import { MAX_IMPORT_PAGES, prepareImportPages, publish } from "../publish.mjs";
+import { MAX_IMPORT_EVENTS, MAX_IMPORT_PAGES, MAX_SOURCE_PAGE_EVENTS, prepareImportPages, publish } from "../publish.mjs";
 import { buildSoakEvidence } from "../soak-report.mjs";
 import { verifySoakEvidence } from "../soak-verify.mjs";
 
@@ -81,6 +81,10 @@ test("checkpoint publish reads canonical state back to disk", async (t) => {
   assert.deepEqual(calls, ["POST /api/admin/import", "POST /api/admin/collection", "GET /api/admin/collection", "GET /api/health"]);
   assert.deepEqual(checkpointBody.report.summary.missingSources, ["bubilet"]);
   assert.deepEqual(checkpointBody.report.summary.sourceHealth.refreshedPages, { biletix: 1, bubilet: 0 });
+});
+
+test("checkpoint restore uses the shared 32 MiB boundary", () => {
+  assert.equal(MAX_CHECKPOINT_BYTES, 32 * 1024 * 1024);
 });
 
 test("publisher omits only sessions that started after collection and reports them", () => {
@@ -174,6 +178,81 @@ test("publisher partitions large reports into at most three whole source pages p
     now: () => new Date("2026-09-27T10:00:00.000Z"),
   });
   assert.deepEqual(pageCounts, [MAX_IMPORT_PAGES, MAX_IMPORT_PAGES, MAX_IMPORT_PAGES, 1]);
+});
+
+test("publisher keeps a 314-session source page atomic and batches by envelope event count", async (t) => {
+  const bodies = [];
+  const remote = await fixture(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks));
+    bodies.push(body);
+    json(response, 200, { imported: body.pages.reduce((sum, page) => sum + page.events.length, 0) });
+  });
+  t.after(remote.close);
+  const makePage = (name, count) => ({
+    url: `https://source.test/${name}`,
+    events: Array.from({ length: count }, (_, index) => ({
+      id: `${name}-${index}`,
+      startsAt: "2026-09-27T12:00:00.000Z",
+    })),
+  });
+  const pages = [makePage('real-shape', 314), makePage('large-a', 900), makePage('large-b', 900)];
+  const result = await publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, summary: {}, pages },
+    allowLoopbackHttp: true,
+    now: () => new Date("2026-09-27T10:00:00.000Z"),
+  });
+  assert.deepEqual(bodies.map(body => body.pages.map(page => page.events.length)), [[314, 900], [900]]);
+  assert.ok(bodies.every(body => body.pages.reduce((sum, page) => sum + page.events.length, 0) <= MAX_IMPORT_EVENTS));
+  assert.deepEqual(bodies.flatMap(body => body.pages).flatMap(page => page.events.map(event => event.id)), pages.flatMap(page => page.events.map(event => event.id)));
+  assert.equal(result.imported, 2114);
+});
+
+test("publisher preflights the 1000-session source-page bound before network access", async (t) => {
+  let requests = 0;
+  const remote = await fixture((request, response) => {
+    requests += 1;
+    json(response, 200, { imported: 0 });
+  });
+  t.after(remote.close);
+  const events = Array.from({ length: MAX_SOURCE_PAGE_EVENTS + 1 }, (_, index) => ({
+    id: `too-large-${index}`,
+    startsAt: "2026-09-27T12:00:00.000Z",
+  }));
+  await assert.rejects(publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, summary: {}, pages: [{ url: "https://source.test/too-large", events }] },
+    allowLoopbackHttp: true,
+    now: () => new Date("2026-09-27T10:00:00.000Z"),
+  }), /source page exceeds the event import limit/);
+  assert.equal(requests, 0);
+});
+
+test("publisher splits a three-page envelope before the steady-state D1 query budget", async (t) => {
+  const pageCounts = [];
+  const remote = await fixture(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    pageCounts.push(JSON.parse(Buffer.concat(chunks)).pages.map(page => page.events.length));
+    json(response, 200, { imported: 1 });
+  });
+  t.after(remote.close);
+  const makePage = (name, count) => ({
+    url: `https://source.test/${name}`,
+    events: Array.from({ length: count }, (_, index) => ({ id: `${name}-${index}`, startsAt: "2026-09-27T12:00:00.000Z" })),
+  });
+  await publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, summary: {}, pages: [makePage("a", 901), makePage("b", 901), makePage("c", 198)] },
+    allowLoopbackHttp: true,
+    now: () => new Date("2026-09-27T10:00:00.000Z"),
+  });
+  assert.deepEqual(pageCounts, [[901, 901], [198]]);
 });
 
 test("publisher does not send or checkpoint when every session expires before the first request", async (t) => {
