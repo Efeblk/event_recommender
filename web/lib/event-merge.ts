@@ -192,6 +192,36 @@ const FABRIKAFA_NAMED_VENUES = new Set([
 const FABRIKAFA_DISTRICTS = new Set(['', normalize('Üsküdar'), normalize('İstanbul Anadolu')]);
 const FABRIKAFA_VENUE_KEY = 'reviewed:fabrikafa-make-and-coffee';
 
+const REVIEWED_WORKSHOP_VENUES = [
+  {
+    key: 'reviewed:bagimsiz-sanat-vakfi',
+    program: 'mozaik-lamba',
+    venue: normalize('Bağımsız Sanat Vakfı'),
+    address: normalize('Hobyar, Ankara Cd. No;3, 34110 Fatih/İstanbul'),
+    districts: new Set(['', normalize('Fatih'), normalize('İstanbul Avrupa')]),
+    prefixedTitle: normalize('İstanbul Workshops Mozaik Lamba Atölyesi'),
+    genericTitle: undefined,
+    titles: new Set([
+      normalize('İstanbul Workshops Mozaik Lamba Atölyesi'),
+      normalize('Mozaik Lamba Atölyesi'),
+    ]),
+  },
+  {
+    key: 'reviewed:atolye-sahi',
+    program: 'seramik-tek-seans',
+    venue: normalize('Atölye Sahi'),
+    address: normalize('Aziz Mahmut Hüdayi Caddesi, Gülfem Sk. No:17A, 34762 Üsküdar/İstanbul'),
+    districts: new Set(['', normalize('Üsküdar'), normalize('İstanbul Anadolu')]),
+    prefixedTitle: normalize('İstanbul Workshops Seramik Atölyesi (Tek Seans Workshop)'),
+    genericTitle: normalize('Seramik Atölyesi'),
+    titles: new Set([
+      normalize('İstanbul Workshops Seramik Atölyesi (Tek Seans Workshop)'),
+      normalize('Seramik Atölyesi ( Tek Seans Workshop )'),
+      normalize('Seramik Atölyesi'),
+    ]),
+  },
+] as const;
+
 function fabrikafaProgram(event: EventRecord): string | undefined {
   if (event.category !== 'Workshop' || normalize(event.city) !== 'istanbul')
     return undefined;
@@ -207,9 +237,40 @@ function fabrikafaProgram(event: EventRecord): string | undefined {
   return !address || address === FABRIKAFA_ADDRESS ? program : undefined;
 }
 
+function reviewedWorkshopIdentity(event: EventRecord): { title: string; venue: string } | undefined {
+  const fabrikafa = fabrikafaProgram(event);
+  if (fabrikafa)
+    return {
+      title: `reviewed:fabrikafa-program:${fabrikafa}`,
+      venue: FABRIKAFA_VENUE_KEY,
+    };
+  if (event.category !== 'Workshop' || normalize(event.city) !== 'istanbul')
+    return undefined;
+  const title = normalize(event.title);
+  const venue = normalize(event.venue);
+  const address = normalize(event.address);
+  const district = normalize(event.district);
+  for (const reviewed of REVIEWED_WORKSHOP_VENUES) {
+    if (
+      venue !== reviewed.venue ||
+      !reviewed.titles.has(title) ||
+      !reviewed.districts.has(district) ||
+      (address && address !== reviewed.address) ||
+      (title === reviewed.prefixedTitle && address !== reviewed.address) ||
+      (reviewed.genericTitle === title &&
+        (!/\bseramik workshop tek oturumluk deneyim\b/.test(normalize(event.description)) ||
+          /\baylik kurs\b/.test(normalize(event.description))))
+    ) continue;
+    return {
+      title: `${reviewed.key}:program:${reviewed.program}`,
+      venue: reviewed.key,
+    };
+  }
+  return undefined;
+}
+
 function identityTitle(event: EventRecord): string {
-  const program = fabrikafaProgram(event);
-  return program ? `reviewed:fabrikafa-program:${program}` : canonicalShowTitle(event.title);
+  return reviewedWorkshopIdentity(event)?.title ?? canonicalShowTitle(event.title);
 }
 
 const venueAliases = new Map<string, string>();
@@ -307,10 +368,11 @@ function identity(event: EventRecord): {
   venue: string;
   instant: string | null;
 } {
+  const reviewed = reviewedWorkshopIdentity(event);
   return {
-    title: identityTitle(event),
+    title: reviewed?.title ?? canonicalShowTitle(event.title),
     city: normalize(event.city),
-    venue: fabrikafaProgram(event) ? FABRIKAFA_VENUE_KEY : venueKey(event.venue),
+    venue: reviewed?.venue ?? venueKey(event.venue),
     instant: parsedInstant(event.startsAt),
   };
 }
