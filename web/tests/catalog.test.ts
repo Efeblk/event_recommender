@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_EVENT_PRICE, sourceOf, validateImport } from '../lib/catalog.ts';
+import { MAX_EVENT_PRICE, MAX_IMPORT_TRANSIT_GRACE_MS, sourceOf, validateImport } from '../lib/catalog.ts';
 import { parseEvents } from '../lib/source.ts';
 import { uniqueEvents, isEligible } from '../lib/search.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
@@ -44,6 +44,7 @@ await test('import rejects foreign sources, duplicate IDs, empty pages and stale
     { checkedAt: '2026-09-01T09:00:00.000Z' },
     { checkedAt: '2026-09-10T09:00:00.000Z' },
     { startsAt: '2026-09-12T18:00:00' },
+    { startsAt: new Date(now.getTime() + 731 * 86400000).toISOString() },
     { url: 'https://evil.example/event' },
     { source: 'biletix' },
     { price: MAX_EVENT_PRICE + 1 },
@@ -77,6 +78,29 @@ await test('import accepts only fresh explicit source retirements', () => {
 await test('import accepts legitimate high TRY prices within safe cent representation', () => {
   assert.equal(validateImport(envelope({ ...event, title: 'Global Marketing Summit', price: 59400 }), now)[0].events[0].price, 59400);
   assert.equal(validateImport(envelope({ ...event, price: MAX_EVENT_PRICE }), now)[0].events[0].price, MAX_EVENT_PRICE);
+});
+await test('import grace retains an atomic page crossing the start boundary while queries stay strict', () => {
+  const justStarted = {
+    ...event,
+    id: 'just-started',
+    startsAt: new Date(now.getTime() - MAX_IMPORT_TRANSIT_GRACE_MS).toISOString(),
+  };
+  const future = {
+    ...event,
+    id: 'future',
+    startsAt: new Date(now.getTime() + 3600000).toISOString(),
+  };
+  const imported = validateImport({
+    schemaVersion: 1,
+    pages: [{ url: event.url, events: [justStarted, future] }],
+  }, now);
+  assert.deepEqual(imported[0].events.map(({ id }) => id), ['just-started', 'future']);
+  assert.equal(isEligible(imported[0].events[0], emptyFilters, now), false);
+  assert.equal(isEligible(imported[0].events[1], emptyFilters, now), true);
+  assert.throws(() => validateImport(envelope({
+    ...event,
+    startsAt: new Date(now.getTime() - MAX_IMPORT_TRANSIT_GRACE_MS - 1).toISOString(),
+  }), now), /Invalid event freshness/);
 });
 await test('import retains an atomic 314-session page within bounded page and envelope limits', () => {
   const sessions = Array.from({ length: 314 }, (_, index) => ({

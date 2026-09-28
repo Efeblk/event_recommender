@@ -4,6 +4,7 @@ import type { SourcePage } from './storage-contract.ts';
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_IMPORT_ENVELOPE_EVENTS = 2000;
 export const MAX_EVENT_PRICE = Number.MAX_SAFE_INTEGER / 100;
+export const MAX_IMPORT_TRANSIT_GRACE_MS = 60_000;
 export function sourceOf(raw: unknown): EventRecord['source'] | null {
   if (typeof raw !== 'string') return null;
   try {
@@ -127,7 +128,7 @@ export function validateImport(
       if (
         !Number.isFinite(start) ||
         new Date(start).toISOString() !== e.startsAt ||
-        start < now.getTime() ||
+        start < now.getTime() - MAX_IMPORT_TRANSIT_GRACE_MS ||
         start > now.getTime() + 730 * 86400000 ||
         !Number.isFinite(checked) ||
         new Date(checked).toISOString() !== e.checkedAt ||
