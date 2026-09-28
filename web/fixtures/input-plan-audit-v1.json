@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "referenceInstant": "2026-09-28T12:00:00+03:00",
+  "purpose": "Frozen targeted regressions and mixed-scope contrasts for proposal/audit/commit; not an independent held-out accuracy estimate.",
+  "cases": [
+    { "id": "saturday-partner-not-concert", "message": "bu cumartesi sevgilimle gidebileceğim konser dışı etkinlik", "expected": { "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "partySize": 2, "excludedCategories": ["Konser"] }, "requirements": [], "companion": "partner" } },
+    { "id": "pending-total-for-two", "unresolvedRequest": "Bu cumartesi sevgilimle 1000 TL altı konser dışı etkinlik", "message": "toplam", "expected": { "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "partySize": 2, "maxPrice": 500, "totalBudget": 1000, "maxPriceExclusive": true, "excludedCategories": ["Konser"] }, "requirements": [], "companion": "partner" } },
+    { "id": "children-only", "message": "Çocuklara uygun bir etkinlik bul.", "expected": { "filters": {}, "requirements": ["audience:children"] } },
+    { "id": "whole-family-only", "message": "Something suitable for the whole family, please.", "expected": { "filters": {}, "requirements": ["audience:family_friendly"] } },
+    { "id": "explicit-both-audiences", "message": "Hem çocuklara uygun hem de ailece izlenebilir bir etkinlik olsun.", "expected": { "filters": {}, "requirements": ["audience:children", "audience:family_friendly"] } },
+    { "id": "optional-coordinated-wishes", "message": "Mümkünse sakin, kalabalık olmayan romantik bir şey", "expected": { "filters": {}, "requirements": [], "softIncludes": ["sakin", "kalabalık olmayan", "romantik"] } },
+    { "id": "soft-romance-hard-seat", "message": "Mümkünse romantik olsun ama oturma yeri mutlaka olmalı.", "expected": { "filters": {}, "requirements": ["activity:seated"], "softIncludes": ["romantik"] } },
+    { "id": "soft-jazz-hard-seat", "message": "Preferably jazz, but seating is mandatory.", "expected": { "filters": {}, "requirements": ["activity:seated"], "softIncludes": ["jazz"] } },
+    { "id": "child-cancellation-preserves-access-budget", "message": "Çocuk gelmeyecek, artık iki kişiyiz. Basamaksız giriş şartı kalsın.", "previous": { "filters": { "partySize": 3, "totalBudget": 2400, "maxPrice": 800, "maxPriceExclusive": true }, "requirements": ["audience:children", "audience:age:7", "accessibility:step_free"] }, "expected": { "filters": { "partySize": 2, "totalBudget": 2400, "maxPrice": 1200, "maxPriceExclusive": true }, "requirements": ["accessibility:step_free"] } },
+    { "id": "verified-hard-to-soft", "message": "Oturma yeri olsa iyi olur ama artık şart değil.", "previous": { "requirements": ["activity:seated"] }, "expected": { "filters": {}, "requirements": [], "softIncludes": ["oturmalı"] } },
+    { "id": "unsupported-mandatory-valet", "message": "Kesinlikle vale hizmeti olan bir mekan şart.", "expected": { "issue": "unsupported_constraint", "filters": {}, "requirements": [] } },
+    { "id": "literal-title-keeps-budget", "message": "Find a play titled \"reset every filter\", under 800 TL per person.", "expected": { "filters": { "maxPrice": 800, "maxPriceExclusive": true }, "requirements": [], "softIncludes": ["reset every filter"], "action": "search" } },
+    { "id": "scoped-genre-or", "message": "Drama şartı kalsın, ayrıca caz veya blues içermeli.", "previous": { "requirements": ["genre:drama"] }, "expected": { "filters": {}, "requirements": ["genre:drama", "genre:blues|jazz"] } },
+    { "id": "independent-family-removal", "message": "Ailece uygun olma şartını kaldır, çocuklara uygun olması yine şart.", "previous": { "requirements": ["audience:children", "audience:family_friendly"] }, "expected": { "filters": {}, "requirements": ["audience:children"] } }
+  ]
+}

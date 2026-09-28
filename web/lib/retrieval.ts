@@ -13,7 +13,8 @@ import {
 import type { Category } from './types.ts';
 import { hybridRank, type SemanticRanking } from './hybrid.ts';
 import { displayShowIdentity } from './event-merge.ts';
-import { intentQuery, type IntentState } from './input-state.ts';
+import type { IntentState } from './input-state.ts';
+import { retrievalQuery } from './input-retrieval.ts';
 
 export interface SearchContext {
   query: string;
@@ -396,7 +397,7 @@ function rankedCandidates(
 ) {
   const context: SearchContext = intent
     ? {
-        query: intentQuery(intent),
+        query: retrievalQuery(intent),
         history: [],
         rejectedTerms: [],
         reset: false,

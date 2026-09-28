@@ -94,6 +94,32 @@ async function submit(page: Page, message: string) {
 }
 
 test.describe('versioned input intent protocol', () => {
+  test('shows required conditions separately from preferences and edits without another provider call', async ({ page }) => {
+    await mockShell(page);
+    let calls = 0;
+    await page.route('**/api/recommend', (route) => {
+      calls += 1;
+      return route.fulfill({ json: response({ intentState: {
+        ...baseState,
+        requirements: [{ kind: 'activity', value: 'seated', policy: 'require_support' }],
+        preferences: { mood: 'calm', companion: 'partner', interests: ['Romantik atmosfer'] },
+      } }) });
+    });
+    await page.goto('/');
+    await submit(page, 'Oturma yeri şart, mümkünse romantik');
+    const plan = page.getByLabel('Anlaşılan plan');
+    await expect(plan).toBeVisible();
+    await expect(plan.getByRole('group', { name: 'Olmazsa olmazlar' })).toContainText('Oturma yeri');
+    await expect(plan.getByRole('group', { name: 'Olmazsa olmazlar' })).not.toContainText('Romantik');
+    await expect(plan.getByRole('group', { name: 'Tercihler', exact: true })).toContainText('Romantik atmosfer');
+    await page.screenshot({ path: test.info().outputPath('interpreted-plan.png'), fullPage: true });
+    await plan.getByRole('button', { name: 'Planı düzelt' }).click();
+    await expect(page.getByLabel('Planını anlat')).toBeFocused();
+    expect(calls).toBe(1);
+    await plan.getByRole('button', { name: 'Planı temizle' }).click();
+    await expect(plan).toHaveCount(0);
+  });
+
   test('sends intentVersion 1 and carries returned intentState into the next turn', async ({
     page,
   }) => {

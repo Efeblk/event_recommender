@@ -4,6 +4,7 @@ import {
   type Filters,
   type Message,
   type PendingInput,
+  type SearchDiagnostics,
   type SearchResult,
 } from './types.ts';
 import {
@@ -23,14 +24,14 @@ import {
 import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
 import { semanticQuery, type SemanticRanking } from './hybrid.ts';
 import { mergeEventSessions } from './event-merge.ts';
-import { deriveRequirements, meetsRequirements } from './requirements.ts';
+import { checkRequirements, deriveRequirements } from './requirements.ts';
 import {
   emptyIntentState,
-  intentQuery,
   validateIntentState,
   type IntentState,
 } from './input-state.ts';
 import { interpretInput } from './input-interpreter.ts';
+import { retrievalQuery } from './input-retrieval.ts';
 
 export interface RecommendInput {
   message: string;
@@ -308,7 +309,7 @@ export async function recommend(
   const result = await recommendResolved(
     {
       ...input,
-      message: intentQuery(intentState),
+      message: retrievalQuery(intentState),
       history: [],
       filters: intentState.filters,
       excludeIds,
@@ -340,8 +341,9 @@ async function recommendResolved(
       notice: issueNotices[issue],
       totalCandidates: 0,
     };
+  const catalog = await deps.candidates(filters);
   let events = mergeEventSessions(
-    (await deps.candidates(filters)).filter((event) =>
+    catalog.filter((event) =>
       isEligible(event, emptyFilters, now),
     ),
   ).filter((event) => isEligible(event, filters, now));
@@ -355,6 +357,7 @@ async function recommendResolved(
   const excludedProductions = new Set(
     events.filter(isExcluded).map(productionIdentity),
   );
+  const beforeAlternativeExclusions = events.length;
   events = events.filter(
     (event) =>
       !isExcluded(event) && !excludedProductions.has(productionIdentity(event)),
@@ -364,9 +367,35 @@ async function recommendResolved(
     : searchContext(input.message, input.history);
   const requirements =
     intent?.requirements ?? deriveRequirements(input.message, context.history);
+  const hardRequirements = requirements.map((requirement) => ({
+    ...requirement,
+    supported: 0,
+    unknown: 0,
+    contradicted: 0,
+  }));
+  const eventsWithChecks = events.map((event) => ({
+    event,
+    checks: checkRequirements(event, requirements),
+  }));
+  for (const { checks } of eventsWithChecks)
+    checks.forEach((check, index) => hardRequirements[index][check.status]++);
   const beforeEvidence = events.length;
-  events = events.filter((event) => meetsRequirements(event, requirements));
+  events = eventsWithChecks
+    .filter(({ checks }) =>
+      checks.every((check) => check.status === 'supported'),
+    )
+    .map(({ event }) => event);
   const totalCandidates = events.length;
+  const diagnostics: SearchDiagnostics = {
+    catalogRetrieved: catalog.length,
+    eligibleBeforeSourceEvidence: beforeEvidence,
+    hardRequirements,
+    eligibleAfterSourceEvidence: totalCandidates,
+    alternativeExclusions: beforeAlternativeExclusions - beforeEvidence,
+    distinctShortlist: 0,
+    vectorCoverage: { available: 0, eligible: totalCandidates },
+    returnedAboveSupportThreshold: null,
+  };
   if (!events.length)
     return {
       recommendations: [],
@@ -378,6 +407,7 @@ async function recommendResolved(
           ? 'Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.'
           : 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
       totalCandidates,
+      diagnostics,
     };
   let shortlist = shortlistEvents(
     events,
@@ -396,6 +426,7 @@ async function recommendResolved(
       notice:
         'Belirttiğin tercih ve hariç tutmalara uyan bir etkinlik bulunamadı.',
       totalCandidates,
+      diagnostics,
     };
   let semantic: SemanticRanking | undefined;
   let retrievalNotice: string | null = null;
@@ -403,6 +434,9 @@ async function recommendResolved(
     try {
       const vectors = await deps.vectors?.(events, deps.embeddingConfig);
       if (vectors?.size) {
+        diagnostics.vectorCoverage.available = events.filter((event) =>
+          vectors.has(event.id),
+        ).length;
         const [queryVector] = await (deps.embed ?? embedWithVoyage)(
           deps.embeddingConfig,
           [
@@ -432,6 +466,7 @@ async function recommendResolved(
     semantic,
     intent,
   );
+  diagnostics.distinctShortlist = shortlist.length;
   const fallback = fallbackEvents(
     shortlist,
     input.message,
@@ -444,7 +479,13 @@ async function recommendResolved(
     try {
       const result = await (deps.rank ?? rankWithJev)(
         deps.config,
-        { ...input, filters, history: context.history, requirements },
+        {
+          ...input,
+          filters,
+          history: context.history,
+          requirements,
+          ...(intent ? { preferences: intent.preferences } : {}),
+        },
         shortlist,
       );
       const recommendations = selectJevEvents(shortlist, result).map(
@@ -461,6 +502,10 @@ async function recommendResolved(
           ? retrievalNotice
           : 'İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.',
         totalCandidates,
+        diagnostics: {
+          ...diagnostics,
+          returnedAboveSupportThreshold: recommendations.length,
+        },
       };
     } catch {
       return {
@@ -475,6 +520,7 @@ async function recommendResolved(
           .filter(Boolean)
           .join(' '),
         totalCandidates,
+        diagnostics,
       };
     }
   }
@@ -489,5 +535,6 @@ async function recommendResolved(
         ? 'Sonuçlar anlamsal benzerlik ve kelime eşleşmesine göre listeleniyor.'
         : basicNotice),
     totalCandidates,
+    diagnostics,
   };
 }

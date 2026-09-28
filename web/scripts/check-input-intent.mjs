@@ -129,23 +129,88 @@ async function runReplay(fixtureValue, replayPath) {
     byId.set(record.caseId, record);
   }
   const expectedStates = materializeExpectedStates(fixtureValue);
-  const evaluations = fixtureValue.cases
-    .filter((testCase) => byId.has(testCase.id))
-    .map((testCase) => {
+  const interpreter = await loadInterpreter();
+  const historical = records.every((record) => !Array.isArray(record.calls));
+  if (!historical && records.some((record) => !Array.isArray(record.calls)))
+    throw new Error('Replay cannot mix historical first-round and audited-flow records.');
+  const evaluations = [];
+  for (const testCase of fixtureValue.cases.filter((item) => byId.has(item.id))) {
       const record = byId.get(testCase.id);
       if (record.result?.issue && !record.previous)
-        return { caseId: testCase.id, expected: testCase.expected, pass: false, mismatches: ['issue record is missing previous state snapshot'] };
-      return evaluate(testCase, record.result, expectedStates.get(testCase.id), record.previous ?? expectedStates.get(testCase.parent));
+        evaluations.push({ caseId: testCase.id, expected: testCase.expected, pass: false, mismatches: ['issue record is missing previous state snapshot'] });
+      else if (historical)
+        evaluations.push(evaluate(testCase, record.result, expectedStates.get(testCase.id), record.previous ?? expectedStates.get(testCase.parent)));
+      else
+        evaluations.push(await replayAuditedRecord(interpreter, testCase, record, expectedStates));
+  }
+  reportEvaluation(
+    historical ? 'replay-historical-first-round' : 'replay-audited-flow',
+    evaluations,
+    0,
+    undefined,
+    fixtureValue.cases.length,
+  );
+}
+
+async function replayAuditedRecord(interpreter, testCase, record, expectedStates) {
+  const input = {
+    message: testCase.message,
+    previous: record.previous ?? expectedStates.get(testCase.parent) ?? emptyPrevious(),
+    now: new Date(record.provenance?.referenceDate
+      ? `${record.provenance.referenceDate}T12:00:00+03:00`
+      : '2026-09-28T12:00:00+03:00'),
+    ...(record.unresolvedRequest ? { unresolvedRequest: record.unresolvedRequest } : {}),
+  };
+  let consumed = 0;
+  let integrityError;
+  const integrityFailure = (message) => {
+    integrityError = message;
+    throw new Error(message);
+  };
+  const fetcher = async (url, init) => {
+    const call = record.calls[consumed++];
+    if (!call) return integrityFailure('Interpreter requested an unrecorded provider round.');
+    if (String(url) !== call.request?.url || safeJson(init?.body) === null ||
+        JSON.stringify(safeJson(init?.body)) !== JSON.stringify(call.request?.body))
+      return integrityFailure(`Provider request ${consumed} does not match recorded evidence.`);
+    if (call.error) throw new Error(call.error);
+    if (!Number.isInteger(call.responseStatus))
+      return integrityFailure(`Provider response ${consumed} is missing its HTTP status.`);
+    return new Response(
+      typeof call.response === 'string' ? call.response : JSON.stringify(call.response), {
+      status: call.responseStatus,
+      headers: { 'Content-Type': 'application/json' },
+      },
+    );
+  };
+  let result;
+  let replayError;
+  try {
+    result = await interpreter.interpretInput(input, {
+      config: { apiKey: 'replay-only', model: record.provenance?.model ?? 'jev-1.13.0' },
+      fetcher,
+      timeoutMs: 8000,
     });
-  reportEvaluation('replay', evaluations, 0, undefined, fixtureValue.cases.length);
+  } catch (error) { replayError = error instanceof Error ? error.message : String(error); }
+  if (integrityError) replayError = integrityError;
+  if (consumed !== record.calls.length) {
+    const consumptionError = `Replay consumed ${consumed} of ${record.calls.length} recorded provider rounds.`;
+    replayError = replayError ? `${replayError} ${consumptionError}` : consumptionError;
+  }
+  const evaluation = result
+    ? evaluate(testCase, result, expectedStates.get(testCase.id), input.previous)
+    : { caseId: testCase.id, expected: testCase.expected, pass: false, mismatches: [`replay error: ${replayError}`] };
+  if (replayError && result) {
+    evaluation.pass = false;
+    evaluation.mismatches.push(replayError);
+  }
+  return evaluation;
 }
 
 async function runLive(fixtureValue, options) {
   if (!options.caseIds.length) throw new Error('--live requires at least one explicit --case-id.');
   if (!Number.isInteger(options.maxCalls) || options.maxCalls < 1 || options.maxCalls > 12)
     throw new Error('--live requires --max-calls between 1 and 12.');
-  if (options.caseIds.length > options.maxCalls)
-    throw new Error('Selected case count exceeds --max-calls; no request was made.');
   if (!options.evidenceDir) throw new Error('--live requires --evidence-dir under web/outputs/.');
   const evidenceDir = resolve(options.evidenceDir);
   const allowedRoot = resolve(webRoot, 'outputs');
@@ -171,12 +236,13 @@ async function runLive(fixtureValue, options) {
   const outputPath = resolve(evidenceDir, `input-intent-${new Date().toISOString().replaceAll(':', '-')}.json`);
   const provenance = await buildProvenance(fixtureValue, model);
   let liveRequests = 0;
+  let lastProviderStartedAt = 0;
   let remainingInputTokens = process.env.BIPLAN_LIVE_REMAINING_INPUT_TOKENS === undefined
     ? Infinity
     : Number(process.env.BIPLAN_LIVE_REMAINING_INPUT_TOKENS);
   if (!(remainingInputTokens >= 64_000)) throw new Error('Insufficient interpretation token allowance; no provider request was made.');
 
-  for (const [index, testCase] of selected.entries()) {
+  for (const testCase of selected) {
     const previous = testCase.parent ? states.get(testCase.parent) : undefined;
     if (testCase.parent && !previous)
       throw new Error(`${testCase.id} requires parent ${testCase.parent}; select it earlier in this run.`);
@@ -188,24 +254,45 @@ async function runLive(fixtureValue, options) {
         ? { unresolvedRequest: pending.get(testCase.parent) }
         : {}),
     };
-    let rawRequest;
-    let rawResponse;
-    let responseStatus;
+    const calls = [];
     const fetcher = async (url, init) => {
+      if (liveRequests >= options.maxCalls)
+        throw new Error('Live provider request cap reached.');
       // Reserve the provider's full request context before each attempted call.
       // Missing usage is conservatively charged the entire reservation.
       if (remainingInputTokens < 64_000) throw new Error('Interpretation token allowance reached.');
+      const waitMs = Math.max(0, paceMs - (Date.now() - lastProviderStartedAt));
+      if (lastProviderStartedAt && waitMs) await new Promise((done) => setTimeout(done, waitMs));
       remainingInputTokens -= 64_000;
       liveRequests += 1;
-      rawRequest = redactRequest(url, init);
-      const response = await fetch(url, init);
-      responseStatus = response.status;
-      const text = await readLimitedResponse(response, 1_000_000);
-      rawResponse = safeJson(text);
-      const billed = rawResponse?.usage?.input_tokens;
-      if (Number.isInteger(billed) && billed >= 0 && billed <= 64_000)
-        remainingInputTokens += 64_000 - billed;
-      return new Response(text, { status: response.status, statusText: response.statusText, headers: response.headers });
+      lastProviderStartedAt = Date.now();
+      const call = {
+        startedAt: new Date().toISOString(),
+        request: redactRequest(url, init),
+        response: null,
+        responseStatus: null,
+        usage: null,
+        latencyMs: null,
+        error: null,
+      };
+      calls.push(call);
+      const beforeCall = performance.now();
+      try {
+        const response = await fetch(url, init);
+        call.responseStatus = response.status;
+        const text = await readLimitedResponse(response, 1_000_000);
+        call.response = safeJson(text);
+        call.usage = extractUsage(call.response);
+        const billed = call.response?.usage?.input_tokens;
+        if (response.ok && Number.isInteger(billed) && billed >= 0 && billed <= 64_000)
+          remainingInputTokens += 64_000 - billed;
+        return new Response(text, { status: response.status, statusText: response.statusText, headers: response.headers });
+      } catch (caught) {
+        call.error = caught instanceof Error ? caught.message : String(caught);
+        throw caught;
+      } finally {
+        call.latencyMs = Math.round(performance.now() - beforeCall);
+      }
     };
     const startedAt = new Date();
     const before = performance.now();
@@ -228,17 +315,13 @@ async function runLive(fixtureValue, options) {
       startedAt: startedAt.toISOString(),
       latencyMs: Math.round(performance.now() - before),
       provenance,
-      request: rawRequest,
-      response: rawResponse,
-      responseStatus,
-      usage: extractUsage(rawResponse),
+      calls,
       result,
       error,
     });
-    await writeFile(outputPath, `${JSON.stringify({ schemaVersion: 1, complete: false, records }, null, 2)}\n`);
-    if (index + 1 < selected.length) await new Promise((done) => setTimeout(done, paceMs));
+    await writeFile(outputPath, `${JSON.stringify({ schemaVersion: 2, evidenceMode: 'audited-interpreter-flow', complete: false, records }, null, 2)}\n`);
   }
-  await writeFile(outputPath, `${JSON.stringify({ schemaVersion: 1, complete: true, records }, null, 2)}\n`);
+  await writeFile(outputPath, `${JSON.stringify({ schemaVersion: 2, evidenceMode: 'audited-interpreter-flow', complete: true, records }, null, 2)}\n`);
   const evaluations = selected.map((testCase) => {
     const record = records.find((item) => item.caseId === testCase.id);
     return record.result ? evaluate(testCase, record.result, expectedStates.get(testCase.id), record.previous) : { caseId: testCase.id, expected: testCase.expected, pass: false, mismatches: [`call error: ${record.error}`] };
@@ -271,6 +354,7 @@ async function buildProvenance(fixtureValue, model) {
     fixturePath,
     resolve(webRoot, 'scripts/check-input-intent.mjs'),
     resolve(webRoot, 'lib/input-interpreter.ts'),
+    resolve(webRoot, 'lib/input-plan-audit.ts'),
     resolve(webRoot, 'lib/input-literals.ts'),
     resolve(webRoot, 'lib/input-candidates.ts'),
     resolve(webRoot, 'lib/input-state.ts'),

@@ -10,6 +10,7 @@ import type { Filters } from './types.ts';
 import type { Requirement, RequirementKind } from './requirements.ts';
 import { buildInputCandidates, type InputCandidatePool, type Span } from './input-candidates.ts';
 import { maskLiteralTitles, maskPriorInterests } from './input-literals.ts';
+import { buildInputPlanAuditRequest, parseInputPlanAuditResponse, type InputPlanProposal } from './input-plan-audit.ts';
 
 export type InputIssue =
   | null
@@ -46,7 +47,8 @@ export const INPUT_INTERPRETER_LIMITATIONS = [
   'Only Istanbul event requests and the canonical requirement vocabulary are actionable.',
   'Unsupported mandatory conditions must be clarified; they are never converted to optional interests.',
   'Dates and prices are normalized from selected source spans in code; vague spans require clarification.',
-  'The interpreter makes one provider request, performs no retries, and applies no partial patch on failure.',
+  'The interpreter makes at most two bounded provider requests (proposal, then complete-plan selection), performs no retries, and applies no partial patch on failure.',
+  'Complete-plan selection checks semantic coverage but can share the proposal model’s mistakes and cannot guarantee correctness.',
 ] as const;
 
 type BuildContext = {
@@ -337,7 +339,11 @@ function safeInterest(c: BuildContext, value: string) {
   return value.slice(0, 80);
 }
 
-export function parseInputInterpreterResponse(value: unknown, input: InterpreterInput): InterpretedInput {
+export function parseInputInterpreterResponse(
+  value: unknown,
+  input: InterpreterInput,
+  genreGroupScope: 'current' | 'new-only' = 'current',
+): InterpretedInput {
   const c = context(input), response = record(value), answers = record(response.answers);
   if (typeof response.model !== 'string' || !response.model.startsWith('jev-')) throw new Error('Invalid interpreter response model.');
   const decisions = new Map<string, ChoiceDecision>();
@@ -499,13 +505,22 @@ export function parseInputInterpreterResponse(value: unknown, input: Interpreter
   const atomicInterests = selectedInterests.filter((value) => !selectedInterests.some((other) =>
     other !== value && fold(value).includes(fold(other)) && value.length > other.length,
   ));
-  if (atomicInterests.length) state.preferences.interests = [...new Set([...state.preferences.interests, ...atomicInterests])].slice(0, 8);
+  if (atomicInterests.length) {
+    const interests = [...new Set([...state.preferences.interests, ...atomicInterests])];
+    if (interests.length > 8) return { state: c.previous, action, issue: 'constraint_ambiguous', query: intentQuery(c.previous), origin: 'jev' };
+    state.preferences.interests = interests;
+  }
   for (const item of effectiveRequirementOps) {
     if (item.operation === 'prefer') {
       if (!reliable(item.id)) continue;
       state.requirements = applyRequirement(state.requirements, `remove:${item.kind}:${item.value}`);
-      const preferred = c.interests.map((candidate) => safeInterest(c, candidate.value)).find((value) => value && fold(value).includes(fold(item.value)));
-      if (preferred) state.preferences.interests = [...new Set([...state.preferences.interests, preferred])].slice(0, 8);
+      const preferred = c.interests.map((candidate) => safeInterest(c, candidate.value)).find((value) => value && fold(value).includes(fold(item.value)))
+        ?? canonicalRequirementPreference[item.value];
+      if (preferred) {
+        const interests = [...new Set([...state.preferences.interests, preferred])];
+        if (interests.length > 8) return { state: c.previous, action, issue: 'constraint_ambiguous', query: intentQuery(c.previous), origin: 'jev' };
+        state.preferences.interests = interests;
+      }
     }
     else if (item.operation !== 'keep') state.requirements = applyRequirement(state.requirements, `${item.operation}:${item.kind}:${item.value}`);
   }
@@ -513,14 +528,29 @@ export function parseInputInterpreterResponse(value: unknown, input: Interpreter
     if (item.operation !== 'keep') state.requirements = applyRequirement(state.requirements, `${item.operation === 'require' ? 'require' : 'remove'}:audience:age:${item.value}`);
   }
   if (positiveGenres.length > 0 && genreLogic === 'or') {
-    const selectedGenres = [...new Set(state.requirements
+    const priorGenreGroups = action === 'reset' ? [] : c.previous.requirements.filter((item) => item.kind === 'genre' && item.policy === 'require_support');
+    const priorGenres = new Set(priorGenreGroups.flatMap((item) => item.value.split('|')));
+    const explicitlySelected = positiveGenres.map((item) => item.value).filter((value) => genreGroupScope === 'current' || !priorGenres.has(value));
+    const linksPrior = action !== 'reset' && priorGenreGroups.length === 1 && positiveGenres.length === 1 && /^(?:or|veya|ya da)\b/u.test(normalizedText.trim());
+    const priorAlternatives = linksPrior ? c.previous.requirements
       .filter((item) => item.kind === 'genre' && item.policy === 'require_support')
-      .flatMap((item) => item.value.split('|')))];
+      .flatMap((item) => item.value.split('|')) : [];
+    const selectedGenres = [...new Set([...priorAlternatives, ...explicitlySelected])];
     if (selectedGenres.length > 1) {
-      state.requirements = state.requirements.filter((item) => !(item.kind === 'genre' && item.policy === 'require_support'));
+      const selected = new Set(selectedGenres);
+      state.requirements = state.requirements.flatMap((item) => {
+        if (item.kind !== 'genre' || item.policy !== 'require_support') return [item];
+        const retained = item.value.split('|').filter((value) => !selected.has(value));
+        return retained.length ? [{ ...item, value: retained.join('|') }] : [];
+      });
       state.requirements.push({ kind: 'genre', value: selectedGenres.join('|'), policy: 'require_support' });
     }
   }
+  // Do not present the same canonical condition as both mandatory and optional.
+  // Literal event titles are data and retain their exact text.
+  const mandatoryTerms = new Set(state.requirements.filter((item) => item.policy === 'require_support').flatMap((item) => item.value.split('|')).flatMap((value) => [value, canonicalRequirementPreference[value]].filter(Boolean)).map(fold));
+  const literalValues = new Set([...c.literals.values()].map((value) => value.slice(0, 80)));
+  state.preferences.interests = state.preferences.interests.filter((value) => literalValues.has(value) || !mandatoryTerms.has(fold(value)));
   try {
     state = validateIntentState(state);
   } catch {
@@ -528,6 +558,101 @@ export function parseInputInterpreterResponse(value: unknown, input: Interpreter
   }
   return { state, action, issue: null, query: intentQuery(state), origin: 'jev' };
 }
+
+// This envelope is an internal adapter to the deterministic reducer. The ones
+// represent chosen candidate operations, never provider confidence or approval.
+// The untouched provider response is retained by evaluation tooling.
+function responseForPlanReduction(value: unknown, input: InterpreterInput) {
+  const response = structuredClone(record(value));
+  const answers = record(response.answers);
+  const request = buildInputInterpreterRequest('jev-contract-check', input);
+  for (const [id, question] of Object.entries(request.questions)) {
+    const current = record(answers[id]);
+    if (typeof current.choice !== 'string' || !Object.hasOwn(question.criteria, current.choice)) throw new Error(`Invalid interpreter answer: ${id}.`);
+    current.confidence = 1;
+    current.probabilities = Object.fromEntries(Object.keys(question.criteria).map((option) => [option, option === current.choice ? 1 : 0]));
+  }
+  return response;
+}
+
+/** Parses the first provider result as a non-authoritative proposal. */
+export function parseInputInterpreterProposal(value: unknown, input: InterpreterInput): InputPlanProposal {
+  const request = buildInputInterpreterRequest('jev-contract-check', input);
+  const questions = request.questions as Record<string, { criteria: Record<string, string> }>;
+  const rawAnswers = record(record(value).answers);
+  for (const [id, question] of Object.entries(questions)) answer(rawAnswers, id, Object.keys(question.criteria));
+  const decisions = new Map(Object.entries(questions).map(([id, question]) => [id, answer(rawAnswers, id, Object.keys(question.criteria))]));
+  const hasPrior = (id: string) => requirementEntries.some((entry) => entry.id === id && input.previous.requirements.some((item) => item.kind === entry.kind && item.value.split('|').includes(entry.value))) || (id.startsWith('req_age_') && input.previous.requirements.some((item) => item.kind === 'audience' && item.value === `age:${id.slice(8)}`));
+  const potentiallyRequired = (kind: string) => requirementEntries.filter((entry) => entry.kind === kind && (decisions.get(entry.id)!.probabilities.require ?? 0) >= 0.08).length;
+  const semantic = Object.entries(questions).flatMap(([id, question]) => {
+    if (!(id.startsWith('req_') || id === 'genre_logic' || id === 'activity_logic')) return [];
+    if (id === 'genre_logic' && potentiallyRequired('genre') < 2 && !input.previous.requirements.some((item) => item.kind === 'genre')) return [];
+    if (id === 'activity_logic' && potentiallyRequired('activity') < 2) return [];
+    const allowed = Object.keys(question.criteria), decision = decisions.get(id)!;
+    const alternatives = allowed.filter((option) => option !== decision.choice && !(option === 'remove' && !hasPrior(id)) && decision.probabilities[option] >= 0.1 && decision.probabilities[option] >= decision.probability - 0.3)
+      .sort((a, b) => decision.probabilities[b] - decision.probabilities[a]).slice(0, 2);
+    return alternatives.length ? [{ id, question, decision, options: [decision.choice, ...alternatives] }] : [];
+  });
+  type Beam = { selections: Map<string, string>; score: number; descriptions: string[] };
+  let beam: Beam[] = [{ selections: new Map(), score: 0, descriptions: [] }];
+  for (const item of semantic) beam = beam.flatMap((candidate) => item.options.map((option) => ({
+    selections: new Map(candidate.selections).set(item.id, option),
+    score: candidate.score + Math.log(Math.max(item.decision.probabilities[option], 1e-9)),
+    descriptions: [...candidate.descriptions, item.question.criteria[option]],
+  }))).sort((a, b) => b.score - a.score).slice(0, 24);
+  // Counterfactuals deliberately challenge a confidently invented extra audience
+  // condition. keep is a delta: it preserves an independently existing condition.
+  const audienceCounterfactuals: Beam[] = ['req_audience_children', 'req_audience_family_friendly']
+    .filter((id) => decisions.get(id)!.choice !== 'keep')
+    .map((id) => ({ selections: new Map([[id, 'keep']]), score: 0, descriptions: [] }));
+  const reduce = (candidate: Beam, scope: 'current' | 'new-only' = 'current') => {
+    const normalized = responseForPlanReduction(value, input), answers = record(normalized.answers);
+    // The final whole-plan decision, rather than a speculative issue label,
+    // judges semantic coverage. Explicit scalar blockers have already stopped.
+    for (const id of ['issue', 'candidate_coverage']) {
+      const target = record(answers[id]), selected = id === 'issue' ? 'none' : 'complete';
+      target.choice = selected;
+      target.probabilities = Object.fromEntries(Object.keys(questions[id].criteria).map((option) => [option, option === selected ? 1 : 0]));
+    }
+    for (const [id, selected] of candidate.selections) {
+      const target = record(answers[id]), allowed = Object.keys(questions[id].criteria);
+      target.choice = selected; target.probabilities = Object.fromEntries(allowed.map((option) => [option, option === selected ? 1 : 0]));
+    }
+    const result = parseInputInterpreterResponse(normalized, input, scope);
+    if (result.issue) return null;
+    const requirements = result.state.requirements.map((item) => `${item.kind}: ${item.policy === 'require_support' ? 'MUST HAVE: reject every event unless its source explicitly confirms' : 'MUST AVOID: reject events whose source explicitly confirms'} ${item.value.split('|').map((part) => requirementMeanings[part] ?? part).join(item.kind === 'content' || item.kind === 'accessibility' ? ' AND ' : ' OR ')}`);
+    const description = [`action ${result.action}`, `exact filters ${JSON.stringify(result.state.filters)}`, ...requirements,
+      `optional mood ${result.state.preferences.mood ?? 'none'}`, `optional companion ${result.state.preferences.companion ?? 'none'}`,
+      result.state.preferences.interests.length ? 'NICE TO HAVE: the interests shown in this plan state are optional. Missing a guarantee for them does not reject an otherwise eligible event.' : 'no optional interests'];
+    return { id: '', result, description };
+  };
+  const unique: InputPlanProposal['plans'] = [];
+  const seen = new Set<string>();
+  const add = (plan: ReturnType<typeof reduce>) => {
+    if (!plan || unique.length === 8) return;
+    const identity = JSON.stringify({ action: plan.result.action, state: plan.result.state });
+    if (seen.has(identity)) return;
+    seen.add(identity);
+    unique.push({ ...plan, id: `plan_${unique.length}` });
+  };
+  add(reduce(beam[0]));
+  const hasPriorGenres = input.previous.requirements.some((item) => item.kind === 'genre');
+  if (hasPriorGenres) add(reduce(beam[0], 'new-only'));
+  for (const candidate of audienceCounterfactuals) add(reduce(candidate));
+  for (const candidate of beam) {
+    add(reduce(candidate));
+    if (hasPriorGenres) add(reduce(candidate, 'new-only'));
+    if (unique.length === 8) break;
+  }
+  return { plans: unique };
+}
+
+const canonicalRequirementPreference: Record<string, string> = {
+  quiet: 'sessiz', romantic: 'romantik', uncrowded: 'kalabalık olmayan', seated: 'oturmalı',
+  jazz: 'jazz', blues: 'blues', rock: 'rock', electronic: 'elektronik', rap: 'rap', classical: 'klasik', comedy: 'komedi', drama: 'drama',
+  kayaking: 'kano', rowing: 'kürek', alcohol_free: 'alkolsüz', family_friendly: 'aile dostu', children: 'çocuklara uygun',
+  swearing: 'küfürsüz', sexual_content: 'cinsel içerik olmadan', step_free: 'basamaksız erişim', accessible_toilet: 'erişilebilir tuvalet',
+};
 
 function fastPath(input: InterpreterInput): InterpretedInput | null {
   const previous = validateIntentState(input.previous), q = fold(input.message.trim());
@@ -546,14 +671,64 @@ export async function interpretInput(input: InterpreterInput, options: Interpret
   if (!options.config?.apiKey.trim()) return unavailable();
   try {
     return await withDeadline(options.timeoutMs ?? 8000, 'Input interpreter timed out.', async (signal) => {
-      const body = JSON.stringify(buildInputInterpreterRequest(options.config!.model, input));
-      const response = await (options.fetcher ?? fetch)('https://api.typesafe.ai/v1/systemone', { method: 'POST', headers: { Authorization: `Bearer ${options.config!.apiKey}`, 'Content-Type': 'application/json' }, body, redirect: 'manual', signal });
-      if (!response.ok) { await response.body?.cancel(); throw new Error(`Interpreter request failed (HTTP ${response.status}).`); }
-      const reader = response.body?.getReader(); if (!reader) throw new Error('Missing interpreter response.');
-      const chunks: Uint8Array[] = []; let size = 0;
-      try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > 128_000) throw new Error('Interpreter response is too large.'); chunks.push(value); } } finally { await reader.cancel(); reader.releaseLock(); }
-      const buffer = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.length; }
-      return parseInputInterpreterResponse(JSON.parse(new TextDecoder().decode(buffer)), input);
+      const request = async (body: unknown) => {
+        const serialized = JSON.stringify(body);
+        if (bytes(serialized) > 48_000) throw new Error('Interpreter input is too large.');
+        const response = await (options.fetcher ?? fetch)('https://api.typesafe.ai/v1/systemone', { method: 'POST', headers: { Authorization: `Bearer ${options.config!.apiKey}`, 'Content-Type': 'application/json' }, body: serialized, redirect: 'manual', signal });
+        if (!response.ok) { await response.body?.cancel(); throw new Error(`Interpreter request failed (HTTP ${response.status}).`); }
+        const reader = response.body?.getReader(); if (!reader) throw new Error('Missing interpreter response.');
+        const chunks: Uint8Array[] = []; let size = 0;
+        try { for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > 128_000) throw new Error('Interpreter response is too large.'); chunks.push(value); } } finally { await reader.cancel(); reader.releaseLock(); }
+        const buffer = new Uint8Array(size); let offset = 0; for (const chunk of chunks) { buffer.set(chunk, offset); offset += chunk.length; }
+        return JSON.parse(new TextDecoder().decode(buffer));
+      };
+      const rawProposal = await request(buildInputInterpreterRequest(options.config!.model, input));
+      const contract = buildInputInterpreterRequest(options.config!.model, input);
+      const contractQuestions = contract.questions as Record<string, { criteria: Record<string, string> }>;
+      const firstAnswers = record(record(rawProposal).answers);
+      const decisions = new Map<string, ChoiceDecision>();
+      for (const [id, question] of Object.entries(contractQuestions)) decisions.set(id, answer(firstAnswers, id, Object.keys(question.criteria)));
+      const candidateContext = context(input);
+      const extractionApplicable = candidateContext.overflow || [candidateContext.amounts, candidateContext.parties, candidateContext.dates, candidateContext.times, candidateContext.districts, candidateContext.ages].some((items) => items.length > 0);
+      const actionChoice = decisions.get('action')?.choice as InterpretedInput['action'] ?? 'search';
+      const stop = (issue: InputIssue): InterpretedInput => ({ state: previous, action: actionChoice, issue, query: intentQuery(previous), origin: 'jev' });
+      if (candidateContext.overflow) return stop('constraint_ambiguous');
+      const budgetChoice = decisions.get('budget')!.choice;
+      const selectedAmount = candidateContext.amounts.find((item) => item.id === budgetChoice)?.value;
+      const activePaidBudget = selectedAmount !== undefined && selectedAmount > 0;
+      const exactIds = Object.keys(contractQuestions).filter((id) => !(id.startsWith('req_') || id.startsWith('interest_') || ['mood', 'companion', 'genre_logic', 'activity_logic'].includes(id)));
+      for (const id of exactIds) {
+        const decision = decisions.get(id)!;
+        const threshold = id === 'candidate_coverage' ? 0.5 : 0.55;
+        if (id === 'issue') {
+          if (decision.choice !== 'none' && decision.probability >= 0.55 && decision.confidence >= 0.1) return { state: previous, action: actionChoice, issue: decision.choice as InputIssue, query: intentQuery(previous), origin: 'jev' };
+          continue;
+        }
+        if (id === 'candidate_coverage' && extractionApplicable && (decision.choice !== 'complete' || decision.probability < threshold || decision.confidence < 0.1)) return { state: previous, action: actionChoice, issue: 'constraint_ambiguous', query: intentQuery(previous), origin: 'jev' };
+        if (id === 'candidate_coverage') continue;
+        if ((id === 'budget_basis' || id === 'budget_boundary') && !activePaidBudget) continue;
+        if (['budget', 'party', 'date', 'time', 'district'].includes(id) && ['ambiguous', 'unsupported'].includes(decision.choice)) return stop(decision.choice === 'unsupported' ? 'unsupported_constraint' : id === 'budget' ? 'budget_ambiguous' : id === 'date' ? 'date_ambiguous' : 'constraint_ambiguous');
+        const candidateAware: Record<string, boolean> = { budget: candidateContext.amounts.length > 0, party: candidateContext.parties.length > 0, date: candidateContext.dates.length > 0, time: candidateContext.times.length > 0, district: candidateContext.districts.length > 0 };
+        if (candidateAware[id] && ['keep', 'none'].includes(decision.choice)) {
+          const noChangeMass = (decision.probabilities.keep ?? 0) + (decision.probabilities.none ?? 0);
+          if (noChangeMass < 0.55 || decision.confidence < 0.1) return { state: previous, action: actionChoice, issue: id === 'budget' ? 'budget_ambiguous' : id === 'date' ? 'date_ambiguous' : 'constraint_ambiguous', query: intentQuery(previous), origin: 'jev' };
+        }
+        const applicable = id === 'action' || !['keep', 'none', 'skip'].includes(decision.choice);
+        if (applicable && (decision.probability < threshold || decision.confidence < 0.1)) return { state: previous, action: actionChoice, issue: id.startsWith('budget') ? 'budget_ambiguous' : id === 'date' ? 'date_ambiguous' : 'constraint_ambiguous', query: intentQuery(previous), origin: 'jev' };
+      }
+      const companion = decisions.get('companion')!;
+      const party = decisions.get('party')!.choice;
+      const selectedParty = candidateContext.parties.find((item) => item.id === party);
+      const inheritedParty = actionChoice !== 'reset' && party !== 'remove' ? previous.filters.partySize : undefined;
+      if (activePaidBudget && decisions.get('budget_basis')!.choice === 'group_total' && !selectedParty && !inheritedParty && companion.choice === 'set:partner' && (companion.probability < 0.55 || companion.confidence < 0.1)) return stop('budget_ambiguous');
+      const proposal = parseInputInterpreterProposal(rawProposal, input);
+      if (!proposal.plans.length) return { state: previous, action: actionChoice, issue: 'constraint_ambiguous', query: intentQuery(previous), origin: 'jev' };
+      const rawAudit = await request(buildInputPlanAuditRequest(options.config!.model, input, proposal));
+      const audit = parseInputPlanAuditResponse(rawAudit, proposal);
+      if (!audit.planId) return { state: previous, action: proposal.plans[0].result.action, issue: audit.issue, query: intentQuery(previous), origin: 'jev' };
+      const selected = proposal.plans.find((plan) => plan.id === audit.planId);
+      if (!selected) throw new Error('Audit selected an unknown plan.');
+      return selected.result;
     });
   } catch { return unavailable(); }
 }

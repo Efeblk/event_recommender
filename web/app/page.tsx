@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { IntentSummary } from '@/components/intent-summary';
 import { isAlternativesRequest } from '@/lib/intent';
 import type { IntentState } from '@/lib/input-state';
 import { groupFilterCount, groupFilterLabels } from '@/lib/ui-filters';
@@ -624,7 +625,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            {result && hasFilters && (
+            {result && hasFilters && !intentState && (
               <div className="active-filters" aria-label="Etkin filtreler">
                 {filters.dateFrom && <span>{filters.dateFrom}</span>}
                 {filters.dateTo && <span>{filters.dateTo}</span>}
@@ -741,6 +742,18 @@ export default function Home() {
               </span>
             </div>
           </div>
+          {result && intentState && (
+            <IntentSummary
+              state={intentState}
+              pending={!!pendingInput}
+              disabled={busy}
+              onEdit={() => {
+                textarea.current?.focus();
+                textarea.current?.scrollIntoView({ block: 'center' });
+              }}
+              onReset={reset}
+            />
+          )}
           {result?.status === 'results' && (
             <p className="recommendation-hint">
               Diğer seçenekleri görmek için “Başka seçenekler”i deneyebilirsin.

@@ -104,7 +104,9 @@ void test('structured integration ignores stale history and passes only canonica
   );
   assert.deepEqual(rankedInput?.history, []);
   assert.deepEqual(rankedInput?.requirements, []);
-  assert.equal(rankedInput?.message, intentQuery(state));
+  assert.match(rankedInput?.message ?? '', /konser concert music/);
+  assert.doesNotMatch(rankedInput?.message ?? '', /category:|mood:|companion:/);
+  assert.deepEqual(rankedInput?.preferences, state.preferences);
   assert.deepEqual(
     result.recommendations.map(({ event }) => event.id),
     ['stale-jazz'],
