@@ -39,12 +39,14 @@ await test('workshops are reclassified on refresh, while mislabeled old concerts
 await test('explicit concert and theatre titles override broad provider categories', () => {
   const gala={title:'Gala Konser - İstanbul DOB',description:'İstanbul Devlet Opera ve Balesi Gala Konser'};
   assert.equal(categoryForEvent('Gösteri',gala.title,gala.description),'Konser');
+  assert.equal(categoryForEvent('Gösteri',gala.title,'Canlı konser İstanbul Devlet Opera ve Balesi tarafından sunulur.'),'Konser');
   assert.equal(hasSupportedEventFormat({...gala,category:'Gösteri'}),false);
   assert.equal(hasSupportedEventFormat({...gala,category:'Konser'}),true);
   assert.equal(categoryForEvent('Film Gösterimi','Harry Potter ve Ateş Kadehi In Concert','Film müziği canlı icra edilir.'),'Konser');
 
   assert.equal(categoryForEvent('Diğer','Çiftlik Macerası Tiyatro Oyunu','Çocuklar için sahneleniyor.'),'Tiyatro');
   assert.equal(categoryForEvent('Diğer','Çizmeli Kedi Çocuk Oyunu','Çocuklar için sahneleniyor.'),'Tiyatro');
+  assert.equal(categoryForEvent('Diğer','Çizmeli Kedi Çocuk Oyunu','Tiyatro oyunu çocuklar için sahneleniyor.'),'Tiyatro');
   assert.equal(categoryForEvent('Diğer','Kutu Oyunu Etkinliği','Katılımcılar masa oyunu oynar.'),'Diğer');
   assert.equal(categoryForEvent('Diğer','Dostların Dilinden Muammer Karaca Tiyatrosu','Sanatçının yaşamı anlatılır.'),'Diğer');
 });

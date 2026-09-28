@@ -49,11 +49,11 @@ function explicitProgramFormat(event: Pick<EventRecord, 'title' | 'description'>
   const formats: [number, Category][] = [[workshop, 'Workshop'], [talk, 'Söyleşi'], [instruction, 'Eğitim']];
   const first = formats.filter(([index]) => index >= 0 && (performance < 0 || index < performance)).sort((a,b) => a[0]-b[0])[0];
   if (first) return first[1];
+  if (/\b(?:konser(?:i)?|concert)\b/.test(title)) return 'Konser';
+  if (/\b(?:tiyatro oyunu|cocuk oyunu|muzikal(?:i)?|theatre play|theater play)\b/.test(title)) return 'Tiyatro';
   if (performance >= 0) return null; // A performer's biography is not the program.
   if (/\b(?:atolye(?:si|leri)?|workshop)\b/.test(title)) return 'Workshop';
   if (/\b(?:soylesi(?:si)?|seminer|konferans)\b/.test(title)) return 'Söyleşi';
-  if (/\b(?:konser(?:i)?|concert)\b/.test(title)) return 'Konser';
-  if (/\b(?:tiyatro oyunu|cocuk oyunu|muzikal(?:i)?|theatre play|theater play)\b/.test(title)) return 'Tiyatro';
   return null;
 }
 
