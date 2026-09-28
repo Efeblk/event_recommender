@@ -165,14 +165,14 @@ export type ConstraintIssue =
   | 'unsupported_location'
   | 'constraint_ambiguous';
 
-const categoryTerms: Array<[Category, RegExp]> = [
-  ['Stand-up', /\b(?:stand[ -]?up)\b/],
-  [
-    'Tiyatro',
-    /\b(?:tiyatro(?:su(?:na|nda|nu)?)?|sahne oyunu|komedi oyunu|comedy play|theatre|theater)\b/,
-  ],
-  ['Konser', /\b(?:konser|concert|music|muzik|caz|jazz|rock|akustik)\b/],
-];
+function isExclusiveCategoryChoice(text: string, category: Category) {
+  // Reuse categoryIntent's complete taxonomy instead of maintaining a second
+  // category-term table. Keep exclusivity clause-scoped: “sadece akşam olsun,
+  // workshop” must not erase existing category exclusions.
+  return [...text.matchAll(/\b(?:sadece|yalniz|only)\b([^,.!?;\n]*)/g)].some(
+    (match) => categoryIntent(match[1]).requestedCategories.includes(category),
+  );
+}
 
 function parseCategories(q: string, previous: Filters) {
   let category = previous.category;
@@ -198,11 +198,7 @@ function parseCategories(q: string, previous: Filters) {
   if (distinct.length === 1) {
     category = distinct[0];
     excluded.delete(category);
-    if (
-      new RegExp(
-        `\\b(?:sadece|yalniz)\\s+${categoryTerms.find(([c]) => c === category)![1].source}`,
-      ).test(positiveText)
-    )
+    if (isExclusiveCategoryChoice(positiveText, category))
       excluded.clear();
   }
   return {

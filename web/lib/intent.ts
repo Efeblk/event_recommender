@@ -215,7 +215,7 @@ const categoryPatterns: Array<[Category, RegExp]> = [
   ['Dans', /\b(?:dans\s+gosterisi|dance\s+performances?)\b/],
   [
     'Gösteri',
-    /\b(?:stage\s+shows?|(?:bir|sahne)\s+gosteri(?:ye|ler)?|gosteri(?:ye|ler)?\s+(?:olsun|istiyorum|isterim|gidelim|izlemek|oner\w*|bul\w*))\b/,
+    /\b(?:stage\s+shows?|sahne\s+gosteri(?:si|ye|ler)?|gosteri(?:ye|ler)?\s+(?:olsun|istiyorum|isterim|gidelim|izlemek|oner\w*|bul\w*))\b/,
   ],
   ['Eğitim', /\b(?:egitim\s+etkinligi|training\s+events?|classes|courses)\b/],
   ['Gezi', /\b(?:gezi(?:ler)?|guided\s+tours?)\b/],

@@ -41,6 +41,7 @@ Biletix'te `52000` değerinin arayüzde `520,00₺` olarak gösterildiği doğru
 
 ## Hata ve yayın davranışı
 
+- Eski `/api/admin/sync` örnekleme yolu iki çalışma ortamında da kimlik doğrulamadan sonra 410 döner. Toplama ve isteğe bağlı embedding işlemleri yalnızca ayrı, bütçeli ve kalıcı akışlarla yapılır.
 - İki eşzamanlı iş; HTML, robots ve sonraki liste sayfaları dahil tüm HTTP istekleri arasında en az bir saniye (toplam en fazla yaklaşık 60/dakika). Geçici HTTP 429/5xx hatalarında en fazla iki tekrar; robots.txt okunamazsa o kaynak atlanır. Yönlendirmeler takip edilmez, yanıtlar okuma sırasında 4 MB ile sınırlandırılır.
 - Bozuk şema, boş/okunamayan sayfa veya ağ hatası, eski prodüksiyonu silmek için kanıt sayılmaz. Önceki kayıtlar kendi kontrol zamanıyla en fazla 72 saat korunur; başarısız deneme onları tazelemez. Başarılı sayfa, aynı URL'nin seanslarını yeniler.
 - Tek bir geçersiz seans bile o sayfanın kısmi olarak yayımlanmasını önler. Kaynakla doğrulanan boş envanter ise `events:[]` ve `retiredAt` ile açıkça aktarılır. Hem GCP hem Cloudflare eski aktarımın kaldırılmış seansları yeniden oluşturmasını engelleyen zaman damgasını saklar. Yeniden başlatmada URL'nin eski seansları başarılı checkpoint ile tamamen değiştirilir.

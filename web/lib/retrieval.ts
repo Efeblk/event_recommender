@@ -104,13 +104,6 @@ export function searchContext(
   const relevantHistory = reset || categorySwitch ? [] : persistentRecent;
 
   const rejected = new Set<string>();
-  const categoryRejections: Record<string, Category> = {
-    konser: 'Konser',
-    muzik: 'Konser',
-    tiyatro: 'Tiyatro',
-    'stand-up': 'Stand-up',
-    'stand up': 'Stand-up',
-  };
   for (const turn of [
     ...relevantHistory.map(({ content }) => content),
     message,
@@ -121,8 +114,8 @@ export function searchContext(
     const positiveText = normalize(intent.positiveText);
     for (const term of rejected) {
       if (
-        categoryRejections[term] &&
-        intent.requestedCategories.includes(categoryRejections[term])
+        rejectedTermCategory(term) &&
+        intent.requestedCategories.includes(rejectedTermCategory(term)!)
       ) {
         rejected.delete(term);
         continue;
@@ -168,13 +161,18 @@ function inheritedCategory(
         ? latest[0]
         : null;
   if (!candidate) return null;
-  const blocked =
-    candidate === 'Konser'
-      ? ['konser', 'muzik']
-      : candidate === 'Tiyatro'
-        ? ['tiyatro', 'sahne oyunu']
-        : ['stand-up', 'stand up', 'komedi'];
-  return blocked.some((term) => rejected.has(term)) ? null : candidate;
+  return [...rejected].some((term) => rejectedTermCategory(term) === candidate)
+    ? null
+    : candidate;
+}
+
+const rejectedCategoryCache = new Map<string, Category | null>();
+function rejectedTermCategory(term: string): Category | null {
+  if (rejectedCategoryCache.has(term)) return rejectedCategoryCache.get(term)!;
+  const categories = categoryIntent(`${term} istemiyorum`).excludedCategories;
+  const category = categories.length === 1 ? categories[0] : null;
+  rejectedCategoryCache.set(term, category);
+  return category;
 }
 
 function eventText(event: EventRecord) {

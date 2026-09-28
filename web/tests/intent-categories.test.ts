@@ -23,8 +23,20 @@ void test('display and merge wording does not become a hard Gösteri category', 
 });
 
 void test('generic requests and permissive workshop examples do not create hard categories', () => {
-  for (const message of ['etkinlik öner', 'show me events', 'bir aktivite olsun', 'workshop olabilir', 'an atelier could be nice'])
+  for (const message of [
+    'etkinlik öner',
+    'show me events',
+    'bir aktivite olsun',
+    'Beş yaşındaki çocuğumla yaşına uygun bir gösteriye gitmek istiyorum.',
+    'workshop olabilir',
+    'an atelier could be nice',
+  ])
     assert.deepEqual(categoryIntent(message).requestedCategories, [], message);
+});
+
+void test('explicit stage-show wording remains a Gösteri category', () => {
+  for (const message of ['sahne gösterisi istiyorum', 'gösteri olsun', 'stage show please'])
+    assert.deepEqual(categoryIntent(message).requestedCategories, ['Gösteri'], message);
 });
 
 void test('new category exclusions support coordinated Turkish and English lists', () => {

@@ -222,6 +222,9 @@ try {
   const sync = await request('/api/admin/sync', {});
   assert.equal(sync.status, 401);
   await sync.arrayBuffer();
+  const retiredSync = await request('/api/admin/sync', {}, true);
+  assert.equal(retiredSync.status, 410, 'Legacy sampled sync must not bypass durable collection');
+  await retiredSync.arrayBuffer();
   const unauthorizedImport = await request('/api/admin/import', {});
   const unauthorizedDetail = await unauthorizedImport.text();
   assert.equal(unauthorizedImport.status, 401, unauthorizedDetail);

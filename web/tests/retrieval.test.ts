@@ -710,6 +710,32 @@ await test('positive inflected category clears stale category rejection without 
   assert.equal(genre.rejectedTerms.includes('rock'), true);
 });
 
+await test('expanded inherited categories are cleared by Turkish and English follow-up rejection', () => {
+  for (const [category, initial, rejection, term] of [
+    ['Workshop', 'Workshop istiyorum', 'Workshop istemiyorum', 'workshop'],
+    ['Workshop', 'I want a workshop', 'No workshops', 'workshop'],
+    ['Sinema', 'Sinema istiyorum', 'Sinema istemiyorum', 'sinema'],
+    ['Sinema', 'I want a cinema screening', 'No cinema', 'sinema'],
+  ] as const) {
+    const context = searchContext(rejection, [
+      { role: 'user', content: initial },
+    ]);
+    assert.equal(context.category, null, `${category}: ${rejection}`);
+    assert.equal(context.rejectedTerms.includes(term), true, rejection);
+  }
+});
+
+await test('expanded category rejection preserves independent exclusions', () => {
+  const context = searchContext('Workshop istemiyorum, rock da istemiyorum', [
+    { role: 'user', content: 'Workshop istiyorum' },
+  ]);
+  assert.equal(context.category, null);
+  assert.deepEqual(
+    new Set(context.rejectedTerms),
+    new Set(['workshop', 'rock']),
+  );
+});
+
 await test('soonest coverage reaches an early eligible production beyond the relevance top sixteen', () => {
   const later = Array.from({ length: 20 }, (_, index) =>
     make(`later-${index}`, {
