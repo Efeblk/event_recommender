@@ -222,6 +222,10 @@ function normalizedSource(source: string) {
   }
   return {
     text,
+    range: (start: number, end: number) => ({
+      start: starts[start] ?? source.length,
+      end: ends[end - 1] ?? source.length,
+    }),
     slice: (start: number, end: number) =>
       source.slice(
         starts[start] ?? source.length,
@@ -376,6 +380,16 @@ export function buildInputCandidates(
     amountRanges.push([match.index!, match.index! + match[0].length]);
     if (value == null) pool.overflow = true;
     else add('amounts', 'a', original(match), value);
+  }
+  // Colloquial Turkish commonly attaches the dative suffix directly to an
+  // upper bound ("bilet başı 1100e kadar"). Keep this narrow budget context
+  // so an arbitrary suffixed number cannot become a price candidate.
+  for (const match of message.matchAll(
+    /(?<![\p{L}\p{N}_])(?:bilet\s+başı|kişi\s+başı)\s+(\d[\d.,]*)(?:'?(?:e|a|ye|ya))\s+kadar(?![\p{L}\p{N}_])/giu,
+  )) {
+    const value = numericAmount(match[1]);
+    if (value == null) pool.overflow = true;
+    else add('amounts', 'a', match[0], value);
   }
   const wordToken = `(?:${numberWords}|bin|thousand|yuz|hundred)`;
   for (const match of scan(
@@ -552,6 +566,21 @@ export function buildInputCandidates(
   const weekdayNames = Object.keys(weekdays)
     .sort((a, b) => b.length - a.length)
     .join('|');
+  const quotedRanges = [...message.matchAll(
+    /["\u201c\u201d']([^"\u201c\u201d']{1,160})["\u201c\u201d']/gu,
+  )].map((match) => ({ start: match.index!, end: match.index! + match[0].length }));
+  const weekdayAbbreviations: Record<string, number> = {
+    pzt: 1,
+    cmt: 6,
+  };
+  for (const match of scan(
+    `${boundaryStart}(${Object.keys(weekdayAbbreviations).join('|')})\\.?${boundaryEnd}`,
+  )) {
+    const range = source.range(match.index!, match.index! + match[0].length);
+    if (quotedRanges.some((quoted) => range.start >= quoted.start && range.end <= quoted.end))
+      continue;
+    addDate(match, weekdayOnOrAfter(today, weekdayAbbreviations[match[1]]));
+  }
   const weekdayPattern = `${boundaryStart}(?:(bu|this|gelecek|next)\\s+)?(${weekdayNames})(?:'?(?:dan|den|tan|ten|ya|ye|na|ne)|\\s+gunu)?${boundaryEnd}`;
   for (const match of scan(weekdayPattern)) {
     const week = dated.find(
@@ -734,14 +763,69 @@ export function buildInputCandidates(
     `${boundaryStart}(?:kalabalik olmayan|canli muzik|date night|low-key|cultural|intimate|improv|exhibitions?|workshops?|atolye(?:ler)?|sergi(?:ler)?|romantik|sakin)${boundaryEnd}`,
   ))
     add('interests', 'i', original(match), original(match));
+  // Offer the interpreter topical words independently from hard constraints.
+  // Mask only spans already grounded by deterministic extractors. Residue that
+  // still looks like a negation or an unsupported mandatory condition is left
+  // unselected rather than weakened into an optional interest.
+  const masked = message.split('');
+  const hard = [
+    ...pool.amounts,
+    ...pool.parties,
+    ...pool.dates,
+    ...pool.times,
+    ...pool.districts,
+    ...pool.ages,
+  ];
+  for (const { text } of hard) {
+    let offset = 0;
+    while ((offset = message.indexOf(text, offset)) >= 0) {
+      for (let index = offset; index < offset + text.length; index++)
+        masked[index] = ' ';
+      offset += text.length;
+    }
+  }
+  // Quoted text is already copied literally above; do not manufacture a
+  // second, partially stripped candidate from inside or around the title.
+  for (const match of message.matchAll(
+    /["\u201c\u201d']([^"\u201c\u201d']{1,160})["\u201c\u201d']/gu,
+  ))
+    for (let index = match.index!; index < match.index! + match[0].length; index++)
+      masked[index] = ' ';
+  const residual = masked.join('');
+  for (const part of residual.split(/[,;!?\n]+|\b(?:veya|or)\b/giu)) {
+    const clean = part
+      .trim()
+      .replace(/^(?:da|de|ta|te)\b\s*/iu, '')
+      .replace(/\b(?:konser(?:i|ler)?|concerts?|etkinlik(?:ler)?|events?|tiyatro|theatre|theater|oyun(?:u|lar)?|show|gosteri|sergi(?:ler)?|exhibitions?)\b/giu, ' ')
+      .replace(/\b(?:dinlemek\s+istiyoz|dinlemek\s+istiyoruz|dinlemek\s+istiyorum|ariyorum|arıyorum|bakiyorum|bakıyorum|bakiyom|bakıyom|istiyorum|isterim|bul|bulur musun|goster|göster|oner|öner|looking for|find|show me|recommend)\b/giu, ' ')
+      .replace(/\b(?:mumkunse|mümkünse|tercihen|please|lutfen|lütfen)\b/giu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const normalized = fold(clean);
+    if (
+      !clean ||
+      clean.length > 160 ||
+      !/\p{L}/u.test(clean) ||
+      /\b(?:degil|istemiyorum|olmasin|olmasın|without|except|must not|no)\b/u.test(normalized) ||
+      /\b(?:sart|zorunlu|mecbur|required|must|need(?:ed)?|accessible|eris(?:im|imi)|baslamasin|bitmesin)\b/u.test(normalized) ||
+      /^(?:ok|okay|olur)$/u.test(normalized) ||
+      /^(?:en fazla|en az|kisi basi|kişi başı|toplam|under|over|at most|at least|per person|each)$/u.test(normalized) ||
+      /^(?:en yakin tarih|en yakın tarih|en erken(?: tarih)?|ilk uygun tarih|mumkun olan ilk tarih|mümkün olan ilk tarih|soonest|earliest|next available date)$/u.test(normalized)
+    )
+      continue;
+    add('interests', 'i', clean, clean);
+  }
   for (const clause of message.split(/[,;!?\n]+/)) {
     const clean = clause.trim();
+    const normalized = fold(clean);
     if (
       clean &&
       clean.length <= 160 &&
       /\p{L}/u.test(clean) &&
-      !/^(?:en yakin tarih|en erken(?: tarih)?|ilk uygun tarih|mumkun olan ilk tarih|soonest|earliest|next available date)$/u.test(fold(clean).trim()) &&
-      !/^\s*(?:no|not|without|istemiyorum|olmasin)\b/u.test(fold(clean))
+      !hard.some(({ text }) => clean.includes(text)) &&
+      !/["\u201c\u201d']/.test(clean) &&
+      !/^(?:en yakin tarih|en erken(?: tarih)?|ilk uygun tarih|mumkun olan ilk tarih|soonest|earliest|next available date)$/u.test(normalized.trim()) &&
+      !/\b(?:no|not|without|degil|istemiyorum|olmasin|sart|zorunlu|mecbur|required|must|accessible|eris(?:im|imi)|baslamasin|bitmesin)\b/u.test(normalized)
     )
       add('interests', 'i', clean, clean);
   }

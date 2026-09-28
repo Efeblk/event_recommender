@@ -23,7 +23,6 @@ import {
 } from './retrieval.ts';
 import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
 import { semanticQuery, type SemanticRanking } from './hybrid.ts';
-import { mergeEventSessions } from './event-merge.ts';
 import { checkRequirements, deriveRequirements } from './requirements.ts';
 import {
   emptyIntentState,
@@ -349,11 +348,7 @@ async function recommendResolved(
       totalCandidates: 0,
     };
   const catalog = await deps.candidates(filters);
-  let events = mergeEventSessions(
-    catalog.filter((event) =>
-      isEligible(event, emptyFilters, now),
-    ),
-  ).filter((event) => isEligible(event, filters, now));
+  let events = catalog.filter((event) => isEligible(event, filters, now));
   const excludedIds = new Set(input.excludeIds);
   const isExcluded = (event: EventRecord) =>
     excludedIds.has(event.id) ||

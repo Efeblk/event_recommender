@@ -257,13 +257,24 @@ await test('private Cloud Run requires a separate identity token', async () => {
   assert.match(result.stderr, /SERVERLESS_ID_TOKEN is required/);
 });
 
-await test('legacy loopback live indexing remains backwards compatible', async () => {
+await test('live indexing activates a fully cached pending publication', async () => {
   await withEndpoint(
-    [{ configured: true, eligible: 1, documents: 1, indexed: 1, pending: 0 }],
+    [
+      { configured: true, eligible: 1, documents: 1, indexed: 1, pending: 0 },
+      {
+        configured: true,
+        eligible: 1,
+        documents: 1,
+        indexed: 1,
+        pending: 0,
+        embedded: 0,
+        usage: { totalTokens: 0 },
+      },
+    ],
     async (origin, methods) => {
       const result = await invoke(origin, ['--live'], { autoLive: false });
       assert.equal(result.code, 0, result.stderr);
-      assert.deepEqual(methods, ['GET']);
+      assert.deepEqual(methods, ['GET', 'POST']);
       assert.equal(result.report, undefined);
     },
   );

@@ -214,7 +214,13 @@ try {
     throw new Error('Embedding profile does not match --expected-profile.');
   if (values['expected-pending'] && status.pending !== expectedPending)
     throw new Error('Pending count does not match --expected-pending.');
-  for (let batch = 1; batch <= maxBatches && status.pending > 0; batch++) {
+  // A zero-pending catalog may still be pending publication. The first POST is
+  // therefore required for server-side activation and consumes no Voyage call.
+  for (
+    let batch = 1;
+    batch <= maxBatches && (status.pending > 0 || batch === 1);
+    batch++
+  ) {
     if (observedTotalTokens >= maxTotalTokens)
       throw new Error(
         'Observed Voyage token usage reached --max-total-tokens.',

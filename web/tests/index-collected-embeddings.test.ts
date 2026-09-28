@@ -124,24 +124,41 @@ await test('unattended indexing defaults off and validates enabled windows befor
   assert.equal(plan.code, 0);
   assert.equal(JSON.parse(plan.stdout).requests, 0);
 });
-await test('fully cached catalog makes only one read-only status request', async () => {
+await test('fully cached catalog makes one activation POST without provider usage', async () => {
   const report = await reportPath();
-  await endpoint([{ body: status() }], async (origin, requests) => {
-    const result = await cli(
-      ['--live', '--allow-loopback-http', '--report', report],
-      { BIPLAN_URL: origin },
-    );
-    assert.equal(result.code, 0, result.stderr);
-    assert.deepEqual(
-      requests.map((r) => r.method),
-      ['GET'],
-    );
-  });
+  await endpoint(
+    [
+      { body: status() },
+      {
+        body: {
+          ...status(),
+          outcome: 'complete',
+          embedded: 0,
+          hashes: [],
+          usage: { totalTokens: 0 },
+          publication: { activated: true, pending: 0 },
+          audit: null,
+        },
+      },
+    ],
+    async (origin, requests) => {
+      const result = await cli(
+        ['--live', '--allow-loopback-http', '--report', report],
+        { BIPLAN_URL: origin },
+      );
+      assert.equal(result.code, 0, result.stderr);
+      assert.deepEqual(
+        requests.map((r) => r.method),
+        ['GET', 'POST'],
+      );
+    },
+  );
   const rows = (await readFile(report, 'utf8'))
     .trim()
     .split('\n')
     .map((x) => JSON.parse(x));
-  assert.equal(rows.at(-1).attempts, 0);
+  assert.equal(rows.at(-1).attempts, 1);
+  assert.equal(rows.at(-1).totalTokens, 0);
   assert.equal(rows.at(-1).pending, 0);
 });
 await test('an older deployed endpoint without audited pin metadata never receives a POST', async () => {

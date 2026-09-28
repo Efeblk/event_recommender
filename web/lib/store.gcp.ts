@@ -1,4 +1,4 @@
-import { mergeEventSessions } from './event-merge.ts';
+import { buildSearchCatalog, searchCatalogCandidates, type SearchCatalog } from './materialized-catalog.ts';
 import { sourcePageTimes } from './source-page.ts';
 import {
   MAX_CHECKPOINT_BYTES,
@@ -9,8 +9,8 @@ import {
   type CollectionCheckpoint,
 } from './operations.ts';
 import { validVector } from './providers.ts';
-import { isEligible } from './search.ts';
 import { emptyFilters, type EventRecord } from './types.ts';
+import { voyageDocumentText } from './voyage.ts';
 import type {
   BlobStore,
   CatalogStatus,
@@ -30,10 +30,20 @@ interface SourceHead {
   events: number;
   kind?: 'active' | 'retired' | 'quarantined';
 }
+interface SearchPointer {
+  key: string;
+  hash: string;
+  bytes: number;
+  profile?: string;
+  dimensions?: number;
+  checkpoint?: CheckpointPointer;
+}
 interface CatalogHead {
   revision: string;
   hash: string;
   pointer: CheckpointPointer;
+  search?: SearchPointer;
+  pendingSearch?: SearchPointer;
 }
 interface VectorHead {
   profile: string;
@@ -62,7 +72,7 @@ async function digest(body: string) {
     n.toString(16).padStart(2, '0'),
   ).join('');
 }
-function statusFor(events: EventRecord[], now: Date): CatalogStatus {
+function statusFor(events: Pick<EventRecord, 'startsAt' | 'checkedAt' | 'availability'>[], now: Date): CatalogStatus {
   const cutoff = new Date(now.getTime() - 72 * 3600000).toISOString();
   const time = now.toISOString();
   let oldestCheckedAt: string | null = null,
@@ -119,9 +129,13 @@ export function createGcpStore(options: {
   blobs: BlobStore;
   now?: () => number;
   namespace?: string;
+  embeddingProfile?: { profile: string; dimensions: number };
 }): HighLevelStore {
   const { control, blobs } = options;
   const now = options.now ?? Date.now;
+  const embeddingProfile = options.embeddingProfile;
+  if (embeddingProfile && (!embeddingProfile.profile || !Number.isSafeInteger(embeddingProfile.dimensions) || embeddingProfile.dimensions < 1 || embeddingProfile.dimensions > 16384))
+    throw new Error('Invalid search embedding profile');
   const namespace = options.namespace ?? 'default';
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(namespace))
     throw new Error('Invalid storage namespace');
@@ -137,6 +151,7 @@ export function createGcpStore(options: {
         checkpoint: CollectionCheckpoint;
       }
     | undefined;
+  const searchCache = new Map<string, SearchCatalog>();
   let vectorCache:
     | {
         key: string;
@@ -209,6 +224,64 @@ export function createGcpStore(options: {
     };
     return catalogCache;
   }
+  function matchesProfile(pointer: SearchPointer | undefined) {
+    return !!pointer && (!embeddingProfile || (pointer.profile === embeddingProfile.profile && pointer.dimensions === embeddingProfile.dimensions));
+  }
+  async function readSearch(pointer: SearchPointer | undefined): Promise<SearchCatalog | null> {
+    if (!pointer) return null;
+    if (!pointer.key || !hashPattern.test(pointer.hash) || !Number.isSafeInteger(pointer.bytes) || pointer.bytes < 1 || pointer.bytes > 128 * 1024 * 1024)
+      throw new Error('Invalid search catalog pointer');
+    const cacheKey = `${pointer.key}:${pointer.hash}:${pointer.bytes}`;
+    const cached = searchCache.get(cacheKey);
+    if (cached) return cached;
+    const projection = await blobs.get(pointer.key);
+    if (!projection || projection.bytes !== pointer.bytes || bytes(projection.body) !== projection.bytes || await digest(projection.body) !== pointer.hash)
+      throw new Error('Published search catalog unavailable or damaged');
+    const search = JSON.parse(projection.body) as SearchCatalog;
+    if (search.schemaVersion !== 1 || !Number.isFinite(Date.parse(search.materializedAt)) || !Array.isArray(search.groups) || !Array.isArray(search.sourceStatus))
+      throw new Error('Invalid published search catalog');
+    if (searchCache.size >= 2) searchCache.clear();
+    searchCache.set(cacheKey, search);
+    return search;
+  }
+  async function activeSearch(head: CatalogHead | null) {
+    if (!head) return null;
+    if (matchesProfile(head.search)) return readSearch(head.search);
+    if (matchesProfile(head.pendingSearch)) return null;
+    throw new Error('Search catalog requires publication');
+  }
+  async function documentsFor(search: SearchCatalog, at: Date) {
+    const documents = new Map<string, EventRecord>();
+    for (const group of search.groups) {
+      for (let index = 0; index < group.versions.length; index++) {
+        const version = group.versions[index];
+        // The selected current version and every future version can become visible.
+        if ((group.versions[index + 1]?.from ?? Infinity) <= at.getTime()) continue;
+        for (const event of version.events) {
+          const hash = event.preparedSearch?.documentHash ?? await digest(voyageDocumentText(event));
+          if (!documents.has(hash)) documents.set(hash, event);
+        }
+      }
+    }
+    return documents;
+  }
+  async function activeStatus(head: CatalogHead | null, at: Date) {
+    const search = await activeSearch(head);
+    if (!search) return statusFor([], at);
+    // Retain each family's last visible records for stale/empty diagnostics after
+    // its expiry version becomes empty; eligibility still uses only active cards.
+    const records = search.groups.flatMap(({ versions }) => {
+      let latest: EventRecord[] = [];
+      for (const version of versions) {
+        if (version.from > at.getTime()) break;
+        if (version.events.length) latest = version.events;
+      }
+      return latest;
+    });
+    const status = statusFor(records, at);
+    const eligible = searchCatalogCandidates(search, emptyFilters, at).length;
+    return { ...status, eligible, status: eligible ? 'ready' as const : status.status === 'ready' ? 'empty' as const : status.status };
+  }
   async function readVectors(head: VectorHead | null, profile: string) {
     if (!head) return new Map<string, number[]>();
     if (head.profile !== profile || !hashPattern.test(head.hash))
@@ -258,24 +331,64 @@ export function createGcpStore(options: {
       await control.get(catalogPath);
     },
     async candidates(filters, at = new Date(now())) {
-      const snapshot = await readCatalog(await catalogHead());
-      const eligible = (snapshot?.checkpoint.events ?? []).filter((event) =>
-        isEligible(event, emptyFilters, at),
-      );
-      return mergeEventSessions(eligible).filter((event) =>
-        isEligible(event, filters, at),
-      );
+      const search = await activeSearch(await catalogHead());
+      return search ? searchCatalogCandidates(search, filters, at) : [];
+    },
+    async embeddingCandidates(at = new Date(now())) {
+      const head = await catalogHead();
+      const pointer = head?.pendingSearch ?? head?.search;
+      if (!pointer) {
+        if (head) throw new Error('Search catalog requires publication');
+        return [];
+      }
+      if (!matchesProfile(pointer)) throw new Error('Search embedding profile mismatch');
+      const search = await readSearch(pointer);
+      return [...(await documentsFor(search!, at)).values()];
+    },
+    async activateSearchCatalog(profile, lease) {
+      requireLeaseKind(lease, ['voyage_index_lock']);
+      const lockPath = await leasePath(lease.key);
+      const vectorPath = await profilePath(profile);
+      const captured = await control.transaction(async (tx) => {
+        await liveLease(tx, lease, lockPath);
+        const head = await tx.get<CatalogHead>(catalogPath);
+        const vectors = await tx.get<VectorHead>(vectorPath);
+        return { head, vectors };
+      });
+      const pending = captured.head?.pendingSearch;
+      if (!pending) return { activated: false, pending: 0 };
+      if (!embeddingProfile || profile !== embeddingProfile.profile || pending.profile !== profile || pending.dimensions !== embeddingProfile.dimensions)
+        throw new Error('Search embedding profile mismatch');
+      const search = await readSearch(pending);
+      const documents = await documentsFor(search!, new Date(now()));
+      const vectors = await readVectors(captured.vectors, profile);
+      const missing = [...documents.keys()].filter((hash) => !validVector(vectors.get(hash), embeddingProfile.dimensions)).length;
+      if (missing) return { activated: false, pending: missing };
+      await control.transaction(async (tx) => {
+        await liveLease(tx, lease, lockPath);
+        const head = await tx.get<CatalogHead>(catalogPath);
+        const vectorHead = await tx.get<VectorHead>(vectorPath);
+        if (!sameRevision(head, captured.head) || !sameRevision(vectorHead, captured.vectors))
+          throw new Error('Search activation publication changed');
+        const { pendingSearch: _pending, ...retained } = head!;
+        tx.set(catalogPath, { ...retained, revision: crypto.randomUUID(), search: pending });
+      });
+      return { activated: true, pending: 0 };
     },
     async catalogStatus(at = new Date(now())) {
-      const snapshot = await readCatalog(await catalogHead());
-      return statusFor(snapshot?.checkpoint.events ?? [], at);
+      return activeStatus(await catalogHead(), at);
     },
     async currentPublished(at = new Date(now())) {
       const head = await catalogHead();
-      const snapshot = await readCatalog(head);
+      const search = await activeSearch(head);
       return {
-        catalog: statusFor(snapshot?.checkpoint.events ?? [], at),
+        catalog: await activeStatus(head, at),
         checkpoint: head?.pointer ?? null,
+        search: {
+          pending: Boolean(head?.pendingSearch),
+          checkpoint: search ? head?.search?.checkpoint ?? null : null,
+          sourceCatalog: statusFor(search?.sourceStatus ?? [], at),
+        },
       };
     },
     async consumeLimit(key, limit, expiresAt) {
@@ -393,7 +506,7 @@ export function createGcpStore(options: {
         await liveLease(tx, lease, lockPath);
         return tx.get<CatalogHead>(catalogPath);
       });
-      if (previous && report.finishedAt <= previous.pointer.finishedAt)
+      if (previous && (report.finishedAt < previous.pointer.finishedAt || (report.finishedAt === previous.pointer.finishedAt && (matchesProfile(previous.pendingSearch) || matchesProfile(previous.search)))))
         return previous.pointer;
       const sources = await control.list<SourceHead>(`${base}/sources`);
       if (sources.length > MAX_CHECKPOINT_EVENTS)
@@ -467,6 +580,11 @@ export function createGcpStore(options: {
         throw new Error('Cannot publish an empty staged catalog');
       events.sort((a, b) => a.id.localeCompare(b.id));
       const savedAt = new Date(now()).toISOString();
+      const searchBody = JSON.stringify(buildSearchCatalog(events, new Date(savedAt)));
+      const searchBytes = bytes(searchBody);
+      if (searchBytes > 128 * 1024 * 1024) throw new Error('Search catalog exceeds limit');
+      const searchKey = `search-catalog/${savedAt.replace(/[:.]/g, '-')}-${crypto.randomUUID()}.json`;
+      await blobs.putImmutable(searchKey, searchBody);
       const checkpoint: CollectionCheckpoint = {
         schemaVersion: 1,
         savedAt,
@@ -488,10 +606,18 @@ export function createGcpStore(options: {
         bytes: size,
         summary: report.summary,
       };
+      const prepared: SearchPointer = {
+        key: searchKey, hash: await digest(searchBody), bytes: searchBytes,
+        checkpoint: pointer,
+        ...(embeddingProfile ? { profile: embeddingProfile.profile, dimensions: embeddingProfile.dimensions } : {}),
+      };
       const next: CatalogHead = {
         revision: crypto.randomUUID(),
         hash: await digest(body),
         pointer,
+        ...(embeddingProfile
+          ? { pendingSearch: prepared, ...(matchesProfile(previous?.search) ? { search: previous!.search } : {}) }
+          : { search: prepared }),
       };
       await control.transaction(async (tx) => {
         await liveLease(tx, lease, lockPath);

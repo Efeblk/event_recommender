@@ -46,10 +46,20 @@ export interface CatalogStatus {
 export interface PublishedState {
   catalog: CatalogStatus;
   checkpoint: CheckpointPointer | null;
+  search?: {
+    pending: boolean;
+    checkpoint: CheckpointPointer | null;
+    sourceCatalog: CatalogStatus;
+  };
 }
 export interface HighLevelStore {
   health(): Promise<void>;
+  /** Canonical sessions with provider offers; recommendation must not re-merge. */
   candidates(filters: Filters, now?: Date): Promise<EventRecord[]>;
+  /** Prepared current and future document variants, including pending publication. */
+  embeddingCandidates(now?: Date): Promise<EventRecord[]>;
+  /** Atomically expose prepared search only once its exact profile is fully indexed. */
+  activateSearchCatalog(profile: string, lease: Lease): Promise<{ activated: boolean; pending: number }>;
   catalogStatus(now?: Date): Promise<CatalogStatus>;
   consumeLimit(key: string, limit: number, expiresAt: number): Promise<boolean>;
   acquireLease(key: string, ttlMs?: number): Promise<Lease | null>;

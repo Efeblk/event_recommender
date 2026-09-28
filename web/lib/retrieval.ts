@@ -35,7 +35,10 @@ export function diverseEvents(events: EventRecord[], limit = 5): EventRecord[] {
   const seen = new Set<string>();
   return events
     .filter((event) => {
-      const key = displayShowIdentity(event) ?? productionIdentity(event);
+      const key =
+        event.canonicalShowKey ??
+        displayShowIdentity(event) ??
+        productionIdentity(event);
       if (seen.has(key)) return false;
       seen.add(key);
       return true;

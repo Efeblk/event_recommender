@@ -15,6 +15,19 @@ const tokens = (text: string) =>
     .split(/[^a-z0-9]+/)
     .filter((word) => word.length > 2 && !stop.has(word));
 
+export function prepareLexicalDocumentTokens(event: EventRecord): string[] {
+  return tokens(
+    [event.title, event.category, event.venue, event.description].join(' '),
+  );
+}
+
+function preparedLexicalTokens(event: EventRecord): string[] {
+  const prepared = event.preparedSearch;
+  return prepared?.version === 1 && Array.isArray(prepared.lexicalTokens)
+    ? prepared.lexicalTokens
+    : prepareLexicalDocumentTokens(event);
+}
+
 // One current request, with bounded relevant history. Do not embed the repeated
 // lexical query or assistant-generated claims as if they were user preferences.
 export function semanticQuery(message: string, history: Message[]) {
@@ -33,11 +46,7 @@ export function hybridRank(
   semantic: SemanticRanking,
 ): EventRecord[] {
   const queryTerms = [...new Set(tokens(query))];
-  const documents = events.map((event) =>
-    tokens(
-      [event.title, event.category, event.venue, event.description].join(' '),
-    ),
-  );
+  const documents = events.map(preparedLexicalTokens);
   const averageLength =
     documents.reduce((sum, words) => sum + words.length, 0) /
       Math.max(1, documents.length) || 1;

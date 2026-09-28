@@ -8,7 +8,7 @@ import {
   type CollectionCheckpoint,
   type CollectionReport,
 } from './operations.ts';
-import type { Lease, SourcePage, VectorEntry } from './storage-contract.ts';
+import type { Lease, SourcePage, VectorEntry, PublishedState } from './storage-contract.ts';
 import { sourcePageTimes } from './source-page.ts';
 export { POST as legacySync } from './legacy-sync.cloudflare.ts';
 import seed from '../data/events.json';
@@ -212,7 +212,7 @@ export async function candidates(f: Filters, now = new Date()) {
     isEligible(event, f, now),
   );
 }
-export async function catalogStatus(now = new Date()) {
+export async function catalogStatus(now = new Date()): Promise<PublishedState['catalog']> {
   const db = await database();
   const cutoff = new Date(now.getTime() - 72 * 3600000).toISOString();
   const row = await db
@@ -246,6 +246,11 @@ export async function catalogStatus(now = new Date()) {
       ? new Date(Date.parse(row.lastCheckedAt) + 72 * 3600000).toISOString()
       : null,
   };
+}
+// The legacy Cloudflare fallback retains its existing publication contract.
+export const embeddingCandidates = (now = new Date()) => candidates(emptyFilters, now);
+export async function activateSearchCatalog(_profile: string, _lease: Lease) {
+  return { activated: false, pending: 0 };
 }
 export async function replaceSource(url: string, items: EventRecord[], checkedAt?: string, kind: 'active' | 'retired' | 'quarantined' = 'active') {
   const db = await database();
@@ -466,7 +471,7 @@ export async function checkpointPointer() {
     .first<{ value: string }>();
   return parseCheckpointPointer(row?.value ?? null);
 }
-export async function currentPublished(now = new Date()) {
+export async function currentPublished(now = new Date()): Promise<PublishedState> {
   const [catalog, checkpoint] = await Promise.all([
     catalogStatus(now),
     checkpointPointer(),

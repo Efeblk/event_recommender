@@ -7,8 +7,9 @@ import {
   runtime,
   type RateLimitResult,
 } from '@/lib/store';
-import { jevConfigFrom } from '@/lib/jev';
-import { voyageConfigFrom } from '@/lib/voyage';
+import { jevConfigFrom, rankWithJev } from '@/lib/jev';
+import { voyageConfigFrom, embedWithVoyage } from '@/lib/voyage';
+import { interpretInput } from '@/lib/input-interpreter';
 import { voyageVectorsFor } from '@/lib/voyage-index';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
 import { visitorRateLimitEnabled } from '@/lib/rate-limit';
@@ -35,6 +36,13 @@ function limited(result: RateLimitResult) {
   );
 }
 export async function POST(request: Request) {
+  const started = performance.now();
+  const timings: string[] = [];
+  async function measured<T>(name: string, operation: () => Promise<T>): Promise<T> {
+    const before = performance.now();
+    try { return await operation(); }
+    finally { timings.push(`${name};dur=${(performance.now() - before).toFixed(1)}`); }
+  }
   let input;
   try {
     if (Number(request.headers.get('content-length') || 0) > 24000)
@@ -63,7 +71,7 @@ export async function POST(request: Request) {
       const requestLimit = await requestRateLimit(request, paid);
       if (!requestLimit.allowed) return limited(requestLimit);
     }
-    const catalog = await catalogStatus();
+    const catalog = await measured('catalog', () => catalogStatus());
     if (!catalogAllowsRecommendations(catalog.status))
       return Response.json(
         {
@@ -83,18 +91,26 @@ export async function POST(request: Request) {
         },
       );
     if (paid) {
-      const dailyLimit = await aiDailyRateLimit();
+      const dailyLimit = await measured('daily_limit', () => aiDailyRateLimit());
       if (!dailyLimit.allowed) return limited(dailyLimit);
     }
-    return Response.json(
-      await recommend(input, {
-        candidates,
+    const result = await recommend(input, {
+        candidates: (filters) => measured('candidates', () => candidates(filters)),
         config,
         embeddingConfig,
-        vectors: voyageVectorsFor,
+        vectors: (events, config) => measured('vectors', () => voyageVectorsFor(events, config)),
+        interpret: (input, options) => measured('interpret', () => interpretInput(input, options)),
+        embed: (config, texts, kind) => measured('query_embedding', () => embedWithVoyage(config, texts, kind)),
+        rank: (config, input, events) => measured('rank', () => rankWithJev(config, input, events)),
         inputInterpreter,
-      }),
-      { headers: { 'Cache-Control': 'no-store' } },
+      });
+    return Response.json(
+      { ...result, recommendations: result.recommendations.map((recommendation) => {
+        const event = { ...recommendation.event };
+        delete event.preparedSearch;
+        return { ...recommendation, event };
+      }) },
+      { headers: { 'Cache-Control': 'no-store', 'Server-Timing': [...timings, `total;dur=${(performance.now() - started).toFixed(1)}`].join(', ') } },
     );
   } catch {
     return Response.json(
