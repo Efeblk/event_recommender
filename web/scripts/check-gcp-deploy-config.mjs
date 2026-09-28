@@ -74,6 +74,7 @@ for (const flag of [
   '--timeout 300',
 ]) assert.match(deploy, new RegExp(flag));
 assert.match(deploy, /BIPLAN_CLIENT_IP_MODE=shared/);
+assert.match(deploy, /BIPLAN_PREVIEW_TESTING=false/);
 assert.match(deploy, /AI_DAILY_LIMIT=100/);
 assert.match(deploy, /VOYAGE_DIMENSIONS=1024/);
 assert.match(deploy, /INPUT_INTERPRETER=\$INPUT_INTERPRETER/);

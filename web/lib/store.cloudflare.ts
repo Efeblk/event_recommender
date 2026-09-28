@@ -32,6 +32,7 @@ export interface RuntimeEnv extends ProviderEnv {
   COLLECTION_STATE?: R2Bucket;
   SYNC_TOKEN?: string;
   AI_DAILY_LIMIT?: string;
+  BIPLAN_PREVIEW_TESTING?: string;
   DONATION_URL?: string;
   DEPLOYMENT_ENV?: string;
   DEPLOYMENT_SHA?: string;

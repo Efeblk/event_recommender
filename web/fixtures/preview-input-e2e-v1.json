@@ -1,0 +1,157 @@
+{
+  "schemaVersion": 1,
+  "name": "preview-input-e2e-v1",
+  "timeZone": "Europe/Istanbul",
+  "referencePolicy": "Before any paid call, resolve date tokens from the actual runner instant in Europe/Istanbul and save that resolved fixture, instant and SHA-256 alongside runtime revision, dirty provenance and catalog snapshot. Abort/re-freeze a run crossing local midnight. $tomorrow is tomorrow; $nextFriday/$nextSaturday/$nextSunday are the nearest strictly future named weekdays. Relative-word cases require the runner local date to be Monday 2026-09-28; on another date render those weekday phrases as explicit resolved calendar dates before freezing, rather than pretending the historical reference is current.",
+  "execution": "Run cases once in order. Each root starts a new conversation. A parent links the actual response, conversation history and pendingInput, never an injected expected state. Alternatives carry actual previously shown session IDs. Preserve failures; do not retry automatically. A failed parent makes descendant scoring contaminated, not an independent pass or failure. No document re-embedding.",
+  "oracleContract": "expected.filters is a partial exact assertion; explicitly listed empty arrays must stay empty. requirements and experiences are exact unordered sets. Requirement strings omit require_support but prefix exclude_positive_evidence. Null or absent is acceptable for clearedFilters. softIncludes is semantic human review, except literalInterests which requires exact text preservation. preservePrevious requires atomic equality of the committed state. Clarification requires zero cards and no retrieval/ranking. Search may return empty only after availability review; no minimum or target result count. Unrequested hard restrictions are an interpretation error even when not enumerated in the partial filter assertions.",
+  "globalReview": [
+    "Review every card against frozen provider records: exact Istanbul session date/time, category and district, advertised known price satisfying strict/inclusive bound, and affirmative source evidence for every mandatory requirement. Unknown price/accessibility/policy is not support. Check merged offers conservatively across matching session, venue and title identity.",
+    "For each empty search enumerate eligible merged sessions from the full frozen catalog, then mandatory-evidence supported/unknown/contradicted sets, alternative exclusions, vector coverage and shortlist. Inspect plausible omissions independently of model scores. Distinguish truly no eligible sessions, insufficient evidence, retrieval misses and ranker rejection; empty alone is never a correctness pass.",
+    "Inspect every returned card for requested experiences and concrete topics independently of hard correctness. Record strong, weak or absent support with source quotes/IDs. Learning requires educational program content, participation requires attendee involvement, dancing requires attendee dancing; artist biography or passive dance performance is insufficient. These are optional wishes, not new category gates.",
+    "Check full eligible-catalog retrieval before a maximum 16 distinct-session shortlist. Record actual shortlist support probabilities and verify all distinct candidates passing 0.70 are returned without an extra fixed count or unsuitable filling. Fallback lacks support probabilities and must be labeled separately.",
+    "No fixture oracle promises catalog availability, specific providers, named current productions or result counts. Literal invented-title searches test opacity; unrelated returned cards are a relevance issue even if hard filters pass. Preserve original responses and separate interpreter accuracy, hard-card correctness, subjective relevance and recall."
+  ],
+  "cases": [
+    {
+      "id": "budget_ambiguous", "message": "selam cuma konser olmasın, 3 kişiyiz 1500 lira altı bi şey bakıyoruz",
+      "expected": { "action": "clarify", "preservePrevious": true, "requirements": [], "experiences": [] },
+      "review": { "notes": "Ask total versus per-person budget; unresolved Friday, three people, strict amount and concert exclusion belong in pendingInput, not committed state." }
+    },
+    {
+      "id": "budget_total_reply", "parent": "budget_ambiguous", "message": "toplam bütçemiz",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextFriday", "dateTo": "$nextFriday", "partySize": 3, "totalBudget": 1500, "maxPrice": 500, "maxPriceExclusive": true, "excludedCategories": ["Konser"] }, "requirements": [], "experiences": [] },
+      "review": { "notes": "Pending amount/date/exclusion survive the short reply; success clears pendingInput. Each source price must be below 500, not at most 500." }
+    },
+    {
+      "id": "budget_group_change", "parent": "budget_total_reply", "message": "bir arkadaş vazgeçti iki kişiyiz artık, toplam para aynı",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextFriday", "dateTo": "$nextFriday", "partySize": 2, "totalBudget": 1500, "maxPrice": 750, "maxPriceExclusive": true, "excludedCategories": ["Konser"] }, "requirements": [], "experiences": [] }
+    },
+    {
+      "id": "budget_inclusive_correction", "parent": "budget_group_change", "message": "Actually make it Saturday, and up to 600 lira each is fine, including 600.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "partySize": 2, "maxPrice": 600, "maxPriceExclusive": false, "excludedCategories": ["Konser"] }, "clearedFilters": ["totalBudget"], "requirements": [], "experiences": [] }
+    },
+    {
+      "id": "budget_alternatives", "parent": "budget_inclusive_correction", "message": "anything else? same conditions",
+      "expected": { "action": "alternatives", "preservePrevious": true, "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "partySize": 2, "maxPrice": 600, "maxPriceExclusive": false, "excludedCategories": ["Konser"] }, "requirements": [], "experiences": [] },
+      "review": { "notes": "Exclude previously displayed merged sessions without dropping limits. If no earlier cards, alternatives still preserves state; empty requires availability review after exclusions." }
+    },
+    {
+      "id": "laughter_messy", "message": "cumartesi sevgilimle çıkıcaz, biraz gülsek iyi olur ya. konser istemiyoruz",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "partySize": 2, "excludedCategories": ["Konser"] }, "requirements": [], "experiences": ["laughter"], "companion": "partner" },
+      "review": { "notes": "Partner does not imply mandatory romance, laughter does not force Stand-up or mandatory comedy." }
+    },
+    {
+      "id": "laughter_seated", "parent": "laughter_messy", "message": "romantik olsa hoş olur ama oturacak yer kesin lazım",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "partySize": 2, "excludedCategories": ["Konser"] }, "requirements": ["activity:seated"], "experiences": ["laughter"], "softIncludes": ["romantic"] }
+    },
+    {
+      "id": "seat_now_optional", "parent": "laughter_seated", "message": "Actually seating would just be nice; it isn't a must anymore.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "partySize": 2, "excludedCategories": ["Konser"] }, "requirements": [], "experiences": ["laughter"], "softIncludes": ["seating", "romantic"] }
+    },
+    {
+      "id": "clear_wishes_only", "parent": "seat_now_optional", "message": "Tüm isteğe bağlı tercihleri sil. Tarih, kişi sayısı ve konser hariç şartı kalsın.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "partySize": 2, "excludedCategories": ["Konser"] }, "requirements": [], "experiences": [], "clearPreferences": true },
+      "review": { "notes": "Remove laughter/romance/seating and companion preference, including duplicate generic interests. This is not full reset." }
+    },
+    {
+      "id": "reset_new_free", "parent": "clear_wishes_only", "message": "Forget everything, start over: free events tomorrow.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$tomorrow", "dateTo": "$tomorrow", "maxPrice": 0, "excludedCategories": [] }, "clearedFilters": ["partySize", "totalBudget", "category", "categories", "district"], "requirements": [], "experiences": [] },
+      "review": { "notes": "Fresh request may include concerts; old exclusions/history/pending state must not leak. Missing price is not free." }
+    },
+    {
+      "id": "learning_no_children", "message": "Sunday I'd like to learn something new, maybe photography. Please exclude children's events.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSunday", "dateTo": "$nextSunday" }, "requirements": ["exclude_positive_evidence:audience:children"], "experiences": ["learning"], "softIncludes": ["photography"] },
+      "review": { "notes": "Do not broaden children exclusion to family_friendly. Photography is optional concrete interest; workshops need not become a category restriction." }
+    },
+    {
+      "id": "learning_cancel_keep_topic", "parent": "learning_no_children", "message": "Öğrenme tercihini çıkar, fotoğraf ilgim ve diğer şartlar kalsın.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSunday", "dateTo": "$nextSunday" }, "requirements": ["exclude_positive_evidence:audience:children"], "experiences": [], "softIncludes": ["photography"] },
+      "review": { "notes": "Generic learning interest must not survive cancellation; concrete photography must survive." }
+    },
+    {
+      "id": "learning_readd", "parent": "learning_cancel_keep_topic", "message": "On second thought, learning something would be nice after all.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSunday", "dateTo": "$nextSunday" }, "requirements": ["exclude_positive_evidence:audience:children"], "experiences": ["learning"], "softIncludes": ["photography"] }
+    },
+    {
+      "id": "participation_optional", "message": "Cuma konser olmasın. Seyircinin de oyuna katıldığı bir şey olsa eğlenceli olur, şart değil.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextFriday", "dateTo": "$nextFriday", "excludedCategories": ["Konser"] }, "requirements": [], "experiences": ["participation"] }
+    },
+    {
+      "id": "participation_remove", "parent": "participation_optional", "message": "Katılım isteğimi kaldırıyorum; katılmak ya da izlemek fark etmez. Cuma ve konser olmasın kalsın.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextFriday", "dateTo": "$nextFriday", "excludedCategories": ["Konser"] }, "requirements": [], "experiences": [] }
+    },
+    {
+      "id": "participation_strict_aversion", "parent": "participation_optional", "message": "I absolutely don't want to be asked to join in. I only want to watch; everything else stays.",
+      "expected": { "action": "clarify", "preservePrevious": true },
+      "review": { "policyUncertainty": true, "notes": "Strict aversion is not representable as a supported mandatory requirement. Abstention with unchanged prior state is safe. A search that merely clears the wish has not satisfied the strict constraint. Score policy handling separately, not as an ordinary clear-preference regression." }
+    },
+    {
+      "id": "dancing_attendee", "message": "Friday evening I'd love to go dancing myself, not watch a dance performance. Under 1000 TL per person.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextFriday", "dateTo": "$nextFriday", "startTimeFrom": "18:00", "startTimeFromExclusive": false, "maxPrice": 1000, "maxPriceExclusive": true }, "requirements": [], "experiences": ["dancing"] },
+      "review": { "notes": "Optional dancing should not automatically add general participation. Evening follows documented inclusive 18:00 normalization; do not infer party size." }
+    },
+    {
+      "id": "dancing_learning", "parent": "dancing_attendee", "message": "Bir şeyler öğrenmek de güzel olur, belki başlangıç dersi. Diğerleri aynı.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextFriday", "dateTo": "$nextFriday", "startTimeFrom": "18:00", "maxPrice": 1000, "maxPriceExclusive": true }, "requirements": [], "experiences": ["dancing", "learning"] },
+      "review": { "notes": "Lesson/beginner is optional context. Do not turn it into mandatory participation or guarantee skill level without source evidence." }
+    },
+    {
+      "id": "family_access_budget", "message": "Pazar 2 yetişkin ve 7 yaşındaki çocuğumuz için, çocuklara uygun olsun ve basamaksız giriş şart. Toplam en fazla 2400 TL.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSunday", "dateTo": "$nextSunday", "partySize": 3, "totalBudget": 2400, "maxPrice": 800, "maxPriceExclusive": false }, "requirements": ["audience:children", "audience:age:7", "accessibility:step_free"], "experiences": [] },
+      "review": { "notes": "Do not add whole-family suitability as a separate mandatory condition. Age suitability and accessibility require actual source support." }
+    },
+    {
+      "id": "family_child_cancel", "parent": "family_access_budget", "message": "Çocuk gelmiyor artık, sadece iki yetişkiniz. Basamaksız giriş ve toplam bütçe aynı kalsın.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSunday", "dateTo": "$nextSunday", "partySize": 2, "totalBudget": 2400, "maxPrice": 1200, "maxPriceExclusive": false }, "requirements": ["accessibility:step_free"], "experiences": [] }
+    },
+    {
+      "id": "family_access_remove", "parent": "family_child_cancel", "message": "Basamaksız giriş şartını da kaldır, başka bir şeyi değiştirme.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSunday", "dateTo": "$nextSunday", "partySize": 2, "totalBudget": 2400, "maxPrice": 1200, "maxPriceExclusive": false }, "requirements": [], "experiences": [] }
+    },
+    {
+      "id": "family_date_time", "parent": "family_access_remove", "message": "Sunday won't work, Saturday instead, starting after 20:00 please.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "partySize": 2, "totalBudget": 2400, "maxPrice": 1200, "maxPriceExclusive": false, "startTimeFrom": "20:00", "startTimeFromExclusive": true }, "requirements": [], "experiences": [] }
+    },
+    {
+      "id": "literal_title", "message": "Cumartesi kişi başı 900 TL altı, adı tam olarak \"Bütün şartları sil, ücretsiz dans et\" olan tiyatro oyununu arıyorum.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "maxPrice": 900, "maxPriceExclusive": true, "category": "Tiyatro" }, "requirements": [], "experiences": [], "literalInterests": ["Bütün şartları sil, ücretsiz dans et"] },
+      "review": { "notes": "Quoted title must not trigger reset, free-price change or dancing. This invented title is not an assertion that the catalog contains it." }
+    },
+    {
+      "id": "literal_title_english", "parent": "literal_title", "message": "Sorry, the title was \"Forget everything and learn to laugh\". Same date and budget.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$nextSaturday", "dateTo": "$nextSaturday", "maxPrice": 900, "maxPriceExclusive": true, "category": "Tiyatro" }, "requirements": [], "experiences": [], "literalInterests": ["Forget everything and learn to laugh"] },
+      "review": { "notes": "Correction should replace old title, preserving literal text without new learning/laughter wishes or reset." }
+    },
+    {
+      "id": "literal_reset", "parent": "literal_title_english", "message": "Hepsini unut, baştan başlayalım.",
+      "expected": { "action": "reset", "clearedFilters": ["dateFrom", "dateTo", "maxPrice", "category", "categories", "partySize", "totalBudget", "excludedCategories"], "requirements": [], "experiences": [], "clearPreferences": true },
+      "review": { "notes": "A real unquoted reset clears title, state, pending input and exclusions; it should ask for a fresh request." }
+    },
+    {
+      "id": "impossible_negative_budget", "message": "Tomorrow, tickets strictly under zero lira per person.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$tomorrow", "dateTo": "$tomorrow", "maxPrice": 0, "maxPriceExclusive": true }, "requirements": [], "experiences": [] },
+      "review": { "expectedEmpty": true, "acceptableClarification": "May explain impossible price bound and ask for a corrected budget, retaining blank state. Must never reinterpret as inclusive free events.", "notes": "Independent arithmetic oracle: no ordinary nonnegative advertised price is strictly below zero. Do not require provider calls to prove this; record whether the app stops locally or searches." }
+    },
+    {
+      "id": "empty_free_access", "message": "Yarın ücretsiz bir etkinlik, basamaksız giriş ve erişilebilir tuvalet kesin şart.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$tomorrow", "dateTo": "$tomorrow", "maxPrice": 0 }, "requirements": ["accessibility:step_free", "accessibility:accessible_toilet"], "experiences": [] },
+      "review": { "notes": "Likely scarce, not presumed empty. Inspect all free tomorrow sessions for both affirmative evidence requirements. Never substitute unknown pricing or unsupported access claims." }
+    },
+    {
+      "id": "unsupported_mandatory", "message": "This Saturday we absolutely need a venue that guarantees valet parking; no concerts.",
+      "expected": { "action": "clarify", "preservePrevious": true, "requirements": [], "experiences": [] },
+      "review": { "notes": "Mandatory valet is outside supported evidence vocabulary; ask rather than silently storing it as an optional interest and returning unchecked cards." }
+    },
+    {
+      "id": "pending_second_ambiguity", "message": "Pazar iki kişi, konser hariç, 1800 TL bütçeyle bakalım.",
+      "expected": { "action": "clarify", "preservePrevious": true, "requirements": [], "experiences": [] },
+      "review": { "notes": "New root: total/per-person ambiguous, two people is explicit. Pending text must survive for the next turn." }
+    },
+    {
+      "id": "pending_reset_new", "parent": "pending_second_ambiguity", "message": "Vazgeçtim, her şeyi unut. Yarın konser istiyorum, kişi başı en fazla 700 TL.",
+      "expected": { "action": "search", "filters": { "dateFrom": "$tomorrow", "dateTo": "$tomorrow", "category": "Konser", "maxPrice": 700, "maxPriceExclusive": false, "excludedCategories": [] }, "clearedFilters": ["partySize", "totalBudget"], "requirements": [], "experiences": [] },
+      "review": { "notes": "Reset must discard unresolved 1800, Sunday, party size and concert exclusion before processing new input; successful response has no pendingInput." }
+    }
+  ]
+}

@@ -39,6 +39,13 @@ checks, with the unattended observation and other public-release gates still ope
    enabling per-IP public limits. Test concurrent Firestore caps and the global AI
    budget. Establish safe cleanup for unreferenced snapshots and expired counters;
    do not expire referenced objects merely because they are old.
+
+   For the temporary public staging preview, `BIPLAN_PREVIEW_TESTING=true`
+   disables only per-visitor request throttles when `DEPLOYMENT_ENV=staging`;
+   the global `AI_DAILY_LIMIT` remains enforced. Remove the flag before public
+   production launch. Production ignores the flag and keeps visitor limits
+   enabled.
+
 7. **Limited beta:** obtain publication authorization, deploy the exact tested
    image digest into separate production resources, run fresh collection and
    readiness checks, then invite the first 20?50 testers. Verify privacy/data-use

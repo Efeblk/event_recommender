@@ -11,6 +11,7 @@ import { jevConfigFrom } from '@/lib/jev';
 import { voyageConfigFrom } from '@/lib/voyage';
 import { voyageVectorsFor } from '@/lib/voyage-index';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
+import { visitorRateLimitEnabled } from '@/lib/rate-limit';
 function limited(result: RateLimitResult) {
   const daily = result.scope === 'daily';
   const wait = daily
@@ -58,8 +59,10 @@ export async function POST(request: Request) {
       throw new Error('Invalid input interpreter configuration.');
     const embeddingConfig = voyageConfigFrom(runtime());
     const paid = Boolean(config || embeddingConfig);
-    const requestLimit = await requestRateLimit(request, paid);
-    if (!requestLimit.allowed) return limited(requestLimit);
+    if (visitorRateLimitEnabled(runtime())) {
+      const requestLimit = await requestRateLimit(request, paid);
+      if (!requestLimit.allowed) return limited(requestLimit);
+    }
     const catalog = await catalogStatus();
     if (!catalogAllowsRecommendations(catalog.status))
       return Response.json(
