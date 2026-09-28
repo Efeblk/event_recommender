@@ -226,6 +226,24 @@ await test('replacing one source keeps prior failed sources, skips older batches
   );
 });
 
+await test('verified retirement removes a source and older imports cannot resurrect it', async () => {
+  const f = fixture(), lease = await syncLease(f.store), original = event();
+  await f.store.importPages([page(original), page(event('survivor'))], lease);
+  await f.store.publishCheckpoint(report(), lease);
+  f.advance(1000);
+  const retiredAt = new Date(instant + 1000).toISOString();
+  await f.store.importPages([{ url: original.url, events: [], retiredAt }], lease);
+  await f.store.publishCheckpoint(report(1000), lease);
+  assert.deepEqual((await f.store.candidates(emptyFilters)).map(item => item.id), ['survivor']);
+  assert.deepEqual(await f.store.importPages([page(original)], lease), { imported: 0, skipped: 1 });
+  assert.deepEqual(await f.store.importPages([page({ ...original, checkedAt: retiredAt })], lease), { imported: 0, skipped: 1 });
+  await assert.rejects(f.store.importPages([{ url: original.url, events: [] }], lease), /retirement/);
+  f.advance(1000);
+  await f.store.importPages([page({ ...original, checkedAt: new Date(instant + 2000).toISOString() })], lease);
+  await f.store.publishCheckpoint(report(2000), lease);
+  assert.deepEqual((await f.store.candidates(emptyFilters)).map(item => item.id).sort(), ['one', 'survivor']);
+});
+
 await test('an older report cannot publish a newer staged source or replace the prior publication', async () => {
   const f = fixture();
   const lease = await syncLease(f.store);

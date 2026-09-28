@@ -8,6 +8,7 @@ import {
 } from '../lib/input-interpreter.ts';
 import { emptyIntentState } from '../lib/input-state.ts';
 import { buildInputCandidates } from '../lib/input-candidates.ts';
+import { CATEGORIES } from '../lib/types.ts';
 
 const now = new Date('2026-09-24T09:00:00Z');
 const amountId = (message: string, value: number, previous = emptyIntentState()) => {
@@ -29,7 +30,7 @@ function responseFor(
   });
   const defaults: Record<string, string> = {
     action: 'search', issue: 'none',
-    budget: 'keep', budget_basis: 'none', budget_boundary: 'none', party: 'keep', date: 'keep', time: 'keep',
+    budget: 'keep', budget_basis: 'none', budget_boundary: 'none', party: 'keep', date: 'keep', order: 'keep', time: 'keep',
     district: 'keep', companion: 'keep', mood: 'keep', interest_clear: 'keep',
     genre_logic: 'keep', activity_logic: 'keep', candidate_coverage: 'complete',
   };
@@ -60,8 +61,13 @@ void test('builds one bounded request with closed Choice criteria and source can
   assert.match(body.questions.action.criteria.search, /initial request.*correction.*clarification/i);
   assert.match(body.questions.action.criteria.alternatives, /different results/i);
   assert.match(body.questions.action.criteria.reset, /forget.*pending.*prior/i);
-  assert.ok(Object.keys(body.questions).length <= 48);
   assert.ok(Buffer.byteLength(JSON.stringify(body)) < 48_000);
+  for (const category of CATEGORIES) {
+    const entry = Object.entries(body.questions).find(([id, question]) => id.startsWith('category_') && question.instructions.endsWith(`category ${category}.`));
+    assert.ok(entry, `question exists for ${category}`);
+    assert.deepEqual(Object.keys(entry[1].criteria), ['keep', 'include', 'exclude', 'remove']);
+  }
+  assert.equal(JSON.stringify(body).match(/Generic event\/activity\/music\/comedy\/show/g)?.length, 1);
 });
 
 void test('applies selected spans, preferences, and group budget atomically', () => {
@@ -356,6 +362,53 @@ void test('coverage uncertainty is inapplicable to explicit reset without new va
   const parsed = parseInputInterpreterResponse(response, { message, previous, now });
   assert.equal(parsed.issue, null);
   assert.deepEqual(parsed.state, emptyIntentState());
+});
+
+void test('exact Turkish request keeps workshop optional and applies soonest without a date filter', () => {
+  const message = 'kişi başı maks 2000tl olan kız arkadaşımla gideceğim etkinlik konser veya tiyatro olmasın, workshop olabilir, en yakın tarih';
+  const candidates = buildInputCandidates(message, now, emptyIntentState());
+  const workshop = candidates.interests.find(({ value }) => value === 'workshop');
+  assert.ok(workshop);
+  const parsed = parseInputInterpreterResponse(responseFor(message, {
+    budget: amountId(message, 2000), budget_basis: 'per_person', budget_boundary: 'inclusive',
+    party: 'p0', companion: 'set:partner', category_concert: 'exclude',
+    category_theatre: 'exclude', category_workshop: 'keep', order: 'soonest',
+    [`interest_${workshop.id}`]: 'select',
+  }), { message, previous: emptyIntentState(), now });
+  assert.equal(parsed.issue, null);
+  assert.equal(parsed.state.filters.maxPrice, 2000);
+  assert.equal(parsed.state.filters.maxPriceExclusive, false);
+  assert.equal(parsed.state.filters.partySize, 2);
+  assert.deepEqual(parsed.state.filters.excludedCategories, ['Konser', 'Tiyatro']);
+  assert.equal(parsed.state.preferences.companion, 'partner');
+  assert.equal(parsed.state.preferences.order, 'soonest');
+  assert.deepEqual(parsed.state.preferences.interests, ['workshop']);
+  assert.equal(parsed.state.filters.dateFrom, null);
+  assert.equal(parsed.state.filters.dateTo, null);
+});
+
+void test('workshop category distinguishes a hard request from a permissive option', () => {
+  const hard = 'Sadece workshop istiyorum';
+  if (CATEGORIES.includes('Workshop' as never)) {
+    const included = parseInputInterpreterResponse(responseFor(hard, { category_workshop: 'include' }), { message: hard, previous: emptyIntentState(), now });
+    assert.equal(included.state.filters.category, 'Workshop');
+  }
+  const optional = 'Workshop olabilir';
+  const candidate = buildInputCandidates(optional, now, emptyIntentState()).interests.find(({ value }) => value === 'Workshop');
+  assert.ok(candidate);
+  const kept = parseInputInterpreterResponse(responseFor(optional, { [`interest_${candidate.id}`]: 'select' }), { message: optional, previous: emptyIntentState(), now });
+  assert.equal(kept.state.filters.category, null);
+  assert.deepEqual(kept.state.preferences.interests, ['Workshop']);
+});
+
+void test('soonest order is retained, explicitly removed, and cleared by reset', () => {
+  const previous = emptyIntentState(); previous.preferences.order = 'soonest';
+  const retained = parseInputInterpreterResponse(responseFor('Kadıköy olsun', {}, previous), { message: 'Kadıköy olsun', previous, now });
+  assert.equal(retained.state.preferences.order, 'soonest');
+  const removed = parseInputInterpreterResponse(responseFor('Relevance order, not necessarily the soonest', { order: 'remove' }, previous), { message: 'Relevance order, not necessarily the soonest', previous, now });
+  assert.equal(removed.state.preferences.order, undefined);
+  const reset = parseInputInterpreterResponse(responseFor('Her şeyi sıfırla', { action: 'reset' }, previous), { message: 'Her şeyi sıfırla', previous, now });
+  assert.equal(reset.state.preferences.order, undefined);
 });
 
 void test('low-confidence reset never clears prior state', () => {

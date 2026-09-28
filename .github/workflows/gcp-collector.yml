@@ -90,8 +90,24 @@ jobs:
           SERVERLESS_ID_TOKEN: ${{ steps.auth_restore.outputs.id_token }}
         run: npm run checkpoint:restore -- --output state/events.json --fallback ../web/data/events.json
 
+      - name: Restore durable coverage backlog
+        id: coverage_restore
+        uses: actions/cache/restore@v4
+        with:
+          path: collector/state/coverage.json
+          key: gcp-staging-collector-coverage-${{ github.run_id }}
+          restore-keys: gcp-staging-collector-coverage-
+
       - name: Collect public listings including later pages
-        run: npm run collect --prefix collector -- --limit 100 --discovery-pages 20 --snapshot state/events.json
+        # Reserve time in the 60-minute job for durable publication and indexing.
+        run: npm run collect --prefix collector -- --max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20 --snapshot state/events.json
+
+      - name: Save durable coverage backlog
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: collector/state/coverage.json
+          key: gcp-staging-collector-coverage-${{ github.run_id }}
 
       - id: auth_publish
         name: Refresh collector identity for publication
@@ -152,6 +168,7 @@ jobs:
             collector/output/soak-evidence.json
             collector/output/publication.json
             collector/state/events.json
+            collector/state/coverage.json
             web/work/collection-embedding-index.jsonl*
           if-no-files-found: warn
           retention-days: 14

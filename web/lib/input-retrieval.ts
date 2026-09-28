@@ -5,6 +5,18 @@ const CATEGORY_TEXT = {
   Konser: 'konser concert music',
   Tiyatro: 'tiyatro theatre play',
   'Stand-up': 'stand-up comedy komedi',
+  Workshop: 'workshop atölye uygulamalı etkinlik',
+  Sergi: 'sergi exhibition',
+  Festival: 'festival',
+  Spor: 'spor sports',
+  Sinema: 'sinema film cinema',
+  Söyleşi: 'söyleşi talk seminar conference',
+  Dans: 'dans dance ballet',
+  Gösteri: 'gösteri show performance',
+  Eğitim: 'eğitim course learning',
+  Gezi: 'gezi tour',
+  Müze: 'müze museum',
+  Diğer: 'etkinlik event',
 } as const;
 
 const REQUIREMENT_TEXT: Record<string, string> = {

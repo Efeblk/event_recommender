@@ -9,6 +9,7 @@ import {
   type CollectionReport,
 } from './operations.ts';
 import type { Lease, SourcePage, VectorEntry } from './storage-contract.ts';
+import { sourcePageTimes } from './source-page.ts';
 export { POST as legacySync } from './legacy-sync.cloudflare.ts';
 import seed from '../data/events.json';
 import { emptyFilters, type EventRecord, type Filters } from './types.ts';
@@ -246,8 +247,11 @@ export async function catalogStatus(now = new Date()) {
       : null,
   };
 }
-export async function replaceSource(url: string, items: EventRecord[]) {
+export async function replaceSource(url: string, items: EventRecord[], checkedAt?: string) {
   const db = await database();
+  const timestamp = checkedAt ? [db.prepare(
+    'INSERT INTO metadata(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value WHERE excluded.value>=metadata.value',
+  ).bind(`source_checked:${await digest(url)}`, checkedAt)] : [];
   await db.batch([
     db
       .prepare(
@@ -256,6 +260,7 @@ export async function replaceSource(url: string, items: EventRecord[]) {
       .bind(url, JSON.stringify(items.map((e) => e.id))),
     db.prepare('DELETE FROM events WHERE source_url=?').bind(url),
     ...upsertStatements(db, items),
+    ...timestamp,
   ]);
 }
 export async function consumeLimit(
@@ -412,17 +417,15 @@ export async function importPages(pages: SourcePage[], lease: Lease) {
     skipped = 0;
   for (const page of pages) {
     await assertLease(lease);
-    const checked = page.events.reduce(
-      (last, e) => (e.checkedAt < last ? e.checkedAt : last),
-      page.events[0].checkedAt,
-    );
+    const { checked, latest } = sourcePageTimes(page);
     const old = await db
       .prepare(
-        'SELECT MAX(checked_at) AS checked FROM events WHERE source_url=?',
+        'SELECT MAX(checked) AS checked, SUM(active) AS active FROM (SELECT MAX(checked_at) AS checked, COUNT(*) AS active FROM events WHERE source_url=? UNION ALL SELECT value AS checked, 0 AS active FROM metadata WHERE key=?)',
       )
-      .bind(page.url)
-      .first<{ checked: string | null }>();
-    if (old?.checked && old.checked > checked) {
+      .bind(page.url, `source_checked:${await digest(page.url)}`)
+      .first<{ checked: string | null; active: number }>();
+    if (old?.checked && (old.checked > checked ||
+        (old.checked === checked && old.active === 0 && page.events.length > 0))) {
       skipped++;
       continue;
     }
@@ -447,7 +450,7 @@ export async function importPages(pages: SourcePage[], lease: Lease) {
         ).slice(0, 24),
       });
     }
-    await replaceSource(page.url, items);
+    await replaceSource(page.url, items, latest);
     imported += items.length;
   }
   return { imported, skipped };

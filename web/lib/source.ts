@@ -35,7 +35,7 @@ export function safeSourceUrl(raw: string): string | null {
       !u.username &&
       !u.password &&
       ((u.hostname === 'biletinial.com' &&
-        /^\/tr-tr\/(muzik|tiyatro|gosteri|etkinlik)\/[^/]+$/.test(
+        /^\/tr-tr\/(muzik|tiyatro|gosteri|etkinlik|sinema|futbol|spor|opera-bale|egitim|seminer|eglence)\/[^/]+$/.test(
           u.pathname,
         )) ||
         (u.hostname === 'www.bubilet.com.tr' &&

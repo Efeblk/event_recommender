@@ -513,3 +513,12 @@ void test('next-week Turkish weekdays and English clock interval modifiers prese
     ),
   );
 });
+
+void test('extracts partner variants and optional workshop without treating soonest as an interest', () => {
+  for (const phrase of ['kız arkadaşımla', 'erkek arkadaşımla', 'with my girlfriend'])
+    assert.ok(build(phrase).parties.some(({ value }) => value === 2), phrase);
+  const pool = build('atölye olabilir, en yakın tarih');
+  assert.ok(pool.interests.some(({ value }) => value === 'atölye'));
+  assert.ok(!pool.interests.some(({ value }) => /yakın tarih/i.test(value)));
+  assert.deepEqual(pool.dates, []);
+});

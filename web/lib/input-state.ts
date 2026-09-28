@@ -12,6 +12,7 @@ export interface IntentState {
     companion: 'partner' | 'friends' | 'family' | null;
     interests: string[];
     experiences?: Experience[];
+    order?: 'soonest';
   };
 }
 
@@ -32,7 +33,7 @@ const FILTER_KEYS = [
   'startTimeToExclusive',
   'categories',
 ];
-const PREFERENCE_KEYS = ['mood', 'companion', 'interests', 'experiences'];
+const PREFERENCE_KEYS = ['mood', 'companion', 'interests', 'experiences', 'order'];
 const REQUIREMENT_KEYS = ['kind', 'value', 'policy'];
 const MOODS = ['calm', 'energetic', 'uplifting'] as const;
 const COMPANIONS = ['partner', 'friends', 'family'] as const;
@@ -214,6 +215,8 @@ export function validateIntentState(value: unknown): IntentState {
     preferences.experiences.some((experience) => typeof experience !== 'string' || !EXPERIENCE_VALUES.includes(experience as Experience)) ||
     new Set(preferences.experiences).size !== preferences.experiences.length
   )) throw new Error('Experiences are invalid.');
+  if (preferences.order !== undefined && preferences.order !== 'soonest')
+    throw new Error('Order preference is invalid.');
 
   return {
     version: 1,
@@ -224,6 +227,7 @@ export function validateIntentState(value: unknown): IntentState {
       companion: preferences.companion as IntentState['preferences']['companion'],
       interests: [...(preferences.interests as string[])],
       ...(Array.isArray(preferences.experiences) && preferences.experiences.length ? { experiences: [...preferences.experiences] as Experience[] } : {}),
+      ...(preferences.order === 'soonest' ? { order: 'soonest' as const } : {}),
     },
   };
 }

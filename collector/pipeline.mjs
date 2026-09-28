@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { detailUrl } from "./adapters.mjs";
+import { CATEGORIES } from "../web/lib/types.ts";
 
 export const sha = (text) => createHash("sha256").update(text).digest("hex");
 const normalize = (text) =>
@@ -27,7 +28,7 @@ export function validateEvent(event, now = new Date()) {
   )
     errors.push("invalid_check_time");
   if (event.city !== "İstanbul") errors.push("outside_city");
-  if (!["Konser", "Tiyatro", "Stand-up"].includes(event.category)) errors.push("invalid_category");
+  if (!CATEGORIES.includes(event.category)) errors.push("invalid_category");
   if (!["available", "unknown", "cancelled", "sold_out"].includes(event.availability))
     errors.push("invalid_availability");
   if (event.currency !== "TRY") errors.push("invalid_currency");

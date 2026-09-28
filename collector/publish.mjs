@@ -19,6 +19,8 @@ export function prepareImportPages(pages, now = new Date()) {
       return !expired;
     });
     if (events.length) prepared.push({ url: page.url, events });
+    else if (page.events.length === 0 && page.retiredAt)
+      prepared.push({ url: page.url, events: [], retiredAt: page.retiredAt });
   }
   return { pages: prepared, omittedExpiredIds };
 }

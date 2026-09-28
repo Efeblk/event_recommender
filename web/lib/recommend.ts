@@ -152,6 +152,7 @@ export const MIN_JEV_SUPPORT_PROBABILITY = 0.7;
 export function selectJevEvents(
   candidates: EventRecord[],
   ranking: JevRanking,
+  order?: IntentState['preferences']['order'],
 ): EventRecord[] {
   const byId = new Map(candidates.map((event) => [event.id, event]));
   const supported = ranking.ranked
@@ -184,10 +185,16 @@ export function selectJevEvents(
     })
     .sort((a, b) => b.score - a.score)
     .map(({ event }) => byId.get(event.id)!);
-  return diverseEvents(
+  const selected = diverseEvents(
     uniqueEvents(supported, supported.length),
     supported.length,
   );
+  return order === 'soonest'
+    ? selected.sort(
+        (a, b) =>
+          a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id),
+      )
+    : selected;
 }
 
 const basicNotice =
@@ -489,7 +496,11 @@ async function recommendResolved(
         },
         shortlist,
       );
-      const recommendations = selectJevEvents(shortlist, result).map(
+      const recommendations = selectJevEvents(
+        shortlist,
+        result,
+        intent?.preferences.order,
+      ).map(
         (event) => ({
           event,
         }),

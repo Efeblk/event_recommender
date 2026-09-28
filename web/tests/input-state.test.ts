@@ -206,3 +206,13 @@ void test('rejects reversed and exclusively empty time windows', () => {
   });
   assert.equal(exactMinute.filters.startTimeFrom, '18:00');
 });
+
+void test('validates the closed soonest order preference', () => {
+  const state = emptyIntentState();
+  state.preferences.order = 'soonest';
+  assert.equal(validateIntentState(state).preferences.order, 'soonest');
+  assert.throws(() => validateIntentState({
+    ...state,
+    preferences: { ...state.preferences, order: 'latest' },
+  }));
+});

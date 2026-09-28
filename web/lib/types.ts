@@ -4,9 +4,12 @@ import type {
   RequirementPolicy,
 } from './requirements.ts';
 
-export type Category = 'Konser' | 'Tiyatro' | 'Stand-up';
+export type Category = 'Konser' | 'Tiyatro' | 'Stand-up' | 'Workshop' | 'Sergi'
+  | 'Festival' | 'Spor' | 'Sinema' | 'Söyleşi' | 'Dans' | 'Gösteri'
+  | 'Eğitim' | 'Gezi' | 'Müze' | 'Diğer';
 export interface EventOffer {
   id: string;
+  sourceSessionIds?: string[];
   source?: EventRecord['source'];
   url: string;
   price: number | null;
@@ -34,6 +37,9 @@ export interface EventRecord {
   source?: 'biletinial' | 'bubilet' | 'biletix';
   sourceVersion?: string;
   extraction?: string;
+  /** The provider's original format label; unknown labels remain searchable. */
+  sourceCategory?: string;
+  sourceSessionIds?: string[];
   productionKey?: string;
   offers?: EventOffer[];
   mergedIds?: string[];
@@ -129,4 +135,6 @@ export const emptyFilters: Filters = {
   maxPrice: null,
   category: null,
 };
-export const CATEGORIES: Category[] = ['Konser', 'Tiyatro', 'Stand-up'];
+export const CATEGORIES: Category[] = ['Konser', 'Tiyatro', 'Stand-up', 'Workshop',
+  'Sergi', 'Festival', 'Spor', 'Sinema', 'Söyleşi', 'Dans', 'Gösteri',
+  'Eğitim', 'Gezi', 'Müze', 'Diğer'];

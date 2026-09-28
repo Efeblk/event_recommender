@@ -57,5 +57,6 @@ export function intentSummary(
   if (mood) preferred.push({ calm: 'Sakin bir plan', energetic: 'Enerjik bir plan', uplifting: 'Moral yükselten bir plan' }[mood]);
   preferred.push(...(state.preferences.experiences ?? []).map((experience) => EXPERIENCES[experience].label));
   preferred.push(...interests);
+  if (state.preferences.order === 'soonest') preferred.push('En yakın tarih önce');
   return { required: [...new Set(required)], preferred: [...new Set(preferred)] };
 }

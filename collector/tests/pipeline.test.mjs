@@ -27,7 +27,7 @@ await test("explicit workshop and talk evidence overrides a provider music categ
       "Lego ve Resimle Geleceği Tasarlıyorum Yaş Grubu: 4-7",
       "Lego ve Resimle Geleceği Tasarlıyorum Atölyesi Bu atölyede çocuklar üretir.",
     ),
-    null,
+    'Workshop',
   );
   assert.equal(
     categorySupportedByEvent(
@@ -35,7 +35,7 @@ await test("explicit workshop and talk evidence overrides a provider music categ
       "Miles: Bir Caz İkonunun Anatomisi",
       "Bu keyifli söyleşi Miles Davis'i ele alıyor. Moderatör ve panelistler katılıyor.",
     ),
-    null,
+    'Söyleşi',
   );
   assert.equal(
     categorySupportedByEvent(
@@ -51,10 +51,39 @@ await test("explicit workshop and talk evidence overrides a provider music categ
   );
   assert.equal(
     categorySupportedByEvent("Konser", "Konser Atölyesi", "Bu atölyede ritim öğrenilir."),
-    null,
+    'Workshop',
   );
 });
 const url = "https://www.bubilet.com.tr/istanbul/etkinlik/sebnem-ferah";
+
+await test("Bubilet uses the deepest recognized breadcrumb and preserves its raw label", async () => {
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { position: 1, name: "Konser" },
+      { position: 2, name: "Workshop" },
+    ],
+  };
+  const events = await extract(wrap([breadcrumb, bubilet]), "bubilet", url, null, now);
+  assert.equal(events[0].category, "Workshop");
+  assert.equal(events[0].sourceCategory, "Workshop");
+});
+
+await test("Bubilet ignores an event-self breadcrumb even when its title resembles music", async () => {
+  const schema = structuredClone(bubilet);
+  schema.name = "Rock Portre Çalışması";
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { position: 3, name: schema.name, item: url },
+      { position: 1, name: "Ana Sayfa" },
+      { position: 2, name: "Workshop" },
+    ],
+  };
+  const events = await extract(wrap([breadcrumb, schema]), "bubilet", url, null, now);
+  assert.equal(events[0].category, "Workshop");
+  assert.equal(events[0].sourceCategory, "Workshop");
+});
 
 await test("real Bubilet schema yields all three individual sessions, not aggregate price/date", async () => {
   const events = await extract(wrap(bubilet), "bubilet", url, "Konser", now);
@@ -84,7 +113,7 @@ await test("Biletix embedded state groups ticket types and converts kurus to TRY
   assert.equal(events[0].availability, "available");
   assert.equal(events[0].startsAt, "2026-09-18T18:00:00.000Z");
 });
-await test("Biletix MUSIC detail is rejected when its event evidence says talk", async () => {
+await test("Biletix MUSIC detail is retained as a talk when its evidence says talk", async () => {
   const state = structuredClone(biletix);
   const detail = Object.values(state)
     .map((entry) => entry?.b?.data)
@@ -92,16 +121,14 @@ await test("Biletix MUSIC detail is rejected when its event evidence says talk",
   detail.eventName = "Miles: Bir Caz İkonunun Anatomisi";
   detail.eventDescription = "Bu keyifli söyleşi Miles Davis'i ele alıyor. Moderatör ve panelistler katılıyor.";
   detail.eventCategoryCode = "MUSIC";
-  await assert.rejects(
-    extract(
+  const events = await extract(
       load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
       "biletix",
       "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
       null,
       now,
-    ),
-    /unsupported_category/,
   );
+  assert.equal(events[0].category, 'Söyleşi');
 });
 await test("Biletix unknown or inactive statuses are never offered as on sale", async () => {
   const state = structuredClone(biletix);

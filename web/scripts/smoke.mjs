@@ -522,6 +522,25 @@ try {
   );
   assert.equal(badImport.status, 400);
   await badImport.arrayBuffer();
+  // A verified empty source must remove old rows and retain its freshness
+  // watermark so replaying an older successful import cannot resurrect them.
+  const retiredAt = new Date(Date.now() + 1000).toISOString();
+  const retiredImport = await request('/api/admin/import', {
+    schemaVersion: 1, pages: [{ url: bulk[0].url, events: [], retiredAt }],
+  }, true);
+  assert.equal(retiredImport.status, 200);
+  await retiredImport.arrayBuffer();
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url=?').bind(bulk[0].url).first()).count, 0);
+  const oldReplay = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: bulk }] }, true);
+  assert.equal(oldReplay.status, 200);
+  assert.equal((await oldReplay.json()).skipped, 1);
+  const equalReplay = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: bulk.map(event => ({ ...event, checkedAt: retiredAt })) }] }, true);
+  assert.equal(equalReplay.status, 200);
+  assert.equal((await equalReplay.json()).skipped, 1);
+  const reinstated = bulk.map(event => ({ ...event, checkedAt: new Date(Date.parse(retiredAt) + 1000).toISOString() }));
+  const reactivated = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: reinstated }] }, true);
+  assert.equal(reactivated.status, 200);
+  assert.equal((await reactivated.json()).imported, 101);
   // Durable checkpoints must contain the canonical published DB, never a
   // caller-provided snapshot. R2 and D1 here are both disposable local bindings.
   const checkpointRequest = (body, authenticated = true) =>

@@ -93,7 +93,7 @@ function validResponse() {
   const request = buildInputInterpreterRequest(config.model, input);
   const defaults: Record<string, string> = {
     action: 'search', issue: 'none', budget: 'keep', budget_basis: 'none', budget_boundary: 'none', party: 'keep', date: 'keep', time: 'keep',
-    district: 'keep', companion: 'keep', mood: 'keep', interest_clear: 'keep', genre_logic: 'keep', activity_logic: 'keep', candidate_coverage: 'complete',
+    district: 'keep', companion: 'keep', mood: 'keep', order: 'keep', interest_clear: 'keep', genre_logic: 'keep', activity_logic: 'keep', candidate_coverage: 'complete',
   };
   const answers: Record<string, {
     type: 'choice';

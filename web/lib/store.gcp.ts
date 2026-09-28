@@ -1,4 +1,5 @@
 import { mergeEventSessions } from './event-merge.ts';
+import { sourcePageTimes } from './source-page.ts';
 import {
   MAX_CHECKPOINT_BYTES,
   MAX_CHECKPOINT_EVENTS,
@@ -329,24 +330,13 @@ export function createGcpStore(options: {
       let imported = 0,
         skipped = 0;
       for (const page of pages) {
-        if (
-          !page.events.length ||
-          page.events.some((event) => event.url !== page.url)
-        )
-          throw new Error('Invalid source page');
+        const { checked, latest } = sourcePageTimes(page);
         const sourceHash = await digest(page.url);
         const path = `${base}/sources/${sourceHash}`;
-        const checked = page.events.reduce(
-          (last, event) => (event.checkedAt < last ? event.checkedAt : last),
-          page.events[0].checkedAt,
-        );
-        const latest = page.events.reduce(
-          (last, event) => (event.checkedAt > last ? event.checkedAt : last),
-          checked,
-        );
         const body = JSON.stringify({
           url: page.url,
           events: page.events,
+          ...(page.retiredAt ? { retiredAt: page.retiredAt } : {}),
         } satisfies SourcePage);
         if (bytes(body) > MAX_SOURCE_BYTES)
           throw new Error('Source page exceeds limit');
@@ -354,7 +344,8 @@ export function createGcpStore(options: {
         const key = `sources/${namespace}/${sourceHash}/${hash}.json`;
         // Skip old batches before upload, then repeat the check in the commit.
         const previous = await control.get<SourceHead>(path);
-        if (previous?.checkedAt && previous.checkedAt > checked) {
+        if (previous?.checkedAt && (previous.checkedAt > checked ||
+            (previous.checkedAt === checked && previous.events === 0 && page.events.length > 0))) {
           skipped++;
           continue;
         }
@@ -362,7 +353,8 @@ export function createGcpStore(options: {
         const changed = await control.transaction(async (tx) => {
           await liveLease(tx, lease, lockPath);
           const current = await tx.get<SourceHead>(path);
-          if (current?.checkedAt && current.checkedAt > checked) return false;
+          if (current?.checkedAt && (current.checkedAt > checked ||
+              (current.checkedAt === checked && current.events === 0 && page.events.length > 0))) return false;
           tx.set(path, {
             url: page.url,
             key,
@@ -411,7 +403,7 @@ export function createGcpStore(options: {
           !Number.isFinite(checkedAt) ||
           new Date(checkedAt).toISOString() !== source.checkedAt ||
           !Number.isSafeInteger(source.events) ||
-          source.events < 1
+          source.events < 0
         )
           throw new Error('Invalid staged source head');
         if (source.checkedAt > report.finishedAt)
@@ -450,6 +442,8 @@ export function createGcpStore(options: {
             page.events.length !== source.events
           )
             throw new Error('Invalid source page object');
+          const times = sourcePageTimes(page);
+          if (times.latest !== source.checkedAt) throw new Error('Source page timestamp mismatch');
           for (const event of page.events) {
             if (event.url !== source.url || ids.has(event.id))
               throw new Error('Conflicting source event identity');

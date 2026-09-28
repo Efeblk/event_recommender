@@ -1,5 +1,6 @@
 import type { EventRecord } from './types.ts';
 import { CATEGORIES } from './types.ts';
+import type { SourcePage } from './storage-contract.ts';
 export function sourceOf(raw: unknown): EventRecord['source'] | null {
   if (typeof raw !== 'string') return null;
   try {
@@ -15,7 +16,7 @@ export function sourceOf(raw: unknown): EventRecord['source'] | null {
       return null;
     if (
       url.hostname === 'biletinial.com' &&
-      /^\/tr-tr\/(muzik|tiyatro|gosteri|etkinlik)\/[^/]+$/.test(url.pathname)
+      /^\/tr-tr\/(muzik|tiyatro|gosteri|etkinlik|sinema|futbol|spor|opera-bale|egitim|seminer|eglence)\/[^/]+$/.test(url.pathname)
     )
       return 'biletinial';
     if (
@@ -36,7 +37,7 @@ export function sourceOf(raw: unknown): EventRecord['source'] | null {
 export function validateImport(
   value: unknown,
   now = new Date(),
-): { url: string; events: EventRecord[] }[] {
+): SourcePage[] {
   const payload = value as { schemaVersion?: unknown; pages?: unknown } | null;
   if (
     !payload ||
@@ -50,7 +51,7 @@ export function validateImport(
     urls = new Set<string>();
   let count = 0;
   return payload.pages.map((raw: unknown) => {
-    const page = raw as { url?: unknown; events?: unknown } | null;
+    const page = raw as { url?: unknown; events?: unknown; retiredAt?: unknown } | null;
     const source = sourceOf(page?.url);
     if (
       !page ||
@@ -58,12 +59,19 @@ export function validateImport(
       typeof page.url !== 'string' ||
       urls.has(page.url) ||
       !Array.isArray(page.events) ||
-      !page.events.length ||
       page.events.length > 300
     )
       throw new Error('Invalid source page');
     urls.add(page.url);
     const url = page.url;
+    if (!page.events.length) {
+      const retired = typeof page.retiredAt === 'string' ? Date.parse(page.retiredAt) : NaN;
+      if (!Number.isFinite(retired) || new Date(retired).toISOString() !== page.retiredAt ||
+          retired > now.getTime() + 300000 || retired < now.getTime() - 72 * 3600000)
+        throw new Error('Invalid source retirement');
+      return { url, events: [], retiredAt: page.retiredAt as string };
+    }
+    if (page.retiredAt !== undefined) throw new Error('Nonempty retired source');
     const events = page.events.map((rawEvent: unknown) => {
       const e = rawEvent as Record<string, unknown> | null;
       if (!e || ++count > 2000) throw new Error('Invalid event');
@@ -83,6 +91,11 @@ export function validateImport(
           throw new Error('Invalid event field');
       const start = Date.parse(e.startsAt as string),
         checked = Date.parse(e.checkedAt as string);
+      if (e.sourceSessionIds !== undefined && (!Array.isArray(e.sourceSessionIds) || e.sourceSessionIds.length > 100 || e.sourceSessionIds.some((id) => typeof id !== 'string' || !id.length || id.length > 100)))
+        throw new Error('Invalid source session IDs');
+      for (const [key, max] of Object.entries({ sourceCategory: 250, sourceVersion: 40, extraction: 80 }))
+        if (e[key] !== undefined && (typeof e[key] !== 'string' || (e[key] as string).length > max))
+          throw new Error('Invalid source metadata');
       if (
         !e.id ||
         !e.title ||
@@ -138,6 +151,10 @@ export function validateImport(
         category: e.category,
         availability: e.availability,
         source,
+        ...(e.sourceSessionIds !== undefined ? { sourceSessionIds: e.sourceSessionIds } : {}),
+        ...(e.sourceCategory !== undefined ? { sourceCategory: e.sourceCategory } : {}),
+        ...(e.sourceVersion !== undefined ? { sourceVersion: e.sourceVersion } : {}),
+        ...(e.extraction !== undefined ? { extraction: e.extraction } : {}),
       } as EventRecord;
     });
     return { url, events };

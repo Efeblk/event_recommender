@@ -1,0 +1,114 @@
+{
+  "2714959873": {
+    "u": "https://www.biletix.com/wbtxapi/api/v1/bxcached/event/getPerformanceList/5IW60/INTERNET/tr",
+    "b": {
+      "status": "SUCCESS",
+      "data": [
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "077",
+          "performanceDate": 1790661600000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": true,
+          "status": "s01_onsale",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "078",
+          "performanceDate": 1790672400000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": true,
+          "status": "s01_onsale",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "079",
+          "performanceDate": 1790683200000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": true,
+          "status": "s01_onsale",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "080",
+          "performanceDate": 1790748000000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": true,
+          "status": "s01_onsale",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "081",
+          "performanceDate": 1790758800000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": true,
+          "status": "s01_onsale",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "082",
+          "performanceDate": 1790769600000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": true,
+          "status": "s01_onsale",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "074",
+          "performanceDate": 1790575200000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": false,
+          "status": "s13_old_over",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "075",
+          "performanceDate": 1790586000000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": false,
+          "status": "s13_old_over",
+          "minPrice": 110000
+        },
+        {
+          "eventCode": "5IW60",
+          "performanceCode": "076",
+          "performanceDate": 1790596800000,
+          "venueName": "İstanbul Workshops - Fabrikafa Make & Coffee",
+          "venueCity": "İstanbul",
+          "active": false,
+          "status": "s13_old_over",
+          "minPrice": 110000
+        }
+      ]
+    }
+  },
+  "4019786270": {
+    "u": "https://www.biletix.com/wbtxapi/api/v1/bxcached/event/getEventDetail/5IW60/INTERNET/tr",
+    "b": {
+      "status": "SUCCESS",
+      "data": {
+        "eventCode": "5IW60",
+        "eventName": "Vitray Atölyesi",
+        "eventDescription": " Vitray sanatının zamansız güzelliği ve yaratıcı ışık oyunları ile tanışmaya hazır mısınız? Bu eşsiz yolculukta, Avrupa ve Afrika'dan Türkiye topraklarına uzanan köklü bir sanatın tarihini ve inceliklerini keşfedeceksiniz. Kendi ellerinizle bir şaheser yaratırken, her bir cam parçasının anlattığı o derin hikâyeye ortak olacaksınız. Sanatın bu büyül",
+        "eventCategoryCode": "OTHER",
+        "subCategory": "Atölye",
+        "venueTown": "ÜSKÜDAR"
+      }
+    }
+  }
+}

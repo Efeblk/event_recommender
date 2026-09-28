@@ -25,6 +25,8 @@ export interface Lease {
 export interface SourcePage {
   url: string;
   events: EventRecord[];
+  /** A source-verified empty inventory; never inferred from an extraction failure. */
+  retiredAt?: string;
 }
 export interface VectorEntry {
   hash: string;

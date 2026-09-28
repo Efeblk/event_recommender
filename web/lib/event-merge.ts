@@ -38,6 +38,7 @@ const TITLE_ALIASES = [
     'STAND UP GECESİ Taksim- Pera- Beyoğlu',
     'Beyoğlu- Taksim- Stand Up Gecesi',
     'Stand Up Gecesi - Taksim & Beyoğlu',
+    'Beyoğlu- Taksim- Pera Stand Up Gecesi',
   ],
   [
     'Stand up Taksim / Beyoğlu Gecesi | İnfiniti Sahne',
@@ -65,6 +66,42 @@ const TITLE_ALIASES = [
   // Biletinial/Bubilet list the same Altı Üstü Kabare show and matching
   // October 2–3, 2026 sessions; preserve both offers on each matched session.
   ['Çiftler Çiftler', 'Çiftler Çiftler Oyunu'],
+  // Exact same-session provider spellings observed in the September 28, 2026
+  // staging checkpoint. Keep these literal: suffix/reordering heuristics can
+  // incorrectly combine adaptations, editions, workshops, or age variants.
+  ['Sesler - Salih Bademci', 'Salih Bademci - Sesler'],
+  ['Tek Hücreliler - Aşkım Kapışmak', 'Aşkım Kapışmak - Tek Hücreliler'],
+  ['Memleket Kumaşı – Sunay Akın', 'Sunay Akın - Memleket Kumaşı'],
+  [
+    'Aleksandrov Rus Kızılordu Korosu ve Dans Topluluğu İle Hayko Cepkin Konserleri',
+    'Aleksandrov Rus Kızılordu Korosu ve Dans Topluluğu İle Hayko Cepkin',
+  ],
+  ['Bir İdam Mahkumunun Son Günü', 'Bir İdam Mahkumunun Son Günü Oyunu'],
+  [
+    'Kasımpaşa Mevlevihanesi Semazen Töreni',
+    "Kasımpaşa Mevlevihanesi'nde Semazen Töreni",
+  ],
+  ["Ölü'n Bizi Ayırana Dek", "Ölü'n Bizi Ayırana Dek Oyunu"],
+  ['Mahşer-i Cümbüş', 'Mahşer-i Cümbüş Oyunu'],
+  ['Haybeden Gerçeküstü Aşk', 'Haybeden Gerçeküstü Aşk Oyunu'],
+  ['Aşk Hikayen Düşmüş', 'Aşk Hikayen Düşmüş Oyunu'],
+  ['Bi Şaka Stand up Programı', 'Bi Şaka Stand Up'],
+  [
+    'Fırat Tanış ile Gelin Tanış Olalım',
+    'Fırat Tanış ile Gelin Tanış Olalım Oyunu',
+  ],
+  ['Anna Karenina', 'Anna Karenina Tiyatro Oyunu'],
+  ['Berkay Konseri', 'Berkay'],
+  ['Ozbi Konseri', 'Ozbi'],
+  ['Kolpa', 'Kolpa Konseri'],
+  ['Duman Konseri', 'Duman'],
+  ['Simge', 'Simge Konseri'],
+  ['Mavi', 'Mavi Konseri'],
+  ['Jakuzi', 'Jakuzi Konseri'],
+  ['Malleus', 'Malleus Oyunu'],
+  ['Ahududu', 'Ahududu Oyunu'],
+  // Both frozen providers list the same Sep 25 Sahne Beşiktaş recording.
+  ['Alpay Erdem - Geçenlerde', 'Alpay Erdem - Geçenlerde Stand Up'],
   [
     'Kadıköy Stand-up Gecesi',
     'Kadıköy Stand Up Gecesi Cuma 20:00',
@@ -110,13 +147,65 @@ for (const aliases of TITLE_ALIASES) {
 /** Exact or explicitly reviewed show-title identity; never merges event facts. */
 export function canonicalShowTitle(title: string): string {
   const normalized = normalize(title);
-  const canonical = titleAliases.get(normalized) ?? normalized;
-  // A trailing format label is not a show subtitle. Retain the complete named
-  // remainder, including edition numbers; never reduce a title to a performer.
-  const withoutFormat = canonical.replace(/\s+stand\s*up$/, '');
-  return withoutFormat !== canonical && withoutFormat.split(' ').length >= 2
-    ? withoutFormat
-    : canonical;
+  return titleAliases.get(normalized) ?? normalized;
+}
+
+type StrongPolicy =
+  | 'child-only'
+  | 'adult-only'
+  | 'workshop'
+  | 'performance'
+  | `adaptation:${string}`;
+
+function strongPolicies(event: EventRecord): Set<StrongPolicy> {
+  const raw = `${event.title} ${event.description}`
+    .toLocaleLowerCase('tr-TR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i');
+  const text = normalize(`${event.title} ${event.description}`);
+  const title = normalize(event.title);
+  const result = new Set<StrongPolicy>();
+  const childRange = [...text.matchAll(/\b(\d{1,2})\s+(?:ile\s+)?(\d{1,2})\s*yas\b/g)]
+    .some((match) => Number(match[2]) <= 17);
+  if (
+    childRange ||
+    /\b(?:yalnizca|sadece)\s+cocuklar\s+icin\b/.test(text) ||
+    /\bcocuklara\s+ozel\b/.test(text)
+  ) result.add('child-only');
+  if (
+    /\b18\s*\+/.test(raw) ||
+    /\b18\s*yas\s+alti\s+(?:giremez|kabul edilmez)\b/.test(text) ||
+    /\b(?:yalnizca|sadece)\s+yetiskinler\s+icin\b/.test(text) ||
+    /\byetiskinlere\s+ozel\b/.test(text)
+  ) result.add('adult-only');
+  if (
+    /\b(?:atolye|workshop)(?:si|u)?\b/.test(title) ||
+    /\buygulamali\b[^.!?\n]{0,32}\b(?:atolye|workshop)\s+calismasi\b/.test(text)
+  )
+    result.add('workshop');
+  if (
+    /\b(?:tiyatro\s+oyunu|canli\s+konser)\b/.test(title) ||
+    /\bcanli\s+sahne\s+gosterisidir\b/.test(text)
+  )
+    result.add('performance');
+  const adaptation = /\buyarlama\s*:\s*([^.;\n]{1,60})/.exec(raw)?.[1]?.trim();
+  if (adaptation) result.add(`adaptation:${adaptation}`);
+  return result;
+}
+
+function conflictingPolicyDimension(members: EventRecord[]):
+  | ['audience', StrongPolicy, StrongPolicy]
+  | ['format', StrongPolicy, StrongPolicy]
+  | null {
+  const policies = members.map(strongPolicies);
+  if (policies.some((set) => set.has('child-only')) && policies.some((set) => set.has('adult-only')))
+    return ['audience', 'child-only', 'adult-only'];
+  if (policies.some((set) => set.has('workshop')) && policies.some((set) => set.has('performance')))
+    return ['format', 'workshop', 'performance'];
+  const adaptations = [...new Set(policies.flatMap((set) => [...set].filter((value) => value.startsWith('adaptation:'))))];
+  if (adaptations.length > 1) return ['format', adaptations[0], adaptations[1]];
+  return null;
 }
 
 function venueKey(venue: string): string {
@@ -182,6 +271,7 @@ function offersOf(event: EventRecord): EventOffer[] {
       url: event.url,
       price: event.price,
       currency: event.currency,
+      ...(event.sourceSessionIds ? { sourceSessionIds: [...event.sourceSessionIds] } : {}),
       checkedAt: event.checkedAt,
       category: event.category,
       venue: event.venue,
@@ -241,18 +331,27 @@ function selectOffer(
   offers: EventOffer[],
   representative: EventRecord,
 ): EventOffer {
+  // A merged card is purchasable when at least one provider explicitly says
+  // this exact session is available. Unknown, sold-out, and cancelled prices
+  // remain visible in `offers`, but never undercut an available card price.
+  const selectable = offers.some((offer) => offer.availability === 'available')
+    ? offers.filter((offer) => offer.availability === 'available')
+    : offers;
   const preferred =
-    offers.find((offer) => offer.id === representative.id) ??
-    offers.find(
+    selectable.find((offer) => offer.id === representative.id) ??
+    selectable.find(
       (offer) =>
         offer.url === representative.url &&
         offer.currency === representative.currency &&
         offer.source === representative.source,
     ) ??
-    offers.find((offer) => offer.currency === representative.currency) ??
-    offers[0];
-  const comparable = offers.filter(
-    (offer) => offer.currency === preferred.currency && offer.price !== null,
+    selectable.find((offer) => offer.currency === representative.currency) ??
+    selectable[0];
+  const comparable = selectable.filter(
+    (offer) =>
+      offer.availability === preferred.availability &&
+      offer.currency === preferred.currency &&
+      offer.price !== null,
   );
   return (
     comparable.sort(
@@ -263,7 +362,7 @@ function selectOffer(
 
 /** Conservatively combines listings that describe the exact same performance. */
 export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
-  const groups = new Map<string, EventRecord[]>();
+  const candidateGroups = new Map<string, EventRecord[]>();
   for (const event of events) {
     const value = identity(event);
     // Invalid dates cannot establish equality. The raw id keeps these isolated.
@@ -273,9 +372,28 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
       value.instant && value.title && value.city && hasSpecificVenue
         ? [value.title, value.city, value.venue, value.instant].join('\u001f')
         : `isolated\u001f${event.id}`;
-    const group = groups.get(key);
+    const group = candidateGroups.get(key);
     if (group) group.push(event);
-    else groups.set(key, [event]);
+    else candidateGroups.set(key, [event]);
+  }
+
+  const groups = new Map<string, EventRecord[]>();
+  for (const [key, members] of candidateGroups) {
+    const conflict = conflictingPolicyDimension(members);
+    for (const member of members) {
+      const policies = strongPolicies(member);
+      const policy = conflict
+        ? policies.has(conflict[1])
+          ? conflict[1]
+          : policies.has(conflict[2])
+            ? conflict[2]
+            : `unspecified-${member.id}`
+        : 'compatible';
+      const guardedKey = conflict ? `${key}\u001f${conflict[0]}:${policy}` : key;
+      const guarded = groups.get(guardedKey);
+      if (guarded) guarded.push(member);
+      else groups.set(guardedKey, [member]);
+    }
   }
 
   return [...groups.entries()]
@@ -309,7 +427,12 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
         !GENERIC_VENUES.has(value.venue)
           ? hash(
               'production',
-              [value.title, value.city, value.venue].join('\u001f'),
+              [
+                value.title,
+                value.city,
+                value.venue,
+                [...strongPolicies(representative)].sort().join('|'),
+              ].join('\u001f'),
             )
           : undefined;
       const showIdentity = displayShowIdentity(representative);
@@ -324,6 +447,7 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
         url: offer.url,
         price: offer.price,
         currency: offer.currency,
+        availability: offer.availability,
         checkedAt: offer.checkedAt,
         offers,
         mergedIds: [...rawIds].sort(),
@@ -348,5 +472,6 @@ const GENERIC_SHOW_TITLES = new Set([
 export function displayShowIdentity(event: EventRecord): string | undefined {
   const title = canonicalShowTitle(event.title);
   if (!title || GENERIC_SHOW_TITLES.has(title)) return undefined;
-  return [normalize(event.city), event.category, title].join('\u001f');
+  const policy = [...strongPolicies(event)].sort().join('|');
+  return [normalize(event.city), event.category, title, policy].join('\u001f');
 }

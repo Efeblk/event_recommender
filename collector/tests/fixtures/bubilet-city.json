@@ -1,0 +1,9 @@
+{
+  "tags": [
+    { "id": 6, "slug": "trendler", "name": "Trendler", "order": 1, "isHomepage": true, "isDefault": false },
+    { "id": 37, "slug": "spor-etkinlikleri", "name": "Spor", "order": 0, "isHomepage": false, "isDefault": false },
+    { "id": 50, "slug": "workshop", "name": "Workshop", "order": 12, "isHomepage": false, "isDefault": false },
+    { "id": 306, "slug": "-", "name": "-", "order": 0, "isHomepage": false, "isDefault": false }
+  ],
+  "pages": [{ "slug": "about" }]
+}

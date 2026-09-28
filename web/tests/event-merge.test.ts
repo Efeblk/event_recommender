@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { mergeEventSessions } from '../lib/event-merge.ts';
+import { diverseEvents } from '../lib/retrieval.ts';
+import { uniqueEvents } from '../lib/search.ts';
 import type { EventRecord } from '../lib/types.ts';
 
 function event(overrides: Partial<EventRecord> = {}): EventRecord {
@@ -224,6 +226,53 @@ await test('keeps unknown prices and separate offers for separate sessions', () 
     result.map((item) => item.offers?.length),
     [2, 1],
   );
+});
+
+await test('an available provider controls merged availability and price over an unknown representative', () => {
+  const unknown = event({
+    id: 'biletinial:unknown',
+    availability: 'unknown',
+    price: 100,
+  });
+  const available = event({
+    id: 'biletix:available',
+    source: 'biletix',
+    availability: 'available',
+    price: 600,
+    url: 'https://biletix.example/available',
+  });
+  const [merged] = mergeEventSessions([unknown, available]);
+  assert.equal(merged.availability, 'available');
+  assert.equal(merged.price, 600);
+  assert.equal(merged.url, available.url);
+  assert.deepEqual(
+    new Set(merged.offers?.map(({ id, availability: status, price }) => `${id}|${status}|${price}`)),
+    new Set([
+      'biletinial:unknown|unknown|100',
+      'biletix:available|available|600',
+    ]),
+  );
+});
+
+await test('unavailable offer prices cannot undercut available offers and no-available groups stay unavailable', () => {
+  const mixed = mergeEventSessions([
+    event({ id: 'cancelled', availability: 'cancelled', price: 10 }),
+    event({ id: 'sold-out', source: 'biletix', availability: 'sold_out', price: 20 }),
+    event({ id: 'available-high', source: 'bubilet', availability: 'available', price: 300 }),
+    event({ id: 'available-low', source: 'biletix', availability: 'available', price: 250 }),
+  ])[0];
+  assert.equal(mixed.availability, 'available');
+  assert.equal(mixed.price, 250);
+  assert.equal(mixed.offers?.length, 4);
+
+  const noAvailable = mergeEventSessions([
+    event({ id: 'unknown', availability: 'unknown', price: 500 }),
+    event({ id: 'sold-out-cheap', source: 'biletix', availability: 'sold_out', price: 1 }),
+    event({ id: 'cancelled-cheapest', source: 'bubilet', availability: 'cancelled', price: 0 }),
+  ])[0];
+  assert.equal(noAvailable.availability, 'unknown');
+  assert.equal(noAvailable.price, 500);
+  assert.equal(noAvailable.offers?.length, 3);
 });
 
 await test('supports every curated venue alias without fuzzy stage matching', () => {
@@ -646,7 +695,7 @@ await test('reviewed Ada Bar schedule titles merge only at the same performance 
   );
 });
 
-await test('trailing stand-up format labels merge exact named sessions but preserve editions and times', () => {
+await test('reviewed trailing stand-up alias merges while preserving editions and times', () => {
   const merged = mergeEventSessions([
     event({ id: 'a', title: 'Alpay Erdem - Geçenlerde Stand Up' }),
     event({
@@ -673,6 +722,65 @@ await test('trailing stand-up format labels merge exact named sessions but prese
     merged.find((e) => e.mergedIds?.includes('e'))?.canonicalShowKey,
     merged.find((e) => e.mergedIds?.includes('f'))?.canonicalShowKey,
   );
+});
+
+await test('does not strip unreviewed trailing stand-up labels into another title', () => {
+  const plain = event({ id: 'plain', title: 'Deneysel Gösteri' });
+  const standup = event({ id: 'standup', title: 'Deneysel Gösteri Stand Up' });
+  assert.equal(mergeEventSessions([plain, standup]).length, 2);
+});
+
+await test('separates contradictory explicit child-only and adult-only policies', () => {
+  const childOnly = event({
+    id: 'child-only',
+    title: 'Seramik Atölyesi',
+    description: 'Yalnızca 6-9 yaş çocuklar için uygulamalı atölye çalışması.',
+    category: 'Atölye',
+  });
+  const adultsOnly = event({
+    id: 'adult-only',
+    title: childOnly.title,
+    description: 'Yalnızca yetişkinler için, 18+ uygulamalı atölye çalışması.',
+    category: 'Atölye',
+  });
+  assert.equal(mergeEventSessions([childOnly, adultsOnly]).length, 2);
+  const source18Plus = event({
+    ...adultsOnly,
+    id: 'source-18-plus',
+    description: '18+ uygulamalı atölye çalışması.',
+  });
+  assert.equal(mergeEventSessions([childOnly, source18Plus]).length, 2);
+
+  const general = event({
+    id: 'general',
+    title: 'Gece Gösterisi',
+    description: 'Genel etkinlik açıklaması.',
+  });
+  const adultRestriction = event({
+    ...general,
+    id: 'adult-restriction',
+    description: '18+ yaş sınırı vardır.',
+    source: 'bubilet',
+  });
+  assert.equal(mergeEventSessions([general, adultRestriction]).length, 1);
+});
+
+await test('separates an explicit workshop from an explicit stage performance', () => {
+  const workshop = event({ id: 'workshop-policy', title: 'Birlikte Üretim', description: 'Uygulamalı workshop çalışması.' });
+  const performance = event({ id: 'performance-policy', title: workshop.title, description: 'Canlı sahne gösterisidir.' });
+  assert.equal(mergeEventSessions([workshop, performance]).length, 2);
+});
+
+await test('separates explicitly named conflicting adaptations', () => {
+  const first = event({ id: 'first-adaptation', title: 'Ortak Hikâye', description: 'Uyarlama: Ayşe Yılmaz.' });
+  const second = event({ id: 'second-adaptation', title: first.title, description: 'Uyarlama: Mehmet Demir.' });
+  const split = mergeEventSessions([first, second]);
+  assert.equal(split.length, 2);
+  assert.notEqual(split[0].canonicalProductionKey, split[1].canonicalProductionKey);
+  assert.notEqual(split[0].canonicalShowKey, split[1].canonicalShowKey);
+  assert.equal(uniqueEvents(split, 10).length, 2);
+  assert.equal(diverseEvents(split, 10).length, 2);
+  assert.deepEqual(mergeEventSessions(split), split);
 });
 
 await test('reviewed Comedy Lab and further Ada Bar schedules merge without absorbing open-mic shows', () => {
@@ -708,4 +816,53 @@ await test('reviewed Comedy Lab and further Ada Bar schedules merge without abso
     ]).length,
     2,
   );
+});
+
+await test('fresh catalog aliases merge exact theatre, concert, and ceremony sessions', () => {
+  for (const [firstTitle, secondTitle, category] of [
+    ['Sesler - Salih Bademci', 'Salih Bademci - Sesler', 'Tiyatro'],
+    ['Tek Hücreliler - Aşkım Kapışmak', 'Aşkım Kapışmak - Tek Hücreliler', 'Tiyatro'],
+    ['Kasımpaşa Mevlevihanesi Semazen Töreni', "Kasımpaşa Mevlevihanesi'nde Semazen Töreni", 'Konser'],
+    ['Aleksandrov Rus Kızılordu Korosu ve Dans Topluluğu İle Hayko Cepkin Konserleri', 'Aleksandrov Rus Kızılordu Korosu ve Dans Topluluğu İle Hayko Cepkin', 'Konser'],
+  ] as const) {
+    const first = event({ title: firstTitle, category });
+    const second = event({ id: `other:${secondTitle}`, source: 'bubilet', title: secondTitle, category, url: `https://bubilet.example/${encodeURIComponent(secondTitle)}` });
+    const merged = mergeEventSessions([first, second]);
+    assert.equal(merged.length, 1, `${firstTitle} / ${secondTitle}`);
+    assert.equal(merged[0].offers?.length, 2);
+    assert.ok(merged[0].mergedIds?.includes(first.id));
+    assert.ok(merged[0].mergedIds?.includes(second.id));
+  }
+});
+
+await test('literal catalog aliases still require the exact session and venue', () => {
+  const base = event({ title: 'Sesler - Salih Bademci', venue: 'Maximum Uniq Hall' });
+  const alias = event({ id: 'other', source: 'bubilet', title: 'Salih Bademci - Sesler', venue: base.venue });
+  assert.equal(mergeEventSessions([base, alias]).length, 1);
+  assert.equal(mergeEventSessions([base, { ...alias, startsAt: '2026-10-11T17:00:00.000Z' }]).length, 2);
+  assert.equal(mergeEventSessions([base, { ...alias, venue: 'Maximum Uniq Açıkhava' }]).length, 2);
+});
+
+await test('does not merge related adaptations, workshop formats, editions, or age policies', () => {
+  const base = event({ title: 'Hamlet', venue: 'Atölye Sahne', category: 'Tiyatro' });
+  const distinct = [
+    event({ id: 'adaptation', title: 'Hamlet - Yeni Uyarlama', venue: base.venue, category: 'Tiyatro' }),
+    event({ id: 'workshop', title: 'Hamlet Oyunculuk Workshopu', venue: base.venue, category: 'Tiyatro' }),
+    event({ id: 'edition', title: 'Hamlet 2', venue: base.venue, category: 'Tiyatro' }),
+    event({ id: 'age', title: 'Hamlet 7+ Çocuk Oyunu', venue: base.venue, category: 'Tiyatro' }),
+  ];
+  assert.equal(mergeEventSessions([base, ...distinct]).length, 5);
+});
+
+await test('preserves every raw offer link, price, and id for fresh aliases', () => {
+  const first = event({ id: 'biletinial:berkay', title: 'Berkay Konseri', category: 'Konser', price: 900, url: 'https://biletinial.example/berkay' });
+  const second = event({ id: 'bubilet:berkay', source: 'bubilet', title: 'Berkay', category: 'Konser', price: 750, url: 'https://bubilet.example/berkay' });
+  const [merged] = mergeEventSessions([first, second]);
+  assert.equal(merged.price, 750);
+  assert.deepEqual(new Set(merged.offers?.map(({ id, url, price }) => `${id}|${url}|${price}`)), new Set([
+    'biletinial:berkay|https://biletinial.example/berkay|900',
+    'bubilet:berkay|https://bubilet.example/berkay|750',
+  ]));
+  assert.ok(merged.mergedIds?.includes(first.id));
+  assert.ok(merged.mergedIds?.includes(second.id));
 });

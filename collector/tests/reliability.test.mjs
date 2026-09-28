@@ -108,6 +108,20 @@ test("publisher omits only sessions that started after collection and reports th
   ]);
 });
 
+test("publisher preserves explicit verified retirement without treating unknown empty pages as retired", async (t) => {
+  const bodies = [];
+  const remote = await fixture(async (request, response) => {
+    const chunks = []; for await (const chunk of request) chunks.push(chunk);
+    bodies.push(JSON.parse(Buffer.concat(chunks))); json(response, 200, { imported: 0 });
+  });
+  t.after(remote.close);
+  const page = { url: 'https://source.test/retired', events: [], retiredAt: '2026-09-26T10:00:00.000Z' };
+  assert.deepEqual(prepareImportPages([page, { url: 'https://source.test/unknown', events: [] }]).pages, [page]);
+  const result = await publish({ origin: remote.origin, token: 'secret', report: { schemaVersion: 1, summary: {}, pages: [page] }, allowLoopbackHttp: true });
+  assert.deepEqual(bodies, [{ schemaVersion: 1, pages: [page] }]);
+  assert.equal(result.imported, 0);
+});
+
 test("publisher rechecks expiration immediately before each import request", async (t) => {
   const bodies = [];
   const remote = await fixture(async (request, response) => {

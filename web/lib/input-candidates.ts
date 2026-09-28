@@ -427,7 +427,7 @@ export function buildInputCandidates(
     }
   }
   for (const match of scan(
-    `${boundaryStart}(?:sevgilimle|partnerimle|esimle|ikimiz|the two of us)${boundaryEnd}`,
+    `${boundaryStart}(?:sevgilimle|partnerimle|esimle|kiz arkadasimla|erkek arkadasimla|ikimiz|the two of us|with my (?:girlfriend|boyfriend|partner|wife|husband))${boundaryEnd}`,
   ))
     add('parties', 'p', original(match), 2);
   for (const match of scan(
@@ -731,7 +731,7 @@ export function buildInputCandidates(
   ))
     add('interests', 'i', match[0], match[1]);
   for (const match of scan(
-    `${boundaryStart}(?:kalabalik olmayan|canli muzik|date night|low-key|cultural|intimate|improv|exhibitions?|workshops?|sergi(?:ler)?|romantik|sakin)${boundaryEnd}`,
+    `${boundaryStart}(?:kalabalik olmayan|canli muzik|date night|low-key|cultural|intimate|improv|exhibitions?|workshops?|atolye(?:ler)?|sergi(?:ler)?|romantik|sakin)${boundaryEnd}`,
   ))
     add('interests', 'i', original(match), original(match));
   for (const clause of message.split(/[,;!?\n]+/)) {
@@ -740,6 +740,7 @@ export function buildInputCandidates(
       clean &&
       clean.length <= 160 &&
       /\p{L}/u.test(clean) &&
+      !/^(?:en yakin tarih|en erken(?: tarih)?|ilk uygun tarih|mumkun olan ilk tarih|soonest|earliest|next available date)$/u.test(fold(clean).trim()) &&
       !/^\s*(?:no|not|without|istemiyorum|olmasin)\b/u.test(fold(clean))
     )
       add('interests', 'i', clean, clean);

@@ -66,6 +66,13 @@ await test('import rejects foreign sources, duplicate IDs, empty pages and stale
     ),
   );
 });
+await test('import accepts only fresh explicit source retirements', () => {
+  const retirement = { url: event.url, events: [], retiredAt: now.toISOString() };
+  assert.deepEqual(validateImport({ schemaVersion: 1, pages: [retirement] }, now), [retirement]);
+  for (const retiredAt of [undefined, '', 'invalid', '2026-09-01T09:00:00.000Z', '2026-09-10T09:00:00.000Z'])
+    assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, retiredAt }] }, now));
+  assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, events: [event] }] }, now));
+});
 await test('unknown offer availability remains unknown and ineligible', async () => {
   const node = {
     '@type': 'Event',

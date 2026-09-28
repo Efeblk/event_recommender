@@ -455,7 +455,7 @@ await test('filter validation deduplicates exclusions and removes contradictions
     { ...emptyFilters, category: 'Konser', excludedCategories: ['Tiyatro'] },
   );
   assert.throws(() =>
-    validateFilters({ ...emptyFilters, excludedCategories: ['Sinema'] }),
+    validateFilters({ ...emptyFilters, excludedCategories: ['Invented category'] }),
   );
 });
 
@@ -766,7 +766,7 @@ await test('optional hard-filter fields are validated', () => {
     validateFilters({ ...emptyFilters, startTimeFrom: '25:00' }),
   );
   assert.throws(() =>
-    validateFilters({ ...emptyFilters, categories: ['Sinema'] }),
+    validateFilters({ ...emptyFilters, categories: ['Invented category'] }),
   );
   assert.throws(() =>
     validateFilters({ ...emptyFilters, startTimeToExclusive: 'yes' }),

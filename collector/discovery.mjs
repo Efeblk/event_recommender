@@ -1,15 +1,18 @@
 import { detailUrl, discover } from "./adapters.mjs";
 import { sha } from "./pipeline.mjs";
 import { flightObjects } from "./flight.mjs";
+import { discoverBubiletCity } from './bubilet.mjs';
+import { collectBiletinialKids, discoverBiletinialDetails } from './biletinial.mjs';
 
 // Public requests observed from scrolling the live sites on 2026-09-09.
-export async function expandListing($, source, url, get, { maxPages = 20, now = new Date() } = {}) {
+export async function expandListing($, source, url, get, { maxPages = 20, now = new Date(), continuation = null } = {}) {
   const urls = new Set(discover($, source));
   const initial = urls.size;
   const requests = [];
   const signatures = new Set();
   let completion = "unsupported_listing";
   let total = null;
+  let progress = null;
   const add = (raw) => {
     const canonical = detailUrl(raw, source);
     if (!canonical) throw new Error("invalid_discovery_url");
@@ -42,6 +45,22 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
   }
   try {
     if (source === "biletinial") {
+      if (['/tr-tr/spor/istanbul', '/tr-tr/futbol'].includes(new URL(url).pathname)) {
+        const details = discoverBiletinialDetails($.html());
+        for (const item of details) add(item);
+        // These two source templates render their entire schedule; their
+        // detail pages still enforce actual Istanbul venue/session evidence.
+        return { urls: [...urls], initial, requests, completion: 'exhausted', total: details.length };
+      }
+      if (new URL(url).pathname === '/tr-tr/kids') {
+        const kids = await collectBiletinialKids(async (endpoint) => {
+          const text = await get(endpoint);
+          requests.push({url:endpoint, method:'GET', contentHash:sha(text)});
+          return text;
+        });
+        for (const item of kids.urls) add(item);
+        return { urls: [...urls], initial, requests, completion: kids.completion, total: kids.total ?? null };
+      }
       const html = $.html();
       if (html.includes("/EventGroup/eventGroupIndex.js")) {
         const groupId = html.match(/var EVENT_GROUP_ID\s*=\s*(\d+)/)?.[1];
@@ -49,7 +68,17 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
         if (!groupId || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100)
           throw new Error("listing_config_changed");
         completion = "page_limit";
-        for (let page = 1; page <= maxPages; page++) {
+        let totalChanged = false;
+        const fingerprint = sha(JSON.stringify({ kind: 'event-group', groupId, pageSize, initial: [...urls].sort() }));
+        const resumed = continuation?.fingerprint === fingerprint && Number.isInteger(continuation.nextPage) && continuation.nextPage > 1;
+        if (resumed && Array.isArray(continuation.signatures)) for (const item of continuation.signatures) signatures.add(item);
+        if (resumed && Number.isInteger(continuation.total)) total = continuation.total;
+        if (resumed) progress = { ...continuation };
+        const firstPage = resumed ? continuation.nextPage : 1;
+        let nextPage = firstPage;
+        for (let offset = 0; offset < maxPages; offset++) {
+          const page = firstPage + offset;
+          nextPage = page + 1;
           const params = new URLSearchParams({
             eventGroupId: groupId,
             type: "events",
@@ -61,11 +90,16 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
           const data = await read(`https://biletinial.com/tr-tr/EventGroup/GetData?${params}`);
           if (!Array.isArray(data.Data) || !Number.isInteger(data.TotalCount))
             throw new Error("listing_schema_changed");
-          if (total !== null && total !== data.TotalCount) {
-            completion = "total_changed";
+          if (total !== null && total !== data.TotalCount) totalChanged = true;
+          total = data.TotalCount;
+          // The provider's city-filtered pages overlap, exceed PAGE_SIZE, and
+          // can be short before later results. TotalCount is advisory; only an
+          // explicit empty page proves the sequence ended.
+          if (!data.Data.length) {
+            requests.at(-1).items = 0;
+            completion = totalChanged ? 'total_changed' : 'exhausted';
             break;
           }
-          total = data.TotalCount;
           if (repeated(data.Data)) {
             completion = "repeated_page";
             break;
@@ -74,22 +108,16 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
             if (
               typeof item.SeoUrl !== "string" ||
               !/^[a-zA-Z0-9_-]+$/.test(item.SeoUrl) ||
-              !/^(muzik|tiyatro|gosteri|etkinlik)$/.test(item.tipForUrl)
+              !/^(muzik|tiyatro|gosteri|etkinlik|sinema|futbol|spor|opera-bale|egitim|seminer|eglence)$/.test(item.tipForUrl)
             )
               throw new Error("listing_schema_changed");
             add(`/tr-tr/${item.tipForUrl}/${item.SeoUrl}`);
           }
           requests.at(-1).items = data.Data.length;
-          if ((page - 1) * pageSize + data.Data.length >= total) {
-            completion = "exhausted";
-            break;
-          }
-          if (data.Data.length !== pageSize) {
-            completion = "short_page";
-            break;
-          }
+          progress = { fingerprint, nextPage, signatures: [...signatures], total };
         }
-        return { urls: [...urls], initial, requests, completion, total };
+        return { urls: [...urls], initial, requests, completion, total,
+          ...(completion === 'page_limit' ? { continuation: progress ?? { fingerprint, nextPage, signatures: [...signatures], total } } : {}) };
       }
       if (!html.includes("/List/GetMoreItems")) throw new Error("listing_config_changed");
       // Read the source's rendered filter configuration; do not invent a city/category mapping.
@@ -98,7 +126,15 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
       if (!cityId || !organizer || !html.includes("cityUrl: 'istanbul'"))
         throw new Error("listing_config_changed");
       completion = "page_limit";
-      for (let page = 1; page <= maxPages; page++) {
+      const fingerprint = sha(JSON.stringify({ kind: 'list', cityId, organizer, initial: [...urls].sort() }));
+      const resumed = continuation?.fingerprint === fingerprint && Number.isInteger(continuation.nextPage) && continuation.nextPage > 1;
+      if (resumed && Array.isArray(continuation.signatures)) for (const item of continuation.signatures) signatures.add(item);
+      if (resumed) progress = { ...continuation };
+      const firstPage = resumed ? continuation.nextPage : 1;
+      let nextPage = firstPage;
+      for (let offset = 0; offset < maxPages; offset++) {
+        const page = firstPage + offset;
+        nextPage = page + 1;
         const params = new URLSearchParams({
           region: "tr-tr",
           cityId,
@@ -121,7 +157,7 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
           if (
             typeof item.seoUrl !== "string" ||
             !/^[a-zA-Z0-9_-]+$/.test(item.seoUrl) ||
-            !/^(muzik|tiyatro|gosteri|etkinlik)$/.test(item.organizerUrl)
+            !/^(muzik|tiyatro|gosteri|etkinlik|sinema|futbol|spor|opera-bale|egitim|seminer|eglence)$/.test(item.organizerUrl)
           )
             throw new Error("listing_schema_changed");
           add(`/tr-tr/${item.organizerUrl}/${item.seoUrl}`);
@@ -135,8 +171,16 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
           completion = "empty_with_more";
           break;
         }
+        progress = { fingerprint, nextPage, signatures: [...signatures] };
       }
+      return { urls: [...urls], initial, requests, completion, total,
+        ...(completion === 'page_limit' ? { continuation: progress ?? { fingerprint, nextPage, signatures: [...signatures] } } : {}) };
     } else if (source === "bubilet") {
+      if (new URL(url).pathname === '/istanbul') {
+        const city = await discoverBubiletCity($, get);
+        for (const production of city.productions) add(production.url);
+        return { urls: [...urls], initial, requests: city.requests, completion: city.completion, total: city.productions.length };
+      }
       const tag = new URL(url).pathname.split("/").at(-1);
       const props = flightObjects($).find(
         (x) => x.citySlug === "istanbul" && Array.isArray(x.events) && Number.isInteger(x.tagId),
@@ -172,11 +216,18 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
       completion = "exhausted";
     } else if (source === "biletix") {
       const startDay = now.toISOString().slice(0, 10);
-      const endDay = new Date(now.getTime() + 730 * 86400000).toISOString().slice(0, 10);
       const rows = 100;
       completion = "page_limit";
+      const fingerprint = sha(JSON.stringify({ kind: 'biletix-solr', startDay, rows }));
+      const resumed = continuation?.fingerprint === fingerprint && Number.isInteger(continuation.nextOffset) && continuation.nextOffset > 0;
+      if (resumed && Array.isArray(continuation.signatures)) for (const item of continuation.signatures) signatures.add(item);
+      if (resumed && Number.isInteger(continuation.total)) total = continuation.total;
+      if (resumed) progress = { ...continuation };
+      const firstOffset = resumed ? continuation.nextOffset : 0;
+      let nextOffset = firstOffset;
       for (let page = 0; page < maxPages; page++) {
-        const offset = page * rows;
+        const offset = firstOffset + page * rows;
+        nextOffset = offset + rows;
         const body = new URLSearchParams({
           wt: "json",
           q: "*:*",
@@ -186,10 +237,9 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
         });
         body.append(
           "fq",
-          `(start:[${startDay}T00:00:00Z TO ${endDay}T23:59:59Z] OR end:[${startDay}T00:00:00Z TO ${endDay}T23:59:59Z])`,
+          `(start:[${startDay}T00:00:00Z TO *] OR end:[${startDay}T00:00:00Z TO *])`,
         );
         body.append("fq", 'city:"İstanbul"');
-        body.append("fq", "category:(MUSIC OR ART)");
         body.append("fq", "type:event");
         const data = await read("https://www.biletix.com/solr/tr/select", {
           method: "POST",
@@ -217,8 +267,7 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
           if (
             !/^[A-Z0-9]+$/.test(item.id) ||
             item.type !== "event" ||
-            ![item.city].flat().includes("İstanbul") ||
-            !["MUSIC", "ART"].includes(item.category)
+            ![item.city].flat().includes("İstanbul")
           )
             throw new Error("listing_schema_changed");
           add(`/etkinlik/${item.id}/ISTANBUL/tr`);
@@ -233,10 +282,13 @@ export async function expandListing($, source, url, get, { maxPages = 20, now = 
           completion = "short_page";
           break;
         }
+        progress = { fingerprint, nextOffset, signatures: [...signatures], total };
       }
+      return { urls: [...urls], initial, requests, completion, total,
+        ...(completion === 'page_limit' ? { continuation: progress ?? { fingerprint, nextOffset, signatures: [...signatures], total } } : {}) };
     }
   } catch (error) {
     completion = `failed:${error.message}`;
   }
-  return { urls: [...urls], initial, requests, completion, total };
+  return { urls: [...urls], initial, requests, completion, total, ...(progress ? { continuation: progress } : {}) };
 }

@@ -34,3 +34,11 @@ void test('experience wishes appear only as preferences and preserve literal int
   assert.deepEqual(summary.required, []);
   assert.deepEqual(summary.preferred, [EXPERIENCES.learning.label, EXPERIENCES.participation.label, 'Dancing to Learn']);
 });
+
+void test('soonest ordering appears as a preference rather than a date requirement', () => {
+  const state = emptyIntentState();
+  state.preferences.order = 'soonest';
+  const summary = intentSummary(state, String);
+  assert.deepEqual(summary.required, []);
+  assert.deepEqual(summary.preferred, ['En yakın tarih önce']);
+});

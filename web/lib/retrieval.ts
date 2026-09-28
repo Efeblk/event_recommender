@@ -412,6 +412,7 @@ function rankedCandidates(
     : events.filter((event) => eligibleForContext(event, context));
   return {
     context,
+    allowed,
     ranked: uniqueEvents(
       demoteChildDirectedPartnerResults(
         semantic
@@ -424,6 +425,76 @@ function rankedCandidates(
   };
 }
 
+function soonestProductionRepresentatives(
+  events: EventRecord[],
+  intent?: IntentState,
+) {
+  return diverseEvents(
+    uniqueEvents(
+      demoteChildDirectedPartnerResults(
+        [...events].sort(
+          (a, b) =>
+            a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id),
+        ),
+        intent,
+      ),
+      events.length,
+    ),
+    events.length,
+  );
+}
+
+function interleaveSoonestCoverage(
+  chronological: EventRecord[],
+  relevant: EventRecord[],
+  limit: number,
+) {
+  const selected: EventRecord[] = [];
+  const seenProductions = new Set<string>();
+  const seenShows = new Set<string>();
+  const add = (event: EventRecord | undefined) => {
+    if (!event) return;
+    const production = productionIdentity(event);
+    const show = displayShowIdentity(event) ?? production;
+    if (seenProductions.has(production) || seenShows.has(show)) return;
+    seenProductions.add(production);
+    seenShows.add(show);
+    selected.push(event);
+  };
+  let earliestIndex = 0, relevanceIndex = 0;
+  while (
+    selected.length < limit &&
+    (earliestIndex < chronological.length || relevanceIndex < relevant.length)
+  ) {
+    add(chronological[earliestIndex++]);
+    if (selected.length < limit) add(relevant[relevanceIndex++]);
+  }
+  return selected;
+}
+
+function mapRelevanceToEarliest(
+  relevant: EventRecord[],
+  chronological: EventRecord[],
+) {
+  const byProduction = new Map(
+    chronological.map((event) => [productionIdentity(event), event]),
+  );
+  const byShow = new Map(
+    chronological.flatMap((event) => {
+      const show = displayShowIdentity(event);
+      return show ? [[show, event] as const] : [];
+    }),
+  );
+  return relevant.map((event) => {
+    const show = displayShowIdentity(event);
+    return (
+      byProduction.get(productionIdentity(event)) ??
+      (show ? byShow.get(show) : undefined) ??
+      event
+    );
+  });
+}
+
 export function shortlistEvents(
   events: EventRecord[],
   message: string,
@@ -433,7 +504,7 @@ export function shortlistEvents(
   intent?: IntentState,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  const { context, ranked } = rankedCandidates(
+  const { context, allowed, ranked } = rankedCandidates(
     events,
     message,
     history,
@@ -441,8 +512,8 @@ export function shortlistEvents(
     intent,
   );
   const diverseRanked = diverseEvents(ranked, ranked.length);
-  if (semantic)
-    return (
+  const relevanceCovered = semantic
+    ? (
       calmMoodShortlistCoverage(
         diverseRanked,
         message,
@@ -450,7 +521,18 @@ export function shortlistEvents(
         limit,
         intent,
       ) ?? diverseRanked.slice(0, limit)
-    );
+    )
+    : diverseRanked;
+  if (intent?.preferences.order === 'soonest')
+    {
+      const chronological = soonestProductionRepresentatives(allowed, intent);
+      return interleaveSoonestCoverage(
+        chronological,
+        mapRelevanceToEarliest(relevanceCovered, chronological),
+        limit,
+      );
+    }
+  if (semantic) return relevanceCovered;
   const selected: EventRecord[] = [];
   const seenProductions = new Set<string>();
   const seenCategories = new Set<string>();
@@ -480,8 +562,8 @@ export function fallbackEvents(
   intent?: IntentState,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  return diverseEvents(
-    rankedCandidates(events, message, history, semantic, intent).ranked,
-    limit,
-  );
+  const candidates = rankedCandidates(events, message, history, semantic, intent);
+  return intent?.preferences.order === 'soonest'
+    ? soonestProductionRepresentatives(candidates.allowed, intent).slice(0, limit)
+    : diverseEvents(candidates.ranked, limit);
 }
