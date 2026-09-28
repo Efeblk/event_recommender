@@ -12,9 +12,11 @@ checks, with the unattended observation and other public-release gates still ope
 
 The user-authorized temporary preview is accessible without sign-in. The
 [September 28 live evaluation](preview-live-evaluation-2026-09-28.md) records its
-visitor-throttle bypass, retained daily AI cap, complete vector coverage and
-interpreter availability failures. This testing link does not establish readiness
-for a public production launch.
+visitor-throttle bypass, retained daily AI cap, vector coverage at that time and
+interpreter availability failures. The subsequent
+[catalog expansion and merge evidence](catalog-coverage-2026-09-28.md) records
+the enlarged inventory, remaining source failures and updated embedding coverage.
+This testing link does not establish readiness for a public production launch.
 
 1. **Exact-revision verification:** pass web/collector tests, typecheck, lint,
    deployment validation, Node standalone startup and Linux container checks on

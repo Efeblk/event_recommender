@@ -11,6 +11,10 @@ deployment is retained for comparison and recovery.
 The [September 27 validation record](gcp-staging-validation-2026-09-27.md)
 records the subsequent embedding completion, live recommendation/source review,
 rollback, full isolated restore, bounded capacity checks and remaining gates.
+The subsequent [catalog coverage record](catalog-coverage-2026-09-28.md)
+tracks the expanded provider inventory, conservative offer merging, source
+quarantines and current embedding/publication evidence. Earlier complete-vector
+counts do not establish coverage of the enlarged catalog.
 
 ## Architecture
 

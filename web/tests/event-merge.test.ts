@@ -998,3 +998,67 @@ await test("unverified cast and ensemble variants remain separate", () => {
   });
   assert.equal(mergeEventSessions([trio, strings]).length, 2);
 });
+
+await test('reviewed Fabrikafa workshop programmes merge only with qualified venue evidence', () => {
+  const programmes = [
+    ['hat', 'Pirinç Çerçeveli Cam Üzerine Hat/Kaligrafi Sanatı Atölyesi', 'Hat Sanatı Atölyesi', 'İstanbul Workshops Hat Sanatı Atölyesi'],
+    ['tezhip', 'Tezhip Atölyesi', 'Tezhip Atölyesi', 'İstanbul Workshops Tezhip Atölyesi'],
+    ['cini', 'Türk Çini Resim Sanatı Atölyesi', 'Çini Atölyesi', 'İstanbul Workshops Çini Atölyesi'],
+    ['vitray', 'Vitray Atölyesi', 'Vitray Atölyesi', 'İstanbul Workshops Vitray Atölyesi'],
+    ['parfum', 'Parfüm Tasarımı Atölyesi', 'Parfüm Atölyesi', 'İstanbul Workshops Parfüm Atölyesi'],
+    ['deri', 'Deri İşçiliği Atölyesi', 'Deri İşçiliği Atölyesi', 'İstanbul Workshops Deri İşçiliği Atölyesi'],
+    ['ebru', 'Ebru ile Bez Çanta Tasarım Atölyesi', 'Ebru Bez Çanta Sanat Atölyesi', 'İstanbul Workshops Ebru ile Bez Çanta Tasarım Atölyesi'],
+  ] as const;
+  const address = 'Aziz Mahmut Hüdayi, Gülfem Sk. No:15, 34672 Üsküdar/İstanbul';
+  const records = programmes.flatMap(([name, biletinialTitle, biletixTitle, bubiletTitle], index) => {
+    const startsAt = new Date(Date.UTC(2026, 8, 29, 6 + index)).toISOString();
+    return [
+      event({ id: `biletinial:${name}`, source: 'biletinial', title: biletinialTitle, category: 'Workshop', description: 'Uygulamalı atölye çalışması.', venue: 'Fabrikafa Make & Coffee', district: 'İstanbul Anadolu', address: '', startsAt, price: 1790, url: `https://biletinial.com/${name}`, sourceSessionIds: [`bi-${name}`] }),
+      event({ id: `biletix:${name}`, source: 'biletix', title: biletixTitle, category: 'Workshop', description: 'Uygulamalı atölye çalışması.', venue: 'İstanbul Workshops - Fabrikafa Make & Coffee', district: 'ÜSKÜDAR', address: '', startsAt, price: name === 'ebru' ? null : 1790, url: `https://www.biletix.com/${name}`, sourceSessionIds: [`bx-${name}`] }),
+      event({ id: `bubilet:${name}`, source: 'bubilet', title: bubiletTitle, category: 'Workshop', description: 'Uygulamalı atölye çalışması.', venue: 'İstanbul Workshops', district: '', address, startsAt, price: 1750, url: `https://www.bubilet.com.tr/${name}`, sourceSessionIds: [`bu-${name}`] }),
+    ];
+  });
+
+  const merged = mergeEventSessions(records);
+  assert.equal(merged.length, programmes.length);
+  for (const [name] of programmes) {
+    const item = merged.find((candidate) => candidate.mergedIds?.includes(`biletinial:${name}`))!;
+    assert.equal(item.offers?.length, 3, name);
+    assert.equal(item.price, 1750, name);
+    assert.deepEqual(
+      new Set(item.offers?.map((offer) => `${offer.id}|${offer.url}|${offer.price}|${offer.sourceSessionIds?.[0]}`)),
+      new Set([
+        `biletinial:${name}|https://biletinial.com/${name}|1790|bi-${name}`,
+        `biletix:${name}|https://www.biletix.com/${name}|${name === 'ebru' ? 'null' : '1790'}|bx-${name}`,
+        `bubilet:${name}|https://www.bubilet.com.tr/${name}|1750|bu-${name}`,
+      ]),
+      name,
+    );
+  }
+  assert.deepEqual(mergeEventSessions(merged), merged);
+  assert.deepEqual(mergeEventSessions([...records].reverse()), merged);
+});
+
+await test('Fabrikafa aliases reject mismatched programmes, sessions, locations, categories, and audiences', () => {
+  const address = 'Aziz Mahmut Hüdayi, Gülfem Sk. No:15, 34672 Üsküdar/İstanbul';
+  const specific = event({ id: 'specific', title: 'Tezhip Atölyesi', category: 'Workshop', description: 'Uygulamalı atölye çalışması.', venue: 'Fabrikafa Make & Coffee', district: 'İstanbul Anadolu', address: '' });
+  const bare = event({ id: 'bare', source: 'bubilet', title: 'İstanbul Workshops Tezhip Atölyesi', category: 'Workshop', description: 'Uygulamalı atölye çalışması.', venue: 'İstanbul Workshops', district: '', address });
+  assert.equal(mergeEventSessions([specific, bare]).length, 1);
+
+  for (const other of [
+    { ...bare, startsAt: '2026-10-10T18:00:00.000Z' },
+    { ...bare, title: 'İstanbul Workshops Vitray Atölyesi' },
+    { ...bare, address: '' },
+    { ...bare, address: 'Başka Sokak No:15, Üsküdar/İstanbul' },
+    { ...bare, district: 'Kadıköy' },
+    { ...bare, venue: 'Başka Atölye', address: '' },
+    { ...bare, city: 'Ankara' },
+    { ...bare, category: 'Eğitim' },
+  ]) assert.equal(mergeEventSessions([specific, other]).length, 2);
+
+  const genericElsewhere = event({ ...specific, id: 'elsewhere', venue: 'Kadıköy Sanat Atölyesi', district: 'Kadıköy' });
+  assert.equal(mergeEventSessions([specific, genericElsewhere]).length, 2);
+  const child = event({ ...specific, id: 'child', description: 'Yalnızca 6 ile 9 yaş çocuklar için uygulamalı atölye çalışması.' });
+  const adult = event({ ...bare, id: 'adult', description: 'Yalnızca yetişkinler için, 18+ uygulamalı atölye çalışması.' });
+  assert.equal(mergeEventSessions([child, adult]).length, 2);
+});

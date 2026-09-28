@@ -169,6 +169,49 @@ function normalize(value: string): string {
     .replace(/\s+/g, ' ');
 }
 
+// Source-reviewed September 2026 identity. These broad workshop titles are
+// aliases only at the verified Fabrikafa/İstanbul Workshops location.
+const FABRIKAFA_PROGRAMS = [
+  ['hat', 'İstanbul Workshops Hat Sanatı Atölyesi', 'Hat Sanatı Atölyesi', 'Pirinç Çerçeveli Cam Üzerine Hat/Kaligrafi Sanatı Atölyesi'],
+  ['tezhip', 'İstanbul Workshops Tezhip Atölyesi', 'Tezhip Atölyesi'],
+  ['cini', 'İstanbul Workshops Çini Atölyesi', 'Çini Atölyesi', 'Türk Çini Resim Sanatı Atölyesi'],
+  ['vitray', 'İstanbul Workshops Vitray Atölyesi', 'Vitray Atölyesi'],
+  ['parfum', 'İstanbul Workshops Parfüm Atölyesi', 'Parfüm Atölyesi', 'Parfüm Tasarımı Atölyesi'],
+  ['deri', 'İstanbul Workshops Deri İşçiliği Atölyesi', 'Deri İşçiliği Atölyesi'],
+  ['ebru', 'İstanbul Workshops Ebru ile Bez Çanta Tasarım Atölyesi', 'Ebru Bez Çanta Sanat Atölyesi', 'Ebru ile Bez Çanta Tasarım Atölyesi'],
+] as const;
+const fabrikafaPrograms = new Map<string, string>();
+for (const [program, ...titles] of FABRIKAFA_PROGRAMS)
+  for (const title of titles) fabrikafaPrograms.set(normalize(title), program);
+const FABRIKAFA_ADDRESS = normalize('Aziz Mahmut Hüdayi, Gülfem Sk. No:15, 34672 Üsküdar/İstanbul');
+const FABRIKAFA_BARE_VENUE = normalize('İstanbul Workshops');
+const FABRIKAFA_NAMED_VENUES = new Set([
+  normalize('İstanbul Workshops - Fabrikafa Make & Coffee'),
+  normalize('Fabrikafa Make & Coffee'),
+]);
+const FABRIKAFA_DISTRICTS = new Set(['', normalize('Üsküdar'), normalize('İstanbul Anadolu')]);
+const FABRIKAFA_VENUE_KEY = 'reviewed:fabrikafa-make-and-coffee';
+
+function fabrikafaProgram(event: EventRecord): string | undefined {
+  if (event.category !== 'Workshop' || normalize(event.city) !== 'istanbul')
+    return undefined;
+  const program = fabrikafaPrograms.get(normalize(event.title));
+  if (!program) return undefined;
+  const venue = normalize(event.venue);
+  const address = normalize(event.address);
+  const district = normalize(event.district);
+  if (!FABRIKAFA_DISTRICTS.has(district)) return undefined;
+  if (venue === FABRIKAFA_BARE_VENUE)
+    return address === FABRIKAFA_ADDRESS ? program : undefined;
+  if (!FABRIKAFA_NAMED_VENUES.has(venue)) return undefined;
+  return !address || address === FABRIKAFA_ADDRESS ? program : undefined;
+}
+
+function identityTitle(event: EventRecord): string {
+  const program = fabrikafaProgram(event);
+  return program ? `reviewed:fabrikafa-program:${program}` : canonicalShowTitle(event.title);
+}
+
 const venueAliases = new Map<string, string>();
 for (const aliases of VENUE_ALIASES) {
   const canonical = normalize(aliases[0]);
@@ -265,9 +308,9 @@ function identity(event: EventRecord): {
   instant: string | null;
 } {
   return {
-    title: canonicalShowTitle(event.title),
+    title: identityTitle(event),
     city: normalize(event.city),
-    venue: venueKey(event.venue),
+    venue: fabrikafaProgram(event) ? FABRIKAFA_VENUE_KEY : venueKey(event.venue),
     instant: parsedInstant(event.startsAt),
   };
 }
@@ -506,7 +549,7 @@ const GENERIC_SHOW_TITLES = new Set([
 
 /** Stable display identity for clear show titles; generic listings stay distinct. */
 export function displayShowIdentity(event: EventRecord): string | undefined {
-  const title = canonicalShowTitle(event.title);
+  const title = identityTitle(event);
   if (!title || GENERIC_SHOW_TITLES.has(title)) return undefined;
   const policy = [...strongPolicies(event)].sort().join('|');
   return [normalize(event.city), event.category, title, policy].join('\u001f');
