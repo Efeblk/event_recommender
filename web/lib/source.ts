@@ -1,6 +1,9 @@
 import { validDay } from './search.ts';
 import type { EventRecord } from './types.ts';
 export const SOURCE = 'https://biletinial.com';
+// Bound TRY values so integer kuruş remain within the safe numeric range.
+// Keep this aligned with the collector/import validators' safe-cent bound.
+const MAX_SOURCE_PRICE_TRY = Number.MAX_SAFE_INTEGER / 100;
 export const LISTINGS = [
   { path: '/tr-tr/muzik/istanbul', category: 'Konser' },
   { path: '/tr-tr/tiyatro/istanbul', category: 'Tiyatro' },
@@ -143,7 +146,9 @@ export async function parseEvents(
           o.priceCurrency === 'TRY',
       )
       .map((o) => Number(o.price))
-      .filter((p) => Number.isFinite(p) && p >= 0 && p <= 100000);
+      .filter(
+        (p) => Number.isFinite(p) && p >= 0 && p <= MAX_SOURCE_PRICE_TRY,
+      );
     const image = Array.isArray(e.image)
       ? e.image[0]
       : typeof e.image === 'object'

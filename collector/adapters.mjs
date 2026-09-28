@@ -4,6 +4,10 @@ import { categoryFromSource, categoryForEvent } from "../web/lib/event-format.ts
 import { discoverBiletinialCategories, extractBiletinial } from './biletinial.mjs';
 import { verifiedBubiletDetailInventory } from './bubilet.mjs';
 
+// Biletix minPrice is an integer minor-unit value. Requiring a safe integer
+// preserves the same safe-cent bound used by collector and import validation.
+const MAX_BILETIX_MINOR_PRICE = Number.MAX_SAFE_INTEGER;
+
 export const sources = {
   biletinial: {
     origin: "https://biletinial.com",
@@ -198,7 +202,10 @@ function extractBiletix($, url, now) {
     // Biletix minPrice is integer kurus (verified against rendered 520,00 TL / 52000).
     const prices = onSale
       .map((p) => p.minPrice)
-      .filter((p) => Number.isSafeInteger(p) && p >= 0 && p <= 10000000)
+      .filter(
+        (p) =>
+          Number.isSafeInteger(p) && p >= 0 && p <= MAX_BILETIX_MINOR_PRICE,
+      )
       .map((p) => p / 100);
     events.push({
       id: createHash("sha256")

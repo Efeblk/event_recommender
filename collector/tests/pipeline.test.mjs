@@ -113,6 +113,27 @@ await test("Biletix embedded state groups ticket types and converts kurus to TRY
   assert.equal(events[0].availability, "available");
   assert.equal(events[0].startsAt, "2026-09-18T18:00:00.000Z");
 });
+await test("Biletix preserves high safe minor-unit prices and rejects unsafe values", async () => {
+  const extractPrice = async (minorPrice) => {
+    const state = structuredClone(biletix);
+    for (const value of Object.values(state))
+      if (Array.isArray(value.b?.data))
+        for (const row of value.b.data)
+          if (row.active === true && row.status === "s01_onsale") row.minPrice = minorPrice;
+    const events = await extract(
+      load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
+      "biletix",
+      "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      null,
+      now,
+    );
+    return events[0].price;
+  };
+  assert.equal(await extractPrice(15000025), 150000.25);
+  assert.equal(await extractPrice(Number.MAX_SAFE_INTEGER), Number.MAX_SAFE_INTEGER / 100);
+  assert.equal(await extractPrice(Number.MAX_SAFE_INTEGER + 1), null);
+  assert.equal(await extractPrice(Number.POSITIVE_INFINITY), null);
+});
 await test("Biletix MUSIC detail is retained as a talk when its evidence says talk", async () => {
   const state = structuredClone(biletix);
   const detail = Object.values(state)

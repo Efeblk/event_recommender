@@ -156,6 +156,31 @@ await test('unknown offer availability remains unknown and ineligible', async ()
   assert.equal(parsed.availability, 'unknown');
   assert.equal(isEligible(parsed, emptyFilters, now), false);
 });
+await test('JSON-LD preserves high safe TRY prices and rejects unsafe numeric prices', async () => {
+  const parsePrice = async (price: unknown) => {
+    const node = {
+      '@type': 'Event',
+      name: event.title,
+      startDate: event.startsAt,
+      location: { name: event.venue, address: { addressLocality: 'istanbul' } },
+      offers: {
+        price,
+        priceCurrency: 'TRY',
+        availability: 'https://schema.org/InStock',
+      },
+    };
+    return (await parseEvents(
+      `<script type="application/ld+json">${JSON.stringify(node)}</script>`,
+      event.url,
+      'Konser',
+      now,
+    ))[0];
+  };
+  assert.equal((await parsePrice(150000.25)).price, 150000.25);
+  assert.equal((await parsePrice(Number.MAX_SAFE_INTEGER / 100)).price, Number.MAX_SAFE_INTEGER / 100);
+  assert.equal((await parsePrice('Infinity')).price, null);
+  assert.equal((await parsePrice(Number.MAX_SAFE_INTEGER / 100 + 1)).price, null);
+});
 await test('exact cross-source production matches appear once in recommendations', () => {
   const first = { ...event, productionKey: 'same' },
     other = {
