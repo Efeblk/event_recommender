@@ -74,6 +74,24 @@ type BuildContext = {
 } & InputCandidatePool;
 
 const fold = (s: string) => s.toLocaleLowerCase('tr-TR').normalize('NFD').replace(/\p{M}/gu, '').replaceAll('\u0131', 'i');
+const hasExplicitSoonestRequest = (text: string) =>
+  /\b(?:en yakin tarih|en erken(?: tarih| etkinlik)?|ilk uygun tarih|mumkun olan ilk tarih|soonest|earliest(?: date| event)?|next available(?: date| event)?)\b/u.test(fold(text));
+const hasExplicitOrderInstruction = (text: string) =>
+  hasExplicitSoonestRequest(text) ||
+  /\b(?:siralama fark etmez|en erken olmasi sart degil|relevance order|not necessarily the soonest)\b/u.test(fold(text));
+const hasOptionalUnboundedTimeWish = (text: string) => {
+  const normalized = fold(text);
+  const timeClauses = normalized.split(/[,;.!?\n]+|\s+(?:ama|ancak|fakat|but|and|ve)\s+/).filter((clause) =>
+    /\b(?:gec|gece|aksam|sabah|ogle|erken|basla|bitir|saat|is cikisi|after work|night|evening|morning|noon)\b/u.test(clause));
+  return timeClauses.length > 0 && timeClauses.every((clause) =>
+    /\b(?:mumkunse|tercihen|olsa (?:guzel|iyi) olur|preferably|ideally|if possible)\b/u.test(clause));
+};
+const hasOrdinaryCalmLanguage = (text: string) =>
+  /\b(?:sakin|rahat|dinlendirici|calm|relaxed|low[ -]?key)\b/u.test(fold(text));
+const hasNoiseOrQuietLanguage = (text: string) =>
+  /\b(?:ses|sessiz|gurultu|gurultusuz|quiet|silent|noise|noisy|loud)\b/u.test(fold(text));
+const startsWithFullResetCommand = (text: string) =>
+  /^(?:(?:yok|vazgectim|pardon)\s*[,;:]?\s*)?(?:bunu\s+)?(?:komple unut bastan|sifirla|reset|bastan basla(?:yalim)?|onceki kosullari unut|hepsini unut|her seyi unut|forget everything|start over)(?=$|\s*[:;,.!])/u.test(fold(text).trim());
 const legacyCategoryIds: Partial<Record<Category, string>> = {
   Konser: 'concert', Tiyatro: 'theatre', 'Stand-up': 'standup',
 };
@@ -110,10 +128,12 @@ function context(input: InterpreterInput): BuildContext {
   if (!(input.now instanceof Date) || !Number.isFinite(input.now.valueOf())) throw new Error('Invalid interpreter time.');
   const rawMessage = input.message.trim();
   if (!rawMessage || rawMessage.length > 1200) throw new Error('Interpreter message must contain 1-1,200 characters.');
-  const rawUnresolvedRequest = input.unresolvedRequest?.trim() || null;
+  let rawUnresolvedRequest = input.unresolvedRequest?.trim() || null;
   if (rawUnresolvedRequest && rawUnresolvedRequest.length > 1200) throw new Error('Unresolved interpreter request must contain at most 1,200 characters.');
   const previous = validateIntentState(input.previous);
   const currentMasked = maskLiteralTitles(rawMessage, 'current');
+  const clearsPendingRequest = startsWithFullResetCommand(currentMasked.text);
+  if (clearsPendingRequest) rawUnresolvedRequest = null;
   const pendingMasked = rawUnresolvedRequest ? maskLiteralTitles(rawUnresolvedRequest, 'pending') : null;
   const message = currentMasked.text;
   const unresolvedRequest = pendingMasked?.text ?? null;
@@ -394,7 +414,11 @@ export function parseInputInterpreterResponse(
   const party = pick('party', ['keep', 'remove', 'none', 'ambiguous', 'unsupported', ...c.parties.map((x) => x.id)]);
   const date = pick('date', ['keep', 'remove', 'none', 'ambiguous', 'unsupported', ...c.dates.map((x) => x.id)]);
   const order = pick('order', ['keep', 'soonest', 'remove']);
-  const time = pick('time', ['keep', 'remove', 'none', 'ambiguous', 'unsupported', ...c.times.map((x) => x.id)]);
+  const rawTime = pick('time', ['keep', 'remove', 'none', 'ambiguous', 'unsupported', ...c.times.map((x) => x.id)]);
+  const optionalUnboundedTime = c.times.length === 0 && hasOptionalUnboundedTimeWish(c.constraintText);
+  const time = rawTime === 'unsupported' && optionalUnboundedTime
+    ? (c.previous.filters.startTimeFrom != null || c.previous.filters.startTimeTo != null ? 'keep' : 'none')
+    : rawTime;
   const district = pick('district', ['keep', 'remove', 'none', 'ambiguous', 'unsupported', ...c.districts.map((x) => x.id)]);
   const companion = pick('companion', ['keep', 'remove', 'set:partner', 'set:friends', 'set:family']);
   const mood = pick('mood', ['keep', 'remove', 'set:calm', 'set:energetic', 'set:uplifting']);
@@ -409,7 +433,11 @@ export function parseInputInterpreterResponse(
   const ageOps = ageValues(c).map((value) => ({ value, id: `req_age_${value}`, operation: pick(`req_age_${value}`, ['keep', 'require', 'remove']) }));
   let issue = issueChoice === 'none' ? null : issueChoice as InputIssue;
   const normalizedText = fold(c.constraintText);
-  const effectiveRequirementOps = requirementOps;
+  const effectiveRequirementOps = requirementOps.map((item) =>
+    item.kind === 'activity' && item.value === 'quiet' && item.operation === 'require' &&
+      hasOrdinaryCalmLanguage(c.constraintText) && !hasNoiseOrQuietLanguage(c.constraintText)
+      ? { ...item, operation: 'prefer' as const }
+      : item);
   const positiveGenres = effectiveRequirementOps.filter((item) => item.kind === 'genre' && item.operation === 'require');
   const positiveActivities = effectiveRequirementOps.filter((item) => item.kind === 'activity' && item.operation === 'require');
   const unsupportedNegativeAccess = /\b(?:exclude|avoid|hari[cç]|d[ıi][sş][ıi])\b.*\b(?:not|no|de[gğ]il)\b.*\b(?:wheelchair|accessible|eri[sş])|\b(?:wheelchair|accessible|eri[sş])\b.*\b(?:not|de[gğ]il)\b/u.test(normalizedText);
@@ -450,9 +478,10 @@ export function parseInputInterpreterResponse(
   const companionReliable = !uncertainChange('companion', ['keep']);
   if (uncertainChange('budget', ['keep', 'none']) || (activeBudget && !freeBudget && (uncertainChange('budget_basis', []) || uncertainChange('budget_boundary', ['none'])))) issue = 'budget_ambiguous';
   else if (uncertainChange('date', ['keep', 'none'])) issue = 'date_ambiguous';
-  else if (['party', 'time', 'district'].some((id) => uncertainChange(id, ['keep', 'none']))) issue = 'constraint_ambiguous';
+  else if (['party', 'time', 'district'].some((id) =>
+    !(id === 'time' && optionalUnboundedTime) && uncertainChange(id, ['keep', 'none']))) issue = 'constraint_ambiguous';
   else if (categoryOps.some(({ id }) => uncertainChange(id, ['keep']))) issue = 'constraint_ambiguous';
-  else if (uncertainChange('order', ['keep'])) issue = 'constraint_ambiguous';
+  else if (hasExplicitOrderInstruction(c.constraintText) && uncertainChange('order', ['keep'])) issue = 'constraint_ambiguous';
   else if (effectiveRequirementOps.some(({ id, kind, value, operation }) =>
     (operation !== 'keep' && operation !== 'prefer' && uncertainChange(id, ['keep'])) ||
     (operation === 'prefer' && c.previous.requirements.some((item) => item.kind === kind && item.value.split('|').includes(value)) && !reliable(id)),
@@ -536,7 +565,7 @@ export function parseInputInterpreterResponse(
   } else if (interestClear === 'remove' && reliable('interest_clear')) {
     state.preferences.interests = [];
   }
-  if (reliable('order')) {
+  if (reliable('order') && (order !== 'soonest' || hasExplicitSoonestRequest(c.constraintText))) {
     if (order === 'soonest') state.preferences.order = 'soonest';
     else if (order === 'remove') delete state.preferences.order;
   }
@@ -815,6 +844,8 @@ export async function interpretInput(input: InterpreterInput, options: Interpret
       const budgetChoice = decisions.get('budget')!.choice;
       const selectedAmount = candidateContext.amounts.find((item) => item.id === budgetChoice)?.value;
       const activePaidBudget = selectedAmount !== undefined && selectedAmount > 0;
+      if (activePaidBudget && decisions.get('budget_basis')!.choice === 'ambiguous')
+        return stop('budget_ambiguous');
       const exactIds = Object.keys(contractQuestions).filter((id) => !(id.startsWith('req_') || id.startsWith('interest_') || id.startsWith('experience_') || ['mood', 'companion', 'genre_logic', 'activity_logic'].includes(id)));
       for (const id of exactIds) {
         const decision = decisions.get(id)!;
@@ -826,6 +857,8 @@ export async function interpretInput(input: InterpreterInput, options: Interpret
         if (id === 'candidate_coverage' && extractionApplicable && (decision.choice !== 'complete' || decision.probability < threshold || decision.confidence < 0.1)) return { state: previous, action: actionChoice, issue: 'constraint_ambiguous', query: intentQuery(previous), origin: 'jev' };
         if (id === 'candidate_coverage') continue;
         if ((id === 'budget_basis' || id === 'budget_boundary') && !activePaidBudget) continue;
+        if (id === 'order' && decision.choice === 'soonest' && !hasExplicitSoonestRequest(candidateContext.constraintText)) continue;
+        if (id === 'time' && decision.choice === 'unsupported' && candidateContext.times.length === 0 && hasOptionalUnboundedTimeWish(candidateContext.constraintText)) continue;
         if (['budget', 'party', 'date', 'time', 'district'].includes(id) && ['ambiguous', 'unsupported'].includes(decision.choice)) return stop(decision.choice === 'unsupported' ? 'unsupported_constraint' : id === 'budget' ? 'budget_ambiguous' : id === 'date' ? 'date_ambiguous' : 'constraint_ambiguous');
         const candidateAware: Record<string, boolean> = { budget: candidateContext.amounts.length > 0, party: candidateContext.parties.length > 0, date: candidateContext.dates.length > 0, time: candidateContext.times.length > 0, district: candidateContext.districts.length > 0 };
         if (candidateAware[id] && ['keep', 'none'].includes(decision.choice)) {

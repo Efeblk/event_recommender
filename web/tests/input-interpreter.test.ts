@@ -337,10 +337,10 @@ void test('constraint-only spans are never committed as interests', () => {
   const message = '1000 TL altı sevgilimle gidebileceğim konser dışı etkinlik';
   const pool = buildInputCandidates(message, now, emptyIntentState());
   const unsafe = pool.interests.find((item) => item.value.includes('1000'));
-  assert.ok(unsafe);
+  assert.equal(unsafe, undefined);
   const parsed = parseInputInterpreterResponse(responseFor(message, {
     budget: amountId(message, 1000), budget_basis: 'per_person', budget_boundary: 'exclusive',
-    party: 'p0', category_concert: 'exclude', [`interest_${unsafe.id}`]: 'select',
+    party: 'p0', category_concert: 'exclude',
   }), { message, previous: emptyIntentState(), now });
   assert.equal(parsed.issue, null);
   assert.deepEqual(parsed.state.preferences.interests, []);
@@ -402,6 +402,39 @@ void test('coverage uncertainty is inapplicable to explicit reset without new va
   const parsed = parseInputInterpreterResponse(response, { message, previous, now });
   assert.equal(parsed.issue, null);
   assert.deepEqual(parsed.state, emptyIntentState());
+});
+
+void test('a realistic pending correction stays within the bounded provider request', () => {
+  const body = buildInputInterpreterRequest('jev-test', {
+    message: 'pardon toplam değil kişi başı 800 demek istemiştim; bir de kesin Kadıköy olsun, diğerleri aynı',
+    unresolvedRequest: 'Pazar 4 kişiyiz, toplam 3200 liraya komedi oyunu ya da standup bakalım; Anadolu yakası tercihimiz.',
+    previous: emptyIntentState(), now,
+  });
+  assert.ok(Buffer.byteLength(JSON.stringify(body)) < 48_000);
+  assert.ok(body.state.unresolvedRequest);
+});
+
+void test('a compound full reset discards the unresolved request before building candidates', () => {
+  const message = "yok bunu komple unut baştan: cumartesi bütçe fark etmez, Kadıköy'de canlı müzik olsun; tiyatro istemiyorum";
+  const body = buildInputInterpreterRequest('jev-test', {
+    message,
+    unresolvedRequest: "yarın Şişli'de tiyatro istiyorum, konser asla olmasın, 1000 lira altı; biraz da romantik olabilir",
+    previous: emptyIntentState(), now,
+  });
+  assert.equal(body.state.unresolvedRequest, null);
+  assert.doesNotMatch(body.state.constraintText, /Şişli|romantik/u);
+  assert.ok(Buffer.byteLength(JSON.stringify(body)) < 48_000);
+});
+
+void test('negated reset wording preserves the unresolved request', () => {
+  const unresolvedRequest = 'Pazar Kadıköy tiyatro';
+  for (const message of ['reset istemiyorum, bütçe 800 TL', 'önceki koşulları unut demedim; bütçe aynı']) {
+    const body = buildInputInterpreterRequest('jev-test', {
+      message, unresolvedRequest, previous: emptyIntentState(), now,
+    });
+    assert.equal(body.state.unresolvedRequest, unresolvedRequest);
+    assert.match(body.state.constraintText, /Pazar Kadıköy tiyatro/u);
+  }
 });
 
 void test('exact Turkish request keeps workshop optional and applies soonest without a date filter', () => {
@@ -607,6 +640,112 @@ void test('a hedge in one clause does not weaken a separately mandatory activity
     req_genre_jazz: 'prefer', req_activity_seated: 'require',
   }), { message, previous: emptyIntentState(), now });
   assert.deepEqual(parsed.state.requirements, [{ kind: 'activity', value: 'seated', policy: 'require_support' }]);
+});
+
+void test('optional nonnumeric clock wishes do not become unsupported exact-time blockers', () => {
+  const message = 'Konser çok geç başlamasın mümkünse';
+  const response = responseFor(message, {
+    category_concert: 'include', time: 'unsupported',
+  });
+  response.answers.time.confidence = 0.28;
+  response.answers.time.probabilities = { keep: 0.28, remove: 0, none: 0.29, ambiguous: 0, unsupported: 0.43 };
+  const parsed = parseInputInterpreterResponse(response, { message, previous: emptyIntentState(), now });
+  assert.equal(parsed.issue, null);
+  assert.equal(parsed.state.filters.startTimeFrom, undefined);
+  assert.equal(parsed.state.filters.startTimeTo, undefined);
+});
+
+void test('an optional time clause cannot weaken a separate mandatory vague-time clause', () => {
+  const message = 'Mümkünse erken olsun; çok geç başlamaması şart';
+  const parsed = parseInputInterpreterResponse(responseFor(message, {
+    time: 'unsupported',
+  }), { message, previous: emptyIntentState(), now });
+  assert.equal(parsed.issue, 'unsupported_constraint');
+});
+
+void test('an optional early wish cannot weaken a separate mandatory night exclusion', () => {
+  const message = 'Mümkünse erken olsun; gece olmasın';
+  const parsed = parseInputInterpreterResponse(responseFor(message, {
+    time: 'unsupported',
+  }), { message, previous: emptyIntentState(), now });
+  assert.equal(parsed.issue, 'unsupported_constraint');
+});
+
+void test('a conjunction cannot scope an early hedge over a mandatory night exclusion', () => {
+  const message = 'Mümkünse erken olsun ama gece olmasın';
+  const parsed = parseInputInterpreterResponse(responseFor(message, {
+    time: 'unsupported',
+  }), { message, previous: emptyIntentState(), now });
+  assert.equal(parsed.issue, 'unsupported_constraint');
+});
+
+void test('invented low-confidence soonest ordering does not block the plan audit', async () => {
+  const message = 'Pazar fotoğraf sergisi öner';
+  const response = responseFor(message, {
+    order: 'soonest',
+  });
+  response.answers.order.confidence = 0.02;
+  response.answers.order.probabilities = { keep: 0.49, soonest: 0.51, remove: 0 };
+  let calls = 0;
+  const parsed = await interpretInput(
+    { message, previous: emptyIntentState(), now },
+    { config: { apiKey: 'test', model: 'jev-test' }, fetcher: async (_url, init) => {
+      calls++;
+      if (calls === 1) return Response.json(response);
+      assert.equal(typeof init?.body, 'string');
+      const audit = JSON.parse(init?.body as string);
+      const options = Object.keys(audit.questions.faithful_plan.criteria);
+      return Response.json({ model: 'jev-test', answers: { faithful_plan: {
+        type: 'choice', choice: 'plan_0', confidence: 1,
+        probabilities: Object.fromEntries(options.map((option) => [option, option === 'plan_0' ? 1 : 0])),
+      } } });
+    } },
+  );
+  assert.equal(parsed.issue, null);
+  assert.equal(parsed.state.preferences.order, undefined);
+  assert.equal(calls, 2);
+});
+
+void test('ordinary calm wording cannot become a mandatory quiet-evidence filter', () => {
+  const message = 'Şöyle sakin sakin gezmelik müze';
+  const parsed = parseInputInterpreterResponse(responseFor(message, {
+    mood: 'set:calm', req_activity_quiet: 'require',
+  }), { message, previous: emptyIntentState(), now });
+  assert.equal(parsed.issue, null);
+  assert.equal(parsed.state.preferences.mood, 'calm');
+  assert.deepEqual(parsed.state.requirements, []);
+});
+
+void test('calm context does not demote a separately mandatory noise condition', () => {
+  const message = 'Sakin bir yer olsun ama yüksek ses kesinlikle olmasın';
+  const parsed = parseInputInterpreterResponse(responseFor(message, {
+    mood: 'set:calm', req_activity_quiet: 'require',
+  }), { message, previous: emptyIntentState(), now });
+  assert.deepEqual(parsed.state.requirements, [
+    { kind: 'activity', value: 'quiet', policy: 'require_support' },
+  ]);
+});
+
+void test('explicit quiet wording may remain a mandatory evidence requirement', () => {
+  const message = 'Mekân kesinlikle sessiz olsun';
+  const parsed = parseInputInterpreterResponse(responseFor(message, {
+    req_activity_quiet: 'require',
+  }), { message, previous: emptyIntentState(), now });
+  assert.deepEqual(parsed.state.requirements, [
+    { kind: 'activity', value: 'quiet', policy: 'require_support' },
+  ]);
+});
+
+void test('a selected ambiguous paid-budget basis returns the specific budget issue before audit', async () => {
+  const message = 'Cuma 750 lira altı olsun';
+  let calls = 0;
+  const raw = responseFor(message, { budget: amountId(message, 750), budget_basis: 'ambiguous', budget_boundary: 'exclusive' });
+  const parsed = await interpretInput(
+    { message, previous: emptyIntentState(), now },
+    { config: { apiKey: 'test', model: 'jev-test' }, fetcher: async () => { calls++; return Response.json(raw); } },
+  );
+  assert.equal(parsed.issue, 'budget_ambiguous');
+  assert.equal(calls, 1);
 });
 
 void test('a recognized genre requirement is not discarded for a spelling mistake', () => {
