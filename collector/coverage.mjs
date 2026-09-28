@@ -74,7 +74,7 @@ export function recordCoverageAttempt(state, url, { success, failure = null, ret
   state.updatedAt = now;
 }
 
-export function checkpointCoverageEvents(state, url, events, now = new Date().toISOString()) {
+export function checkpointCoverageEvents(state, url, events, now = new Date().toISOString(), provenance = {}) {
   const entry = state.entries.find((candidate) => candidate.url === url);
   if (entry) {
     entry.events = events.map((event) => ({ ...event }));
@@ -82,11 +82,83 @@ export function checkpointCoverageEvents(state, url, events, now = new Date().to
     entry.eventsCheckpointUrl = entry.url;
     entry.eventsCheckpointSource = entry.source;
     entry.eventsCheckpointStatus = events.length ? 'active' : 'retired';
+    if (typeof provenance.contentHash === 'string') entry.eventsCheckpointContentHash = provenance.contentHash;
+    else delete entry.eventsCheckpointContentHash;
+    if (typeof provenance.parserVersion === 'string') entry.eventsCheckpointParserVersion = provenance.parserVersion;
+    else delete entry.eventsCheckpointParserVersion;
   }
 }
 
 /** Replace, rather than union, snapshot rows for trustworthy completed URL checkpoints. */
 export function recoverCoverageEvents(snapshot, state, validate = () => [], now = new Date()) {
+  const replacements = recoverableCoverageEntries(snapshot, state, validate, now);
+  const combined = snapshot.filter((event) => !replacements.has(event.url));
+  for (const entry of replacements.values()) combined.push(...entry.events);
+  return [...new Map(combined.map((event) => [event.id, event])).values()];
+}
+
+/** Pages durably fetched after the last published snapshot, ready for a later run. */
+export function unpublishedCoveragePages(snapshot, state, validate = () => [], now = new Date()) {
+  const snapshotInventory = inventoryByUrl(snapshot);
+  const snapshotEvents = eventsByUrl(snapshot);
+  return [...recoverableCoverageEntries(snapshot, state, validate, now).values()]
+    .filter((entry) => entry.status === 'retired' || entry.events.length > 0)
+    .filter((entry) => {
+      const current = snapshotInventory.get(entry.url) ?? new Set();
+      if (entry.status === 'retired') return current.size > 0;
+      const cached = new Set(entry.events.map((event) => `${event.id}|${event.checkedAt}`));
+      return current.size !== cached.size || [...cached].some((key) => !current.has(key)) ||
+        comparablePage(snapshotEvents.get(entry.url) ?? []) !== comparablePage(entry.events);
+    })
+    .map((entry) => ({
+      source: entry.source,
+      url: entry.url,
+      checkedAt: entry.checkpointAt,
+      ...(entry.status === 'retired' ? { retiredAt: entry.checkpointAt } : {}),
+      ...(entry.contentHash ? { contentHash: entry.contentHash } : {}),
+      ...(entry.parserVersion ? { parserVersion: entry.parserVersion } : {}),
+      events: entry.events.map((event) => ({ ...event })),
+      recoveredFromCoverage: true,
+    }));
+}
+
+function inventoryByUrl(events) {
+  const result = new Map();
+  for (const event of events) {
+    if (typeof event?.url !== 'string') continue;
+    const inventory = result.get(event.url) ?? new Set();
+    inventory.add(`${event.id}|${event.checkedAt}`);
+    result.set(event.url, inventory);
+  }
+  return result;
+}
+
+function eventsByUrl(events) {
+  const result = new Map();
+  for (const event of events) {
+    if (typeof event?.url !== 'string') continue;
+    const group = result.get(event.url) ?? [];
+    group.push(event);
+    result.set(event.url, group);
+  }
+  return result;
+}
+
+function comparablePage(events) {
+  return canonicalJson(events.map((event) => {
+    const { productionKey: _derived, ...source } = event;
+    return source;
+  }).sort((a, b) => `${a.id}|${a.checkedAt}`.localeCompare(`${b.id}|${b.checkedAt}`)));
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object')
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  return JSON.stringify(value);
+}
+
+function recoverableCoverageEntries(snapshot, state, validate, now) {
   const replacements = new Map();
   const newestSnapshotByUrl = new Map();
   for (const event of snapshot) {
@@ -107,14 +179,24 @@ export function recoverCoverageEvents(snapshot, state, validate = () => [], now 
     const retired = entry.eventsCheckpointStatus === 'retired' && entry.events.length === 0 && Number.isFinite(retiredAt) &&
       checkpointAt === retiredAt;
     if (!active && !retired) continue;
-    if (entry.events.some((event) => event?.url !== entry.url || event?.source !== entry.source ||
+    const recoverableEvents = entry.events.filter((event) => {
+      const startsAt = Date.parse(event?.startsAt);
+      return !Number.isFinite(startsAt) || startsAt >= current;
+    });
+    if (recoverableEvents.some((event) => event?.url !== entry.url || event?.source !== entry.source ||
         !Number.isFinite(Date.parse(event.checkedAt)) || Date.parse(event.checkedAt) > checkpointAt + sequencingToleranceMs ||
         Date.parse(event.checkedAt) > successAt + sequencingToleranceMs || validate(event).length)) continue;
-    replacements.set(entry.url, entry.events.map((event) => ({ ...event })));
+    replacements.set(entry.url, {
+      url: entry.url,
+      source: entry.source,
+      checkpointAt: entry.eventsCheckpointAt,
+      status: entry.eventsCheckpointStatus,
+      events: recoverableEvents.map((event) => ({ ...event })),
+      contentHash: typeof entry.eventsCheckpointContentHash === 'string' ? entry.eventsCheckpointContentHash : null,
+      parserVersion: typeof entry.eventsCheckpointParserVersion === 'string' ? entry.eventsCheckpointParserVersion : null,
+    });
   }
-  const combined = snapshot.filter((event) => !replacements.has(event.url));
-  for (const events of replacements.values()) combined.push(...events);
-  return [...new Map(combined.map((event) => [event.id, event])).values()];
+  return replacements;
 }
 
 export function verifyCompletePage(events, validate, source, url) {

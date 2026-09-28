@@ -26,6 +26,7 @@ import {
   recordCoverageAttempt,
   serializedCheckpointWriter,
   recoverCoverageEvents,
+  unpublishedCoveragePages,
   verifyCompletePage,
 } from "./coverage.mjs";
 
@@ -81,6 +82,7 @@ let coverage;
 try { coverage = normalizeCoverage(JSON.parse(await readFile(coveragePath, "utf8"))); }
 catch (error) { if (error.code !== "ENOENT") throw error; coverage = normalizeCoverage(null); }
 const previous = recoverCoverageEvents(snapshotEvents, coverage, validateEvent);
+report.pages = unpublishedCoveragePages(snapshotEvents, coverage, validateEvent);
 const snapshotVersions = new Set(snapshotEvents.map((event) => `${event.id}|${event.checkedAt}`));
 const resumedEvents = previous.filter((event) => !snapshotVersions.has(`${event.id}|${event.checkedAt}`));
 // Both crawler handlers may finish together. Serialize full-state snapshots so
@@ -97,6 +99,11 @@ let nextNetworkSlot = 0;
 let httpRequests = 0, activeCrawler = null, budgetStop = null;
 const enqueued = new Set();
 const attemptedUrls = new Set(), verifiedUrls = new Set();
+function upsertReportPage(page) {
+  const index = report.pages.findIndex((candidate) => candidate.url === page.url);
+  if (index >= 0) report.pages[index] = page;
+  else report.pages.push(page);
+}
 const headers = { "User-Agent": userAgent, "Accept-Language": "tr-TR,tr;q=0.9" };
 async function get(url, options = {}, isRobots = false) {
   if (httpRequests >= maxHttp) {
@@ -289,22 +296,23 @@ const crawler = new BasicCrawler(
         const checkedAt = new Date().toISOString();
         attemptedUrls.add(request.url);
         recordCoverageAttempt(coverage, request.url, { success: false, retired: true, failure: "no_verified_sessions" }, checkedAt);
-        checkpointCoverageEvents(coverage, request.url, [], checkedAt);
-        report.pages.push({ source, url: request.url, checkedAt, retiredAt: checkedAt, contentHash: sha(html), parserVersion: "4", events: [] });
+        const provenance = { contentHash: sha(html), parserVersion: "4" };
+        checkpointCoverageEvents(coverage, request.url, [], checkedAt, provenance);
+        upsertReportPage({ source, url: request.url, checkedAt, retiredAt: checkedAt, ...provenance, events: [] });
         await saveCoverage();
         return;
       }
-      report.pages.push({
+      const checkedAt = new Date().toISOString(), provenance = { contentHash: sha(html), parserVersion: "4" };
+      upsertReportPage({
         source,
         url: request.url,
-        checkedAt: new Date().toISOString(),
-        contentHash: sha(html),
-        parserVersion: "4",
+        checkedAt,
+        ...provenance,
         events: accepted,
       });
       verifiedUrls.add(request.url);
-      recordCoverageAttempt(coverage, request.url, { success: true });
-      checkpointCoverageEvents(coverage, request.url, accepted);
+      recordCoverageAttempt(coverage, request.url, { success: true }, checkedAt);
+      checkpointCoverageEvents(coverage, request.url, accepted, checkedAt, provenance);
       await saveCoverage();
       if (report.pages.length % 10 === 0)
         console.log(`Verified ${report.pages.length} event pages.`);

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { addCoverageEntries, checkpointCoverageEvents, coverageBySource, fairCoverageOrder, normalizeCoverage, recordCoverageAttempt, recoverCoverageEvents, verifyCompletePage } from '../coverage.mjs';
+import { addCoverageEntries, checkpointCoverageEvents, coverageBySource, fairCoverageOrder, normalizeCoverage, recordCoverageAttempt, recoverCoverageEvents, unpublishedCoveragePages, verifyCompletePage } from '../coverage.mjs';
 
 test('durable coverage retains every discovered URL without sampling', () => {
   const state = normalizeCoverage(null);
@@ -122,4 +122,60 @@ test('one invalid session quarantines the whole page without changing its valid 
   assert.equal(page.quarantined.length, 1);
   recordCoverageAttempt(state, url, { success: false, failure: 'page_contains_quarantined_sessions' }, '2026-09-29T00:00:00.000Z');
   assert.deepEqual(state.entries[0].events, [prior]);
+});
+
+test('a failed run exposes its durable active page for publication on the next run', () => {
+  const url = 'https://a.test/workshop', checkedAt = '2026-09-28T10:00:00.000Z';
+  const old = { id: 'old', url, source: 'a', checkedAt: '2026-09-28T08:00:00.000Z', startsAt: '2026-10-01T10:00:00.000Z' };
+  const workshop = { id: 'workshop', url, source: 'a', checkedAt, startsAt: '2026-10-02T10:00:00.000Z' };
+  const state = normalizeCoverage(null);
+  addCoverageEntries(state, [{ url, source: 'a' }]);
+  recordCoverageAttempt(state, url, { success: true }, checkedAt);
+  checkpointCoverageEvents(state, url, [workshop], checkedAt, { contentHash: 'provider-html-hash', parserVersion: '4' });
+  recordCoverageAttempt(state, url, { success: false, failure: 'run_crashed' }, '2026-09-28T10:05:00.000Z');
+  assert.deepEqual(unpublishedCoveragePages([old], state, () => [], new Date('2026-09-28T11:00:00.000Z')), [{
+    source: 'a', url, checkedAt, contentHash: 'provider-html-hash', parserVersion: '4', events: [workshop], recoveredFromCoverage: true,
+  }]);
+});
+
+test('published, malformed, and older cached pages are not pending publication', () => {
+  const url = 'https://a.test/event', checkedAt = '2026-09-28T10:00:00.000Z';
+  const cached = { id: 'same', url, source: 'a', checkedAt, startsAt: '2026-10-02T10:00:00.000Z' };
+  const state = normalizeCoverage(null);
+  addCoverageEntries(state, [{ url, source: 'a' }]);
+  recordCoverageAttempt(state, url, { success: true }, checkedAt);
+  checkpointCoverageEvents(state, url, [cached], checkedAt);
+  assert.deepEqual(unpublishedCoveragePages([cached], state, () => [], new Date('2026-09-28T11:00:00.000Z')), []);
+  assert.deepEqual(unpublishedCoveragePages([{ ...cached, productionKey: 'derived-only' }], state, () => [], new Date('2026-09-28T11:00:00.000Z')), []);
+  assert.equal(unpublishedCoveragePages([{ ...cached, category: 'Konser' }], state, () => [], new Date('2026-09-28T11:00:00.000Z')).length, 1);
+  const newer = { ...cached, id: 'newer', checkedAt: '2026-09-28T10:30:00.000Z' };
+  assert.deepEqual(unpublishedCoveragePages([newer], state, () => [], new Date('2026-09-28T11:00:00.000Z')), []);
+  state.entries[0].events[0].source = 'wrong';
+  assert.deepEqual(unpublishedCoveragePages([], state, () => [], new Date('2026-09-28T11:00:00.000Z')), []);
+});
+
+test('pending retirement is durable only while the published snapshot still has the URL', () => {
+  const url = 'https://a.test/retired', retiredAt = '2026-09-28T10:00:00.000Z';
+  const old = { id: 'old', url, source: 'a', checkedAt: '2026-09-28T08:00:00.000Z', startsAt: '2026-10-02T10:00:00.000Z' };
+  const state = normalizeCoverage(null);
+  addCoverageEntries(state, [{ url, source: 'a' }]);
+  recordCoverageAttempt(state, url, { retired: true }, retiredAt);
+  checkpointCoverageEvents(state, url, [], retiredAt, { contentHash: 'empty-provider-page', parserVersion: '4' });
+  const [page] = unpublishedCoveragePages([old], state, () => [], new Date('2026-09-28T11:00:00.000Z'));
+  assert.deepEqual(page, { source: 'a', url, checkedAt: retiredAt, retiredAt, contentHash: 'empty-provider-page', parserVersion: '4', events: [], recoveredFromCoverage: true });
+  assert.deepEqual(unpublishedCoveragePages([], state, () => [], new Date('2026-09-28T11:00:00.000Z')), []);
+});
+
+test('recovery omits only expired cached sessions without changing checkpoint bodies', () => {
+  const url = 'https://a.test/mixed', checkedAt = '2026-09-28T10:00:00.000Z';
+  const expired = { id: 'past', url, source: 'a', checkedAt, startsAt: '2026-09-28T10:30:00.000Z' };
+  const future = { id: 'future', url, source: 'a', checkedAt, startsAt: '2026-09-29T12:00:00.000Z' };
+  const state = normalizeCoverage(null);
+  addCoverageEntries(state, [{ url, source: 'a' }]);
+  recordCoverageAttempt(state, url, { success: true }, checkedAt);
+  checkpointCoverageEvents(state, url, [expired, future], checkedAt);
+  const [page] = unpublishedCoveragePages([], state, () => [], new Date('2026-09-28T11:00:00.000Z'));
+  assert.deepEqual(page.events, [future]);
+  assert.deepEqual(state.entries[0].events, [expired, future]);
+  assert.deepEqual(unpublishedCoveragePages([], state, () => [], new Date('2026-09-30T00:00:00.000Z')), []);
 });
