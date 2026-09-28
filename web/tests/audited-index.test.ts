@@ -7,7 +7,11 @@ import {
   type AuditedIndexInput,
 } from '../lib/audited-index.ts';
 import { createGcpStore } from '../lib/store.gcp.ts';
-import { voyageCacheKey, voyageDocumentText } from '../lib/voyage.ts';
+import { voyageCacheKey, voyageDocumentText, embedWithVoyage } from '../lib/voyage.ts';
+import { recommend, validateInput } from '../lib/recommend.ts';
+import { rankWithJev } from '../lib/jev.ts';
+import { emptyFilters } from '../lib/types.ts';
+import { emptyIntentState, intentQuery } from '../lib/input-state.ts';
 import type {
   ControlStore,
   ControlTransaction,
@@ -85,7 +89,7 @@ const config = {
   profile = voyageCacheKey(config);
 const vector = (n = 1) =>
   Array.from({ length: 1024 }, (_, i) => (i === 0 ? n : 0));
-async function fixture(count = 1, description = 'Canlı müzik') {
+async function fixture(count = 1, description = 'Canlı müzik', prepared = false) {
   let time = instant,
     calls = 0;
   const control = new Control(),
@@ -95,6 +99,7 @@ async function fixture(count = 1, description = 'Canlı müzik') {
       blobs,
       namespace: 'staging',
       now: () => time,
+      ...(prepared ? { embeddingProfile: { profile, dimensions: config.dimensions } } : {}),
     });
   const events: EventRecord[] = Array.from({ length: count }, (_, i) => ({
     id: `id-${i}`,
@@ -197,6 +202,71 @@ async function fixture(count = 1, description = 'Canlı müzik') {
     },
   };
 }
+await test('prepared publication to recommendation flow indexes only misses, activates, retrieves and applies Jev support without query-time document embedding', async () => {
+  const f = await fixture(2, 'Canlı akustik müzik konseri.', true);
+  assert.equal((await f.store.catalogStatus()).status, 'empty');
+  assert.deepEqual(await f.store.candidates(emptyFilters), []);
+  const firstHash = await auditDigest(voyageDocumentText(f.events[0]));
+  const lease = await f.store.acquireLease('voyage_index_lock');
+  assert.ok(lease);
+  await f.store.saveVoyageVectors(profile, [{ hash: firstHash, vector: vector(7) }], lease);
+  await f.store.releaseLease(lease);
+  f.action(async (_url, init) => {
+    const body = JSON.parse(init?.body as string);
+    assert.equal(body.input_type, 'document');
+    assert.deepEqual(body.input, [voyageDocumentText(f.events[1])]);
+    assert.deepEqual(await f.store.candidates(emptyFilters), [], 'provider response must not expose pending search');
+    return Response.json({ data: [{ index: 0, embedding: vector() }], usage: { total_tokens: 10 } });
+  });
+  const indexed = await f.run();
+  assert.equal(indexed.embedded, 1);
+  assert.ok('publication' in indexed);
+  assert.deepEqual(indexed.publication, { activated: true, pending: 0 });
+  assert.equal((await f.store.catalogStatus()).status, 'ready');
+  const state = emptyIntentState({ ...emptyFilters, maxPrice: 1000 });
+  let queryCalls = 0, rankCalls = 0;
+  const result = await recommend(validateInput({ message: '1000 TL altı akustik konser', intentVersion: 1 }), {
+    candidates: (filters) => f.store.candidates(filters),
+    now: new Date(instant), config: { apiKey: 'offline', model: 'jev-test' },
+    inputInterpreter: 'jev-v1',
+    interpret: async () => ({ state, action: 'search', issue: null, query: intentQuery(state), origin: 'jev' }),
+    embeddingConfig: config,
+    vectors: async (events) => {
+      const hashes = events.map((event) => event.preparedSearch!.documentHash);
+      const stored = await f.store.voyageVectorsByHash(profile, hashes, 1024);
+      assert.deepEqual(stored.get(firstHash), vector(7), 'cached vector remains unchanged');
+      return new Map(events.map((event) => [event.id, stored.get(event.preparedSearch!.documentHash)!]));
+    },
+    embed: (config, texts, kind) => embedWithVoyage(config, texts, kind, async (_url, init) => {
+      queryCalls++;
+      const body = JSON.parse(init?.body as string);
+      assert.equal(body.input_type, 'query');
+      assert.equal(body.input.length, 1);
+      return Response.json({ data: [{ index: 0, embedding: vector() }], usage: { total_tokens: 3 } });
+    }),
+    rank: (config, input, events) => rankWithJev(config, input, events, async (_url, init) => {
+      rankCalls++;
+      const body = JSON.parse(init?.body as string);
+      assert.equal(body.state.candidates.length, 2);
+      assert.ok(body.state.candidates.every((candidate: Record<string, unknown>) => !('preparedSearch' in candidate)));
+      return Response.json({ model: 'jev-test', usage: { input_tokens: 1, output_tokens: 1 }, answers: Object.fromEntries(events.map((_, i) => [
+        `candidate_${i}`, { type: 'score', score: i === 0 ? 3 : 1, confidence: 1, probabilities: i === 0 ? { 0: 0, 1: 0, 2: 0, 3: 1 } : { 0: 0, 1: 1, 2: 0, 3: 0 } },
+      ])) });
+    }),
+  });
+  assert.equal(result.mode, 'jev');
+  assert.equal(result.totalCandidates, 2);
+  assert.equal(result.recommendations.length, 1, 'below-threshold event is not used to fill results');
+  assert.equal(result.recommendations[0].event.price, 500);
+  assert.equal(result.diagnostics?.vectorCoverage.available, 2);
+  assert.equal(queryCalls, 1);
+  assert.equal(rankCalls, 1);
+  assert.equal(f.calls, 1, 'only the one missing document was embedded');
+  const replay = await f.run();
+  assert.equal(replay.embedded, 0);
+  assert.equal(f.calls, 1, 'replay does not call document provider');
+});
+
 await test('only missing exact-profile text hashes are embedded; old vectors remain exact and next run pays nothing', async () => {
   const f = await fixture(2),
     oldHash = await auditDigest(voyageDocumentText(f.events[0])),

@@ -202,7 +202,13 @@ try {
   input.checkpointSha256 = status.checkpointSha256;
   input.expectedRevision = status.deploymentRevision;
   await note({ type: 'initial', status });
-  while (status.pending && attempts < auditIndexLimits.callsPerRun) {
+  // A newly published catalog can already have complete vector coverage while
+  // still waiting in pendingSearch. One POST lets the server perform the
+  // lease-fenced activation without making a provider request.
+  while (
+    (status.pending || attempts === 0) &&
+    attempts < auditIndexLimits.callsPerRun
+  ) {
     // More conservative than the server's21s minimum: one minute separates
     // batches, retaining the existing rolling token headroom without retries.
     if (lastStart)

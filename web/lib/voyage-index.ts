@@ -1,7 +1,8 @@
-import { emptyFilters, type EventRecord } from './types.ts';
+import type { EventRecord } from './types.ts';
 import {
-  candidates,
+  activateSearchCatalog,
   digest,
+  embeddingCandidates,
   voyageVectorsByHash,
   saveVoyageVectors,
 } from './store.ts';
@@ -18,6 +19,17 @@ export { voyageDocumentText } from './voyage.ts';
 async function hashesFor(events: EventRecord[]) {
   return Promise.all(
     events.map(async (event) => {
+      const prepared = event.preparedSearch;
+      if (
+        prepared?.version === 1 &&
+        prepared.documentText.length <= 10000 &&
+        /^[a-f0-9]{64}$/.test(prepared.documentHash)
+      )
+        return {
+          event,
+          text: prepared.documentText,
+          hash: prepared.documentHash,
+        };
       const text = voyageDocumentText(event);
       return { event, text, hash: await digest(text) };
     }),
@@ -53,7 +65,7 @@ export interface VoyageIndexStatus {
 }
 
 async function currentDocuments(now = new Date()) {
-  const events = await candidates(emptyFilters, now);
+  const events = await embeddingCandidates(now);
   const documents = await hashesFor(events);
   const unique = new Map<string, { hash: string; text: string }>();
   for (const document of documents)
@@ -118,6 +130,7 @@ export async function indexVoyageBatch(
       lease,
     );
   }
+  const publication = await activateSearchCatalog(profile, lease);
   return {
     eligible: current.eligible,
     documents: current.documents.length,
@@ -127,5 +140,6 @@ export async function indexVoyageBatch(
     profile,
     hashes: batch.map((document) => document.hash),
     usage,
+    publication,
   };
 }

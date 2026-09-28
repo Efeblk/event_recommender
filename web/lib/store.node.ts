@@ -12,7 +12,7 @@ import { embeddingCacheKey, type EmbeddingConfig } from './providers.ts';
 import type { EventRecord } from './types.ts';
 import type { HighLevelStore } from './storage-contract.ts';
 import { indexAuditedBatch, type AuditedIndexInput } from './audited-index.ts';
-import type { VoyageConfig } from './voyage.ts';
+import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts';
 import type { Lease } from './storage-contract.ts';
 export type { RateLimitResult } from './rate-limit.ts';
 
@@ -29,9 +29,16 @@ function storageClients() {
 }
 function store() {
   return (instance ??= storageClients()
-    .then((clients) =>
-      createGcpStore({ ...clients, namespace: env.DEPLOYMENT_ENV }),
-    )
+    .then((clients) => {
+      const voyage = voyageConfigFrom({
+        VOYAGE_API_KEY: env.VOYAGE_API_KEY,
+        VOYAGE_MODEL: env.VOYAGE_MODEL,
+        VOYAGE_DIMENSIONS: env.VOYAGE_DIMENSIONS,
+      });
+      return createGcpStore({ ...clients, namespace: env.DEPLOYMENT_ENV,
+        ...(voyage ? { embeddingProfile: { profile: voyageCacheKey(voyage), dimensions: voyage.dimensions } } : {}),
+      });
+    })
     .catch((error) => {
       instance = undefined;
       throw error;
@@ -54,6 +61,10 @@ export async function auditedVoyageIndex(
 }
 export const candidates: HighLevelStore['candidates'] = async (...args) =>
   (await store()).candidates(...args);
+export const embeddingCandidates: HighLevelStore['embeddingCandidates'] = async (...args) =>
+  (await store()).embeddingCandidates(...args);
+export const activateSearchCatalog: HighLevelStore['activateSearchCatalog'] = async (...args) =>
+  (await store()).activateSearchCatalog(...args);
 export const catalogStatus: HighLevelStore['catalogStatus'] = async (...args) =>
   (await store()).catalogStatus(...args);
 export const health: HighLevelStore['health'] = async (...args) =>

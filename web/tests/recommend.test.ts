@@ -326,35 +326,7 @@ await test('soonest final ordering keeps every admitted event and the same suppo
 });
 
 function assertRecommendedEvent(actual: EventRecord, expected: EventRecord) {
-  const sourceFields = (record: EventRecord) => {
-    return Object.fromEntries(
-      Object.entries(record).filter(
-        ([key, value]) =>
-          value !== undefined &&
-          ![
-            'id',
-            'offers',
-            'mergedIds',
-            'canonicalProductionKey',
-            'canonicalShowKey',
-          ].includes(key),
-      ),
-    );
-  };
-  assert.deepEqual(sourceFields(actual), sourceFields(expected));
-  assert.ok(
-    actual.id === expected.id || actual.mergedIds?.includes(expected.id),
-    `Expected canonical event to retain source ID ${expected.id}`,
-  );
-  assert.ok(
-    actual.offers?.some(
-      (offer) =>
-        offer.id === expected.id &&
-        offer.url === expected.url &&
-        offer.price === expected.price,
-    ),
-    `Expected canonical event to retain source offer ${expected.id}`,
-  );
+  assert.deepEqual(actual, expected);
 }
 
 function mockRank(
@@ -454,12 +426,18 @@ await test('no match never relaxes a hard budget or spends a Jev call', async ()
   assert.equal(result.filters.maxPrice, 100);
   assert.deepEqual(result.recommendations, []);
 });
-await test('alternatives exclude all sessions of the shown production', async () => {
+await test('alternatives exclude a merged session by any provider ID', async () => {
+  const merged = {
+    ...event,
+    id: 'merged-session',
+    mergedIds: ['a', 'b'],
+    canonicalProductionKey: 'production-a',
+  };
   const result = await recommend(
     { ...request, excludeIds: ['a'] },
     {
       ...deps,
-      candidates: async () => [event, { ...event, id: 'b' }],
+      candidates: async () => [merged],
     },
   );
   assert.deepEqual(result.recommendations, []);
@@ -468,7 +446,13 @@ await test('alternatives exclude the same clear show title at another venue', as
   const first = await recommend(validateInput({ message: 'Konser' }), {
     ...deps,
     candidates: async () => [
-      { ...event, id: 'first-venue', title: 'Edepsiz', venue: 'Sahne Bir' },
+      {
+        ...event,
+        id: 'first-venue',
+        title: 'Edepsiz',
+        venue: 'Sahne Bir',
+        canonicalShowKey: 'show-edepsiz',
+      },
     ],
   });
   const shown = first.recommendations[0].event;
@@ -481,7 +465,13 @@ await test('alternatives exclude the same clear show title at another venue', as
     {
       ...deps,
       candidates: async () => [
-        { ...event, id: 'other-venue', title: 'Edepsiz', venue: 'Sahne İki' },
+        {
+          ...event,
+          id: 'other-venue',
+          title: 'Edepsiz',
+          venue: 'Sahne İki',
+          canonicalShowKey: 'show-edepsiz',
+        },
       ],
     },
   );
@@ -489,15 +479,28 @@ await test('alternatives exclude the same clear show title at another venue', as
 });
 await test('recommendations show distinct exact titles across venues without merging session offers', async () => {
   const candidates = [
-    { ...event, id: 'edepsiz-one', title: 'Edepsiz', venue: 'Sahne Bir' },
+    {
+      ...event,
+      id: 'edepsiz-one',
+      title: 'Edepsiz',
+      venue: 'Sahne Bir',
+      canonicalProductionKey: 'production-edepsiz-one',
+    },
     {
       ...event,
       id: 'edepsiz-two',
       title: 'Edepsiz',
       venue: 'Sahne İki',
       url: 'https://example.test/edepsiz-two',
+      canonicalProductionKey: 'production-edepsiz-two',
     },
-    { ...event, id: 'yunus', title: 'Yunus', venue: 'Sahne Üç' },
+    {
+      ...event,
+      id: 'yunus',
+      title: 'Yunus',
+      venue: 'Sahne Üç',
+      canonicalProductionKey: 'production-yunus',
+    },
   ];
   const result = await recommend(validateInput({ message: 'Konser' }), {
     ...deps,
@@ -1016,28 +1019,45 @@ await test('no eligible events spends neither Voyage nor Jev calls', async () =>
 });
 
 await test('same performance reaches Jev once with both provider offers and cheapest-price filtering', async () => {
+  const merged: EventRecord = {
+    ...event,
+    id: 'merged-edepsiz',
+    title: 'Edepsiz Komedi',
+    venue: 'Cafe Theatre',
+    category: 'Stand-up',
+    description: 'Metin Zakoğlu stand-up gösterisi.',
+    price: 658,
+    source: 'biletinial',
+    mergedIds: ['source-a', 'source-b'],
+    canonicalProductionKey: 'production-edepsiz',
+    canonicalShowKey: 'show-edepsiz',
+    offers: [
+      {
+        id: 'source-a',
+        source: 'biletinial',
+        url: event.url,
+        price: 658,
+        currency: 'TRY',
+        checkedAt: event.checkedAt,
+        category: 'Stand-up',
+        venue: 'Cafe Theatre',
+        availability: 'available',
+      },
+      {
+        id: 'source-b',
+        source: 'biletix',
+        url: 'https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr',
+        price: 672,
+        currency: 'TRY',
+        checkedAt: event.checkedAt,
+        category: 'Tiyatro',
+        venue: 'Cafe Theatre Koşuyolu',
+        availability: 'available',
+      },
+    ],
+  };
   const listings: EventRecord[] = [
-    {
-      ...event,
-      id: 'source-a',
-      title: 'Edepsiz Komedi',
-      venue: 'Cafe Theatre',
-      category: 'Stand-up',
-      description: 'Metin Zakoğlu stand-up gösterisi.',
-      price: 658,
-      source: 'biletinial',
-    },
-    {
-      ...event,
-      id: 'source-b',
-      title: 'Edepsiz Komedi',
-      venue: 'Cafe Theatre Koşuyolu',
-      category: 'Tiyatro',
-      description: 'Metin Zakoğlu stand-up gösterisi.',
-      price: 672,
-      source: 'biletix',
-      url: 'https://www.biletix.com/etkinlik/5PJ7M/ISTANBUL/tr',
-    },
+    merged,
     {
       ...event,
       id: 'stale-cheap',
@@ -1075,7 +1095,7 @@ await test('same performance reaches Jev once with both provider offers and chea
   assert.equal(seen, 1);
   const card = result.recommendations[0].event;
   assert.equal(card.price, 658);
-  assert.equal(card.url, listings[0].url);
+  assert.equal(card.url, merged.url);
   assert.deepEqual(
     card.offers?.map((offer) => offer.price),
     [658, 672],
@@ -1087,11 +1107,6 @@ await test('same performance reaches Jev once with both provider offers and chea
     );
     assert.equal(alternatives.recommendations.length, 0);
   }
-  const survived = await recommend(
-    validateInput({ message: 'Başka etkinlik', excludeIds: [card.id] }),
-    { ...deps, candidates: async () => [listings[1]] },
-  );
-  assert.equal(survived.recommendations.length, 0);
 });
 
 await test('late district sessions survive earlier siblings before production selection', async () => {
@@ -1246,12 +1261,18 @@ await test('strict content uncertainty produces an evidence notice without paid 
 });
 
 await test('stable production exclusion still works after the shown session starts', async () => {
-  const first = await recommend(validateInput({ message: 'Konser' }), deps);
+  const first = await recommend(validateInput({ message: 'Konser' }), {
+    ...deps,
+    candidates: async () => [
+      { ...event, canonicalProductionKey: 'production-concert' },
+    ],
+  });
   const shown = first.recommendations[0].event;
   assert.ok(shown.canonicalProductionKey);
   const later = {
     ...event,
     id: 'next-week',
+    canonicalProductionKey: 'production-concert',
     startsAt: '2026-09-19T18:00:00Z',
     checkedAt: '2026-09-13T09:00:00Z',
   };

@@ -19,6 +19,15 @@ export interface EventOffer {
   venue: string;
   availability: EventRecord['availability'];
 }
+export interface PreparedSearchV1 {
+  version: 1;
+  /** Exact Voyage document input produced for this immutable event record. */
+  documentText: string;
+  /** Lowercase hexadecimal SHA-256 digest of documentText. */
+  documentHash: string;
+  /** Normalized, stop-word-filtered document tokens used by lexical ranking. */
+  lexicalTokens: string[];
+}
 export interface EventRecord {
   id: string;
   title: string;
@@ -45,6 +54,7 @@ export interface EventRecord {
   mergedIds?: string[];
   canonicalProductionKey?: string;
   canonicalShowKey?: string;
+  preparedSearch?: PreparedSearchV1;
   checkedAt: string;
 }
 export interface Filters {
@@ -97,7 +107,7 @@ export interface HardRequirementDiagnostics {
   contradicted: number;
 }
 export interface SearchDiagnostics {
-  /** Rows returned by catalog storage before merging or admission checks. */
+  /** Canonical sessions returned by storage before recommendation admission checks. */
   catalogRetrieved: number;
   /** Eligible, non-excluded merged sessions evaluated for source evidence. */
   eligibleBeforeSourceEvidence: number;

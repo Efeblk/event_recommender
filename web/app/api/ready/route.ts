@@ -14,8 +14,11 @@ export async function GET() {
       { status: 503, headers },
     );
   try {
-    const { catalog, checkpoint } = await currentPublished();
-    const reasons = checkpointReadiness(catalog, checkpoint);
+    const published = await currentPublished();
+    const { catalog } = published;
+    const checkpoint = published.search ? published.search.checkpoint : published.checkpoint;
+    const comparableCatalog = published.search ? { ...published.search.sourceCatalog, status: catalog.status } : catalog;
+    const reasons = checkpointReadiness(comparableCatalog, checkpoint);
     if (checkpoint) {
       try {
         if (!(await checkpointExists(checkpoint)))
@@ -30,6 +33,11 @@ export async function GET() {
         checkedAt,
         reasons,
         catalog,
+        ...(published.search ? { search: {
+          pending: published.search.pending,
+          latestCollectedAt: published.checkpoint?.finishedAt ?? null,
+          activeCollectedAt: checkpoint?.finishedAt ?? null,
+        } } : {}),
         checkpoint: checkpoint
           ? {
               savedAt: checkpoint.savedAt,

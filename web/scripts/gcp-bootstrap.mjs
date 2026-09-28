@@ -2,6 +2,7 @@ import { parseArgs } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { bootstrapSummary, planGcpBootstrap } from '../lib/gcp-bootstrap.ts';
+import { voyageCacheKey } from '../lib/voyage.ts';
 
 const { values } = parseArgs({ options: {
   checkpoint: { type: 'string' }, vectors: { type: 'string' }, apply: { type: 'boolean', default: false },
@@ -25,13 +26,17 @@ const [{ createGcpClients }, { createGcpStore }] = await Promise.all([
 const clients = await createGcpClients(process.env);
 const namespace = process.env.DEPLOYMENT_ENV;
 if (!namespace || !/^[A-Za-z0-9_-]{1,64}$/.test(namespace)) throw new Error('DEPLOYMENT_ENV is required.');
-const store = createGcpStore({ ...clients, namespace });
+const embeddingProfile = plan.vectors
+  ? { profile: plan.vectors.profile, dimensions: plan.vectors.dimensions }
+  : { profile: voyageCacheKey({ apiKey: '', model: process.env.VOYAGE_MODEL || 'voyage-4-large', dimensions: Number(process.env.VOYAGE_DIMENSIONS || 1024) }), dimensions: Number(process.env.VOYAGE_DIMENSIONS || 1024) };
+const store = createGcpStore({ ...clients, namespace, embeddingProfile });
 const syncLease = await store.acquireLease('sync_lock', 3600000);
 if (!syncLease) throw new Error('Catalog bootstrap lease is unavailable.');
 let vectorLease = null;
 let imported = 0, skipped = 0;
+let publication = { activated: false, pending: 0 };
 try {
-  if (plan.vectors) {
+  {
     vectorLease = await store.acquireLease('voyage_index_lock', 3600000);
     if (!vectorLease) throw new Error('Vector bootstrap lease is unavailable.');
   }
@@ -47,8 +52,9 @@ try {
   }
   await store.publishCheckpoint(plan.checkpoint.report, syncLease);
   if (plan.vectors && vectorLease) await store.saveVoyageVectors(plan.vectors.profile, plan.vectors.entries, vectorLease);
+  publication = await store.activateSearchCatalog(embeddingProfile.profile, vectorLease);
 } finally {
   if (vectorLease) await store.releaseLease(vectorLease).catch(() => undefined);
   await store.releaseLease(syncLease).catch(() => undefined);
 }
-console.log(JSON.stringify({ mode: 'applied', ...summary, imported, skipped }, null, 2));
+console.log(JSON.stringify({ mode: 'applied', ...summary, imported, skipped, publication }, null, 2));

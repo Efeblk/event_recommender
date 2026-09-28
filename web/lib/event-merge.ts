@@ -501,18 +501,22 @@ function selectOffer(
   );
 }
 
-/** Conservatively combines listings that describe the exact same performance. */
-export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
-  const candidateGroups = new Map<string, EventRecord[]>();
-  for (const event of events) {
+/** Base identity before policy conflicts split a family into separate sessions. */
+export function eventSessionIdentityKey(event: EventRecord): string {
     const value = identity(event);
     // Invalid dates cannot establish equality. The raw id keeps these isolated.
     const hasSpecificVenue =
       value.venue.length > 0 && !GENERIC_VENUES.has(value.venue);
-    const key =
-      value.instant && value.title && value.city && hasSpecificVenue
+    return value.instant && value.title && value.city && hasSpecificVenue
         ? [value.title, value.city, value.venue, value.instant].join('\u001f')
         : `isolated\u001f${event.id}`;
+}
+
+/** Conservatively combines listings that describe the exact same performance. */
+export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
+  const candidateGroups = new Map<string, EventRecord[]>();
+  for (const event of events) {
+    const key = eventSessionIdentityKey(event);
     const group = candidateGroups.get(key);
     if (group) group.push(event);
     else candidateGroups.set(key, [event]);

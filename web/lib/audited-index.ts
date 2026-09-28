@@ -1,4 +1,3 @@
-import { emptyFilters } from './types.ts';
 import {
   embedWithVoyageDetailed,
   voyageCacheKey,
@@ -213,11 +212,11 @@ export async function indexAuditedBatch(
       throw new Error('Indexing checkpoint changed');
   };
   await pin();
-  const events = await store.candidates(emptyFilters, new Date(now())),
+  const events = await store.embeddingCandidates(new Date(now())),
     documents = new Map<string, string>();
   for (const event of events) {
-    const text = voyageDocumentText(event);
-    documents.set(await auditDigest(text), text);
+    const text = event.preparedSearch?.documentText ?? voyageDocumentText(event);
+    documents.set(event.preparedSearch?.documentHash ?? await auditDigest(text), text);
   }
   const cached = await store.voyageVectorsByHash(
     profile,
@@ -250,6 +249,7 @@ export async function indexAuditedBatch(
   if (!pending.length)
     return {
       ...status,
+      publication: await store.activateSearchCatalog(profile, lease),
       outcome: 'complete',
       embedded: 0,
       hashes: [],
@@ -564,6 +564,7 @@ export async function indexAuditedBatch(
     await settle(false);
     return {
       ...status,
+      publication: await store.activateSearchCatalog(profile, lease),
       outcome: pending.length === batch.length ? 'complete' : 'progress',
       indexed: cached.size + batch.length,
       pending: pending.length - batch.length,
