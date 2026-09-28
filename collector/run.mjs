@@ -17,6 +17,7 @@ import {
 } from "./pipeline.mjs";
 
 import { expandListing } from "./discovery.mjs";
+import { followDetailRedirects } from "./redirects.mjs";
 import {
   addCoverageEntries,
   checkpointCoverageEvents,
@@ -106,28 +107,46 @@ function upsertReportPage(page) {
 }
 const headers = { "User-Agent": userAgent, "Accept-Language": "tr-TR,tr;q=0.9" };
 async function get(url, options = {}, isRobots = false) {
-  if (httpRequests >= maxHttp) {
-    budgetStop = "http_budget";
-    void activeCrawler?.autoscaledPool?.abort();
-    throw new NonRetryableError("http_budget_exhausted");
+  const { detailRedirectSource = null, ...fetchOptions } = options;
+  const request = async (currentUrl) => {
+    if (httpRequests >= maxHttp) {
+      budgetStop = "http_budget";
+      void activeCrawler?.autoscaledPool?.abort();
+      throw new NonRetryableError("http_budget_exhausted");
+    }
+    httpRequests += 1;
+    const origin = new URL(currentUrl).origin;
+    if (!allowedOrigins.has(origin)) throw new NonRetryableError("origin_not_allowed");
+    if (!isRobots) {
+      if (!robots.has(origin)) await loadRobots(origin);
+      if (!robots.get(origin)?.isAllowed(currentUrl, "BiPlan"))
+        throw new NonRetryableError("robots_disallowed");
+    }
+    const slot = Math.max(Date.now(), nextNetworkSlot);
+    nextNetworkSlot = slot + 1000;
+    await delay(Math.max(0, slot - Date.now()));
+    const response = await fetch(currentUrl, {
+      ...fetchOptions,
+      headers: { ...headers, ...fetchOptions.headers },
+      redirect: "manual",
+      signal: AbortSignal.timeout(20000),
+    });
+    return response;
+  };
+  let response;
+  try {
+    response = detailRedirectSource
+      ? (await followDetailRedirects({
+          initialUrl: url, source: detailRedirectSource, request, detailUrl,
+        })).response
+      : await request(url);
+  } catch (error) {
+    if (error instanceof NonRetryableError) throw error;
+    if (typeof error?.message === "string" &&
+        (error.message.startsWith("redirect_") || error.message.includes(":redirect_")))
+      throw new NonRetryableError(error.message);
+    throw error;
   }
-  httpRequests += 1;
-  const origin = new URL(url).origin;
-  if (!allowedOrigins.has(origin)) throw new NonRetryableError("origin_not_allowed");
-  if (!isRobots) {
-    if (!robots.has(origin)) await loadRobots(origin);
-    if (!robots.get(origin)?.isAllowed(url, "BiPlan"))
-      throw new NonRetryableError("robots_disallowed");
-  }
-  const slot = Math.max(Date.now(), nextNetworkSlot);
-  nextNetworkSlot = slot + 1000;
-  await delay(Math.max(0, slot - Date.now()));
-  const response = await fetch(url, {
-    ...options,
-    headers: { ...headers, ...options.headers },
-    redirect: "manual",
-    signal: AbortSignal.timeout(20000),
-  });
   if (isRobots && response.status === 404) {
     await response.body?.cancel();
     return "";
@@ -239,7 +258,10 @@ const crawler = new BasicCrawler(
     useSessionPool: false,
     async requestHandler({ request, crawler: active }) {
       const { source, category, kind } = request.userData;
-      const html = await get(request.url),
+      const html = await get(
+          request.url,
+          kind === "event" ? { detailRedirectSource: source } : {},
+        ),
         $ = load(html);
       if (values["save-html"])
         await writeFile(join(output, "html", `${sha(request.url)}.html`), html);

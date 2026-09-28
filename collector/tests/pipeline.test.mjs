@@ -236,6 +236,54 @@ await test("Bubilet ignores a false Istanbul JSON-LD date corroborated as anothe
   assert.equal(events.length, state.eventSessions.length);
   assert.ok(events.some((item) => item.city === "İstanbul"));
 });
+await test("Bubilet excludes the real Gastro shape when eventSessions prove every session is outside Istanbul", async () => {
+  const dates = ["2026-10-02T10:00:00+00:00", "2026-10-03T09:00:00+00:00", "2026-10-04T09:00:00+00:00"],
+    venue = "Eskişehir Büyükşehir Belediyesi Kentpark",
+    schema = {
+      ...structuredClone(bubilet),
+      name: "Eskişehir Gastro Fest",
+      startDate: dates[0],
+      location: {
+        ...structuredClone(bubilet.location),
+        name: venue,
+        address: { ...structuredClone(bubilet.location.address), addressLocality: "İstanbul" },
+      },
+      subEvent: dates.map((startDate) => ({
+        "@type": "Event",
+        name: "Eskişehir Gastro Fest",
+        startDate,
+        location: {
+          "@type": "Place",
+          name: venue,
+          address: { "@type": "PostalAddress", addressLocality: "İstanbul" },
+        },
+      })),
+    },
+    state = {
+      ...structuredClone(sessions),
+      eventSessions: dates.map((date, index) => ({
+        sessionId: 269039 + index,
+        cityId: 26,
+        date,
+        venueName: venue,
+      })),
+      allSessions: [],
+    };
+  const events = await extract(wrap(schema, state), "bubilet", url, "Festival", now);
+  assert.deepEqual(events, []);
+});
+await test("Bubilet keeps conflicting detailed city evidence fail-closed", async () => {
+  const schema = structuredClone(bubilet), state = structuredClone(sessions), node = schema.subEvent[0];
+  state.eventSessions = [{ sessionId: 900, cityId: 26, date: node.startDate, venueName: node.location.name }];
+  state.allSessions = [{ sessionId: 901, cityId: 34, date: node.startDate, venueName: node.location.name }];
+  await assert.rejects(extract(wrap(schema, state), "bubilet", url, "Konser", now), /session_coverage_mismatch/);
+});
+await test("Bubilet keeps missing eventSessions city evidence fail-closed", async () => {
+  const schema = structuredClone(bubilet), state = structuredClone(sessions), node = schema.subEvent[0];
+  state.eventSessions = [{ sessionId: 900, date: node.startDate, venueName: node.location.name }];
+  state.allSessions = [];
+  await assert.rejects(extract(wrap(schema, state), "bubilet", url, "Konser", now), /session_coverage_mismatch/);
+});
 await test("Bubilet keeps ambiguous allSessions city evidence fail-closed", async () => {
   const schema = structuredClone(bubilet),
     state = structuredClone(sessions),

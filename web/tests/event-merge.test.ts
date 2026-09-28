@@ -866,3 +866,135 @@ await test('preserves every raw offer link, price, and id for fresh aliases', ()
   assert.ok(merged.mergedIds?.includes(first.id));
   assert.ok(merged.mergedIds?.includes(second.id));
 });
+
+await test("reviewed frozen catalog title pairs preserve exact provider offers", () => {
+  const pairs = [
+    [
+      "Hikayeden Adamlar 'Mahalle' - Youtube Çekimi - 3.sezon",
+      "Hikayeden Adamlar - Mahalle - Youtube Çekimi",
+      "Hoş geldin! Şimdi biraz gülmeye, bazen dertleşmeye geldik.",
+      "Sahne Beşiktaş",
+    ],
+    [
+      "Kadıköy Stand Up Gecesi Pazartesi Açık Mikrofon",
+      "Kadıköy Stand Up Gecesi Açık Mikrofon",
+      "Açık mikrofonda komedyenler şakalarını deniyor; herkesin 5 dakikası var.",
+      "Ada Bar Kadıköy",
+    ],
+    [
+      "XI. Gastromasa Istanbul Uluslararası Gastronomi Konferansı & Fuarı",
+      "Gastromasa İstanbul Uluslararası Gastronomi Konferansı & Fuarı",
+      "26-27 Kasım 2026 tarihlerinde Haliç Kongre Merkezi.",
+      "Haliç Kongre Merkezi",
+    ],
+    [
+      "Burak Altuni Akustik Flamenko Konser",
+      "Burak Altuni Akustik Flamenko Konseri",
+      "Dünya çapındaki flamenko sanatçısı Burak Altuni akustik konseri.",
+      "Tiyatro Keyfi Lab – Savaş Başar Sahnesi",
+    ],
+    [
+      "Benyunusyılmaz - Olay Yeri İnceleme Stand Up",
+      "Yunus Yılmaz - Olay Yeri İnceleme Stand Up",
+      "Ben Yunus Yılmaz; Olay Yeri İnceleme stand-up gösterime hoş geldin.",
+      "Sancaktepe Sahnesi",
+    ],
+    [
+      "Lumera Trio Sezen Aksu Şarkıları",
+      "Lumera - Sezen Aksu Şarkıları",
+      "Lumera Trio; klarnet, gitar ve çellonun uyumu.",
+      "Hilltown Seyirlik Sahne",
+    ],
+    [
+      "Celile (Nazım Hikmet'in Annesi) Oyunu",
+      "Celile (Nazım Hikmet'in Annesi)",
+      "Nazım Hikmet'in annesi Celile'nin hayatı, ilk kez tiyatro sahnesinde.",
+      "Kadıköy Barış Manço Kültür Merkezi",
+    ],
+    [
+      "Çocuklar İçin Yaratıcı Drama Eğitimi",
+      "Çocuklar için Yaratıcı Drama Eğitim",
+      "8–12 yaş arası çocuklara özel yaratıcı drama eğitimi.",
+      "Taksim İstiklal Sahne",
+    ],
+    [
+      "Güncel Gürsel Artıktay Konseri",
+      "Güncel Gürsel Artıktay",
+      "Güncel Gürsel Artıktay unutulmaz bir konserle sahneye çıkıyor.",
+      "Blind İstanbul",
+    ],
+    [
+      "Ölü'n Bizi Ayırana Dek",
+      "Ölün Bizi Ayırana Dek",
+      "Cansu ve Serdar boşanmaya karar vermiş bir çifttir.",
+      "Kadıköy Eğitim Sahnesi",
+    ],
+  ] as const;
+  for (const [leftTitle, rightTitle, description, venue] of pairs) {
+    const left = event({
+      id: `left:${leftTitle}`,
+      title: leftTitle,
+      description,
+      venue,
+      price: 410,
+      url: `https://biletinial.com/${encodeURIComponent(leftTitle)}`,
+    });
+    const right = event({
+      id: `right:${rightTitle}`,
+      source: "bubilet",
+      title: rightTitle,
+      description,
+      venue,
+      price: 450,
+      url: `https://www.bubilet.com.tr/${encodeURIComponent(rightTitle)}`,
+    });
+    const result = mergeEventSessions([left, right]);
+    assert.equal(result.length, 1, `${leftTitle} / ${rightTitle}`);
+    assert.deepEqual(
+      new Set(
+        result[0].offers?.map(
+          ({ id, url, price, availability }) =>
+            `${id}|${url}|${price}|${availability}`,
+        ),
+      ),
+      new Set([
+        `${left.id}|${left.url}|410|available`,
+        `${right.id}|${right.url}|450|available`,
+      ]),
+    );
+    assert.deepEqual(mergeEventSessions(result), result);
+  }
+});
+
+await test("unverified cast and ensemble variants remain separate", () => {
+  const memoir = event({
+    title: "Bir Delinin Hatıra Defteri",
+    description: "Bakırköy Butik Sahne etkinlik kuralları.",
+    venue: "Bakırköy Butik Sahne",
+  });
+  const memoirSuffix = event({
+    id: "memoir-suffix",
+    source: "bubilet",
+    title: "Bir Delinin Hatıra Defteri Oyunu",
+    description: "Bir Delinin Hatıra Defteri Oyunu",
+    venue: memoir.venue,
+  });
+  assert.equal(
+    mergeEventSessions([memoir, memoirSuffix]).length,
+    2,
+    "the frozen pages do not identify the adaptation or cast",
+  );
+  const trio = event({
+    title: "Bülent Evcil & Nova Trio ile Mozart Akşamı",
+    category: "Konser",
+    venue: "Deniz Müzesi",
+  });
+  const strings = event({
+    id: "nova-strings",
+    source: "bubilet",
+    title: "Bülent Evcil & Nova Strings ile Mozart Akşamı",
+    category: "Konser",
+    venue: trio.venue,
+  });
+  assert.equal(mergeEventSessions([trio, strings]).length, 2);
+});

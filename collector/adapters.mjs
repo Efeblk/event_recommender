@@ -318,11 +318,14 @@ async function extractBubilet($, url, category, sourceCategory, nodes, now, { ge
   // A truncated payload is an error, not evidence that those sessions disappeared.
   const observedDates = new Set(events.map((e) => e.startsAt));
   const corroboratedNonIstanbul = (node) => {
-    if (!Array.isArray(props.allSessions)) return false;
     const timestamp = Date.parse(node.startDate),
       venue = clean(node.location?.name);
     if (!Number.isFinite(timestamp) || !venue) return false;
-    const matching = props.allSessions.filter(
+    const detailedSessions = [
+      ...(Array.isArray(props.eventSessions) ? props.eventSessions : []),
+      ...(Array.isArray(props.allSessions) ? props.allSessions : []),
+    ];
+    const matching = detailedSessions.filter(
       (row) =>
         typeof row?.date === "string" &&
         Date.parse(row.date) === timestamp &&

@@ -81,7 +81,12 @@ const TITLE_ALIASES = [
     'Kasımpaşa Mevlevihanesi Semazen Töreni',
     "Kasımpaşa Mevlevihanesi'nde Semazen Töreni",
   ],
-  ["Ölü'n Bizi Ayırana Dek", "Ölü'n Bizi Ayırana Dek Oyunu"],
+  [
+    "Ölü'n Bizi Ayırana Dek",
+    'Ölün Bizi Ayırana Dek',
+    'Ölü’n Bizi Ayırana Dek',
+    "Ölü'n Bizi Ayırana Dek Oyunu",
+  ],
   ['Mahşer-i Cümbüş', 'Mahşer-i Cümbüş Oyunu'],
   ['Haybeden Gerçeküstü Aşk', 'Haybeden Gerçeküstü Aşk Oyunu'],
   ['Aşk Hikayen Düşmüş', 'Aşk Hikayen Düşmüş Oyunu'],
@@ -111,6 +116,37 @@ const TITLE_ALIASES = [
     'Kadıköy Stand Up Gecesi Çarşamba 20:30',
     'Kadıköy Stand up Gecesi Cumartesi 21:45',
   ],
+  [
+    'Kadıköy Stand Up Gecesi Açık Mikrofon',
+    'Kadıköy Stand Up Gecesi Pazartesi Açık Mikrofon',
+    'Kadıköy Stand Up Gecesi Salı Açık Mikrofon',
+  ],
+  [
+    "Hikayeden Adamlar 'Mahalle' - Youtube Çekimi - 3.sezon",
+    'Hikayeden Adamlar - Mahalle - Youtube Çekimi',
+  ],
+  [
+    'XI. Gastromasa Istanbul Uluslararası Gastronomi Konferansı & Fuarı',
+    'Gastromasa İstanbul Uluslararası Gastronomi Konferansı & Fuarı',
+  ],
+  [
+    'Burak Altuni Akustik Flamenko Konser',
+    'Burak Altuni Akustik Flamenko Konseri',
+  ],
+  [
+    'Benyunusyılmaz - Olay Yeri İnceleme Stand Up',
+    'Yunus Yılmaz - Olay Yeri İnceleme Stand Up',
+  ],
+  ['Lumera Trio Sezen Aksu Şarkıları', 'Lumera - Sezen Aksu Şarkıları'],
+  [
+    "Celile (Nazım Hikmet'in Annesi) Oyunu",
+    "Celile (Nazım Hikmet'in Annesi)",
+  ],
+  [
+    'Çocuklar İçin Yaratıcı Drama Eğitimi',
+    'Çocuklar için Yaratıcı Drama Eğitim',
+  ],
+  ['Güncel Gürsel Artıktay Konseri', 'Güncel Gürsel Artıktay'],
 ] as const;
 
 const GENERIC_VENUES = new Set([
