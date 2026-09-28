@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sourceOf, validateImport } from '../lib/catalog.ts';
+import { MAX_EVENT_PRICE, sourceOf, validateImport } from '../lib/catalog.ts';
 import { parseEvents } from '../lib/source.ts';
 import { uniqueEvents, isEligible } from '../lib/search.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
@@ -46,7 +46,8 @@ await test('import rejects foreign sources, duplicate IDs, empty pages and stale
     { startsAt: '2026-09-12T18:00:00' },
     { url: 'https://evil.example/event' },
     { source: 'biletix' },
-    { price: 99999 },
+    { price: MAX_EVENT_PRICE + 1 },
+    { price: Number.POSITIVE_INFINITY },
     { price: -1 },
     { city: 'Ankara' },
   ])
@@ -72,6 +73,10 @@ await test('import accepts only fresh explicit source retirements', () => {
   for (const retiredAt of [undefined, '', 'invalid', '2026-09-01T09:00:00.000Z', '2026-09-10T09:00:00.000Z'])
     assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, retiredAt }] }, now));
   assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, events: [event] }] }, now));
+});
+await test('import accepts legitimate high TRY prices within safe cent representation', () => {
+  assert.equal(validateImport(envelope({ ...event, title: 'Global Marketing Summit', price: 59400 }), now)[0].events[0].price, 59400);
+  assert.equal(validateImport(envelope({ ...event, price: MAX_EVENT_PRICE }), now)[0].events[0].price, MAX_EVENT_PRICE);
 });
 await test('import retains an atomic 314-session page within bounded page and envelope limits', () => {
   const sessions = Array.from({ length: 314 }, (_, index) => ({

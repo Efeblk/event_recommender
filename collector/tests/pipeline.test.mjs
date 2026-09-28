@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { load } from "cheerio";
 import { categorySupportedByEvent, detailUrl, discover, extract } from "../adapters.mjs";
-import { validateEvent, reconcile, publicationGate, productionKey } from "../pipeline.mjs";
+import { MAX_EVENT_PRICE, validateEvent, reconcile, publicationGate, productionKey } from "../pipeline.mjs";
 const now = new Date("2026-09-09T09:00:00Z");
 const bubilet = JSON.parse(
   await readFile(new URL("./fixtures/bubilet.json", import.meta.url), "utf8"),
@@ -338,4 +338,13 @@ await test("Bubilet uses each session venue even when JSON-LD repeats the first 
   schema.subEvent[2].location = structuredClone(schema.subEvent[0].location);
   const events = await extract(wrap(schema), "bubilet", url, "Konser", now);
   assert.equal(events[2].venue, sessions.eventSessions[2].venueName);
+});
+
+await test("validates legitimate high TRY prices without losing safe numeric bounds", async () => {
+  const [parsed] = await extract(wrap(bubilet), "bubilet", url, "Konser", now);
+  const base = { ...parsed, title: "Global Marketing Summit", price: 59400 };
+  assert.deepEqual(validateEvent(base, now), []);
+  assert.deepEqual(validateEvent({ ...base, price: MAX_EVENT_PRICE }, now), []);
+  assert.ok(validateEvent({ ...base, price: MAX_EVENT_PRICE + 1 }, now).includes("price_outlier"));
+  assert.ok(validateEvent({ ...base, price: Number.POSITIVE_INFINITY }, now).includes("price_outlier"));
 });

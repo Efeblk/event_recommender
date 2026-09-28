@@ -3,6 +3,7 @@ import { CATEGORIES } from './types.ts';
 import type { SourcePage } from './storage-contract.ts';
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_IMPORT_ENVELOPE_EVENTS = 2000;
+export const MAX_EVENT_PRICE = Number.MAX_SAFE_INTEGER / 100;
 export function sourceOf(raw: unknown): EventRecord['source'] | null {
   if (typeof raw !== 'string') return null;
   try {
@@ -140,7 +141,7 @@ export function validateImport(
           (typeof e.price !== 'number' ||
             !Number.isFinite(e.price) ||
             e.price < 0 ||
-            e.price > 50000))
+            e.price > MAX_EVENT_PRICE))
       )
         throw new Error('Invalid price');
       if (e.imageUrl && !(e.imageUrl as string).startsWith('https://'))

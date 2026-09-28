@@ -3,6 +3,8 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { detailUrl } from "./adapters.mjs";
 import { CATEGORIES } from "../web/lib/types.ts";
 
+export const MAX_EVENT_PRICE = Number.MAX_SAFE_INTEGER / 100;
+
 export const sha = (text) => createHash("sha256").update(text).digest("hex");
 const normalize = (text) =>
   text
@@ -37,7 +39,7 @@ export function validateEvent(event, now = new Date()) {
     (typeof event.price !== "number" ||
       !Number.isFinite(event.price) ||
       event.price < 0 ||
-      event.price > 50000)
+      event.price > MAX_EVENT_PRICE)
   )
     errors.push("price_outlier");
   const source =
