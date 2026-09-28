@@ -739,10 +739,31 @@ function fastPath(input: InterpreterInput): InterpretedInput | null {
   const effectiveRequest = input.unresolvedRequest
     ? `${input.unresolvedRequest}\n${input.message}`
     : input.message;
+  const normalizedRequest = fold(effectiveRequest);
+  const money = [
+    ...normalizedRequest.matchAll(
+      /(?:₺\s*\d[\d.,]*|\d[\d.,]*\s*(?:tl|try|turkish liras?|lira|₺))(?=\s|$|[.,!?"'])/g,
+    ),
+  ];
+  const amount = money.length === 1
+    ? Number(money[0][0].replace(/[^\d.,]/g, '').replace(/\.(?=\d{3}(?:\D|$))/g, '').replace(',', '.'))
+    : Number.NaN;
+  const hasExplicitBudgetBasis =
+    /\b(?:kisi basi|per[ -]?person|each|per ticket|toplam(?=\b|\d)|toplamda|butun grup|hepimiz icin|total|altogether|for (?:the )?(?:whole )?group)\b/.test(
+      normalizedRequest,
+    );
+  const isValidBareAmount =
+    money.length === 1 &&
+    Number.isFinite(amount) &&
+    amount >= 0 &&
+    amount <= 100000 &&
+    !/-\s*\d[\d.]*(?:,\d{1,2})?\s*(?:tl|lira|₺)/.test(normalizedRequest);
   // A bare ceiling for multiple attendees has exactly two supported meanings.
   // Stop before paid interpretation so neither basis nor partial preferences
   // are committed; the unresolved request carries them into the clarification.
   if (
+    isValidBareAmount &&
+    !hasExplicitBudgetBasis &&
     interpretConstraints(effectiveRequest, previous.filters, input.now).issue ===
     'budget_ambiguous'
   )
