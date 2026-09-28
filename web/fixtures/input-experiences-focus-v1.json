@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "referenceInstant": "2026-09-28T12:00:00+03:00",
+  "timeZone": "Europe/Istanbul",
+  "note": "Fresh revised-only interpretation focus. Static previous states avoid dependence on a prior live result. The cancellation case asks to remove an optional preference; the earlier aversion wording remains an unresolved policy case in comparison-01.",
+  "cases": [
+    {
+      "id": "focus_learning_no_children",
+      "message": "I'd enjoy learning something new at an event. No children's events, please.",
+      "previous": { "version": 1, "filters": { "dateFrom": null, "dateTo": null, "maxPrice": null, "category": null }, "requirements": [], "preferences": { "mood": null, "companion": null, "interests": [] } },
+      "expected": { "action": "search", "requirements": ["exclude_positive_evidence:audience:children"], "experiences": ["learning"] }
+    },
+    {
+      "id": "focus_attendee_dancing",
+      "message": "I'd love an evening where we can dance ourselves rather than watch dancers perform.",
+      "previous": { "version": 1, "filters": { "dateFrom": null, "dateTo": null, "maxPrice": null, "category": null }, "requirements": [], "preferences": { "mood": null, "companion": null, "interests": [] } },
+      "expected": { "action": "search", "filters": { "startTimeFrom": "18:00", "startTimeFromExclusive": false }, "requirements": [], "experiences": ["dancing"] },
+      "normalizationNote": "The coded interpreter reasonably normalizes evening to an inclusive 18:00 lower bound; this is documented rather than treated as a feature-oracle failure."
+    },
+    {
+      "id": "focus_dancing_and_participation",
+      "message": "I'd love an evening where we can dance and actively join in with the event.",
+      "previous": { "version": 1, "filters": { "dateFrom": null, "dateTo": null, "maxPrice": null, "category": null }, "requirements": [], "preferences": { "mood": null, "companion": null, "interests": [] } },
+      "expected": { "action": "search", "filters": { "startTimeFrom": "18:00", "startTimeFromExclusive": false }, "requirements": [], "experiences": ["participation", "dancing"] }
+    },
+    {
+      "id": "focus_clear_participation_preference",
+      "message": "Katılım tercihini kaldır; tarih ve konser hariç şartı aynı kalsın.",
+      "previous": { "version": 1, "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "maxPrice": null, "category": null, "excludedCategories": ["Konser"] }, "requirements": [], "preferences": { "mood": null, "companion": null, "interests": [], "experiences": ["participation"] } },
+      "expected": { "action": "search", "requirements": [], "experiences": [] }
+    }
+  ],
+  "unresolvedPolicyCase": {
+    "source": "outputs/experience-upgrade-20260928/comparison-01/interpretation.json#revised:followup_cancel_participation",
+    "message": "Aslında katılmak istemiyorum, sadece izleyeyim. Tarih ve konser olmasın şartı aynı.",
+    "observed": "constraint_ambiguous with atomic retention",
+    "interpretation": "May be correct abstention for a strict unsupported aversion; do not relabel it as a required clear operation without a product-policy decision."
+  }
+}

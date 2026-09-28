@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { EXPERIENCES } from '../lib/input-experiences.ts';
 
 const emptyFilters = {
   dateFrom: null,
@@ -102,7 +103,7 @@ test.describe('versioned input intent protocol', () => {
       return route.fulfill({ json: response({ intentState: {
         ...baseState,
         requirements: [{ kind: 'activity', value: 'seated', policy: 'require_support' }],
-        preferences: { mood: 'calm', companion: 'partner', interests: ['Romantik atmosfer'] },
+        preferences: { mood: 'calm', companion: 'partner', interests: ['Romantik atmosfer'], experiences: ['learning'] },
       } }) });
     });
     await page.goto('/');
@@ -112,6 +113,8 @@ test.describe('versioned input intent protocol', () => {
     await expect(plan.getByRole('group', { name: 'Olmazsa olmazlar' })).toContainText('Oturma yeri');
     await expect(plan.getByRole('group', { name: 'Olmazsa olmazlar' })).not.toContainText('Romantik');
     await expect(plan.getByRole('group', { name: 'Tercihler', exact: true })).toContainText('Romantik atmosfer');
+    await expect(plan.getByRole('group', { name: 'Tercihler', exact: true })).toContainText(EXPERIENCES.learning.label);
+    await expect(plan.getByRole('group', { name: 'Olmazsa olmazlar' })).not.toContainText(EXPERIENCES.learning.label);
     await page.screenshot({ path: test.info().outputPath('interpreted-plan.png'), fullPage: true });
     await plan.getByRole('button', { name: 'Planı düzelt' }).click();
     await expect(page.getByLabel('Planını anlat')).toBeFocused();

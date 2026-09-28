@@ -31,7 +31,7 @@ import {
   type IntentState,
 } from './input-state.ts';
 import { interpretInput } from './input-interpreter.ts';
-import { retrievalQuery } from './input-retrieval.ts';
+import { recommendationQuery, retrievalQuery } from './input-retrieval.ts';
 
 export interface RecommendInput {
   message: string;
@@ -481,6 +481,7 @@ async function recommendResolved(
         deps.config,
         {
           ...input,
+          ...(intent ? { message: recommendationQuery(intent) } : {}),
           filters,
           history: context.history,
           requirements,

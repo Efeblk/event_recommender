@@ -354,6 +354,7 @@ async function buildProvenance(fixtureValue, model) {
     fixturePath,
     resolve(webRoot, 'scripts/check-input-intent.mjs'),
     resolve(webRoot, 'lib/input-interpreter.ts'),
+    resolve(webRoot, 'lib/input-experiences.ts'),
     resolve(webRoot, 'lib/input-plan-audit.ts'),
     resolve(webRoot, 'lib/input-literals.ts'),
     resolve(webRoot, 'lib/input-candidates.ts'),

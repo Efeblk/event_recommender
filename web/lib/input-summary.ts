@@ -1,5 +1,6 @@
 import type { IntentState } from './input-state.ts';
 import type { Requirement } from './requirements.ts';
+import { EXPERIENCES } from './input-experiences.ts';
 
 const labels: Record<string, string> = {
   jazz: 'Caz', blues: 'Blues', rock: 'Rock', electronic: 'Elektronik müzik',
@@ -54,6 +55,7 @@ export function intentSummary(
   const { mood, companion, interests } = state.preferences;
   if (companion) preferred.push({ partner: 'Partnerle birlikte', friends: 'Arkadaşlarla birlikte', family: 'Aileyle birlikte' }[companion]);
   if (mood) preferred.push({ calm: 'Sakin bir plan', energetic: 'Enerjik bir plan', uplifting: 'Moral yükselten bir plan' }[mood]);
+  preferred.push(...(state.preferences.experiences ?? []).map((experience) => EXPERIENCES[experience].label));
   preferred.push(...interests);
   return { required: [...new Set(required)], preferred: [...new Set(preferred)] };
 }

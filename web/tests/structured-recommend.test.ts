@@ -12,6 +12,7 @@ import {
   type Dependencies,
 } from '../lib/recommend.ts';
 import type { EventRecord } from '../lib/types.ts';
+import { recommendationQuery, retrievalQuery } from '../lib/input-retrieval.ts';
 
 const now = new Date('2026-09-28T09:00:00Z');
 const config = { apiKey: 'test-only', model: 'jev-test' };
@@ -111,6 +112,41 @@ void test('structured integration ignores stale history and passes only canonica
     result.recommendations.map(({ event }) => event.id),
     ['stale-jazz'],
   );
+});
+
+void test('experience search terms reach retrieval but never become hard filters or a rewritten ranking request', async () => {
+  const state = emptyIntentState();
+  state.filters = { ...state.filters, maxPrice: 500, excludedCategories: ['Konser'] };
+  state.preferences.experiences = ['laughter'];
+  const valid = { ...event('humor', 'Komedi ve mizah dolu bir oyun.'), category: 'Tiyatro' };
+  const expensive = { ...valid, id: 'expensive', price: 501, venue: 'Başka Sahne' };
+  const concert = event('concert', 'Komik şarkılar ve mizah.');
+  let embedded: string[] = [];
+  let rankedInput: Parameters<NonNullable<Dependencies['rank']>>[1] | undefined;
+  const result = await recommend(structuredRequest('Birlikte gülelim', state), {
+    inputInterpreter: 'jev-v1', now, config,
+    embeddingConfig: { apiKey: 'test', model: 'voyage-4-large', dimensions: 1024 },
+    interpret: async () => interpreted(state),
+    candidates: async () => [valid, expensive, concert],
+    vectors: async (eligible) => {
+      assert.deepEqual(eligible.map((e) => e.id), ['humor']);
+      return new Map([['humor', [1, 0]]]);
+    },
+    embed: async (_config, texts) => { embedded = texts; return [[1, 0]]; },
+    rank: async (_config, input, candidates) => {
+      rankedInput = input;
+      return {
+        model: 'jev-test', usage: { inputTokens: 0, outputTokens: 0 },
+        ranked: candidates.map((e) => ({ event: e, score: 3, confidence: 1, probabilities: [0, 0, 0, 1] as const, supportProbability: 1 })),
+      };
+    },
+  });
+  assert.deepEqual(embedded, [retrievalQuery(state)]);
+  assert.equal(rankedInput?.message, recommendationQuery(state));
+  assert.notEqual(rankedInput?.message, embedded[0]);
+  assert.deepEqual(rankedInput?.requirements, []);
+  assert.deepEqual(rankedInput?.preferences?.experiences, ['laughter']);
+  assert.deepEqual(result.recommendations.map(({ event: e }) => e.id), ['humor']);
 });
 
 void test('structured state survives evidence-empty results and ranker fallback', async () => {

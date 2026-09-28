@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { retrievalQuery } from '../lib/input-retrieval.ts';
+import { recommendationQuery, retrievalQuery } from '../lib/input-retrieval.ts';
+import { EXPERIENCES } from '../lib/input-experiences.ts';
 import { emptyIntentState, type IntentState } from '../lib/input-state.ts';
 import { rankEvents } from '../lib/search.ts';
 import type { EventRecord } from '../lib/types.ts';
@@ -137,4 +138,39 @@ void test('fallback is deterministic and long interests stay within the hard bou
   });
   assert.equal(retrievalQuery(intent), retrievalQuery(intent));
   assert.ok(retrievalQuery(intent).length <= 1200);
+});
+
+void test('experience concepts expand search while ranking retains the actual desired experience', () => {
+  const intent = state({
+    preferences: { mood: null, companion: 'partner', interests: ['Molière'], experiences: ['laughter'] },
+  });
+  const before = structuredClone(intent);
+  const query = retrievalQuery(intent);
+  assert.ok(query.includes(EXPERIENCES.laughter.query));
+  assert.ok(query.includes('Molière'));
+  const rankQuery = recommendationQuery(intent);
+  assert.ok(rankQuery.includes(EXPERIENCES.laughter.label));
+  assert.ok(!rankQuery.includes(EXPERIENCES.laughter.query));
+  assert.deepEqual(intent, before);
+  assert.deepEqual(intent.requirements, []);
+  assert.equal(intent.filters.category, null);
+
+  const events = [
+    event('generic', 'Bir Akşam', 'Canlı performans', 'Tiyatro'),
+    event('humor', 'Yanlış Anlaşılma', 'Molière komedisi ve mizah dolu sahneler', 'Tiyatro'),
+  ];
+  assert.equal(rankEvents(events, query)[0].id, 'humor');
+});
+
+void test('experience expansions respect genre exclusions and never expand a literal title alone', () => {
+  const intent = state({
+    requirements: [{ kind: 'genre', value: 'comedy', policy: 'exclude_positive_evidence' }],
+    preferences: { mood: null, companion: null, interests: [], experiences: ['laughter'] },
+  });
+  assert.doesNotMatch(retrievalQuery(intent), /comedy|komedi/iu);
+  assert.ok(retrievalQuery(intent).includes(EXPERIENCES.laughter.label));
+
+  const literal = state({ preferences: { mood: null, companion: null, interests: ['Dancing to Learn'] } });
+  assert.equal(retrievalQuery(literal), 'Dancing to Learn');
+  assert.equal(recommendationQuery(literal), 'Dancing to Learn');
 });

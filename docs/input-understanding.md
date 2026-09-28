@@ -12,6 +12,11 @@ without structured state asks for a new search instead of losing old requirement
 
 The state contains validated filters, source-evidence requirements, and optional
 mood, companion, and interest preferences. It contains no verified event facts.
+An optional `preferences.experiences` array adds four desired experiences:
+`laughter`, `learning`, `participation`, and `dancing`. Existing v1 states without
+that array remain valid. These are independent wishes, not event attributes or
+new category filters. Participation concerns the attendee joining the activity;
+dancing concerns the attendee dancing, rather than watching dancers perform.
 An interpretation either commits a complete update or returns the previous state
 with a clarification. Date and amount arithmetic remains in code. The model
 selects from closed choices and source spans; it cannot invent filter values.
@@ -51,6 +56,21 @@ every distinct shortlisted event above the support threshold can be returned.
 Retrieval text is deterministic Turkish/English prose, while the ranker also
 receives the optional preferences separately from mandatory requirements.
 Neither companion context nor a mood preference establishes a venue fact.
+
+Experience judgments share the existing first interpretation request. Code
+applies reliable additions/removals, preserves unmentioned wishes through
+follow-ups, and clears prior wishes on reset. Concrete topics and literal titles
+stay in interests. Typed source-span judgments keep generic experience wording
+out of interests so cancelling a wish cannot leave its duplicate search text
+behind. An uncertain or inconsistent association asks for clarification before
+committing a plan; opaque interests from older states are never guessed away.
+
+Search uses short bilingual experience expansions over the existing event
+vectors. The final ranker receives the actual desired experience separately,
+without treating expansion terms as user requirements. For example, educational
+program content can support learning, while a biography mentioning the artist's
+education does not. The event embedding text, vector profile, storage, and cached
+vectors are unchanged. No event-side AI tags or document re-embedding are added.
 
 Responses include a diagnostic funnel: storage rows retrieved, eligible merged
 sessions before and after source checks, supported/unknown/contradicted counts

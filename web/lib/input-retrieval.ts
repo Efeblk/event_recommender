@@ -1,4 +1,5 @@
 import { validateIntentState, type IntentState } from './input-state.ts';
+import { EXPERIENCES } from './input-experiences.ts';
 
 const CATEGORY_TEXT = {
   Konser: 'konser concert music',
@@ -54,6 +55,15 @@ const fold = (value: string) =>
  * repeated here.
  */
 export function retrievalQuery(state: IntentState): string {
+  return queryText(state, true);
+}
+
+/** Keeps search expansions out of the user's request shown to the ranker. */
+export function recommendationQuery(state: IntentState): string {
+  return queryText(state, false);
+}
+
+function queryText(state: IntentState, expandExperiences: boolean): string {
   const current = validateIntentState(state);
   const prohibited = new Set(
     current.requirements
@@ -96,6 +106,19 @@ export function retrievalQuery(state: IntentState): string {
   if (current.preferences.mood) add(MOOD_TEXT[current.preferences.mood]);
   if (current.preferences.companion)
     add(COMPANION_TEXT[current.preferences.companion]);
+
+  for (const experience of current.preferences.experiences ?? []) {
+    // These suggest search concepts, never a category filter or source fact.
+    // Omit an expansion when it would positively name an excluded genre.
+    const feature = EXPERIENCES[experience];
+    const terms = expandExperiences ? feature.query : feature.label;
+    const conflicts = [...prohibited].some((value) =>
+      (REQUIREMENT_TEXT[value] ?? value).split(/\s+/u).some((term) =>
+        term.length > 2 && fold(terms).split('_').includes(fold(term)),
+      ),
+    );
+    add(conflicts ? feature.label : terms);
+  }
 
   for (const interest of current.preferences.interests) {
     const normalized = fold(interest);

@@ -1,6 +1,7 @@
 import type { Requirement, RequirementKind } from './requirements.ts';
 import { validateFilters } from './search.ts';
 import { emptyFilters, type Filters } from './types.ts';
+import { EXPERIENCES, EXPERIENCE_VALUES, type Experience } from './input-experiences.ts';
 
 export interface IntentState {
   version: 1;
@@ -10,6 +11,7 @@ export interface IntentState {
     mood: 'calm' | 'energetic' | 'uplifting' | null;
     companion: 'partner' | 'friends' | 'family' | null;
     interests: string[];
+    experiences?: Experience[];
   };
 }
 
@@ -30,7 +32,7 @@ const FILTER_KEYS = [
   'startTimeToExclusive',
   'categories',
 ];
-const PREFERENCE_KEYS = ['mood', 'companion', 'interests'];
+const PREFERENCE_KEYS = ['mood', 'companion', 'interests', 'experiences'];
 const REQUIREMENT_KEYS = ['kind', 'value', 'policy'];
 const MOODS = ['calm', 'energetic', 'uplifting'] as const;
 const COMPANIONS = ['partner', 'friends', 'family'] as const;
@@ -183,7 +185,7 @@ export function validateIntentState(value: unknown): IntentState {
   }
 
   const preferences = record(input.preferences, 'Preferences');
-  exactKeys(preferences, PREFERENCE_KEYS, PREFERENCE_KEYS, 'Preferences');
+  exactKeys(preferences, PREFERENCE_KEYS, ['mood', 'companion', 'interests'], 'Preferences');
   if (
     preferences.mood !== null &&
     !MOODS.includes(preferences.mood as (typeof MOODS)[number])
@@ -207,6 +209,11 @@ export function validateIntentState(value: unknown): IntentState {
     new Set(preferences.interests).size !== preferences.interests.length
   )
     throw new Error('Interests are invalid.');
+  if (preferences.experiences !== undefined && (
+    !Array.isArray(preferences.experiences) || preferences.experiences.length > 4 ||
+    preferences.experiences.some((experience) => typeof experience !== 'string' || !EXPERIENCE_VALUES.includes(experience as Experience)) ||
+    new Set(preferences.experiences).size !== preferences.experiences.length
+  )) throw new Error('Experiences are invalid.');
 
   return {
     version: 1,
@@ -216,6 +223,7 @@ export function validateIntentState(value: unknown): IntentState {
       mood: preferences.mood as IntentState['preferences']['mood'],
       companion: preferences.companion as IntentState['preferences']['companion'],
       interests: [...(preferences.interests as string[])],
+      ...(Array.isArray(preferences.experiences) && preferences.experiences.length ? { experiences: [...preferences.experiences] as Experience[] } : {}),
     },
   };
 }
@@ -256,5 +264,6 @@ export function intentQuery(state: IntentState): string {
     if (![...excluded].some((term) => normalized.includes(term)))
       add(`interest:${interest}`);
   }
+  for (const experience of current.preferences.experiences ?? []) add(`experience:${EXPERIENCES[experience].query}`);
   return parts.join(' ') || 'Istanbul events';
 }

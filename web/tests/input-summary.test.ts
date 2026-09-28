@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { emptyIntentState } from '../lib/input-state.ts';
 import { intentSummary, requirementLabel } from '../lib/input-summary.ts';
+import { EXPERIENCES } from '../lib/input-experiences.ts';
 
 void test('visible plan separates hard group budget and evidence requirements from outing preferences', () => {
   const state = emptyIntentState();
@@ -23,4 +24,13 @@ void test('visible requirement wording preserves alternatives, conjunctions and 
   assert.equal(requirementLabel({ kind: 'content', value: 'swearing|sexual_content', policy: 'require_support' }), 'Küfür içermediği belirtilen ve Cinsel içerik içermediği belirtilen');
   assert.equal(requirementLabel({ kind: 'audience', value: 'age:7', policy: 'require_support' }), '7 yaşa uygun');
   assert.equal(requirementLabel({ kind: 'genre', value: 'rock', policy: 'exclude_positive_evidence' }), 'Rock olanlar hariç');
+});
+
+void test('experience wishes appear only as preferences and preserve literal interests', () => {
+  const state = emptyIntentState();
+  state.preferences.experiences = ['learning', 'participation'];
+  state.preferences.interests = ['Dancing to Learn'];
+  const summary = intentSummary(state, String);
+  assert.deepEqual(summary.required, []);
+  assert.deepEqual(summary.preferred, [EXPERIENCES.learning.label, EXPERIENCES.participation.label, 'Dancing to Learn']);
 });

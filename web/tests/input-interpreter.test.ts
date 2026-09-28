@@ -37,7 +37,7 @@ function responseFor(
     model: 'jev-1.13.0',
     answers: Object.fromEntries(Object.entries(request.questions).map(([id, question]) => {
       const options = Object.keys(question.criteria);
-      const selected = overrides[id] ?? defaults[id] ?? (id.startsWith('interest_') ? 'skip' : undefined) ?? (id.startsWith('req_') || id.startsWith('age_') || id.startsWith('category_') ? 'keep' : undefined);
+      const selected = overrides[id] ?? defaults[id] ?? (id.startsWith('interest_') ? 'skip' : undefined) ?? (id.startsWith('experience_') || id.startsWith('req_') || id.startsWith('age_') || id.startsWith('category_') ? 'keep' : undefined);
       assert.ok(options.includes(selected), `${selected} is available for ${id}`);
       return [id, { type: 'choice', choice: selected, confidence: 1, probabilities: Object.fromEntries(options.map((option) => [option, option === selected ? 1 : 0])) }];
     })),
@@ -577,7 +577,8 @@ void test('audience questions distinguish child cancellation from family suitabi
   assert.match(questions.req_audience_children.instructions, /condition: present/i);
   assert.match(questions.req_audience_children.criteria.remove, /çocuk gelmeyecek|will not attend/i);
   assert.match(questions.req_audience_children.criteria.exclude, /Do not use when.*will no longer attend/i);
-  assert.match(questions.req_audience_family_friendly.criteria.keep, /Child attendance or child suitability alone always means keep/i);
+  assert.match(questions.req_audience_family_friendly.criteria.keep, /Child attendance, child suitability, or excluding child-directed events alone always means keep/i);
+  assert.match(questions.req_audience_family_friendly.criteria.exclude, /Avoiding children’s events alone does not authorize this broader exclusion/i);
   assert.match(questions.req_audience_family_friendly.criteria.require, /whole family.*family-friendly.*aile dostu/i);
   assert.doesNotMatch(questions.req_genre_jazz.criteria.remove, /child|çocuk/i);
 });
