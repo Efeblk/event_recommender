@@ -2,6 +2,17 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import test from "node:test";
+import { prepareImportPages } from '../publish.mjs';
+
+test('publication preserves quarantine watermarks and rejects conflicting empty states', () => {
+  const page = { url: 'https://biletinial.com/tr-tr/tiyatro/example', events: [], quarantinedAt: '2026-09-28T01:00:00.000Z', quarantineReason: 'session_time_conflict' };
+  const now = new Date('2026-09-28T02:00:00.000Z');
+  assert.deepEqual(prepareImportPages([page], now).pages, [page]);
+  assert.deepEqual(prepareImportPages(prepareImportPages([page], now).pages, now).pages, [page]);
+  assert.throws(() => prepareImportPages([{ ...page, retiredAt: page.quarantinedAt }], now), /Invalid empty source state/);
+  assert.throws(() => prepareImportPages([{ ...page, quarantineReason: 'http_503' }], now), /Invalid empty source state/);
+  assert.throws(() => prepareImportPages([{ ...page, quarantinedAt: undefined }], now), /Invalid empty source state/);
+});
 
 const publish = resolve(import.meta.dirname, "../publish.mjs");
 

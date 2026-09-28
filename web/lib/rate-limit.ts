@@ -16,6 +16,18 @@ export type LimitConsumer = (
   expiresAt: number,
 ) => Promise<boolean>;
 
+export interface VisitorRateLimitEnv {
+  DEPLOYMENT_ENV?: string;
+  BIPLAN_PREVIEW_TESTING?: string;
+}
+
+/** Temporarily allows unrestricted visitor testing only in staging. */
+export function visitorRateLimitEnabled(env: VisitorRateLimitEnv) {
+  return !(
+    env.DEPLOYMENT_ENV === 'staging' && env.BIPLAN_PREVIEW_TESTING === 'true'
+  );
+}
+
 export function requestLimitBuckets(ip: string, paid: boolean, now: number) {
   const minute = Math.floor(now / 60000),
     hour = Math.floor(now / 3600000);

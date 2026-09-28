@@ -1,6 +1,15 @@
-export type Category = 'Konser' | 'Tiyatro' | 'Stand-up';
+import type { IntentState } from './input-state.ts';
+import type {
+  RequirementKind,
+  RequirementPolicy,
+} from './requirements.ts';
+
+export type Category = 'Konser' | 'Tiyatro' | 'Stand-up' | 'Workshop' | 'Sergi'
+  | 'Festival' | 'Spor' | 'Sinema' | 'Söyleşi' | 'Dans' | 'Gösteri'
+  | 'Eğitim' | 'Gezi' | 'Müze' | 'Diğer';
 export interface EventOffer {
   id: string;
+  sourceSessionIds?: string[];
   source?: EventRecord['source'];
   url: string;
   price: number | null;
@@ -28,6 +37,9 @@ export interface EventRecord {
   source?: 'biletinial' | 'bubilet' | 'biletix';
   sourceVersion?: string;
   extraction?: string;
+  /** The provider's original format label; unknown labels remain searchable. */
+  sourceCategory?: string;
+  sourceSessionIds?: string[];
   productionKey?: string;
   offers?: EventOffer[];
   mergedIds?: string[];
@@ -64,6 +76,45 @@ export interface Message {
 export interface Recommendation {
   event: EventRecord;
 }
+/** Unresolved user text is separate from the atomically committed intent. */
+export interface PendingInput {
+  message: string;
+  reason:
+    | 'budget_ambiguous'
+    | 'date_ambiguous'
+    | 'constraint_ambiguous'
+    | 'unsupported_location'
+    | 'unsupported_constraint'
+    | 'interpreter_unavailable';
+}
+export interface HardRequirementDiagnostics {
+  kind: RequirementKind;
+  /** Canonical derived value; never contains the user's raw query. */
+  value: string;
+  policy: RequirementPolicy;
+  supported: number;
+  unknown: number;
+  contradicted: number;
+}
+export interface SearchDiagnostics {
+  /** Rows returned by catalog storage before merging or admission checks. */
+  catalogRetrieved: number;
+  /** Eligible, non-excluded merged sessions evaluated for source evidence. */
+  eligibleBeforeSourceEvidence: number;
+  hardRequirements: HardRequirementDiagnostics[];
+  /** Sessions for which every hard requirement has source support. */
+  eligibleAfterSourceEvidence: number;
+  /** Eligible merged sessions removed by explicit alternative exclusions. */
+  alternativeExclusions: number;
+  /** Distinct productions sent to the final ranker or fallback ranking. */
+  distinctShortlist: number;
+  vectorCoverage: {
+    available: number;
+    eligible: number;
+  };
+  /** Null when no Jev support probability was evaluated. */
+  returnedAboveSupportThreshold: number | null;
+}
 export interface SearchResult {
   recommendations: Recommendation[];
   filters: Filters;
@@ -71,6 +122,12 @@ export interface SearchResult {
   status: 'results' | 'empty' | 'needs_input' | 'unsupported_location';
   notice: string | null;
   totalCandidates: number;
+  intentState?: IntentState;
+  pendingInput?: PendingInput;
+  excludedIds?: string[];
+  clarification?: { label: string; message: string }[];
+  resetRequired?: boolean;
+  diagnostics?: SearchDiagnostics;
 }
 export const emptyFilters: Filters = {
   dateFrom: null,
@@ -78,4 +135,6 @@ export const emptyFilters: Filters = {
   maxPrice: null,
   category: null,
 };
-export const CATEGORIES: Category[] = ['Konser', 'Tiyatro', 'Stand-up'];
+export const CATEGORIES: Category[] = ['Konser', 'Tiyatro', 'Stand-up', 'Workshop',
+  'Sergi', 'Festival', 'Spor', 'Sinema', 'Söyleşi', 'Dans', 'Gösteri',
+  'Eğitim', 'Gezi', 'Müze', 'Diğer'];

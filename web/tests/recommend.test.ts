@@ -308,6 +308,23 @@ await test('Jev returns every distinct supported event without padding rejected 
   );
 });
 
+await test('soonest final ordering keeps every admitted event and the same support threshold', () => {
+  const candidates = [
+    { ...event, id: 'late', title: 'Late', startsAt: '2026-10-03T18:00:00Z', url: 'https://example.test/late' },
+    { ...event, id: 'rejected', title: 'Rejected', startsAt: '2026-10-01T18:00:00Z', url: 'https://example.test/rejected' },
+    { ...event, id: 'early', title: 'Early', startsAt: '2026-10-02T18:00:00Z', url: 'https://example.test/early' },
+  ];
+  const ranked = candidates.map((candidate, index) => ({
+    event: candidate,
+    score: 3 - index,
+    confidence: 1,
+    probabilities: index === 1 ? [0, 0.31, 0.69, 0] as const : [0, 0, 0.7, 0.3] as const,
+    supportProbability: index === 1 ? 0.69 : 1,
+  }));
+  const selected = selectJevEvents(candidates, { ranked, model: 'jev-test', usage: { inputTokens: 0, outputTokens: 0 } }, 'soonest');
+  assert.deepEqual(selected.map(({ id }) => id), ['early', 'late']);
+});
+
 function assertRecommendedEvent(actual: EventRecord, expected: EventRecord) {
   const sourceFields = (record: EventRecord) => {
     return Object.fromEntries(

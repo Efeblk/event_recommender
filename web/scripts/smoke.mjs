@@ -222,6 +222,9 @@ try {
   const sync = await request('/api/admin/sync', {});
   assert.equal(sync.status, 401);
   await sync.arrayBuffer();
+  const retiredSync = await request('/api/admin/sync', {}, true);
+  assert.equal(retiredSync.status, 410, 'Legacy sampled sync must not bypass durable collection');
+  await retiredSync.arrayBuffer();
   const unauthorizedImport = await request('/api/admin/import', {});
   const unauthorizedDetail = await unauthorizedImport.text();
   assert.equal(unauthorizedImport.status, 401, unauthorizedDetail);
@@ -522,6 +525,77 @@ try {
   );
   assert.equal(badImport.status, 400);
   await badImport.arrayBuffer();
+  // A verified empty source must remove old rows and retain its freshness
+  // watermark so replaying an older successful import cannot resurrect them.
+  const retiredAt = new Date(Date.now() + 1000).toISOString();
+  const retiredImport = await request('/api/admin/import', {
+    schemaVersion: 1, pages: [{ url: bulk[0].url, events: [], retiredAt }],
+  }, true);
+  assert.equal(retiredImport.status, 200);
+  await retiredImport.arrayBuffer();
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url=?').bind(bulk[0].url).first()).count, 0);
+  const bulkStatusKey = `source_status:${createHash('sha256').update(bulk[0].url).digest('hex')}`;
+  assert.deepEqual(JSON.parse((await env.DB.prepare('SELECT value FROM metadata WHERE key=?').bind(bulkStatusKey).first()).value), {
+    checkedAt: retiredAt,
+    kind: 'retired',
+  });
+  const oldReplay = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: bulk }] }, true);
+  assert.equal(oldReplay.status, 200);
+  assert.equal((await oldReplay.json()).skipped, 1);
+  const equalReplay = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: bulk.map(event => ({ ...event, checkedAt: retiredAt })) }] }, true);
+  assert.equal(equalReplay.status, 200);
+  assert.equal((await equalReplay.json()).skipped, 1);
+  const reinstated = bulk.map(event => ({ ...event, checkedAt: new Date(Date.parse(retiredAt) + 1000).toISOString() }));
+  const reactivated = await request('/api/admin/import', { schemaVersion: 1, pages: [{ url: bulk[0].url, events: reinstated }] }, true);
+  assert.equal(reactivated.status, 200);
+  assert.equal((await reactivated.json()).imported, 101);
+  // Quarantine is a separate, evidenced empty state. It removes only this
+  // source, retains its distinct state and watermark, and requires newer verification.
+  const otherProviderCount = (await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url<>?').bind(bulk[0].url).first()).count;
+  const quarantinedAt = new Date(Date.parse(retiredAt) + 2000).toISOString();
+  const quarantined = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{
+      url: bulk[0].url,
+      events: [],
+      quarantinedAt,
+      quarantineReason: 'session_time_conflict',
+    }],
+  }, true);
+  assert.equal(quarantined.status, 200);
+  await quarantined.arrayBuffer();
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url=?').bind(bulk[0].url).first()).count, 0);
+  assert.equal((await env.DB.prepare('SELECT COUNT(*) AS count FROM events WHERE source_url<>?').bind(bulk[0].url).first()).count, otherProviderCount);
+  assert.deepEqual(JSON.parse((await env.DB.prepare('SELECT value FROM metadata WHERE key=?').bind(bulkStatusKey).first()).value), {
+    checkedAt: quarantinedAt,
+    kind: 'quarantined',
+  });
+  const quarantineOldReplay = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{ url: bulk[0].url, events: reinstated }],
+  }, true);
+  assert.equal(quarantineOldReplay.status, 200);
+  assert.equal((await quarantineOldReplay.json()).skipped, 1);
+  const quarantineEqualReplay = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{ url: bulk[0].url, events: bulk.map(event => ({ ...event, checkedAt: quarantinedAt })) }],
+  }, true);
+  assert.equal(quarantineEqualReplay.status, 200);
+  assert.equal((await quarantineEqualReplay.json()).skipped, 1);
+  const verifiedAfterQuarantine = bulk.map(event => ({
+    ...event,
+    checkedAt: new Date(Date.parse(quarantinedAt) + 1000).toISOString(),
+  }));
+  const quarantineReactivated = await request('/api/admin/import', {
+    schemaVersion: 1,
+    pages: [{ url: bulk[0].url, events: verifiedAfterQuarantine }],
+  }, true);
+  assert.equal(quarantineReactivated.status, 200);
+  assert.equal((await quarantineReactivated.json()).imported, 101);
+  assert.deepEqual(JSON.parse((await env.DB.prepare('SELECT value FROM metadata WHERE key=?').bind(bulkStatusKey).first()).value), {
+    checkedAt: verifiedAfterQuarantine[0].checkedAt,
+    kind: 'active',
+  });
   // Durable checkpoints must contain the canonical published DB, never a
   // caller-provided snapshot. R2 and D1 here are both disposable local bindings.
   const checkpointRequest = (body, authenticated = true) =>

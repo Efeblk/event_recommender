@@ -50,6 +50,32 @@ test("a page containing previously discovered productions does not end paginatio
   assert.equal(r.completion, "exhausted");
   assert.equal(r.urls.length, 2);
 });
+test("bounded listing sweeps resume past page one and discover the tail", async () => {
+  const seen = [], found = new Set();
+  let continuation = null;
+  for (let run = 0; run < 3; run++) {
+    const result = await biletinial(async (raw) => {
+      const page = Number(new URL(raw).searchParams.get("page"));
+      seen.push(page);
+      return JSON.stringify({ items: [item(`page-${page}`)], hasMore: page < 3 });
+    }, { maxPages: 1, continuation });
+    result.urls.forEach((url) => found.add(url));
+    continuation = result.continuation ?? null;
+    if (run < 2) assert.equal(result.completion, "page_limit");
+    else assert.equal(result.completion, "exhausted");
+  }
+  assert.deepEqual(seen, [1, 2, 3]);
+  assert.ok([...found].some((url) => url.endsWith("/page-3")));
+});
+test("a failed resumed page preserves the last durable listing cursor", async () => {
+  const first = await biletinial(async () => JSON.stringify({ items: [item("page-1")], hasMore: true }), { maxPages: 1 });
+  const failed = await biletinial(async (raw) => {
+    assert.equal(new URL(raw).searchParams.get("page"), "2");
+    throw new Error("offline");
+  }, { maxPages: 1, continuation: first.continuation });
+  assert.equal(failed.completion, "failed:offline");
+  assert.deepEqual(failed.continuation, first.continuation);
+});
 test("event-group pagination uses source configuration and Istanbul filter", async () => {
   const $ = load(
     `<script>var EVENT_GROUP_ID=311;var PAGE_SIZE=1;</script><script src='/EventGroup/eventGroupIndex.js'></script>`,
@@ -65,11 +91,11 @@ test("event-group pagination uses source configuration and Istanbul filter", asy
       assert.equal(u.searchParams.get("cityId"), "147");
       return JSON.stringify({
         TotalCount: 2,
-        Data: [{ SeoUrl: "show-" + seen.length, tipForUrl: "tiyatro" }],
+        Data: seen.length <= 2 ? [{ SeoUrl: "show-" + seen.length, tipForUrl: "tiyatro" }] : [],
       });
     },
   );
-  assert.deepEqual(seen, ["1", "2"]);
+  assert.deepEqual(seen, ["1", "2", "3"]);
   assert.equal(r.urls.length, 2);
   assert.equal(r.completion, "exhausted");
 });

@@ -1,0 +1,30 @@
+{
+  "items": [
+    {
+      "id": 9,
+      "name": "Seramik Atölyesi",
+      "organizerUrl": "egitim",
+      "seoUrl": "seramik-atolyesi",
+      "cityId": 77,
+      "cityName": "İstanbul Anadolu",
+      "saloonName": "Atölye Sahi",
+      "imageUrl": "/Uploads/Films/seramik.jpg",
+      "seances": [
+        ["2026-10-01T18:00:00+03:00"],
+        ["2026-10-02T18:00:00+03:00"]
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Açık Bilet Atölyesi",
+      "organizerUrl": "egitim",
+      "seoUrl": "acik-bilet",
+      "cityId": 5,
+      "cityName": "İstanbul Avrupa",
+      "saloonName": "Birden fazla mekanda",
+      "isOpenTicket": true,
+      "seances": []
+    }
+  ],
+  "TotalCount": 2
+}

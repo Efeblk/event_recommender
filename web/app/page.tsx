@@ -25,13 +25,16 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { IntentSummary } from '@/components/intent-summary';
 import { isAlternativesRequest } from '@/lib/intent';
+import type { IntentState } from '@/lib/input-state';
 import { groupFilterCount, groupFilterLabels } from '@/lib/ui-filters';
 import {
   emptyFilters,
   type EventRecord,
   type Filters,
   type Message,
+  type PendingInput,
   type SearchResult,
 } from '@/lib/types';
 
@@ -55,6 +58,9 @@ type SearchAttempt = {
   filters: Filters;
   history: Message[];
   excludeIds: string[];
+  alternativeIds: string[];
+  intentState?: IntentState;
+  pendingInput?: PendingInput;
 };
 type RetryAction =
   | { kind: 'events' }
@@ -233,6 +239,8 @@ export default function Home() {
   const [message, setMessage] = useState('');
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
   const [history, setHistory] = useState<Message[]>([]);
+  const [intentState, setIntentState] = useState<IntentState | undefined>();
+  const [pendingInput, setPendingInput] = useState<PendingInput | undefined>();
   const [lastRequest, setLastRequest] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [events, setEvents] = useState<EventRecord[]>([]);
@@ -344,7 +352,14 @@ export default function Home() {
       retryAttempt?.query ??
       (queryText.trim() || 'Seçtiğim filtrelere göre etkinlik bul.');
     const requestFilters = retryAttempt?.filters ?? filters;
-    const requestHistory = retryAttempt?.history ?? history.slice(-10);
+    const requestIntentState = retryAttempt
+      ? retryAttempt.intentState
+      : intentState;
+    const requestPendingInput = retryAttempt
+      ? retryAttempt.pendingInput
+      : pendingInput;
+    const requestHistory =
+      retryAttempt?.history ?? (requestIntentState ? [] : history.slice(-10));
     if (
       requestFilters.dateFrom &&
       requestFilters.dateTo &&
@@ -354,27 +369,31 @@ export default function Home() {
       setRetryAction(null);
       return;
     }
+    const alternativeIds =
+      retryAttempt?.alternativeIds ??
+      [
+        ...new Set([
+          ...excluded,
+          ...(result?.recommendations.flatMap(({ event }) => [
+            event.id,
+            ...(event.canonicalProductionKey
+              ? [event.canonicalProductionKey]
+              : []),
+            ...(event.canonicalShowKey ? [event.canonicalShowKey] : []),
+          ]) ?? []),
+        ]),
+      ].slice(-100);
     const excludeIds =
       retryAttempt?.excludeIds ??
-      (alternatives || isAlternativesRequest(query)
-        ? [
-            ...new Set([
-              ...excluded,
-              ...(result?.recommendations.flatMap(({ event }) => [
-                event.id,
-                ...(event.canonicalProductionKey
-                  ? [event.canonicalProductionKey]
-                  : []),
-                ...(event.canonicalShowKey ? [event.canonicalShowKey] : []),
-              ]) ?? []),
-            ]),
-          ].slice(-100)
-        : []);
+      (alternatives || isAlternativesRequest(query) ? alternativeIds : []);
     const attempt: SearchAttempt = {
       query,
       filters: { ...requestFilters },
       history: [...requestHistory],
       excludeIds: [...excludeIds],
+      alternativeIds: [...alternativeIds],
+      intentState: requestIntentState,
+      pendingInput: requestPendingInput,
     };
     controller.current?.abort();
     const generation = ++searchGeneration.current;
@@ -402,6 +421,10 @@ export default function Home() {
           history: requestHistory,
           filters: requestFilters,
           excludeIds,
+          alternativeIds,
+          intentVersion: 1,
+          intentState: requestIntentState,
+          pendingInput: requestPendingInput,
         }),
       });
       const data = (await response.json()) as SearchResult & { error?: string };
@@ -416,17 +439,35 @@ export default function Home() {
         return;
       }
       if (!response.ok) throw new Error(data.error || 'Arama tamamlanamadı.');
+      if (data.pendingInput?.reason === 'interpreter_unavailable') {
+        setError(
+          data.notice ||
+            'Araman şu anda yorumlanamadı. Birazdan tekrar deneyebilirsin.',
+        );
+        setRetryAction({ kind: 'search', attempt });
+        return;
+      }
       setResult(data);
       setFilters(data.filters);
+      setIntentState(data.intentState);
       const needsRevision =
         data.status === 'needs_input' || data.status === 'unsupported_location';
+      setPendingInput(needsRevision ? data.pendingInput : undefined);
       if (!needsRevision)
         setHistory((previous) =>
           [...previous, { role: 'user' as const, content: query }].slice(-10),
         );
-      setLastRequest(query);
+      setLastRequest(
+        requestPendingInput
+          ? `${requestPendingInput.message} (${query})`
+          : query,
+      );
       setMessage(needsRevision ? query : '');
-      setExcluded(excludeIds);
+      // A clarification has not committed a new search. Keep both previously
+      // excluded and currently displayed IDs for the eventual alternatives.
+      setExcluded(
+        needsRevision ? alternativeIds : (data.excludedIds ?? excludeIds),
+      );
       requestAnimationFrame(() => {
         if (generation !== searchGeneration.current) return;
         const reduceMotion = window.matchMedia(
@@ -472,6 +513,8 @@ export default function Home() {
     setMessage('');
     setFilters({ ...emptyFilters });
     setHistory([]);
+    setIntentState(undefined);
+    setPendingInput(undefined);
     setLastRequest('');
     setResult(null);
     setExcluded([]);
@@ -590,7 +633,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            {result && hasFilters && (
+            {result && hasFilters && !intentState && (
               <div className="active-filters" aria-label="Etkin filtreler">
                 {filters.dateFrom && <span>{filters.dateFrom}</span>}
                 {filters.dateTo && <span>{filters.dateTo}</span>}
@@ -707,6 +750,18 @@ export default function Home() {
               </span>
             </div>
           </div>
+          {result && intentState && (
+            <IntentSummary
+              state={intentState}
+              pending={!!pendingInput}
+              disabled={busy}
+              onEdit={() => {
+                textarea.current?.focus();
+                textarea.current?.scrollIntoView({ block: 'center' });
+              }}
+              onReset={reset}
+            />
+          )}
           {result?.status === 'results' && (
             <p className="recommendation-hint">
               Diğer seçenekleri görmek için “Başka seçenekler”i deneyebilirsin.
@@ -762,14 +817,42 @@ export default function Home() {
                       : result?.notice ||
                         'Tarihi, bütçeyi veya etkinlik türünü değiştirip yeniden deneyebilirsin.'}
               </p>
+              {result?.clarification?.length ? (
+                <div
+                  className="result-tools clarification-actions"
+                  aria-label="Bütçeyi netleştir"
+                >
+                  {result.clarification.map((choice) => (
+                    <Button
+                      key={choice.label}
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void search(choice.message)}
+                    >
+                      {choice.label}
+                    </Button>
+                  ))}
+                </div>
+              ) : null}
               {result?.status === 'needs_input' ||
               result?.status === 'unsupported_location' ? (
-                <Button
-                  variant="outline"
-                  onClick={() => textarea.current?.focus()}
-                >
-                  Aramayı düzenle
-                </Button>
+                <div className="result-tools">
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      result?.resetRequired
+                        ? reset()
+                        : textarea.current?.focus()
+                    }
+                  >
+                    {result?.resetRequired ? 'Yeni arama' : 'Aramayı düzenle'}
+                  </Button>
+                  {pendingInput && !result?.resetRequired ? (
+                    <Button variant="ghost" onClick={reset}>
+                      Yeni arama
+                    </Button>
+                  ) : null}
+                </div>
               ) : (
                 <Button variant="outline" onClick={reset}>
                   Filtreleri kaldır
@@ -849,10 +932,11 @@ export default function Home() {
             <summary>Veriler nasıl kullanılıyor?</summary>
             <div>
               <p>
-                Arama mesajın ve bu sekmedeki son kullanıcı mesajların, öneri
-                üretmek için AI araması etkin olduğunda Voyage AI ve TypeSafe
-                AI’a gönderilir. Etkinlik bilgileri de eşleştirme ve sıralama
-                için bu servislere gönderilebilir.
+                Arama mesajın, önceki isteklerinden tutulan tercihler ve
+                gerektiğinde son kullanıcı mesajların, öneri üretmek için AI
+                araması etkin olduğunda Voyage AI ve TypeSafe AI’a gönderilir.
+                Etkinlik bilgileri de eşleştirme ve sıralama için bu servislere
+                gönderilebilir.
               </p>
               <p>
                 Bi’ Plan sohbet geçmişini sunucuda saklamaz; arayüzdeki kopya bu

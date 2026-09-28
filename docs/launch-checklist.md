@@ -10,6 +10,14 @@ The [subsequent staging validation](gcp-staging-validation-2026-09-27.md)
 records completed embedding, recommendation/source, rollback and full-restore
 checks, with the unattended observation and other public-release gates still open.
 
+The user-authorized temporary preview is accessible without sign-in. The
+[September 28 live evaluation](preview-live-evaluation-2026-09-28.md) records its
+visitor-throttle bypass, retained daily AI cap, vector coverage at that time and
+interpreter availability failures. The subsequent
+[catalog expansion and merge evidence](catalog-coverage-2026-09-28.md) records
+the enlarged inventory, remaining source failures and updated embedding coverage.
+This testing link does not establish readiness for a public production launch.
+
 1. **Exact-revision verification:** pass web/collector tests, typecheck, lint,
    deployment validation, Node standalone startup and Linux container checks on
    the candidate revision. Keep the Cloudflare build/smoke green for recovery.
@@ -39,9 +47,16 @@ checks, with the unattended observation and other public-release gates still ope
    enabling per-IP public limits. Test concurrent Firestore caps and the global AI
    budget. Establish safe cleanup for unreferenced snapshots and expired counters;
    do not expire referenced objects merely because they are old.
+
+   For the temporary public staging preview, `BIPLAN_PREVIEW_TESTING=true`
+   disables only per-visitor request throttles when `DEPLOYMENT_ENV=staging`;
+   the global `AI_DAILY_LIMIT` remains enforced. Remove the flag before public
+   production launch. Production ignores the flag and keeps visitor limits
+   enabled.
+
 7. **Limited beta:** obtain publication authorization, deploy the exact tested
    image digest into separate production resources, run fresh collection and
-   readiness checks, then invite the first 20?50 testers. Verify privacy/data-use
+   readiness checks, then invite the first 20–50 testers. Verify privacy/data-use
    and source/price notices. Donation and ad integrations remain placeholders.
 
 Follow the free-first preference. The deployed private staging profile is

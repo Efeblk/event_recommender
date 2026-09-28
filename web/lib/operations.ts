@@ -2,7 +2,7 @@ import type { EventRecord } from './types.ts';
 
 export const CHECKPOINT_POINTER_KEY = 'collection_checkpoint';
 export const MAX_REPORT_BYTES = 128 * 1024;
-export const MAX_CHECKPOINT_BYTES = 20 * 1024 * 1024;
+export const MAX_CHECKPOINT_BYTES = 32 * 1024 * 1024;
 export const MAX_CHECKPOINT_EVENTS = 20_000;
 
 export interface CollectionReport {

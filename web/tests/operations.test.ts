@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  MAX_CHECKPOINT_BYTES,
   checkpointReadiness,
   parseCollectionReport,
   parseCheckpointPointer,
@@ -17,6 +18,12 @@ const pointer: CheckpointPointer = {
   bytes: 1000,
   summary: { blocked: null },
 };
+
+await test('checkpoint pointer accepts the 32 MiB bound and rejects larger objects', () => {
+  assert.equal(MAX_CHECKPOINT_BYTES, 32 * 1024 * 1024);
+  assert.ok(parseCheckpointPointer(JSON.stringify({ ...pointer, bytes: MAX_CHECKPOINT_BYTES })));
+  assert.equal(parseCheckpointPointer(JSON.stringify({ ...pointer, bytes: MAX_CHECKPOINT_BYTES + 1 })), null);
+});
 
 await test('collection reports reject blocked and malformed runs', () => {
   const summary = {

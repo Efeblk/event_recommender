@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "referenceInstant": "2026-09-28T12:00:00+03:00",
+  "timeZone": "Europe/Istanbul",
+  "catalog": "work/input-understanding-20260928/current-catalog/events.json",
+  "catalogProvenance": "work/input-understanding-20260928/current-catalog/provenance.json",
+  "note": "Frozen before live evaluation. Experiences are optional preferences, never source facts or hard constraints. Labels below are a small evidence set for these cases, not a catalog-wide recall claim.",
+  "cases": [
+    {
+      "id": "tr_laughter_saturday_partner_nonconcert",
+      "message": "Cumartesi sevgilimle biraz kafamız dağılsın, bol bol gülelim; konser olmasın.",
+      "expected": {
+        "action": "search",
+        "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "excludedCategories": ["Konser"] },
+        "requirements": [],
+        "companion": "partner",
+        "experiences": ["laughter"]
+      },
+      "retrievalLabels": {
+        "accepted": ["0778570ac9078742df4ddb62", "37ac8373a7fc1447d79521b5"],
+        "unsupportedFit": []
+      },
+      "rank": true
+    },
+    {
+      "id": "en_learning_no_children",
+      "message": "I'd enjoy learning something new at an event. No children's events, please.",
+      "expected": {
+        "action": "search",
+        "requirements": ["exclude_positive_evidence:audience:children"],
+        "experiences": ["learning"]
+      },
+      "retrievalLabels": {
+        "accepted": [],
+        "unsupportedFit": ["019d144628c973d5d88828cc"]
+      }
+    },
+    {
+      "id": "tr_optional_participation",
+      "message": "Cumartesi konser olmasın; seyirci kalmak yerine işin içine katılabileceğim bir şey güzel olur.",
+      "expected": {
+        "action": "search",
+        "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "excludedCategories": ["Konser"] },
+        "requirements": [],
+        "experiences": ["participation"]
+      },
+      "retrievalLabels": {
+        "accepted": ["8712fce64f5d27375be62dc2", "f576854431fb23b50542a804"],
+        "unsupportedFit": []
+      },
+      "rank": true
+    },
+    {
+      "id": "en_attendee_dancing",
+      "message": "I'd love an evening where we can dance ourselves rather than watch dancers perform.",
+      "expected": { "action": "search", "requirements": [], "experiences": ["dancing"] },
+      "retrievalLabels": {
+        "accepted": ["07eae2897d7f0b0620074a5e"],
+        "unsupportedFit": ["262afbd21aa86bf7d48d3c9b", "0f978bc384d63e36a2ceb37b"]
+      }
+    },
+    {
+      "id": "literal_dancing_to_learn",
+      "message": "“Dancing to Learn” adlı gösteriyi bul; başlıktaki kelimeler ayrıca tercihim değil.",
+      "expected": { "action": "search", "requirements": [], "experiences": [], "interestIncludes": ["Dancing to Learn"] },
+      "retrievalLabels": { "accepted": [], "unsupportedFit": [] }
+    },
+    {
+      "id": "ordinary_vague_partner",
+      "message": "Sevgilimle İstanbul'da güzel bir etkinlik arıyoruz.",
+      "expected": { "action": "search", "requirements": [], "companion": "partner", "experiences": [] },
+      "retrievalLabels": { "accepted": [], "unsupportedFit": [] }
+    },
+    {
+      "id": "followup_cancel_participation",
+      "parent": "tr_optional_participation",
+      "message": "Aslında katılmak istemiyorum, sadece izleyeyim. Tarih ve konser olmasın şartı aynı.",
+      "expected": {
+        "action": "search",
+        "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "excludedCategories": ["Konser"] },
+        "requirements": [],
+        "experiences": []
+      },
+      "retrievalLabels": { "accepted": [], "unsupportedFit": ["8712fce64f5d27375be62dc2", "f576854431fb23b50542a804"] }
+    },
+    {
+      "id": "reset_then_dancing",
+      "parent": "en_learning_no_children",
+      "message": "Start over and forget those conditions. I'd like somewhere we can dance.",
+      "expected": { "action": "reset", "requirements": [], "experiences": ["dancing"] },
+      "retrievalLabels": {
+        "accepted": ["07eae2897d7f0b0620074a5e"],
+        "unsupportedFit": ["262afbd21aa86bf7d48d3c9b", "0f978bc384d63e36a2ceb37b"]
+      }
+    }
+  ],
+  "labelEvidence": [
+    {
+      "id": "0778570ac9078742df4ddb62",
+      "label": "supports_laughter",
+      "sourceExcerpt": "mizah ve kahkaha dolu komedi gecelerine"
+    },
+    {
+      "id": "37ac8373a7fc1447d79521b5",
+      "label": "supports_laughter",
+      "sourceExcerpt": "bol kahkaha ve keyif dolu anların tadını çıkarıyorsunuz"
+    },
+    {
+      "id": "8712fce64f5d27375be62dc2",
+      "label": "supports_participation",
+      "sourceExcerpt": "seyircilerin aktif katılımıyla"
+    },
+    {
+      "id": "f576854431fb23b50542a804",
+      "label": "supports_participation",
+      "sourceExcerpt": "seyircilerin aktif katılımıyla"
+    },
+    {
+      "id": "07eae2897d7f0b0620074a5e",
+      "label": "supports_attendee_dancing",
+      "sourceExcerpt": "Dj eşliğinde canlı performans"
+    },
+    {
+      "id": "262afbd21aa86bf7d48d3c9b",
+      "label": "unsupported_attendee_dancing_fit",
+      "sourceExcerpt": "Tango After Dark Dans Gösterisi"
+    },
+    {
+      "id": "0f978bc384d63e36a2ceb37b",
+      "label": "unsupported_attendee_dancing_fit",
+      "sourceExcerpt": "sanat yönetmenliği ve koreografisiyle"
+    },
+    {
+      "id": "019d144628c973d5d88828cc",
+      "label": "unsupported_attendee_learning_fit",
+      "sourceExcerpt": "Türk Sanat Müziği korosunda Türk müziği eğitimi almış"
+    }
+  ]
+}

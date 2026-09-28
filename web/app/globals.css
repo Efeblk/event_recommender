@@ -492,6 +492,69 @@ button:focus-visible {
 .event-offers svg {
   flex: none;
 }
+.intent-summary {
+  margin: 0 0 24px;
+  padding: 18px;
+  border: 1px solid var(--line, #d7dbcf);
+  border-radius: 12px;
+  background: #f8f8f0;
+  font-size: 13px;
+}
+.intent-summary-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.intent-summary-heading > div {
+  display: flex;
+  gap: 16px;
+}
+.intent-summary button {
+  color: inherit;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.intent-summary button:disabled {
+  cursor: wait;
+  opacity: .5;
+}
+.intent-summary-row {
+  margin: 10px 0 0;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.intent-summary-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #4f6557;
+}
+.intent-summary ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.intent-summary li {
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #e9eddf;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.intent-summary p {
+  margin: 12px 0 0;
+  color: #4f6557;
+  line-height: 1.6;
+}
 .recommendation-hint {
   margin: -8px 0 20px;
   color: #4f6557;
@@ -529,9 +592,13 @@ button:focus-visible {
 }
 .result-tools {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 8px;
   margin-top: 28px;
+}
+.clarification-actions {
+  margin: 20px 0;
 }
 .empty-state {
   border: 1px dashed #bdc7ba;

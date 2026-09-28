@@ -1,4 +1,4 @@
-import { type EventRecord, type Filters, type Message } from './types.ts';
+import { CATEGORIES, type EventRecord, type Filters, type Message } from './types.ts';
 import { validateFilters, todayInIstanbul } from './search.ts';
 import { structured, type AIConfig } from './providers.ts';
 export {
@@ -16,7 +16,7 @@ const filterSchema = {
     maxPrice: { type: ['number', 'null'] },
     category: {
       type: ['string', 'null'],
-      enum: ['Konser', 'Tiyatro', 'Stand-up', null],
+      enum: [...CATEGORIES, null],
     },
     query: { type: 'string' },
     clarification: nullableString,

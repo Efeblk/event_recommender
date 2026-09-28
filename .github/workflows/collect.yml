@@ -82,8 +82,21 @@ jobs:
           mkdir -p collector/state
           cp web/data/events.json collector/state/events.json
           echo "Destination is not configured; this run produces artifacts only." >> "$GITHUB_STEP_SUMMARY"
+      - name: Restore durable coverage backlog
+        uses: actions/cache/restore@v4
+        with:
+          path: collector/state/coverage.json
+          key: collector-coverage-${{ matrix.environment }}-${{ github.run_id }}
+          restore-keys: collector-coverage-${{ matrix.environment }}-
       - name: Collect public listings including later pages
-        run: npm run collect --prefix collector -- --limit 100 --discovery-pages 20 --snapshot state/events.json
+        # Leave room for publication before the overall job deadline.
+        run: npm run collect --prefix collector -- --max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20 --snapshot state/events.json
+      - name: Save durable coverage backlog
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: collector/state/coverage.json
+          key: collector-coverage-${{ matrix.environment }}-${{ github.run_id }}
       - name: Import, checkpoint, and read back canonical state
         if: env.BIPLAN_URL != ''
         env:
@@ -116,5 +129,6 @@ jobs:
             collector/output/soak-evidence.json
             collector/output/publication.json
             collector/state/events.json
+            collector/state/coverage.json
           if-no-files-found: warn
           retention-days: 14

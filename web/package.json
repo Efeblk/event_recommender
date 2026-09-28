@@ -30,7 +30,8 @@
     "deploy:run": "node scripts/deploy.mjs deploy",
     "test:browser": "playwright test",
     "test:smoke:node": "node scripts/smoke-node.mjs",
-    "test:deploy:gcp": "node scripts/check-gcp-deploy-config.mjs"
+    "test:deploy:gcp": "node scripts/check-gcp-deploy-config.mjs",
+    "test:input-intent": "node --experimental-strip-types scripts/check-input-intent.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",

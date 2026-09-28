@@ -40,6 +40,18 @@ export const CATEGORY_NEGATION =
   '(?:istemiyorum|istemiyoruz|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disi|disinda|disindaki|yerine|bosver)';
 
 const rejectionTerms = [
+  ['workshop', /\b(?:workshops?|atolye(?:ler)?)\b/, 'Workshop'],
+  ['sergi', /\b(?:sergi(?:ler)?|exhibitions?)\b/, 'Sergi'],
+  ['festival', /\bfestivals?\b/, 'Festival'],
+  ['spor', /\b(?:spor(?:\s+etkinligi)?|sports?(?:\s+events?)?)\b/, 'Spor'],
+  ['sinema', /\b(?:sinema|cinema|movie\s+screenings?|film\s+gosterimi)\b/, 'Sinema'],
+  ['soylesi', /\b(?:soylesi(?:ler)?|talks?)\b/, 'Söyleşi'],
+  ['dans', /\b(?:dans\s+gosterisi|dance\s+performances?)\b/, 'Dans'],
+  ['gosteri', /\b(?:gosteri(?:ler)?|stage\s+shows?)\b/, 'Gösteri'],
+  ['egitim', /\b(?:egitim\s+etkinligi|training\s+events?|classes|courses)\b/, 'Eğitim'],
+  ['gezi', /\b(?:gezi(?:ler)?|guided\s+tours?)\b/, 'Gezi'],
+  ['muze', /\b(?:muze(?:ler)?|museums?)\b/, 'Müze'],
+  ['diger', /\b(?:diger\s+kategori|other\s+category)\b/, 'Diğer'],
   ['elektronik muzik', /\belektronik\s+muzik\b/, null],
   ['cocuk tiyatrosu', /\bcocuk\s+tiyatro(?:su(?:na|nda|nu)?|ya|yu)?\b/, null],
   ['cocuk etkinligi', /\bcocuk\s+etkinligi\b/, null],
@@ -116,7 +128,7 @@ function rejectionAnalysis(message: string) {
         const matchStart = match.index ?? 0;
         const tail = candidate.slice(matchStart + match[0].length);
         const coordinatedTail =
-          /^\s*(?:da|de)?\s*$|^\s*(?:ve|veya|ya da|and|or|,)\s+(?:cocuk\s+etkinligi|cocuk\s+tiyatro(?:su(?:na|nda|nu)?|ya|yu)?|cocuk\s+oyunu|konser(?:ler(?:e|i|in|den|de)?|e|i|in|den|de)?|concerts?|muzik|music|tiyatro(?:lar|ya|yu|su(?:na|nda|nu)?)?|theatre|theater|stand[ -]?up)\s*$/.test(
+          /^\s*(?:da|de)?\s*$|^\s*(?:ve|veya|ya da|and|or|,)\s+(?:cocuk\s+etkinligi|cocuk\s+tiyatro(?:su(?:na|nda|nu)?|ya|yu)?|cocuk\s+oyunu|konser(?:ler(?:e|i|in|den|de)?|e|i|in|den|de)?|concerts?|muzik|music|tiyatro(?:lar|ya|yu|su(?:na|nda|nu)?)?|theatre|theater|stand[ -]?up|workshops?|atolye(?:ler)?|sergi(?:ler)?|exhibitions?|festivals?|spor(?:\s+etkinligi)?|sports?(?:\s+events?)?|sinema|cinema|movie\s+screenings?|film\s+gosterimi|soylesi(?:ler)?|talks?|dans\s+gosterisi|dance\s+performances?|gosteri(?:ler)?|stage\s+shows?|egitim\s+etkinligi|training\s+events?|classes|courses|gezi(?:ler)?|guided\s+tours?|muze(?:ler)?|museums?|diger\s+kategori|other\s+category)\s*$/.test(
             tail,
           );
         const genreBeforeConcert =
@@ -194,10 +206,28 @@ const categoryPatterns: Array<[Category, RegExp]> = [
     /\b(?:tiyatro(?:ya|da|yu|lar|su(?:na|nda|nu)?)?|theatre|theater|sahne oyunu|comedy play)\b/,
   ],
   ['Stand-up', /\b(?:stand[ -]?up)\b/],
+  ['Workshop', /\b(?:workshops?|atolye(?:ler)?)\b/],
+  ['Sergi', /\b(?:sergi(?:ler)?|exhibitions?)\b/],
+  ['Festival', /\bfestivals?\b/],
+  ['Spor', /\b(?:spor(?:\s+etkinligi)?|sports?(?:\s+events?)?)\b/],
+  ['Sinema', /\b(?:sinema|cinema|movie\s+screenings?|film\s+gosterimi)\b/],
+  ['Söyleşi', /\b(?:soylesi(?:ler)?|talks?)\b/],
+  ['Dans', /\b(?:dans\s+gosterisi|dance\s+performances?)\b/],
+  [
+    'Gösteri',
+    /\b(?:stage\s+shows?|sahne\s+gosteri(?:si|ye|ler)?|gosteri(?:ye|ler)?\s+(?:olsun|istiyorum|isterim|gidelim|izlemek|oner\w*|bul\w*))\b/,
+  ],
+  ['Eğitim', /\b(?:egitim\s+etkinligi|training\s+events?|classes|courses)\b/],
+  ['Gezi', /\b(?:gezi(?:ler)?|guided\s+tours?)\b/],
+  ['Müze', /\b(?:muze(?:ler)?|museums?)\b/],
+  ['Diğer', /\b(?:diger\s+kategori|other\s+category)\b/],
 ];
 
 export function requestedCategories(normalizedMessage: string): Category[] {
-  const positiveText = positiveCategoryText(normalizedMessage);
+  const positiveText = positiveCategoryText(normalizedMessage).replace(
+    /\b(?:workshops?|atolye(?:ler)?)\s+(?:olabilir|de olabilir|could be (?:nice|good|fine)|would be (?:nice|good|fine))\b/g,
+    ' ',
+  );
   const categories = categoryPatterns
     .filter(([, pattern]) => pattern.test(positiveText))
     .map(([category]) => category);
@@ -236,7 +266,7 @@ export function categoryIntent(message: string): CategoryIntent {
         ? 'Tiyatro'
         : term === 'stand-up'
           ? 'Stand-up'
-          : null;
+          : rejectionTerms.find(([name]) => name === term)?.[2] ?? null;
   const categoryState = new Map<Category, 'positive' | 'negative'>();
   const rejected = new Set<string>();
   const positiveParts: string[] = [];

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { load } from "cheerio";
 import { categorySupportedByEvent, detailUrl, discover, extract } from "../adapters.mjs";
-import { validateEvent, reconcile, publicationGate, productionKey } from "../pipeline.mjs";
+import { MAX_EVENT_PRICE, validateEvent, reconcile, publicationGate, productionKey } from "../pipeline.mjs";
 const now = new Date("2026-09-09T09:00:00Z");
 const bubilet = JSON.parse(
   await readFile(new URL("./fixtures/bubilet.json", import.meta.url), "utf8"),
@@ -27,7 +27,7 @@ await test("explicit workshop and talk evidence overrides a provider music categ
       "Lego ve Resimle Geleceği Tasarlıyorum Yaş Grubu: 4-7",
       "Lego ve Resimle Geleceği Tasarlıyorum Atölyesi Bu atölyede çocuklar üretir.",
     ),
-    null,
+    'Workshop',
   );
   assert.equal(
     categorySupportedByEvent(
@@ -35,7 +35,7 @@ await test("explicit workshop and talk evidence overrides a provider music categ
       "Miles: Bir Caz İkonunun Anatomisi",
       "Bu keyifli söyleşi Miles Davis'i ele alıyor. Moderatör ve panelistler katılıyor.",
     ),
-    null,
+    'Söyleşi',
   );
   assert.equal(
     categorySupportedByEvent(
@@ -51,10 +51,39 @@ await test("explicit workshop and talk evidence overrides a provider music categ
   );
   assert.equal(
     categorySupportedByEvent("Konser", "Konser Atölyesi", "Bu atölyede ritim öğrenilir."),
-    null,
+    'Workshop',
   );
 });
 const url = "https://www.bubilet.com.tr/istanbul/etkinlik/sebnem-ferah";
+
+await test("Bubilet uses the deepest recognized breadcrumb and preserves its raw label", async () => {
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { position: 1, name: "Konser" },
+      { position: 2, name: "Workshop" },
+    ],
+  };
+  const events = await extract(wrap([breadcrumb, bubilet]), "bubilet", url, null, now);
+  assert.equal(events[0].category, "Workshop");
+  assert.equal(events[0].sourceCategory, "Workshop");
+});
+
+await test("Bubilet ignores an event-self breadcrumb even when its title resembles music", async () => {
+  const schema = structuredClone(bubilet);
+  schema.name = "Rock Portre Çalışması";
+  const breadcrumb = {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { position: 3, name: schema.name, item: url },
+      { position: 1, name: "Ana Sayfa" },
+      { position: 2, name: "Workshop" },
+    ],
+  };
+  const events = await extract(wrap([breadcrumb, schema]), "bubilet", url, null, now);
+  assert.equal(events[0].category, "Workshop");
+  assert.equal(events[0].sourceCategory, "Workshop");
+});
 
 await test("real Bubilet schema yields all three individual sessions, not aggregate price/date", async () => {
   const events = await extract(wrap(bubilet), "bubilet", url, "Konser", now);
@@ -84,7 +113,28 @@ await test("Biletix embedded state groups ticket types and converts kurus to TRY
   assert.equal(events[0].availability, "available");
   assert.equal(events[0].startsAt, "2026-09-18T18:00:00.000Z");
 });
-await test("Biletix MUSIC detail is rejected when its event evidence says talk", async () => {
+await test("Biletix preserves high safe minor-unit prices and rejects unsafe values", async () => {
+  const extractPrice = async (minorPrice) => {
+    const state = structuredClone(biletix);
+    for (const value of Object.values(state))
+      if (Array.isArray(value.b?.data))
+        for (const row of value.b.data)
+          if (row.active === true && row.status === "s01_onsale") row.minPrice = minorPrice;
+    const events = await extract(
+      load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
+      "biletix",
+      "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      null,
+      now,
+    );
+    return events[0].price;
+  };
+  assert.equal(await extractPrice(15000025), 150000.25);
+  assert.equal(await extractPrice(Number.MAX_SAFE_INTEGER), Number.MAX_SAFE_INTEGER / 100);
+  assert.equal(await extractPrice(Number.MAX_SAFE_INTEGER + 1), null);
+  assert.equal(await extractPrice(Number.POSITIVE_INFINITY), null);
+});
+await test("Biletix MUSIC detail is retained as a talk when its evidence says talk", async () => {
   const state = structuredClone(biletix);
   const detail = Object.values(state)
     .map((entry) => entry?.b?.data)
@@ -92,16 +142,14 @@ await test("Biletix MUSIC detail is rejected when its event evidence says talk",
   detail.eventName = "Miles: Bir Caz İkonunun Anatomisi";
   detail.eventDescription = "Bu keyifli söyleşi Miles Davis'i ele alıyor. Moderatör ve panelistler katılıyor.";
   detail.eventCategoryCode = "MUSIC";
-  await assert.rejects(
-    extract(
+  const events = await extract(
       load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
       "biletix",
       "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
       null,
       now,
-    ),
-    /unsupported_category/,
   );
+  assert.equal(events[0].category, 'Söyleşi');
 });
 await test("Biletix unknown or inactive statuses are never offered as on sale", async () => {
   const state = structuredClone(biletix);
@@ -209,6 +257,54 @@ await test("Bubilet ignores a false Istanbul JSON-LD date corroborated as anothe
   assert.equal(events.length, state.eventSessions.length);
   assert.ok(events.some((item) => item.city === "İstanbul"));
 });
+await test("Bubilet excludes the real Gastro shape when eventSessions prove every session is outside Istanbul", async () => {
+  const dates = ["2026-10-02T10:00:00+00:00", "2026-10-03T09:00:00+00:00", "2026-10-04T09:00:00+00:00"],
+    venue = "Eskişehir Büyükşehir Belediyesi Kentpark",
+    schema = {
+      ...structuredClone(bubilet),
+      name: "Eskişehir Gastro Fest",
+      startDate: dates[0],
+      location: {
+        ...structuredClone(bubilet.location),
+        name: venue,
+        address: { ...structuredClone(bubilet.location.address), addressLocality: "İstanbul" },
+      },
+      subEvent: dates.map((startDate) => ({
+        "@type": "Event",
+        name: "Eskişehir Gastro Fest",
+        startDate,
+        location: {
+          "@type": "Place",
+          name: venue,
+          address: { "@type": "PostalAddress", addressLocality: "İstanbul" },
+        },
+      })),
+    },
+    state = {
+      ...structuredClone(sessions),
+      eventSessions: dates.map((date, index) => ({
+        sessionId: 269039 + index,
+        cityId: 26,
+        date,
+        venueName: venue,
+      })),
+      allSessions: [],
+    };
+  const events = await extract(wrap(schema, state), "bubilet", url, "Festival", now);
+  assert.deepEqual(events, []);
+});
+await test("Bubilet keeps conflicting detailed city evidence fail-closed", async () => {
+  const schema = structuredClone(bubilet), state = structuredClone(sessions), node = schema.subEvent[0];
+  state.eventSessions = [{ sessionId: 900, cityId: 26, date: node.startDate, venueName: node.location.name }];
+  state.allSessions = [{ sessionId: 901, cityId: 34, date: node.startDate, venueName: node.location.name }];
+  await assert.rejects(extract(wrap(schema, state), "bubilet", url, "Konser", now), /session_coverage_mismatch/);
+});
+await test("Bubilet keeps missing eventSessions city evidence fail-closed", async () => {
+  const schema = structuredClone(bubilet), state = structuredClone(sessions), node = schema.subEvent[0];
+  state.eventSessions = [{ sessionId: 900, date: node.startDate, venueName: node.location.name }];
+  state.allSessions = [];
+  await assert.rejects(extract(wrap(schema, state), "bubilet", url, "Konser", now), /session_coverage_mismatch/);
+});
 await test("Bubilet keeps ambiguous allSessions city evidence fail-closed", async () => {
   const schema = structuredClone(bubilet),
     state = structuredClone(sessions),
@@ -263,4 +359,13 @@ await test("Bubilet uses each session venue even when JSON-LD repeats the first 
   schema.subEvent[2].location = structuredClone(schema.subEvent[0].location);
   const events = await extract(wrap(schema), "bubilet", url, "Konser", now);
   assert.equal(events[2].venue, sessions.eventSessions[2].venueName);
+});
+
+await test("validates legitimate high TRY prices without losing safe numeric bounds", async () => {
+  const [parsed] = await extract(wrap(bubilet), "bubilet", url, "Konser", now);
+  const base = { ...parsed, title: "Global Marketing Summit", price: 59400 };
+  assert.deepEqual(validateEvent(base, now), []);
+  assert.deepEqual(validateEvent({ ...base, price: MAX_EVENT_PRICE }, now), []);
+  assert.ok(validateEvent({ ...base, price: MAX_EVENT_PRICE + 1 }, now).includes("price_outlier"));
+  assert.ok(validateEvent({ ...base, price: Number.POSITIVE_INFINITY }, now).includes("price_outlier"));
 });

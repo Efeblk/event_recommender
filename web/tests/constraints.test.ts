@@ -6,7 +6,12 @@ import {
   parseFilters,
   validateFilters,
 } from '../lib/search.ts';
-import { emptyFilters, type EventRecord } from '../lib/types.ts';
+import {
+  CATEGORIES,
+  emptyFilters,
+  type Category,
+  type EventRecord,
+} from '../lib/types.ts';
 
 const now = new Date('2026-09-07T09:00:00Z');
 const event: EventRecord = {
@@ -76,6 +81,51 @@ await test('category reset clears exclusions and explicit choice overrides its o
     ...emptyFilters,
     category: 'Konser',
   });
+});
+
+await test('exclusive choices support every catalog category without a partial term table', () => {
+  const examples = new Map<Category, string>([
+    ['Konser', 'konser'],
+    ['Tiyatro', 'tiyatro'],
+    ['Stand-up', 'stand-up'],
+    ['Workshop', 'atolye'],
+    ['Sergi', 'sergi'],
+    ['Festival', 'festival'],
+    ['Spor', 'spor etkinligi'],
+    ['Sinema', 'sinema'],
+    ['Söyleşi', 'soylesi'],
+    ['Dans', 'dans gosterisi'],
+    ['Gösteri', 'gosteri olsun'],
+    ['Eğitim', 'egitim etkinligi'],
+    ['Gezi', 'gezi'],
+    ['Müze', 'muze'],
+    ['Diğer', 'diger kategori'],
+  ]);
+  assert.equal(examples.size, CATEGORIES.length);
+  for (const category of CATEGORIES) {
+    const previous = {
+      ...emptyFilters,
+      excludedCategories: CATEGORIES.filter((item) => item !== category),
+    };
+    const result = parseFilters(`sadece ${examples.get(category)}`, previous, now);
+    assert.equal(result.category, category);
+    assert.deepEqual(result.excludedCategories, undefined);
+  }
+});
+
+await test('exclusive wording is clause-scoped and optional workshop stays non-mandatory', () => {
+  const previous = { ...emptyFilters, excludedCategories: ['Konser' as const] };
+  assert.deepEqual(
+    parseFilters('sadece aksam olsun, atolye olabilir', previous, now),
+    previous,
+  );
+  const exact = parseFilters(
+    'kisi basi maks 2000tl olan kiz arkadasimla gidecegim etkinlik konser veya tiyatro olmasin, workshop olabilir, en yakin tarih',
+    emptyFilters,
+    now,
+  );
+  assert.equal(exact.category, null);
+  assert.deepEqual(exact.excludedCategories, ['Konser', 'Tiyatro']);
 });
 
 await test('full preference reset clears every prior hard filter', () => {
@@ -455,7 +505,7 @@ await test('filter validation deduplicates exclusions and removes contradictions
     { ...emptyFilters, category: 'Konser', excludedCategories: ['Tiyatro'] },
   );
   assert.throws(() =>
-    validateFilters({ ...emptyFilters, excludedCategories: ['Sinema'] }),
+    validateFilters({ ...emptyFilters, excludedCategories: ['Invented category'] }),
   );
 });
 
@@ -766,7 +816,7 @@ await test('optional hard-filter fields are validated', () => {
     validateFilters({ ...emptyFilters, startTimeFrom: '25:00' }),
   );
   assert.throws(() =>
-    validateFilters({ ...emptyFilters, categories: ['Sinema'] }),
+    validateFilters({ ...emptyFilters, categories: ['Invented category'] }),
   );
   assert.throws(() =>
     validateFilters({ ...emptyFilters, startTimeToExclusive: 'yes' }),

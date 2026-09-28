@@ -4,6 +4,7 @@ import {
   checkRequirements,
   deriveRequirements,
   meetsRequirements,
+  type Requirement,
 } from '../lib/requirements.ts';
 import type { EventRecord, Message } from '../lib/types.ts';
 
@@ -571,6 +572,29 @@ await test('explicit romance and crowd contradictions take priority', () => {
     ).map((check) => check.status),
     ['supported', 'contradicted'],
   );
+});
+
+await test('quiet and seating requirements reject conflicting source evidence', () => {
+  for (const [value, description] of [
+    ['quiet', 'Quiet venue. Loud music.'],
+    ['quiet', 'Sakin bir ortam. Gürültülü müzik.'],
+    ['seated', 'Seated event. Standing only.'],
+    ['seated', 'Numaralı koltuk. Etkinlik ayakta gerçekleşir.'],
+  ]) {
+    const requirements: Requirement[] = [
+      { kind: 'activity', value, policy: 'require_support' },
+    ];
+    assert.equal(
+      checkRequirements(event(description), requirements)[0].status,
+      'contradicted',
+      description,
+    );
+    assert.equal(
+      meetsRequirements(event(description), requirements),
+      false,
+      description,
+    );
+  }
 });
 
 await test('experience waivers remove only the scoped mandatory condition', () => {

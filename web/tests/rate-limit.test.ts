@@ -4,8 +4,53 @@ import assert from 'node:assert/strict';
 import {
   consumeBuckets,
   requestLimitBuckets,
+  visitorRateLimitEnabled,
   type LimitConsumer,
 } from '../lib/rate-limit.ts';
+
+await test('visitor limits default to enabled', () => {
+  assert.equal(visitorRateLimitEnabled({}), true);
+  assert.equal(visitorRateLimitEnabled({ DEPLOYMENT_ENV: 'staging' }), true);
+});
+
+await test('preview testing disables only visitor limits in staging', () => {
+  assert.equal(
+    visitorRateLimitEnabled({
+      DEPLOYMENT_ENV: 'staging',
+      BIPLAN_PREVIEW_TESTING: 'true',
+    }),
+    false,
+  );
+});
+
+await test('production cannot bypass visitor limits with the preview flag', () => {
+  assert.equal(
+    visitorRateLimitEnabled({
+      DEPLOYMENT_ENV: 'production',
+      BIPLAN_PREVIEW_TESTING: 'true',
+    }),
+    true,
+  );
+});
+
+await test('preview flag does not alter the global daily AI bucket', async () => {
+  assert.equal(
+    visitorRateLimitEnabled({
+      DEPLOYMENT_ENV: 'staging',
+      BIPLAN_PREVIEW_TESTING: 'true',
+    }),
+    false,
+  );
+  const deny: LimitConsumer = async () => false;
+  assert.deepEqual(
+    await consumeBuckets(
+      [{ key: 'ai:preview', limit: 100, expiresAt: 86400000, scope: 'daily' }],
+      0,
+      deny,
+    ),
+    { allowed: false, retryAfter: 86400, scope: 'daily' },
+  );
+});
 
 function counter() {
   const counts = new Map<string, number>();

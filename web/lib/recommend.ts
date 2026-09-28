@@ -3,6 +3,8 @@ import {
   type EventRecord,
   type Filters,
   type Message,
+  type PendingInput,
+  type SearchDiagnostics,
   type SearchResult,
 } from './types.ts';
 import {
@@ -22,13 +24,24 @@ import {
 import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
 import { semanticQuery, type SemanticRanking } from './hybrid.ts';
 import { mergeEventSessions } from './event-merge.ts';
-import { deriveRequirements, meetsRequirements } from './requirements.ts';
+import { checkRequirements, deriveRequirements } from './requirements.ts';
+import {
+  emptyIntentState,
+  validateIntentState,
+  type IntentState,
+} from './input-state.ts';
+import { interpretInput } from './input-interpreter.ts';
+import { recommendationQuery, retrievalQuery } from './input-retrieval.ts';
 
 export interface RecommendInput {
   message: string;
   history: Message[];
   filters: Filters;
   excludeIds: string[];
+  intentVersion?: 1;
+  intentState?: IntentState;
+  alternativeIds?: string[];
+  pendingInput?: PendingInput;
 }
 export function validateInput(value: unknown): RecommendInput {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -60,12 +73,59 @@ export function validateInput(value: unknown): RecommendInput {
     exclude.some((id) => typeof id !== 'string' || id.length > 100)
   )
     throw new Error('Etkinlik seçimi geçersiz.');
+  const alternativeIds = x.alternativeIds ?? [];
+  if (
+    !Array.isArray(alternativeIds) ||
+    alternativeIds.length > 100 ||
+    alternativeIds.some((id) => typeof id !== 'string' || id.length > 100)
+  )
+    throw new Error('Etkinlik seçimi geçersiz.');
+  if (x.intentVersion !== undefined && x.intentVersion !== 1)
+    throw new Error('Arama sürümü geçersiz.');
+  if (x.intentState !== undefined && x.intentVersion !== 1)
+    throw new Error('Arama sürümü geçersiz.');
+  let pendingInput: PendingInput | undefined;
+  if (x.pendingInput !== undefined) {
+    const pending = x.pendingInput as Record<string, unknown>;
+    if (
+      x.intentVersion !== 1 ||
+      !pending ||
+      typeof pending !== 'object' ||
+      Array.isArray(pending) ||
+      Object.keys(pending).some(
+        (key) => !['message', 'reason'].includes(key),
+      ) ||
+      typeof pending.message !== 'string' ||
+      !pending.message.trim() ||
+      pending.message.length > 1200 ||
+      ![
+        'budget_ambiguous',
+        'date_ambiguous',
+        'constraint_ambiguous',
+        'unsupported_location',
+        'unsupported_constraint',
+        'interpreter_unavailable',
+      ].includes(pending.reason as string)
+    )
+      throw new Error('Bekleyen arama geçersiz.');
+    pendingInput = {
+      message: pending.message.trim(),
+      reason: pending.reason as PendingInput['reason'],
+    };
+  }
   return {
     message: x.message.trim(),
     // Old clients may send assistant messages. Only user requests are context.
     history: history.filter((m) => m.role === 'user').slice(-6),
     filters: validateFilters(x.filters ?? emptyFilters),
     excludeIds: exclude,
+    ...(pendingInput ? { pendingInput } : {}),
+    ...(x.intentVersion === 1
+      ? { intentVersion: 1 as const, alternativeIds }
+      : {}),
+    ...(x.intentState !== undefined
+      ? { intentState: validateIntentState(x.intentState) }
+      : {}),
   };
 }
 export interface Dependencies {
@@ -79,6 +139,8 @@ export interface Dependencies {
     config: VoyageConfig,
   ) => Promise<Map<string, number[]>>;
   embed?: typeof embedWithVoyage;
+  inputInterpreter?: 'rules' | 'jev-v1';
+  interpret?: typeof interpretInput;
 }
 
 // Initial product policy, not an empirically calibrated quality claim.
@@ -90,6 +152,7 @@ export const MIN_JEV_SUPPORT_PROBABILITY = 0.7;
 export function selectJevEvents(
   candidates: EventRecord[],
   ranking: JevRanking,
+  order?: IntentState['preferences']['order'],
 ): EventRecord[] {
   const byId = new Map(candidates.map((event) => [event.id, event]));
   const supported = ranking.ranked
@@ -122,10 +185,16 @@ export function selectJevEvents(
     })
     .sort((a, b) => b.score - a.score)
     .map(({ event }) => byId.get(event.id)!);
-  return diverseEvents(
+  const selected = diverseEvents(
     uniqueEvents(supported, supported.length),
     supported.length,
   );
+  return order === 'soonest'
+    ? selected.sort(
+        (a, b) =>
+          a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id),
+      )
+    : selected;
 }
 
 const basicNotice =
@@ -139,18 +208,134 @@ const issueNotices = {
     'Koşulları ayrı ve açık biçimde belirt. Örneğin: cumartesi, kişi başı 800 TL, konser hariç.',
   unsupported_location:
     'Şu an yalnızca İstanbul etkinlikleri var. İstanbul için bir arama yapabilirsin.',
+  unsupported_constraint:
+    'Bu zorunlu koşulu mevcut etkinlik bilgileriyle güvenilir biçimde değerlendiremiyoruz. Koşulu değiştirerek yeniden arayabilirsin.',
+  interpreter_unavailable:
+    'Arama hizmeti isteğini şu anda işleyemiyor. İsteğin ve önceki koşulların korunuyor; biraz sonra yeniden deneyebilirsin.',
 };
 
 export async function recommend(
   input: RecommendInput,
   deps: Dependencies,
 ): Promise<SearchResult> {
-  const now = deps.now ?? new Date();
-  const { filters, issue } = interpretConstraints(
-    input.message,
-    input.filters,
-    now,
+  // A configuration rollback must not turn persisted evidence requirements
+  // into best-effort reconstruction from a truncated conversation history.
+  if (
+    deps.inputInterpreter !== 'jev-v1' &&
+    (input.intentState || input.pendingInput)
+  )
+    return {
+      recommendations: [],
+      filters: input.intentState?.filters ?? input.filters,
+      intentState: input.intentState,
+      mode: 'filters',
+      status: 'needs_input',
+      totalCandidates: 0,
+      resetRequired: true,
+      notice:
+        'Arama anlayışı güncellendi. “Yeni arama” ile koşullarını bir kez yeniden yazabilirsin.',
+    };
+  if (deps.inputInterpreter !== 'jev-v1' || input.intentVersion !== 1)
+    return recommendResolved(input, deps);
+  // A rules-era conversation cannot silently lose its unrecorded requirements.
+  if (!input.intentState && input.history.length)
+    return {
+      recommendations: [],
+      filters: input.filters,
+      mode: 'filters',
+      status: 'needs_input',
+      totalCandidates: 0,
+      notice:
+        'Arama anlayışı güncellendi. “Yeni arama” ile koşullarını bir kez yeniden yazabilirsin.',
+      resetRequired: true,
+    };
+  const pendingMessage = input.pendingInput
+    ? `${input.pendingInput.message}\n${input.message}`
+    : input.message;
+  // Never truncate unresolved constraints to fit the interpretation window.
+  if (pendingMessage.length > 1200)
+    return {
+      recommendations: [],
+      filters: input.intentState?.filters ?? input.filters,
+      intentState: input.intentState ?? emptyIntentState(input.filters),
+      pendingInput: input.pendingInput,
+      mode: 'filters',
+      status: 'needs_input',
+      totalCandidates: 0,
+      notice:
+        'Arama çok uzadı. “Yeni arama” ile koşullarını tek mesajda yeniden yazabilirsin.',
+      resetRequired: true,
+    };
+  const interpreted = await (deps.interpret ?? interpretInput)(
+    {
+      message: input.message,
+      previous: input.intentState ?? emptyIntentState(input.filters),
+      now: deps.now ?? new Date(),
+      ...(input.pendingInput
+        ? { unresolvedRequest: input.pendingInput.message }
+        : {}),
+    },
+    { config: deps.config },
   );
+  const intentState = validateIntentState(interpreted.state);
+  if (interpreted.issue)
+    return {
+      recommendations: [],
+      filters: intentState.filters,
+      intentState,
+      mode: 'filters',
+      status:
+        interpreted.issue === 'unsupported_location'
+          ? 'unsupported_location'
+          : 'needs_input',
+      totalCandidates: 0,
+      pendingInput: {
+        message:
+          interpreted.action === 'reset' ? input.message : pendingMessage,
+        reason: interpreted.issue,
+      },
+      notice: issueNotices[interpreted.issue],
+      ...(interpreted.issue === 'budget_ambiguous'
+        ? {
+            clarification: [
+              {
+                label: 'Kişi başı',
+                message: 'Bütçe kişi başı.',
+              },
+              { label: 'Toplam', message: 'Bütçe toplam.' },
+            ],
+          }
+        : {}),
+    };
+  const excludeIds =
+    interpreted.action === 'alternatives'
+      ? [
+          ...new Set([...input.excludeIds, ...(input.alternativeIds ?? [])]),
+        ].slice(-100)
+      : [];
+  const result = await recommendResolved(
+    {
+      ...input,
+      message: retrievalQuery(intentState),
+      history: [],
+      filters: intentState.filters,
+      excludeIds,
+    },
+    deps,
+    intentState,
+  );
+  return { ...result, intentState, excludedIds: excludeIds };
+}
+
+async function recommendResolved(
+  input: RecommendInput,
+  deps: Dependencies,
+  intent?: IntentState,
+): Promise<SearchResult> {
+  const now = deps.now ?? new Date();
+  const { filters, issue } = intent
+    ? { filters: intent.filters, issue: null }
+    : interpretConstraints(input.message, input.filters, now);
   if (issue)
     return {
       recommendations: [],
@@ -163,8 +348,9 @@ export async function recommend(
       notice: issueNotices[issue],
       totalCandidates: 0,
     };
+  const catalog = await deps.candidates(filters);
   let events = mergeEventSessions(
-    (await deps.candidates(filters)).filter((event) =>
+    catalog.filter((event) =>
       isEligible(event, emptyFilters, now),
     ),
   ).filter((event) => isEligible(event, filters, now));
@@ -178,15 +364,45 @@ export async function recommend(
   const excludedProductions = new Set(
     events.filter(isExcluded).map(productionIdentity),
   );
+  const beforeAlternativeExclusions = events.length;
   events = events.filter(
     (event) =>
       !isExcluded(event) && !excludedProductions.has(productionIdentity(event)),
   );
-  const context = searchContext(input.message, input.history);
-  const requirements = deriveRequirements(input.message, context.history);
+  const context = intent
+    ? { history: [] }
+    : searchContext(input.message, input.history);
+  const requirements =
+    intent?.requirements ?? deriveRequirements(input.message, context.history);
+  const hardRequirements = requirements.map((requirement) => ({
+    ...requirement,
+    supported: 0,
+    unknown: 0,
+    contradicted: 0,
+  }));
+  const eventsWithChecks = events.map((event) => ({
+    event,
+    checks: checkRequirements(event, requirements),
+  }));
+  for (const { checks } of eventsWithChecks)
+    checks.forEach((check, index) => hardRequirements[index][check.status]++);
   const beforeEvidence = events.length;
-  events = events.filter((event) => meetsRequirements(event, requirements));
+  events = eventsWithChecks
+    .filter(({ checks }) =>
+      checks.every((check) => check.status === 'supported'),
+    )
+    .map(({ event }) => event);
   const totalCandidates = events.length;
+  const diagnostics: SearchDiagnostics = {
+    catalogRetrieved: catalog.length,
+    eligibleBeforeSourceEvidence: beforeEvidence,
+    hardRequirements,
+    eligibleAfterSourceEvidence: totalCandidates,
+    alternativeExclusions: beforeAlternativeExclusions - beforeEvidence,
+    distinctShortlist: 0,
+    vectorCoverage: { available: 0, eligible: totalCandidates },
+    returnedAboveSupportThreshold: null,
+  };
   if (!events.length)
     return {
       recommendations: [],
@@ -198,8 +414,16 @@ export async function recommend(
           ? 'Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.'
           : 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
       totalCandidates,
+      diagnostics,
     };
-  let shortlist = shortlistEvents(events, input.message, input.history, 16);
+  let shortlist = shortlistEvents(
+    events,
+    input.message,
+    input.history,
+    16,
+    undefined,
+    intent,
+  );
   if (!shortlist.length)
     return {
       recommendations: [],
@@ -209,6 +433,7 @@ export async function recommend(
       notice:
         'Belirttiğin tercih ve hariç tutmalara uyan bir etkinlik bulunamadı.',
       totalCandidates,
+      diagnostics,
     };
   let semantic: SemanticRanking | undefined;
   let retrievalNotice: string | null = null;
@@ -216,9 +441,16 @@ export async function recommend(
     try {
       const vectors = await deps.vectors?.(events, deps.embeddingConfig);
       if (vectors?.size) {
+        diagnostics.vectorCoverage.available = events.filter((event) =>
+          vectors.has(event.id),
+        ).length;
         const [queryVector] = await (deps.embed ?? embedWithVoyage)(
           deps.embeddingConfig,
-          [semanticQuery(input.message, context.history)],
+          [
+            intent
+              ? input.message
+              : semanticQuery(input.message, context.history),
+          ],
           'query',
         );
         semantic = { queryVector, vectors };
@@ -239,22 +471,36 @@ export async function recommend(
     input.history,
     16,
     semantic,
+    intent,
   );
+  diagnostics.distinctShortlist = shortlist.length;
   const fallback = fallbackEvents(
     shortlist,
     input.message,
     input.history,
     shortlist.length,
     semantic,
+    intent,
   ).map((event) => ({ event }));
   if (deps.config) {
     try {
       const result = await (deps.rank ?? rankWithJev)(
         deps.config,
-        { ...input, filters, history: context.history, requirements },
+        {
+          ...input,
+          ...(intent ? { message: recommendationQuery(intent) } : {}),
+          filters,
+          history: context.history,
+          requirements,
+          ...(intent ? { preferences: intent.preferences } : {}),
+        },
         shortlist,
       );
-      const recommendations = selectJevEvents(shortlist, result).map(
+      const recommendations = selectJevEvents(
+        shortlist,
+        result,
+        intent?.preferences.order,
+      ).map(
         (event) => ({
           event,
         }),
@@ -268,6 +514,10 @@ export async function recommend(
           ? retrievalNotice
           : 'İsteğine yeterince uyan bir etkinlik bulunamadı. İsteğini değiştirebilirsin.',
         totalCandidates,
+        diagnostics: {
+          ...diagnostics,
+          returnedAboveSupportThreshold: recommendations.length,
+        },
       };
     } catch {
       return {
@@ -282,6 +532,7 @@ export async function recommend(
           .filter(Boolean)
           .join(' '),
         totalCandidates,
+        diagnostics,
       };
     }
   }
@@ -296,5 +547,6 @@ export async function recommend(
         ? 'Sonuçlar anlamsal benzerlik ve kelime eşleşmesine göre listeleniyor.'
         : basicNotice),
     totalCandidates,
+    diagnostics,
   };
 }

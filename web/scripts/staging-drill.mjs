@@ -25,7 +25,7 @@ const TABLE_ORDER = {
   request_limits: 'key',
 };
 const MAX_COMMAND_OUTPUT_BYTES = 4 * 1024 * 1024;
-const MAX_CHECKPOINT_BYTES = 20 * 1024 * 1024;
+const MAX_CHECKPOINT_BYTES = 32 * 1024 * 1024;
 const DIGEST_PAGE_SIZE = 50;
 const R2_DRILL_PREFIX = 'drills/checkpoint-restore/';
 const CORRUPT_CHECKPOINT = Buffer.from('{"schemaVersion":0,"kind":"intentional-staging-drill-corruption"}\n');

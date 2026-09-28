@@ -488,6 +488,7 @@ test.describe('mobile accessibility and layout', () => {
     );
     await page.goto('/');
     const textarea = page.getByLabel('Planını anlat');
+    await expect(textarea).toBeEnabled();
     await textarea.focus();
     await expect(textarea).toBeFocused();
     const panel = page.locator('.chat-panel');

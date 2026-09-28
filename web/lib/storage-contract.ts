@@ -25,6 +25,11 @@ export interface Lease {
 export interface SourcePage {
   url: string;
   events: EventRecord[];
+  /** A source-verified empty inventory; never inferred from an extraction failure. */
+  retiredAt?: string;
+  /** A source page withheld because its sessions conflict with authoritative source evidence. */
+  quarantinedAt?: string;
+  quarantineReason?: 'session_time_conflict';
 }
 export interface VectorEntry {
   hash: string;

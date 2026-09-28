@@ -61,7 +61,9 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
   assert.match(workflow, /needs\.schedule_gate\.outputs\.run == 'true'/);
   assert.match(workflow, /environment: gcp-staging-collector/);
   assert.match(workflow, /cancel-in-progress: false/);
-  assert.match(workflow, /--limit 100 --discovery-pages 20/);
+  assert.match(workflow, /--max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20/);
+  assert.match(workflow, /actions\/cache\/restore@v4/);
+  assert.match(workflow, /collector\/state\/coverage\.json/);
   assert.match(workflow, /GCP_COLLECTOR_SERVICE_ACCOUNT/);
   assert.match(workflow, /GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER/);
   assert.match(workflow, /token_format: id_token/);

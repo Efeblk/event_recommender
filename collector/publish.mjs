@@ -7,18 +7,50 @@ import { atomicJson, endpointFor, requestJson, validateCollection } from "./remo
 // Keep source-page work below the Free D1 per-invocation query budget while
 // reserving room for lock handling and current-seed database initialization.
 export const MAX_IMPORT_PAGES = 3;
+export const MAX_IMPORT_EVENTS = 2000;
+export const MAX_IMPORT_BYTES = 3_500_000;
+export const MAX_SOURCE_PAGE_EVENTS = 1000;
+export const MAX_D1_QUERY_BUDGET = 50;
+// Full-catalog checkpoint assembly measured over 60 seconds; keep its budget
+// below the 300-second server timeout and sync lease without changing other requests.
+export const CHECKPOINT_SAVE_TIMEOUT_MS = 240_000;
+
+function estimatedUpsertStatements(events, bytes) {
+  // Cloudflare starts a new statement at either 100 rows or 500 kB. Adding
+  // both ceilings is a conservative upper bound when both limits split the
+  // same page. Allow 48 bytes per row for the derived productionKey field.
+  return Math.ceil(events / 100) + Math.ceil((bytes + 48 * events) / 500_000);
+}
+
+export function shouldFlushImportBatch({ pages, events, bytes, upserts = 0 }, { events: nextEvents, bytes: nextBytes }) {
+  const nextUpserts = estimatedUpsertStatements(nextEvents, nextBytes);
+  // 11 fixed steady-state queries (schema/existing-seed/lease) and six per
+  // source page. Initial seed installation is a separate, pre-existing cost.
+  const queries = 11 + 6 * (pages + 1) + upserts + nextUpserts;
+  return pages >= MAX_IMPORT_PAGES || events + nextEvents > MAX_IMPORT_EVENTS ||
+    bytes + nextBytes > MAX_IMPORT_BYTES || queries > MAX_D1_QUERY_BUDGET;
+}
 
 export function prepareImportPages(pages, now = new Date()) {
   const cutoff = now.getTime();
   const omittedExpiredIds = [];
   const prepared = [];
   for (const page of pages) {
+    if ((page.retiredAt !== undefined && page.quarantinedAt !== undefined) ||
+        (page.events.length && (page.retiredAt !== undefined || page.quarantinedAt !== undefined || page.quarantineReason !== undefined)) ||
+        (page.quarantinedAt !== undefined && page.quarantineReason !== 'session_time_conflict') ||
+        (page.quarantineReason !== undefined && page.quarantinedAt === undefined))
+      throw new Error('Invalid empty source state');
     const events = page.events.filter((event) => {
       const expired = Number.isFinite(Date.parse(event.startsAt)) && Date.parse(event.startsAt) < cutoff;
       if (expired) omittedExpiredIds.push(event.id);
       return !expired;
     });
     if (events.length) prepared.push({ url: page.url, events });
+    else if (page.events.length === 0 && page.retiredAt)
+      prepared.push({ url: page.url, events: [], retiredAt: page.retiredAt });
+    else if (page.events.length === 0 && page.quarantinedAt)
+      prepared.push({ url: page.url, events: [], quarantinedAt: page.quarantinedAt, quarantineReason: page.quarantineReason });
   }
   return { pages: prepared, omittedExpiredIds };
 }
@@ -30,7 +62,15 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   const prepared = prepareImportPages(report.pages, now());
   if (!prepared.pages.length)
     throw new Error("No future event sessions remain importable; checkpoint was not advanced.");
-  let batch = [], bytes = 0, imported = 0, sentBatches = 0, omittedCount = 0;
+  const sizedPages = prepared.pages.map((page) => ({
+    page,
+    bytes: Buffer.byteLength(JSON.stringify(page)),
+  }));
+  for (const item of sizedPages) {
+    if (item.bytes > MAX_IMPORT_BYTES) throw new Error("A source page exceeds the import limit.");
+    if (item.page.events.length > MAX_SOURCE_PAGE_EVENTS) throw new Error("A source page exceeds the event import limit.");
+  }
+  let batch = [], bytes = 0, batchEvents = 0, batchUpserts = 0, imported = 0, sentBatches = 0, omittedCount = 0;
   const omittedIds = [];
   function recordOmissions(ids) {
     omittedCount += ids.length;
@@ -43,18 +83,23 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
     recordOmissions(current.omittedExpiredIds);
     batch = [];
     bytes = 0;
+    batchEvents = 0;
+    batchUpserts = 0;
     if (!current.pages.length) return;
     const { response, result } = await requestJson(importEndpoint, { token, method: "POST", body: { schemaVersion: 1, pages: current.pages } });
     if (!response.ok) throw new Error(`Import returned HTTP ${response.status}; checkpoint was not advanced.`);
     imported += Number(result?.imported ?? 0);
     sentBatches += 1;
   }
-  for (const minimal of prepared.pages) {
-    const size = Buffer.byteLength(JSON.stringify(minimal));
-    if (size > 3_500_000) throw new Error("A source page exceeds the import limit.");
-    if (batch.length >= MAX_IMPORT_PAGES || bytes + size > 3_500_000) await send();
+  for (const { page: minimal, bytes: size } of sizedPages) {
+    if (shouldFlushImportBatch(
+      { pages: batch.length, events: batchEvents, bytes, upserts: batchUpserts },
+      { events: minimal.events.length, bytes: size },
+    )) await send();
     batch.push(minimal);
     bytes += size;
+    batchEvents += minimal.events.length;
+    batchUpserts += estimatedUpsertStatements(minimal.events.length, size);
   }
   await send();
   if (!sentBatches)
@@ -67,7 +112,7 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   const refreshedBySource = Object.fromEntries(expectedSources.map((source) => [source, report.pages.filter((page) => page.source === source).length]));
   const missingSources = expectedSources.filter((source) => refreshedBySource[source] === 0);
   const summary = { ...report.summary, missingSources, sourceHealth: { refreshedPages: refreshedBySource } };
-  const saved = await requestJson(collectionEndpoint, { token, method: "POST", body: { schemaVersion: 1, report: { finishedAt: report.finishedAt, summary } } });
+  const saved = await requestJson(collectionEndpoint, { token, method: "POST", body: { schemaVersion: 1, report: { finishedAt: report.finishedAt, summary } }, timeout: CHECKPOINT_SAVE_TIMEOUT_MS });
   if (!saved.response.ok) throw new Error(`Checkpoint save returned HTTP ${saved.response.status}.`);
   if (saved.result?.schemaVersion !== 1 || typeof saved.result.savedAt !== "string" || !Number.isFinite(Date.parse(saved.result.savedAt)) || !Number.isInteger(saved.result.events) || saved.result.events < 0 || saved.result.events > 20_000)
     throw new Error("Checkpoint save returned an invalid receipt.");

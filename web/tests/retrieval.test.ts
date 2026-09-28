@@ -9,6 +9,7 @@ import {
 } from '../lib/retrieval.ts';
 import type { EventRecord, Message } from '../lib/types.ts';
 import { categoryIntent } from '../lib/intent.ts';
+import { emptyIntentState, type IntentState } from '../lib/input-state.ts';
 
 const base: EventRecord = {
   id: 'base',
@@ -32,6 +33,10 @@ const make = (id: string, patch: Partial<EventRecord> = {}): EventRecord => ({
   id,
   url: `https://example.test/${id}`,
   ...patch,
+});
+const soonestIntent = (): IntentState => ({
+  ...emptyIntentState(),
+  preferences: { ...emptyIntentState().preferences, order: 'soonest' },
 });
 
 await test('display diversity suppresses the same recognized show across venues without fuzzy title merging', () => {
@@ -643,11 +648,13 @@ await test('a humour preference searches across categories unless the user alrea
 await test('ranks every session before selecting the best representative of a production', () => {
   const early = make('early', {
     productionKey: 'same',
+    category: 'Gösteri',
     description: 'Genel program',
     startsAt: '2026-09-26T16:00:00Z',
   });
   const late = make('late', {
     productionKey: 'same',
+    category: 'Gösteri',
     description: 'Doğaçlama deneysel özgün gösteri',
     startsAt: '2026-09-26T19:00:00Z',
   });
@@ -701,4 +708,115 @@ await test('positive inflected category clears stale category rejection without 
     { role: 'user', content: 'Rock istemiyorum' },
   ]);
   assert.equal(genre.rejectedTerms.includes('rock'), true);
+});
+
+await test('expanded inherited categories are cleared by Turkish and English follow-up rejection', () => {
+  for (const [category, initial, rejection, term] of [
+    ['Workshop', 'Workshop istiyorum', 'Workshop istemiyorum', 'workshop'],
+    ['Workshop', 'I want a workshop', 'No workshops', 'workshop'],
+    ['Sinema', 'Sinema istiyorum', 'Sinema istemiyorum', 'sinema'],
+    ['Sinema', 'I want a cinema screening', 'No cinema', 'sinema'],
+  ] as const) {
+    const context = searchContext(rejection, [
+      { role: 'user', content: initial },
+    ]);
+    assert.equal(context.category, null, `${category}: ${rejection}`);
+    assert.equal(context.rejectedTerms.includes(term), true, rejection);
+  }
+});
+
+await test('expanded category rejection preserves independent exclusions', () => {
+  const context = searchContext('Workshop istemiyorum, rock da istemiyorum', [
+    { role: 'user', content: 'Workshop istiyorum' },
+  ]);
+  assert.equal(context.category, null);
+  assert.deepEqual(
+    new Set(context.rejectedTerms),
+    new Set(['workshop', 'rock']),
+  );
+});
+
+await test('soonest coverage reaches an early eligible production beyond the relevance top sixteen', () => {
+  const later = Array.from({ length: 20 }, (_, index) =>
+    make(`later-${index}`, {
+      title: `Workshop ${index}`,
+      description: 'Seramik workshop uygulaması',
+      startsAt: `2026-10-${String(index + 2).padStart(2, '0')}T18:00:00Z`,
+    }),
+  );
+  const earliest = make('earliest', {
+    title: 'Yakın Tarihli Etkinlik',
+    description: 'Genel katılımlı program',
+    startsAt: '2026-10-01T18:00:00Z',
+  });
+  const semantic = {
+    queryVector: [1, 0],
+    vectors: new Map<string, number[]>([
+      ...later.map((item): [string, number[]] => [item.id, [1, 0]]),
+      [earliest.id, [0, 1]],
+    ]),
+  };
+  const result = shortlistEvents([...later, earliest], 'workshop olabilir', [], 16, semantic, soonestIntent());
+  assert.equal(result.length, 16);
+  assert.equal(result.some(({ id }) => id === earliest.id), true);
+});
+
+await test('soonest chooses the earliest valid session of a production before display dedupe', () => {
+  const early = make('production-early', { productionKey: 'same-production', startsAt: '2026-10-01T18:00:00Z', description: 'Genel program' });
+  const late = make('production-late', { productionKey: 'same-production', startsAt: '2026-10-20T18:00:00Z', description: 'Seramik workshop uygulaması' });
+  const result = shortlistEvents([late, early], 'workshop olabilir', [], 16, undefined, soonestIntent());
+  assert.deepEqual(result.map(({ id }) => id), ['production-early']);
+});
+
+await test('soonest replaces a semantically stronger late session before it can block its production earliest', () => {
+  const nearer = Array.from({ length: 8 }, (_, index) => make(`other-near-${index}`, {
+    title: `Başka Yakın Etkinlik ${index}`,
+    startsAt: `2026-10-${String(index + 1).padStart(2, '0')}T18:00:00Z`,
+  }));
+  const relevantEarly = make('relevant-production-early', {
+    productionKey: 'relevant-production',
+    title: 'Seramik Deneyimi',
+    description: 'Genel etkinlik açıklaması',
+    startsAt: '2026-10-09T18:00:00Z',
+  });
+  const relevantLate = make('relevant-production-late', {
+    productionKey: 'relevant-production',
+    title: 'Seramik Deneyimi',
+    description: 'Yoğun uygulamalı seramik workshop programı',
+    startsAt: '2026-12-20T18:00:00Z',
+  });
+  const events = [...nearer, relevantEarly, relevantLate];
+  const semantic = {
+    queryVector: [1, 0],
+    vectors: new Map<string, number[]>(events.map((event) => [
+      event.id,
+      event.id === relevantLate.id ? [1, 0] : [0, 1],
+    ])),
+  };
+  const result = shortlistEvents(events, 'seramik workshop', [], 16, semantic, soonestIntent());
+  assert.equal(result.some(({ id }) => id === relevantEarly.id), true);
+  assert.equal(result.some(({ id }) => id === relevantLate.id), false);
+});
+
+await test('soonest interleaves near production coverage with a meaningful later semantic match', () => {
+  const near = Array.from({ length: 20 }, (_, index) => make(`near-${index}`, {
+    title: `Yakın Etkinlik ${index}`,
+    description: 'Genel sahne programı',
+    startsAt: `2026-10-${String(index + 1).padStart(2, '0')}T18:00:00Z`,
+  }));
+  const workshop = make('later-workshop', { title: 'Seramik Atölyesi', description: 'Uygulamalı seramik workshop etkinliği', startsAt: '2026-12-20T18:00:00Z' });
+  const events = [...near, workshop];
+  const semantic = { queryVector: [1, 0], vectors: new Map(events.map((item) => [item.id, item.id === workshop.id ? [1, 0] : [0, 1]])) };
+  const result = shortlistEvents(events, 'workshop olabilir, en yakın tarih', [], 16, semantic, soonestIntent());
+  assert.equal(result.some(({ id }) => id === 'near-0'), true);
+  assert.equal(result.some(({ id }) => id === workshop.id), true);
+});
+
+await test('soonest fallback sorts distinct eligible productions chronologically', () => {
+  const result = fallbackEvents([
+    make('third', { startsAt: '2026-10-03T18:00:00Z' }),
+    make('first', { startsAt: '2026-10-01T18:00:00Z' }),
+    make('second', { startsAt: '2026-10-02T18:00:00Z' }),
+  ], 'en yakın tarih', [], 5, undefined, soonestIntent());
+  assert.deepEqual(result.map(({ id }) => id), ['first', 'second', 'third']);
 });

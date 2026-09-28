@@ -13,6 +13,8 @@ import {
 import type { Category } from './types.ts';
 import { hybridRank, type SemanticRanking } from './hybrid.ts';
 import { displayShowIdentity } from './event-merge.ts';
+import type { IntentState } from './input-state.ts';
+import { retrievalQuery } from './input-retrieval.ts';
 
 export interface SearchContext {
   query: string;
@@ -102,13 +104,6 @@ export function searchContext(
   const relevantHistory = reset || categorySwitch ? [] : persistentRecent;
 
   const rejected = new Set<string>();
-  const categoryRejections: Record<string, Category> = {
-    konser: 'Konser',
-    muzik: 'Konser',
-    tiyatro: 'Tiyatro',
-    'stand-up': 'Stand-up',
-    'stand up': 'Stand-up',
-  };
   for (const turn of [
     ...relevantHistory.map(({ content }) => content),
     message,
@@ -119,8 +114,8 @@ export function searchContext(
     const positiveText = normalize(intent.positiveText);
     for (const term of rejected) {
       if (
-        categoryRejections[term] &&
-        intent.requestedCategories.includes(categoryRejections[term])
+        rejectedTermCategory(term) &&
+        intent.requestedCategories.includes(rejectedTermCategory(term)!)
       ) {
         rejected.delete(term);
         continue;
@@ -166,13 +161,18 @@ function inheritedCategory(
         ? latest[0]
         : null;
   if (!candidate) return null;
-  const blocked =
-    candidate === 'Konser'
-      ? ['konser', 'muzik']
-      : candidate === 'Tiyatro'
-        ? ['tiyatro', 'sahne oyunu']
-        : ['stand-up', 'stand up', 'komedi'];
-  return blocked.some((term) => rejected.has(term)) ? null : candidate;
+  return [...rejected].some((term) => rejectedTermCategory(term) === candidate)
+    ? null
+    : candidate;
+}
+
+const rejectedCategoryCache = new Map<string, Category | null>();
+function rejectedTermCategory(term: string): Category | null {
+  if (rejectedCategoryCache.has(term)) return rejectedCategoryCache.get(term)!;
+  const categories = categoryIntent(`${term} istemiyorum`).excludedCategories;
+  const category = categories.length === 1 ? categories[0] : null;
+  rejectedCategoryCache.set(term, category);
+  return category;
 }
 
 function eventText(event: EventRecord) {
@@ -250,11 +250,27 @@ function calmMoodShortlistCoverage(
   message: string,
   history: Message[],
   limit: number,
+  intent?: IntentState,
 ) {
-  if (!requestsCalmOptionalMood(message, history) || limit < 2) return null;
-  const requestedChildEvent = /\bcocuk(?:lar|lara|larin)?\b/.test(
-    normalize(message),
-  );
+  const calm = intent
+    ? intent.preferences.mood === 'calm'
+    : requestsCalmOptionalMood(message, history);
+  if (!calm || limit < 2) return null;
+  const requestedChildEvent = intent
+    ? intent.requirements.some(
+        (requirement) =>
+          requirement.kind === 'audience' &&
+          requirement.policy === 'require_support' &&
+          requirement.value
+            .split('|')
+            .some(
+              (value) =>
+                value === 'children' ||
+                value === 'family_friendly' ||
+                value.startsWith('age:'),
+            ),
+      )
+    : /\bcocuk(?:lar|lara|larin)?\b/.test(normalize(message));
   const seenTags = new Set<string>();
   const supplements: EventRecord[] = [];
   for (const event of ranked) {
@@ -307,13 +323,16 @@ function eligibleForContext(event: EventRecord, context: SearchContext) {
 }
 
 function hasChildAudienceEvidence(event: EventRecord) {
-  const description = normalize(event.description);
-  const withoutNegatedChildClaims = description.replace(
-    /\bcocuk(?:lar|lara|larin)?\b[^.!?\n]{0,36}\b(?:degil(?:dir)?|degildir|icermez|yok)\b/g,
-    ' ',
-  );
+  const withoutNegatedChildClaims = [event.title, event.description]
+    .map((value) =>
+      normalize(value).replace(
+        /\b(?:cocuk(?:lar|lara|larin)?|children|kids?)\b[^.!?\n]{0,36}\b(?:degil(?:dir)?|degildir|icermez|yok|not|isn't|is not)\b/g,
+        ' ',
+      ),
+    )
+    .join(' ');
   return (
-    /\b(?:cocuk(?:lar|lara|larin)?\s+(?:icin|oyunu|tiyatrosu)|cocuklara\s+yonelik)\b/.test(
+    /\b(?:cocuk(?:lar|lara|larin)?\s+(?:icin|oyunu|tiyatrosu|muzikali|sirki|stand[ -]?up)|cocuklara\s+yonelik|(?:children|kids?)['’s]*\s+(?:show|theatre|theater|musical|circus|comedy)|(?:show|theatre|theater|musical|circus|comedy)\s+for\s+(?:children|kids?))\b/.test(
       withoutNegatedChildClaims,
     ) ||
     /\b\d{1,2}\s*[–-]\s*\d{1,2}\s*yas\b[^.!?\n]{0,40}\bcocuk(?:lar|lara|larin)?\b/.test(
@@ -321,8 +340,50 @@ function hasChildAudienceEvidence(event: EventRecord) {
     ) ||
     /\bcocuk(?:lar|lara|larin)?\b[^.!?\n]{0,32}\b(?:aileleri|aileler)\b[^.!?\n]{0,16}\bicin\b/.test(
       withoutNegatedChildClaims,
+    ) ||
+    /\b(?:merhaba\s+cocuklar|(?:cocuklar|minik\s+(?:seyirciler|izleyiciler))[^.!?\n]{0,64}(?:davet|bekliyor|bulusuyor|katil))\b/.test(
+      withoutNegatedChildClaims,
     )
   );
+}
+
+function requestsChildAudience(intent: IntentState) {
+  return intent.requirements.some(
+    (requirement) =>
+      requirement.kind === 'audience' &&
+      requirement.policy === 'require_support' &&
+      requirement.value
+        .split('|')
+        .some(
+          (value) =>
+            value === 'children' ||
+            value === 'family_friendly' ||
+            value.startsWith('age:'),
+        ),
+  );
+}
+
+/**
+ * A partner outing is a soft relevance signal. Keep every eligible event, but
+ * place programs whose source description explicitly targets children after
+ * the other ranked options unless the request itself asks for children.
+ */
+function demoteChildDirectedPartnerResults(
+  ranked: EventRecord[],
+  intent?: IntentState,
+) {
+  if (
+    intent?.preferences.companion !== 'partner' ||
+    requestsChildAudience(intent)
+  )
+    return ranked;
+  const adultOrUnspecified: EventRecord[] = [];
+  const childDirected: EventRecord[] = [];
+  for (const event of ranked)
+    (hasChildAudienceEvidence(event) ? childDirected : adultOrUnspecified).push(
+      event,
+    );
+  return [...adultOrUnspecified, ...childDirected];
 }
 
 function rankedCandidates(
@@ -330,19 +391,106 @@ function rankedCandidates(
   message: string,
   history: Message[],
   semantic?: SemanticRanking,
+  intent?: IntentState,
 ) {
-  const context = searchContext(message, history);
+  const context: SearchContext = intent
+    ? {
+        query: retrievalQuery(intent),
+        history: [],
+        rejectedTerms: [],
+        reset: false,
+        category: null,
+      }
+    : searchContext(message, history);
   // Rank sessions before selecting a representative for each production.
-  const allowed = events.filter((event) => eligibleForContext(event, context));
+  // The structured path has already applied validated filters and source
+  // requirements. Do not infer constraints again from its query or old turns.
+  const allowed = intent
+    ? events
+    : events.filter((event) => eligibleForContext(event, context));
   return {
     context,
+    allowed,
     ranked: uniqueEvents(
-      semantic
+      demoteChildDirectedPartnerResults(
+        semantic
         ? hybridRank(allowed, context.query, semantic)
         : rankEvents(allowed, context.query),
+        intent,
+      ),
       allowed.length,
     ),
   };
+}
+
+function soonestProductionRepresentatives(
+  events: EventRecord[],
+  intent?: IntentState,
+) {
+  return diverseEvents(
+    uniqueEvents(
+      demoteChildDirectedPartnerResults(
+        [...events].sort(
+          (a, b) =>
+            a.startsAt.localeCompare(b.startsAt) || a.id.localeCompare(b.id),
+        ),
+        intent,
+      ),
+      events.length,
+    ),
+    events.length,
+  );
+}
+
+function interleaveSoonestCoverage(
+  chronological: EventRecord[],
+  relevant: EventRecord[],
+  limit: number,
+) {
+  const selected: EventRecord[] = [];
+  const seenProductions = new Set<string>();
+  const seenShows = new Set<string>();
+  const add = (event: EventRecord | undefined) => {
+    if (!event) return;
+    const production = productionIdentity(event);
+    const show = displayShowIdentity(event) ?? production;
+    if (seenProductions.has(production) || seenShows.has(show)) return;
+    seenProductions.add(production);
+    seenShows.add(show);
+    selected.push(event);
+  };
+  let earliestIndex = 0, relevanceIndex = 0;
+  while (
+    selected.length < limit &&
+    (earliestIndex < chronological.length || relevanceIndex < relevant.length)
+  ) {
+    add(chronological[earliestIndex++]);
+    if (selected.length < limit) add(relevant[relevanceIndex++]);
+  }
+  return selected;
+}
+
+function mapRelevanceToEarliest(
+  relevant: EventRecord[],
+  chronological: EventRecord[],
+) {
+  const byProduction = new Map(
+    chronological.map((event) => [productionIdentity(event), event]),
+  );
+  const byShow = new Map(
+    chronological.flatMap((event) => {
+      const show = displayShowIdentity(event);
+      return show ? [[show, event] as const] : [];
+    }),
+  );
+  return relevant.map((event) => {
+    const show = displayShowIdentity(event);
+    return (
+      byProduction.get(productionIdentity(event)) ??
+      (show ? byShow.get(show) : undefined) ??
+      event
+    );
+  });
 }
 
 export function shortlistEvents(
@@ -351,24 +499,38 @@ export function shortlistEvents(
   history: Message[],
   limit = 16,
   semantic?: SemanticRanking,
+  intent?: IntentState,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  const { context, ranked } = rankedCandidates(
+  const { context, allowed, ranked } = rankedCandidates(
     events,
     message,
     history,
     semantic,
+    intent,
   );
   const diverseRanked = diverseEvents(ranked, ranked.length);
-  if (semantic)
-    return (
+  const relevanceCovered = semantic
+    ? (
       calmMoodShortlistCoverage(
         diverseRanked,
         message,
         context.history,
         limit,
+        intent,
       ) ?? diverseRanked.slice(0, limit)
-    );
+    )
+    : diverseRanked;
+  if (intent?.preferences.order === 'soonest')
+    {
+      const chronological = soonestProductionRepresentatives(allowed, intent);
+      return interleaveSoonestCoverage(
+        chronological,
+        mapRelevanceToEarliest(relevanceCovered, chronological),
+        limit,
+      );
+    }
+  if (semantic) return relevanceCovered;
   const selected: EventRecord[] = [];
   const seenProductions = new Set<string>();
   const seenCategories = new Set<string>();
@@ -395,10 +557,11 @@ export function fallbackEvents(
   history: Message[],
   limit = 5,
   semantic?: SemanticRanking,
+  intent?: IntentState,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  return diverseEvents(
-    rankedCandidates(events, message, history, semantic).ranked,
-    limit,
-  );
+  const candidates = rankedCandidates(events, message, history, semantic, intent);
+  return intent?.preferences.order === 'soonest'
+    ? soonestProductionRepresentatives(candidates.allowed, intent).slice(0, limit)
+    : diverseEvents(candidates.ranked, limit);
 }
