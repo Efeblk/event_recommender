@@ -99,6 +99,8 @@ function EventCard({ event }: { event: EventRecord }) {
   const [imageFailed, setImageFailed] = useState(false);
   const offers = event.offers ?? [];
   const hasMultipleOffers = offers.length > 1;
+  const displayPrice = event.price ?? event.advertisedPrice?.amount ?? null;
+  const displayCurrency = event.price === null ? event.advertisedPrice?.currency ?? event.currency : event.currency;
   return (
     <article className="event-card">
       <div className="event-poster">
@@ -179,14 +181,16 @@ function EventCard({ event }: { event: EventRecord }) {
           <div className="event-actions">
             <div className="event-price">
               <span>
-                {event.price === null
+                {displayPrice === null
                   ? 'Fiyat bilgisi yok'
-                  : event.price === 0
-                    ? 'Ücretsiz'
-                    : formatMoney(event.price, event.currency)}
+                  : displayPrice === 0
+                    ? (event.advertisedPrice && !event.advertisedPrice.feesKnown ? '₺0 bilet fiyatı' : 'Ücretsiz')
+                    : formatMoney(displayPrice, displayCurrency)}
               </span>
-              {event.price !== null && event.price > 0 && (
-                <small>bilet başlangıç fiyatı</small>
+              {displayPrice !== null && displayPrice > 0 && (
+                <small>{event.advertisedPrice
+                  ? event.price !== null ? 'doğrulanmış bilet toplamı' : event.advertisedPrice.kind === 'starting_at' ? 'başlangıç fiyatı · ek ücretler bilinmiyor' : 'bilet fiyatı · ek ücretler bilinmiyor'
+                  : 'bilet başlangıç fiyatı'}</small>
               )}
             </div>
             <a
@@ -795,7 +799,7 @@ export default function Home() {
                     ? 'Aramanı biraz netleştir.'
                     : result?.status === 'unsupported_location'
                       ? 'Şimdilik yalnızca İstanbul’dayız.'
-                      : 'Bu koşullarda etkinlik bulamadık.'}
+                      : 'Koşullarına uyan seçenekleri doğrulayamadık.'}
               </h3>
               <p>
                 {catalog?.status === 'stale'

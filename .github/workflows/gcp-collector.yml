@@ -137,7 +137,8 @@ jobs:
           id_token_audience: ${{ vars.BIPLAN_URL }}
           id_token_include_email: true
 
-      - name: Index changed documents within the reviewed window
+      - id: index
+        name: Index changed documents within the reviewed window
         timeout-minutes: 8
         env:
           GCP_STAGING_INDEXING_ENABLED: ${{ vars.GCP_STAGING_INDEXING_ENABLED }}
@@ -147,8 +148,25 @@ jobs:
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
           SERVERLESS_ID_TOKEN: ${{ steps.auth_index.outputs.id_token }}
         run: |
+          set -euo pipefail
           mkdir -p web/work
+          set +e
           node --experimental-strip-types web/scripts/index-collected-embeddings.mjs --live --report web/work/collection-embedding-index.jsonl
+          status=$?
+          set -e
+          case "$status" in
+            0)
+              echo "outcome=complete-or-disabled" >> "$GITHUB_OUTPUT"
+              ;;
+            2)
+              echo "outcome=bounded-stop" >> "$GITHUB_OUTPUT"
+              echo "::warning title=Embedding indexing remains pending::Required collection and canonical publication succeeded, but optional bounded indexing stopped with pending documents. See the preserved indexing report."
+              ;;
+            *)
+              echo "Indexing failed with exit code $status; required credentials, configuration, and evidence checks remain fatal." >&2
+              exit "$status"
+              ;;
+          esac
 
       - name: Record published run evidence
         if: always() && steps.publish.outcome == 'success'

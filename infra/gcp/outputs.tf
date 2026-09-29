@@ -36,3 +36,15 @@ output "secret_names" {
 output "budget_alert_enabled" {
   value = var.budget_billing_account != ""
 }
+
+output "postgres_staging_resources" {
+  description = "Non-secret identifiers for the optional PostgreSQL staging resources; null while the paid activation bundle is disabled."
+  value = var.postgres_staging_enabled ? {
+    instance_name               = google_sql_database_instance.catalog[0].name
+    instance_connection_name    = google_sql_database_instance.catalog[0].connection_name
+    database_name               = google_sql_database.catalog[0].name
+    preparation_service_account = google_service_account.preparation[0].email
+    runtime_password_secret     = google_secret_manager_secret.postgres_password["runtime"].secret_id
+    preparation_password_secret = google_secret_manager_secret.postgres_password["preparation"].secret_id
+  } : null
+}

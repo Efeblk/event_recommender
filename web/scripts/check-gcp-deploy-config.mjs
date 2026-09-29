@@ -124,6 +124,11 @@ assert.doesNotMatch(collectorWorkflow, /INDEX_EMBEDDINGS|embeddings:index|TYPESA
 assert.match(collectorWorkflow, /if: vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
 for (const name of ['FROM', 'UNTIL', 'MAX_CALLS']) assert.match(collectorWorkflow, new RegExp(`GCP_STAGING_INDEXING_${name}`));
 assert.match(collectorWorkflow, /node --experimental-strip-types web\/scripts\/index-collected-embeddings\.mjs --live --report/);
+assert.match(collectorWorkflow, /id: index/);
+assert.match(collectorWorkflow, /status=\$\?/);
+assert.match(collectorWorkflow, /2\)[\s\S]*outcome=bounded-stop[\s\S]*::warning title=Embedding indexing remains pending/);
+assert.match(collectorWorkflow, /\*\)[\s\S]*exit "\$status"/);
+assert.doesNotMatch(collectorWorkflow, /continue-on-error/);
 assert.match(collectorWorkflow, /if: always\(\) && steps\.publish\.outcome == 'success'/);
 assert.match(collectorWorkflow, /collection-embedding-index\.jsonl\*/);
 

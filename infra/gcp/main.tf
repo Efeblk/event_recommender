@@ -9,19 +9,23 @@ locals {
     typesafe_api_key = "${local.prefix}-typesafe-api-key"
     voyage_api_key   = "${local.prefix}-voyage-api-key"
   }
-  services = toset(concat([
-    "artifactregistry.googleapis.com",
-    "cloudbilling.googleapis.com",
-    "cloudresourcemanager.googleapis.com",
-    "firestore.googleapis.com",
-    "iam.googleapis.com",
-    "iamcredentials.googleapis.com",
-    "run.googleapis.com",
-    "secretmanager.googleapis.com",
-    "serviceusage.googleapis.com",
-    "storage.googleapis.com",
-    "sts.googleapis.com",
-  ], var.budget_billing_account != "" ? ["billingbudgets.googleapis.com"] : []))
+  services = toset(concat(
+    [
+      "artifactregistry.googleapis.com",
+      "cloudbilling.googleapis.com",
+      "cloudresourcemanager.googleapis.com",
+      "firestore.googleapis.com",
+      "iam.googleapis.com",
+      "iamcredentials.googleapis.com",
+      "run.googleapis.com",
+      "secretmanager.googleapis.com",
+      "serviceusage.googleapis.com",
+      "storage.googleapis.com",
+      "sts.googleapis.com",
+    ],
+    var.budget_billing_account != "" ? ["billingbudgets.googleapis.com"] : [],
+    var.postgres_staging_enabled ? ["sqladmin.googleapis.com"] : [],
+  ))
 }
 
 # Read only: the project must already exist and belong to this application.

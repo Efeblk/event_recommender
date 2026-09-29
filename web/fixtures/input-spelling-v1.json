@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "name": "biplan-input-spelling-v1",
+  "description": "Frozen independent human-input cases for typo-tolerant pre-parsed extraction. Expected fields are conservative partial assertions, not claims about current model accuracy.",
+  "cases": [
+    {
+      "id": "tr-severe-saturday-partner-kadikoy-nonconcert-budget",
+      "message": "bu cmrtesi kadkoyde sevgilmle konsr olmasn kişi başı 1000tl altı",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": {
+        "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "district": "Kadıköy", "partySize": 2, "maxPrice": 1000, "maxPriceExclusive": true },
+        "excludedCategoriesIncludes": ["Konser"],
+        "companion": "partner"
+      }
+    },
+    {
+      "id": "tr-district-correction",
+      "message": "beşktaş değil kadkoy demek istedm",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": { "district": "Kadıköy" } }
+    },
+    {
+      "id": "tr-group-total-budget",
+      "message": "4 kişiyz toplam bütçe 3200tl",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": { "partySize": 4, "totalBudget": 3200, "maxPrice": 800 } }
+    },
+    {
+      "id": "tr-preferred-and-maximum-amounts",
+      "message": "kişi başı tercihen 2000tl ama en fazla 2500tl",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": { "maxPrice": 2500 } }
+    },
+    {
+      "id": "tr-typo-exclude-concert",
+      "message": "konsr olmasn",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": {}, "excludedCategoriesIncludes": ["Konser"] }
+    },
+    {
+      "id": "tr-typo-exclude-theatre",
+      "message": "tiyatroo istemiyorm",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": {}, "excludedCategoriesIncludes": ["Tiyatro"] }
+    },
+    {
+      "id": "tr-typo-exclude-workshop",
+      "message": "atölye olmasn",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": {}, "excludedCategoriesIncludes": ["Workshop"] }
+    },
+    {
+      "id": "tr-quoted-weekday-is-title",
+      "message": "\"Bu Cumartesi\" adlı etkinliği bul",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "noFilters": true }
+    },
+    {
+      "id": "tr-malformed-number-not-salvaged",
+      "message": "kişi başı 1..000 TL altı",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "issue": ["budget_ambiguous", "constraint_ambiguous"], "noFilters": true }
+    },
+    {
+      "id": "tr-budget-basis-ambiguous",
+      "message": "3 kişiyz bütçe 1500tl",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "issue": "budget_ambiguous", "noFilters": true }
+    },
+    {
+      "id": "en-weekday-and-location-typos",
+      "message": "nxt saturdy in Kadkoy please",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": { "dateFrom": "2026-10-03", "dateTo": "2026-10-03", "district": "Kadıköy" } }
+    },
+    {
+      "id": "tr-optional-workshop-with-typo-exclusions",
+      "message": "kişi başı maks 2000tl kız arkadaşımla gideceğim etkinlik, konsr veya tiyatroo olmasn, workshp olabilir, en yakın tarih",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "filters": { "maxPrice": 2000, "category": null }, "excludedCategoriesIncludes": ["Konser", "Tiyatro"], "companion": "partner" }
+    },
+    {
+      "id": "tr-unsupported-neighborhood-not-district",
+      "message": "Taksim'de konser bul",
+      "now": "2026-09-29T09:00:00Z",
+      "expected": { "issue": "unsupported_constraint", "noFilters": true }
+    }
+  ]
+}

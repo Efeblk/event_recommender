@@ -1,0 +1,153 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { emptyIntentState, intentQuery } from '../lib/input-state.ts';
+import {
+  recommend,
+  validateInput,
+  type Dependencies,
+} from '../lib/recommend.ts';
+import type { EventRecord } from '../lib/types.ts';
+
+const now = new Date('2026-09-30T09:00:00Z');
+const config = { apiKey: 'test-only', model: 'jev-test' };
+
+function event(id: string, title = `Pinned ${id}`): EventRecord {
+  return {
+    id,
+    title,
+    description: 'Akustik konser',
+    startsAt: '2026-10-03T18:00:00Z',
+    checkedAt: now.toISOString(),
+    venue: 'Sahne',
+    city: 'İstanbul',
+    district: 'Kadıköy',
+    address: '',
+    price: 500,
+    currency: 'TRY',
+    category: 'Konser',
+    availability: 'available',
+    imageUrl: '',
+    url: `https://example.test/${id}`,
+  };
+}
+
+const input = validateInput({
+  message: 'Konser öner',
+  intentVersion: 1,
+});
+
+function rankAll(): NonNullable<Dependencies['rank']> {
+  return async (_config, _input, candidates) => ({
+    model: 'jev-test',
+    usage: { inputTokens: 0, outputTokens: 0 },
+    ranked: candidates.map((candidate) => ({
+      event: candidate,
+      score: 3,
+      confidence: 1,
+      probabilities: [0, 0, 0, 1] as const,
+      supportProbability: 1,
+    })),
+  });
+}
+
+void test('catalog is pinned before structured interpretation and publication ID survives', async () => {
+  const calls: string[] = [];
+  const pinned = event('pinned');
+  const state = emptyIntentState();
+  state.filters.category = 'Konser';
+  const result = await recommend(input, {
+    now,
+    config,
+    inputInterpreter: 'jev-v1',
+    pinCatalog: async (at) => {
+      calls.push('pin');
+      assert.equal(at, now);
+      return {
+        publicationId: 'publication-42',
+        candidates: async () => {
+          calls.push('candidates');
+          return [pinned];
+        },
+        vectors: async () => new Map(),
+        finalize: async (events) => {
+          calls.push('finalize');
+          return events;
+        },
+      };
+    },
+    candidates: async () => assert.fail('unpinned catalog must not be read'),
+    interpret: async () => {
+      calls.push('interpret');
+      return { state, action: 'search', issue: null, query: intentQuery(state), origin: 'jev' };
+    },
+    rank: rankAll(),
+  });
+
+  assert.deepEqual(calls, ['pin', 'interpret', 'candidates', 'finalize']);
+  assert.equal(result.publicationId, 'publication-42');
+  assert.deepEqual(result.recommendations.map(({ event }) => event.id), ['pinned']);
+});
+
+for (const mode of ['ai', 'fallback'] as const) {
+  void test(`final validation applies to ${mode} cards and cannot replace pinned facts`, async () => {
+    const kept = event('kept', 'Pinned title');
+    const stale = event('stale');
+    let finalized: string[] = [];
+    const result = await recommend(validateInput({ message: 'konser' }), {
+      now,
+      config: mode === 'ai' ? config : null,
+      candidates: async () => assert.fail('unpinned catalog must not be read'),
+      rank: rankAll(),
+      pinCatalog: async () => ({
+        publicationId: `publication-${mode}`,
+        candidates: async () => [kept, stale],
+        vectors: async () => new Map(),
+        finalize: async (events) => {
+          finalized = events.map(({ id }) => id);
+          return [
+            { ...kept, title: 'Unpinned replacement', price: 1 },
+            event('injected'),
+          ];
+        },
+      }),
+    });
+
+    assert.deepEqual(new Set(finalized), new Set(['kept', 'stale']));
+    assert.equal(result.publicationId, `publication-${mode}`);
+    assert.deepEqual(result.recommendations.map(({ event }) => event.id), ['kept']);
+    assert.equal(result.recommendations[0].event.title, 'Pinned title');
+    assert.equal(result.recommendations[0].event.price, 500);
+    assert.equal(result.status, 'results');
+    assert.match(result.notice ?? '', /güncel durumu değişti/);
+  });
+}
+
+void test('all stale cards are withheld and diagnostics reflect rendered results', async () => {
+  const result = await recommend(validateInput({ message: 'konser' }), {
+    now,
+    config,
+    candidates: async () => [],
+    rank: rankAll(),
+    pinCatalog: async () => ({
+      publicationId: 'publication-stale',
+      candidates: async () => [event('stale')],
+      vectors: async () => new Map(),
+      finalize: async () => [],
+    }),
+  });
+  assert.equal(result.status, 'empty');
+  assert.deepEqual(result.recommendations, []);
+  assert.equal(result.diagnostics?.returnedAboveSupportThreshold, 0);
+  assert.equal(result.publicationId, 'publication-stale');
+});
+
+void test('legacy dependencies retain behavior without a publication pin', async () => {
+  const legacy = event('legacy');
+  const result = await recommend(validateInput({ message: 'konser' }), {
+    now,
+    config: null,
+    candidates: async () => [legacy],
+  });
+  assert.equal(result.publicationId, undefined);
+  assert.deepEqual(result.recommendations.map(({ event }) => event.id), ['legacy']);
+});

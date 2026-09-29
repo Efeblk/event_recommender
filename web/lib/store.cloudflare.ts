@@ -1,4 +1,5 @@
 import { env } from 'cloudflare:workers';
+import type { PinnedRecommendationCatalog } from './recommend.ts';
 import {
   CHECKPOINT_POINTER_KEY,
   MAX_CHECKPOINT_BYTES,
@@ -22,6 +23,11 @@ import {
   type LimitConsumer,
 } from './rate-limit.ts';
 export type { RateLimitResult } from './rate-limit.ts';
+// PostgreSQL is a Node-only opt-in; the Worker keeps its current snapshot store.
+export async function pinRecommendationCatalog(_now: Date): Promise<PinnedRecommendationCatalog | null> { return null; }
+export async function preparedCatalogReadiness(): Promise<
+  import('./postgres-readiness.node.ts').PostgresPreparedCatalogReadiness | null
+> { return null; }
 import {
   embeddingCacheKey,
   validVector,

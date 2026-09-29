@@ -14,6 +14,7 @@ import type { HighLevelStore } from './storage-contract.ts';
 import { indexAuditedBatch, type AuditedIndexInput } from './audited-index.ts';
 import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts';
 import type { Lease } from './storage-contract.ts';
+import { createPostgresCatalog } from './postgres-catalog.node.ts';
 export type { RateLimitResult } from './rate-limit.ts';
 
 export function runtime() {
@@ -21,6 +22,19 @@ export function runtime() {
 }
 let instance: Promise<HighLevelStore> | undefined;
 let clients: ReturnType<typeof createGcpClients> | undefined;
+let postgres: ReturnType<typeof createPostgresCatalog> | undefined;
+function postgresCatalog() {
+  const backend = env.CATALOG_BACKEND ?? 'snapshots';
+  if (backend === 'snapshots') return null;
+  if (backend !== 'postgres') throw new Error('Unsupported catalog backend');
+  return postgres ??= createPostgresCatalog(env);
+}
+export async function pinRecommendationCatalog(now: Date) {
+  return postgresCatalog()?.pin(now) ?? null;
+}
+export async function preparedCatalogReadiness() {
+  return postgresCatalog()?.readiness() ?? null;
+}
 function storageClients() {
   return (clients ??= createGcpClients(env).catch((error) => {
     clients = undefined;
@@ -66,7 +80,7 @@ export const embeddingCandidates: HighLevelStore['embeddingCandidates'] = async 
 export const activateSearchCatalog: HighLevelStore['activateSearchCatalog'] = async (...args) =>
   (await store()).activateSearchCatalog(...args);
 export const catalogStatus: HighLevelStore['catalogStatus'] = async (...args) =>
-  (await store()).catalogStatus(...args);
+  postgresCatalog()?.catalogStatus(...args) ?? (await store()).catalogStatus(...args);
 export const health: HighLevelStore['health'] = async (...args) =>
   (await store()).health(...args);
 export const consumeLimit: HighLevelStore['consumeLimit'] = async (...args) =>

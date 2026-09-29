@@ -5,6 +5,7 @@ import {
   catalogStatus,
   requestRateLimit,
   runtime,
+  pinRecommendationCatalog,
   type RateLimitResult,
 } from '@/lib/store';
 import { jevConfigFrom, rankWithJev } from '@/lib/jev';
@@ -95,6 +96,19 @@ export async function POST(request: Request) {
       if (!dailyLimit.allowed) return limited(dailyLimit);
     }
     const result = await recommend(input, {
+        pinCatalog: async (now) => {
+          const pinned = await measured('publication_pin', () => pinRecommendationCatalog(now));
+          if (!pinned) return null;
+          return { ...pinned,
+            candidates: (filters) => measured('candidates', () => pinned.candidates(filters)),
+            vectors: (events, config) => measured('vectors', () => pinned.vectors(events,config)),
+            ...(pinned.dense ? { dense: {
+              coverage: (events,config) => measured('vector_coverage', () => pinned.dense!.coverage(events,config)),
+              rank: (events,config,vector) => measured('dense_exact', () => pinned.dense!.rank(events,config,vector)),
+            } } : {}),
+            finalize: (events) => measured('source_revalidation', () => pinned.finalize(events)),
+          };
+        },
         candidates: (filters) => measured('candidates', () => candidates(filters)),
         config,
         embeddingConfig,
