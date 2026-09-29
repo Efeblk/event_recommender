@@ -75,6 +75,15 @@ await test('import accepts only fresh explicit source retirements', () => {
     assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, retiredAt }] }, now));
   assert.throws(() => validateImport({ schemaVersion: 1, pages: [{ ...retirement, events: [event] }] }, now));
 });
+await test('import preserves validated admission semantics and rejects malformed bounds', () => {
+  const attendanceTiming = { kind: 'admission_window' as const, evidence: 'provider_flexible_window' as const,
+    validFrom: '2026-09-01T07:00:00.000Z', validThrough: '2026-09-30T14:00:00.000Z' };
+  const imported = validateImport(envelope({ ...event, attendanceTiming }), now)[0].events[0];
+  assert.deepEqual(imported.attendanceTiming, attendanceTiming);
+  assert.throws(() => validateImport(envelope({ ...event, attendanceTiming: {
+    ...attendanceTiming, validThrough: '2026-08-01T07:00:00.000Z',
+  } }), now));
+});
 await test('import accepts legitimate high TRY prices within safe cent representation', () => {
   assert.equal(validateImport(envelope({ ...event, title: 'Global Marketing Summit', price: 59400 }), now)[0].events[0].price, 59400);
   assert.equal(validateImport(envelope({ ...event, price: MAX_EVENT_PRICE }), now)[0].events[0].price, MAX_EVENT_PRICE);

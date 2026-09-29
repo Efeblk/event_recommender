@@ -28,6 +28,22 @@ export interface PreparedSearchV1 {
   /** Normalized, stop-word-filtered document tokens used by lexical ranking. */
   lexicalTokens: string[];
 }
+export type AttendanceTiming =
+  | {
+      kind: 'timed_session';
+      evidence: 'provider_sessions_and_source_text';
+    }
+  | {
+      kind: 'admission_window';
+      evidence: 'provider_flexible_window';
+      /** Exact provider validity bounds; these are not daily opening hours. */
+      validFrom: string;
+      validThrough: string;
+    }
+  | {
+      kind: 'unknown';
+      evidence: 'insufficient_source_evidence';
+    };
 export interface EventRecord {
   id: string;
   title: string;
@@ -46,6 +62,8 @@ export interface EventRecord {
   source?: 'biletinial' | 'bubilet' | 'biletix';
   sourceVersion?: string;
   extraction?: string;
+  /** Source-backed attendance semantics. Absent on legacy/unclassified records. */
+  attendanceTiming?: AttendanceTiming;
   /** The provider's original format label; unknown labels remain searchable. */
   sourceCategory?: string;
   sourceSessionIds?: string[];

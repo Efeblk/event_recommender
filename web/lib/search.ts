@@ -1045,6 +1045,11 @@ export function isEligible(
       return false;
   }
   if (f.startTimeFrom || f.startTimeTo) {
+    // A validity-window boundary or unresolved admission timestamp is not
+    // evidence of a booked start time. Preserve legacy session behavior when
+    // the source has not supplied timing semantics yet.
+    if (e.attendanceTiming && e.attendanceTiming.kind !== 'timed_session')
+      return false;
     const localTime = istanbulTimeFormatter.format(new Date(start));
     if (
       (f.startTimeFrom &&

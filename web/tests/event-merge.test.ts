@@ -152,6 +152,65 @@ await test('requires exact normalized title, city, venue identity and instant', 
   assert.equal(mergeEventSessions([base, ...cases]).length, 5);
 });
 
+await test('concert identity drops only the generic terminal concert suffix', () => {
+  const plain = event({
+    id: 'biletix:tugkan',
+    title: 'Tuğkan',
+    description: 'Tuğkan canlı performansı.',
+    category: 'Konser',
+    venue: 'Dorock XL Kadıköy',
+  });
+  const suffixed = event({
+    ...plain,
+    id: 'bubilet:tugkan',
+    source: 'bubilet',
+    title: 'Tuğkan Konseri',
+    url: 'https://bubilet.example/tugkan',
+  });
+  const merged = mergeEventSessions([plain, suffixed]);
+  assert.equal(merged.length, 1);
+  assert.deepEqual(new Set(merged[0].offers?.map(({ id }) => id)), new Set([plain.id, suffixed.id]));
+
+  for (const different of [
+    { ...suffixed, startsAt: '2026-10-10T18:00:00.000Z' },
+    { ...suffixed, venue: 'Başka Sahne' },
+    { ...suffixed, title: 'Tuğkan Akustik Konseri' },
+    { ...suffixed, title: 'Tuğkan Tribute Konseri' },
+    { ...suffixed, title: 'Tuğkan +18 Konseri' },
+    { ...suffixed, title: 'Tuğkan Konseri', category: 'Tiyatro' },
+  ]) assert.equal(mergeEventSessions([plain, different]).length, 2);
+});
+
+await test('merged sessions preserve agreed attendance timing and fail conflicting evidence closed', () => {
+  const admission = {
+    kind: 'admission_window' as const,
+    evidence: 'provider_flexible_window' as const,
+    validFrom: '2026-10-10T17:00:00.000Z',
+    validThrough: '2026-10-10T20:00:00.000Z',
+  };
+  const agreed = mergeEventSessions([
+    event({ attendanceTiming: admission }),
+    event({ id: 'two', source: 'bubilet', attendanceTiming: admission }),
+  ]);
+  assert.deepEqual(agreed[0].attendanceTiming, admission);
+
+  const conflicting = mergeEventSessions([
+    event({ attendanceTiming: admission }),
+    event({
+      id: 'two',
+      source: 'bubilet',
+      attendanceTiming: {
+        kind: 'timed_session',
+        evidence: 'provider_sessions_and_source_text',
+      },
+    }),
+  ]);
+  assert.deepEqual(conflicting[0].attendanceTiming, {
+    kind: 'unknown',
+    evidence: 'insufficient_source_evidence',
+  });
+});
+
 await test('normalizes Turkish accents and punctuation but not words', () => {
   const result = mergeEventSessions([
     event({ title: 'Şımarık: Gösteri!' }),

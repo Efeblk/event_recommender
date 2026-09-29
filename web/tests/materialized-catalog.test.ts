@@ -36,6 +36,14 @@ function sourceRecords(events: EventRecord[]) {
   });
 }
 
+await test('preparation marks unclassified admission times unknown without changing embedding input', () => {
+  const raw = event({ category: 'Müze', title: 'Müze girişi' });
+  const prepared = searchCatalogCandidates(buildSearchCatalog([raw], publishedAt), emptyFilters, publishedAt)[0];
+  assert.deepEqual(prepared.attendanceTiming, { kind: 'unknown', evidence: 'insufficient_source_evidence' });
+  assert.equal(prepared.preparedSearch?.documentText, voyageDocumentText(raw));
+  assert.equal(raw.attendanceTiming, undefined);
+});
+
 await test('materialized offers expire individually at the exact inclusive freshness boundary', () => {
   const old = event({ price: 100 });
   const fresh = later({ price: 600 });
@@ -97,6 +105,17 @@ await test('active representative keeps exact embedding document text as offers 
   assert.equal(after.preparedSearch?.documentText, voyageDocumentText(fresh));
   assert.equal(after.preparedSearch?.documentHash, createHash('sha256').update(voyageDocumentText(fresh)).digest('hex'));
   assert.notEqual(voyageDocumentText(initial), voyageDocumentText(after));
+});
+
+await test('publication merges concert suffix aliases without rewriting cached document text', () => {
+  const plain = event({ title: 'Halil Sezai', category: 'Konser', venue: 'Dorock XL', description: 'Kaynak A açıklaması.' });
+  const suffixed = later({ title: 'Halil Sezai Konseri', category: 'Konser', venue: 'Dorock XL Kadıköy', description: 'Kaynak B açıklaması.' });
+  const snapshot = buildSearchCatalog([plain, suffixed], publishedAt);
+  const cards = searchCatalogCandidates(snapshot, emptyFilters, publishedAt);
+  assert.equal(cards.length, 1);
+  assert.deepEqual(new Set(cards[0].offers?.map(({ id }) => id)), new Set([plain.id, suffixed.id]));
+  assert.equal(cards[0].preparedSearch?.documentText, voyageDocumentText(plain));
+  assert.equal(cards[0].preparedSearch?.documentHash, createHash('sha256').update(voyageDocumentText(plain)).digest('hex'));
 });
 
 await test('future clock-skewed source activates when it enters the five-minute allowance', () => {
