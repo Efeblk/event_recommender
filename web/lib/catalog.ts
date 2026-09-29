@@ -1,5 +1,6 @@
 import type { EventRecord } from './types.ts';
 import { CATEGORIES } from './types.ts';
+import { parseAttendanceTiming } from './event-timing.ts';
 import type { SourcePage } from './storage-contract.ts';
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_IMPORT_ENVELOPE_EVENTS = 2000;
@@ -106,6 +107,7 @@ export function validateImport(
           throw new Error('Invalid event field');
       const start = Date.parse(e.startsAt as string),
         checked = Date.parse(e.checkedAt as string);
+      const attendanceTiming = parseAttendanceTiming(e.attendanceTiming);
       if (e.sourceSessionIds !== undefined && (!Array.isArray(e.sourceSessionIds) || e.sourceSessionIds.length > 100 || e.sourceSessionIds.some((id) => typeof id !== 'string' || !id.length || id.length > 100)))
         throw new Error('Invalid source session IDs');
       for (const [key, max] of Object.entries({ sourceCategory: 250, sourceVersion: 40, extraction: 80 }))
@@ -170,6 +172,7 @@ export function validateImport(
         ...(e.sourceCategory !== undefined ? { sourceCategory: e.sourceCategory } : {}),
         ...(e.sourceVersion !== undefined ? { sourceVersion: e.sourceVersion } : {}),
         ...(e.extraction !== undefined ? { extraction: e.extraction } : {}),
+        ...(attendanceTiming ? { attendanceTiming } : {}),
       } as EventRecord;
     });
     return { url, events };

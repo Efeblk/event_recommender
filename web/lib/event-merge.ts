@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type { EventOffer, EventRecord } from './types.ts';
+import type { AttendanceTiming, EventOffer, EventRecord } from './types.ts';
 
 const VENUE_ALIASES = [
   ['Cafe Theatre', 'Cafe Theatre Koşuyolu'],
@@ -23,6 +23,9 @@ const VENUE_ALIASES = [
   // Matching Redd, Can Bonomo, Kalben and Gökhan Türkmen schedules;
   // the short-name source address is Watergarden AVM, Ataşehir.
   ['JJ Arena', 'JJ Arena Ataşehir'],
+  // Matching Halil Sezai and Kolpa schedules; provider shorthand omits the
+  // Kadıköy district while retaining the same Dorock XL venue.
+  ['Dorock XL Kadıköy', 'Dorock XL'],
   ['AKM Türk Telekom Opera Salonu', 'Türk Telekom Opera Salonu'],
   ['Mall Of İstanbul Biletinial Moi Sahne', 'Mall of İstanbul MOİ Sahne'],
 ] as const;
@@ -270,7 +273,18 @@ function reviewedWorkshopIdentity(event: EventRecord): { title: string; venue: s
 }
 
 function identityTitle(event: EventRecord): string {
-  return reviewedWorkshopIdentity(event)?.title ?? canonicalShowTitle(event.title);
+  const reviewed = reviewedWorkshopIdentity(event)?.title;
+  if (reviewed) return reviewed;
+  const canonical = canonicalShowTitle(event.title);
+  // Ticket providers inconsistently append the generic Turkish concert label
+  // to performer names. This is safe only inside the concert category: exact
+  // instant and reviewed venue identity are still required by the session key,
+  // while meaningful qualifiers such as "akustik" and "tribute" remain.
+  if (event.category === 'Konser') {
+    const withoutGenericConcertSuffix = canonical.replace(/\s+konseri?$/, '');
+    if (withoutGenericConcertSuffix) return withoutGenericConcertSuffix;
+  }
+  return canonical;
 }
 
 const venueAliases = new Map<string, string>();
@@ -370,7 +384,7 @@ function identity(event: EventRecord): {
 } {
   const reviewed = reviewedWorkshopIdentity(event);
   return {
-    title: reviewed?.title ?? canonicalShowTitle(event.title),
+    title: reviewed?.title ?? identityTitle(event),
     city: normalize(event.city),
     venue: reviewed?.venue ?? venueKey(event.venue),
     instant: parsedInstant(event.startsAt),
@@ -466,6 +480,17 @@ function selectRepresentative(events: EventRecord[]): EventRecord {
           ? evidencedStandup
           : events),
   ].sort(eventOrder)[0];
+}
+
+function mergedAttendanceTiming(events: EventRecord[]): AttendanceTiming | undefined {
+  const explicit = events
+    .map(({ attendanceTiming }) => attendanceTiming)
+    .filter((value): value is AttendanceTiming => value !== undefined);
+  if (!explicit.length) return undefined;
+  const first = JSON.stringify(explicit[0]);
+  return explicit.every((value) => JSON.stringify(value) === first)
+    ? explicit[0]
+    : { kind: 'unknown', evidence: 'insufficient_source_evidence' };
 }
 
 function selectOffer(
@@ -584,6 +609,7 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
       const canonicalShowKey = showIdentity
         ? hash('show', showIdentity)
         : undefined;
+      const attendanceTiming = mergedAttendanceTiming(ordered);
       return {
         ...representative,
         address,
@@ -596,6 +622,7 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
         checkedAt: offer.checkedAt,
         offers,
         mergedIds: [...rawIds].sort(),
+        ...(attendanceTiming ? { attendanceTiming } : {}),
         ...(canonicalProductionKey ? { canonicalProductionKey } : {}),
         ...(canonicalShowKey ? { canonicalShowKey } : {}),
       };

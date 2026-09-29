@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { jsonLd, parseEvents } from "../web/lib/source.ts";
 import { categoryFromSource, categoryForEvent } from "../web/lib/event-format.ts";
+import { biletixAttendanceTiming } from "../web/lib/event-timing.ts";
 import { discoverBiletinialCategories, extractBiletinial } from './biletinial.mjs';
 import { verifiedBubiletDetailInventory } from './bubilet.mjs';
 
@@ -174,6 +175,14 @@ function extractBiletix($, url, now) {
     description,
   );
   if (!category) throw new Error("unsupported_category");
+  const attendanceTiming = biletixAttendanceTiming({
+    category,
+    description,
+    flexibleTimeEventCheck: detail.flexibleTimeEventCheck,
+    startShowDate: detail.startShowDate,
+    endShowDate: detail.endShowDate,
+    performanceDates: performances.map((performance) => performance?.performanceDate),
+  });
   const image = $('meta[property="og:image"]').attr("content") ?? "";
   const groups = new Map();
   for (const p of performances) {
@@ -231,6 +240,7 @@ function extractBiletix($, url, now) {
       sourceCategory: sourceLabel,
       sourceVersion: "4",
       extraction: "embedded-state",
+      ...(attendanceTiming ? { attendanceTiming } : {}),
     });
   }
   // A complete, well-formed performance list containing only past/nonlocal

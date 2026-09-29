@@ -29,6 +29,7 @@ import { IntentSummary } from '@/components/intent-summary';
 import { isAlternativesRequest } from '@/lib/intent';
 import type { IntentState } from '@/lib/input-state';
 import { groupFilterCount, groupFilterLabels } from '@/lib/ui-filters';
+import { eventDateLabel } from '@/lib/event-date';
 import {
   emptyFilters,
   type EventRecord,
@@ -67,15 +68,6 @@ type RetryAction =
   | { kind: 'search'; attempt: SearchAttempt }
   | null;
 type SiteConfig = { donationUrl: string | null };
-const formatDate = (date: string) =>
-  new Intl.DateTimeFormat('tr-TR', {
-    timeZone: 'Europe/Istanbul',
-    day: 'numeric',
-    month: 'long',
-    weekday: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date));
 const formatShortDate = (date: string) =>
   new Intl.DateTimeFormat('tr-TR', {
     timeZone: 'Europe/Istanbul',
@@ -130,7 +122,7 @@ function EventCard({ event }: { event: EventRecord }) {
       </div>
       <div className="event-copy">
         <div className="event-date">
-          <CalendarDays size={14} /> {formatDate(event.startsAt)}
+          <CalendarDays size={14} /> {eventDateLabel(event)}
         </div>
         <h3>{event.title}</h3>
         <p className="venue">

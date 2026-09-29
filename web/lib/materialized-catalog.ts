@@ -38,7 +38,11 @@ export function buildSearchCatalog(events: EventRecord[], at: Date): SearchCatal
     for (const from of [...boundaries].sort((a, b) => a - b)) {
       const merged = mergeEventSessions(members.filter((event) => isEligible(event, emptyFilters, new Date(from)))).map((event) => {
         const documentText = voyageDocumentText(event);
-        return { ...event, preparedSearch: {
+        return { ...event,
+          ...(!event.attendanceTiming && ['Müze', 'Sergi'].includes(event.category)
+            ? { attendanceTiming: { kind: 'unknown' as const, evidence: 'insufficient_source_evidence' as const } }
+            : {}),
+          preparedSearch: {
           version: 1 as const,
           documentText,
           documentHash: createHash('sha256').update(documentText).digest('hex'),
