@@ -145,6 +145,8 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - name: Install shared collector validation dependencies without fetching providers
+        run: npm ci --prefix ../collector
       - name: Start isolated PostgreSQL with PostGIS and pgvector
         run: npm run catalog:start
       - name: Verify canonical identity and mandatory evidence contracts
