@@ -309,19 +309,50 @@ function project(session: PreparedPublicationSession, now: Date, maxAgeMs: numbe
     evidenceDependencyHash: chosen.evidenceDependencyHash ?? null, projected: projectionVersion === 1 }, event };
 }
 
-export function preparePublicationCandidates(publication: PreparedPublicationRead, inputFilters: Filters, now: Date, maxAgeMs = 72 * 3600000) {
+type ProjectedPublication = Array<{ event: EventRecord; selectedOffer: PreparedSelectedOffer; source: PreparedPublicationSession }>;
+type ProjectionCacheEntry = { createdMs: number; untilMs: number; projected: ProjectedPublication };
+const projectionCache = new WeakMap<PreparedPublicationRead, Map<number, ProjectionCacheEntry>>();
+
+function projectPublication(publication: PreparedPublicationRead, now: Date, maxAgeMs: number): ProjectedPublication {
+  return publication.sessions.flatMap((source) => {
+    const result = project(source, now, maxAgeMs, publication.offerProjectionVersion);
+    return result ? [{ ...result, source }] : [];
+  });
+}
+
+function nextProjectionBoundary(publication: PreparedPublicationRead, nowMs: number, maxAgeMs: number) {
+  let next = Number.POSITIVE_INFINITY;
+  const consider = (value: number) => { if (Number.isSafeInteger(value) && value > nowMs && value < next) next = value; };
+  for (const session of publication.sessions) {
+    const snapshot = object(session.snapshot);
+    if (!snapshot) continue;
+    for (const item of authoritativeTerms(session, snapshot, publication.offerProjectionVersion)) {
+      const observed = Date.parse(item.observedAt ?? '');
+      const from = item.validFrom ? Date.parse(item.validFrom) : Number.NaN;
+      const until = item.validUntil ? Date.parse(item.validUntil) : Number.NaN;
+      consider(observed); consider(from);
+      if (Number.isFinite(observed) && Number.isSafeInteger(observed + maxAgeMs)) consider(Math.floor(observed + maxAgeMs) + 1);
+      if (Number.isFinite(until)) consider(Math.floor(until) + 1);
+    }
+  }
+  return next;
+}
+
+function filterProjectedCandidates(projected: ProjectedPublication, inputFilters: Filters, now: Date, cloneEvents = false) {
   const filters = validateFilters(inputFilters);
   const selectedOffers = new Map<string, string>();
   const selectedOfferChecks = new Map<string, PreparedSelectedOffer>();
-  const projected = publication.sessions.flatMap((session) => {
-    const result = project(session, now, maxAgeMs, publication.offerProjectionVersion);
-    if (result) { selectedOffers.set(result.event.id, result.selectedOffer.offerId); selectedOfferChecks.set(result.event.id, result.selectedOffer); }
-    return result ? [result.event] : [];
+  const sources = cloneEvents ? new Map<string, PreparedPublicationSession>() : null;
+  const events = projected.map(({ event, selectedOffer, source }) => {
+    sources?.set(event.id, source);
+    selectedOffers.set(event.id, selectedOffer.offerId);
+    selectedOfferChecks.set(event.id, { ...selectedOffer });
+    return event;
   });
-  const budgetExcludedUnknownPrice = projected.filter(event => event.price === null &&
+  const budgetExcludedUnknownPrice = events.filter(event => event.price === null &&
     (filters.maxPrice !== null || filters.totalBudget !== undefined) &&
     isEligible(event, { ...filters, maxPrice: null, totalBudget: undefined }, now)).length;
-  const events = projected.filter((event) => {
+  const eligible = events.filter((event) => {
     if (!isEligible(event, filters, now)) return false;
     if (filters.totalBudget !== undefined && filters.partySize !== undefined) {
       if (event.price === null) return false;
@@ -330,7 +361,39 @@ export function preparePublicationCandidates(publication: PreparedPublicationRea
     }
     return true;
   });
-  return { events, selectedOffers, selectedOfferChecks, budgetExcludedUnknownPrice };
+  const returned = cloneEvents ? eligible.map(event => {
+    const cloned: EventRecord = { ...event,
+      ...(event.advertisedPrice ? { advertisedPrice: { ...event.advertisedPrice } } : {}),
+      ...(event.sourceSessionIds ? { sourceSessionIds: [...event.sourceSessionIds] } : {}),
+      ...(event.mergedIds ? { mergedIds: [...event.mergedIds] } : {}),
+      ...(event.offers ? { offers: structuredClone(event.offers) } : {}),
+      ...(event.attendanceTiming ? { attendanceTiming: structuredClone(event.attendanceTiming) } : {}),
+      ...(event.preparedSearch ? { preparedSearch: { ...event.preparedSearch, lexicalTokens: [...event.preparedSearch.lexicalTokens] } } : {}),
+    };
+    bindDisplayIdentitySource(cloned, sources!.get(event.id)!);
+    return cloned;
+  }) : eligible;
+  return { events: returned, selectedOffers, selectedOfferChecks, budgetExcludedUnknownPrice };
+}
+
+/** PostgreSQL-only immutable projection cache. All request filters and final current-head validation remain uncached. */
+export function prepareCachedPublicationCandidates(publication: PreparedPublicationRead, inputFilters: Filters, now: Date, maxAgeMs = 72 * 3600000) {
+  const nowMs = now.getTime();
+  if (!Number.isFinite(nowMs) || !Number.isSafeInteger(maxAgeMs) || maxAgeMs <= 0)
+    return preparePublicationCandidates(publication, inputFilters, now, maxAgeMs);
+  let byAge = projectionCache.get(publication);
+  if (!byAge) { byAge = new Map(); projectionCache.set(publication, byAge); }
+  let entry = byAge.get(maxAgeMs);
+  if (!entry || nowMs < entry.createdMs || nowMs >= entry.untilMs) {
+    entry = { createdMs: nowMs, untilMs: nextProjectionBoundary(publication, nowMs, maxAgeMs),
+      projected: projectPublication(publication, now, maxAgeMs) };
+    byAge.set(maxAgeMs, entry);
+  }
+  return filterProjectedCandidates(entry.projected, inputFilters, now, true);
+}
+
+export function preparePublicationCandidates(publication: PreparedPublicationRead, inputFilters: Filters, now: Date, maxAgeMs = 72 * 3600000) {
+  return filterProjectedCandidates(projectPublication(publication, now, maxAgeMs), inputFilters, now);
 }
 
 export async function searchPreparedPublication(

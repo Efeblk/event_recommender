@@ -1,6 +1,6 @@
 import { createPostgresClient } from './postgres-client.node.ts';
 import { createSqlPublicationRepository } from './publication-repository.ts';
-import { preparePublicationCandidates, selectedPublicationOfferUsable, type PreparedPublicationRead, type PreparedSelectedOffer, type PublicationSessionStatus } from './prepared-publication-search.ts';
+import { prepareCachedPublicationCandidates, selectedPublicationOfferUsable, type PreparedPublicationRead, type PreparedSelectedOffer, type PublicationSessionStatus } from './prepared-publication-search.ts';
 import { voyageCacheKey, type VoyageConfig } from './voyage.ts';
 import type { EventRecord, Filters } from './types.ts';
 import type { CatalogStatus } from './storage-contract.ts';
@@ -135,7 +135,7 @@ export function createPostgresCatalog(env: Record<string, string | undefined>) {
         availability: async () => (await client.queryText(postgresPublicationAvailabilitySql(publicationId, now))) === 'true',
         catalogStatus: () => readCatalogStatus(publicationId, now),
         candidates: async (filters: Filters) => {
-          const projected = preparePublicationCandidates(await read(publicationId), filters, now);
+          const projected = prepareCachedPublicationCandidates(await read(publicationId), filters, now);
           selectedOfferChecks = projected.selectedOfferChecks;
           budgetExcludedUnknownPrice = projected.budgetExcludedUnknownPrice;
           return projected.events;

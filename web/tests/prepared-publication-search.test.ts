@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { preparePublicationCandidates, searchPreparedPublication, type PreparedOfferTerm, type PreparedPublicationRead, type PreparedPublicationRepository, type PreparedPublicationSession, type PublicationSessionStatus } from '../lib/prepared-publication-search.ts';
+import { prepareCachedPublicationCandidates, preparePublicationCandidates, searchPreparedPublication, type PreparedOfferTerm, type PreparedPublicationRead, type PreparedPublicationRepository, type PreparedPublicationSession, type PublicationSessionStatus } from '../lib/prepared-publication-search.ts';
 import { emptyFilters } from '../lib/types.ts';
 
 const now = new Date('2026-09-30T09:00:00Z');
@@ -22,6 +22,61 @@ class Repo implements PreparedPublicationRepository {
   async readPublication(id?: string) { this.reads.push(id); return this.data; }
   async revalidatePublication(publicationId: string, ids: string[]) { this.revalidations.push(ids); return ids.map((sessionId) => ({ publicationId, sessionId, availabilityUsable: true, verifiedTotalEligible: true, canonicalSessionUsable: true, reasons: [], offers: [{ offerId: `offer-${sessionId}`, pinnedRevisionId: `rev-${sessionId}`, currentRevisionId: `rev-${sessionId}`, status: 'usable', reasons: [] }], ...this.statuses.get(sessionId) })); }
 }
+
+await test('immutable projection cache matches the oracle at each independent time boundary', () => {
+  const base = exact('base', { price: '200', priceMinor: '20000', observedAt: '2026-09-30T09:30:00Z' });
+  const cases = [
+    { name: 'observed', term: exact('cheap', { price:'50',priceMinor:'5000',observedAt:'2026-09-30T10:00:00Z' }), before:'2026-09-30T09:59:59.999Z', at:'2026-09-30T10:00:00Z', afterPrice:50 },
+    { name: 'valid-from', term: exact('cheap', { price:'50',priceMinor:'5000',observedAt:'2026-09-30T09:30:00Z',validFrom:'2026-09-30T10:30:00Z' }), before:'2026-09-30T10:29:59.999Z', at:'2026-09-30T10:30:00Z', afterPrice:50 },
+    { name: 'valid-until', term: exact('cheap', { price:'50',priceMinor:'5000',observedAt:'2026-09-30T09:30:00Z',validUntil:'2026-09-30T11:00:00Z' }), before:'2026-09-30T11:00:00Z', at:'2026-09-30T11:00:00.001Z', afterPrice:200 },
+    { name: 'age-expiry', term: exact('cheap', { price:'50',priceMinor:'5000',observedAt:'2026-09-30T09:00:00Z' }), before:'2026-09-30T11:59:59.999Z', at:'2026-09-30T12:00:00.001Z', afterPrice:200 },
+  ];
+  for (const item of cases) {
+    const row = session(item.name); row.pinnedOfferTerms=[base,item.term];
+    const publication={publicationId:item.name,sessions:[row]};
+    for (const iso of [item.before,item.at]) {
+      const date=new Date(iso), cached=prepareCachedPublicationCandidates(publication,emptyFilters,date,3*3600000);
+      assert.deepEqual(cached,preparePublicationCandidates(publication,emptyFilters,date,3*3600000));
+    }
+    assert.equal(prepareCachedPublicationCandidates(publication,emptyFilters,new Date(item.at),3*3600000).events[0].price,item.afterPrice);
+  }
+  const backward=session('backward'); backward.pinnedOfferTerms=[exact('backward',{observedAt:'2026-09-30T10:00:00Z'})];
+  const publication={publicationId:'backward',sessions:[backward]};
+  assert.equal(prepareCachedPublicationCandidates(publication,emptyFilters,new Date('2026-09-30T10:00:00Z')).events.length,1);
+  assert.equal(prepareCachedPublicationCandidates(publication,emptyFilters,new Date('2026-09-30T09:59:59.999Z')).events.length,0);
+  assert.deepEqual(prepareCachedPublicationCandidates({ ...publication, sessions:[session('replacement')] },emptyFilters,now).events.map(e=>e.id),['replacement']);
+  assert.deepEqual(prepareCachedPublicationCandidates(publication,emptyFilters,now,0.5),preparePublicationCandidates(publication,emptyFilters,now,0.5));
+  assert.deepEqual(prepareCachedPublicationCandidates(publication,emptyFilters,now,3600000),preparePublicationCandidates(publication,emptyFilters,now,3600000));
+  const invalidNow=new Date(Number.NaN);
+  assert.deepEqual(prepareCachedPublicationCandidates(publication,emptyFilters,invalidNow),preparePublicationCandidates(publication,emptyFilters,invalidNow));
+});
+
+await test('cache hits isolate nested results and rerun filters, group budgets and unknown-price notice', () => {
+  const row=session('isolated',{sourceSessionIds:['source-one'],attendanceTiming:{kind:'unknown',evidence:'insufficient_source_evidence'},preparedSearch:{lexicalTokens:['program']}});
+  row.pinnedOfferTerms=[exact('isolated',{priceKind:'starting_at',feeMinor:null})];
+  const publication={publicationId:'isolated',sessions:[row]};
+  const first=prepareCachedPublicationCandidates(publication,emptyFilters,now);
+  first.events[0].sourceSessionIds!.push('bad');
+  first.events[0].preparedSearch!.lexicalTokens.push('bad');
+  first.events[0].advertisedPrice!.amount=1;
+  (first.events[0].attendanceTiming as { evidence:string }).evidence='bad';
+  first.selectedOfferChecks.clear(); first.selectedOffers.clear();
+  const second=prepareCachedPublicationCandidates(publication,emptyFilters,now);
+  assert.deepEqual(second.events[0].sourceSessionIds,['source-one']);
+  assert.deepEqual(second.events[0].preparedSearch?.lexicalTokens,['program']);
+  assert.equal(second.events[0].advertisedPrice?.amount,100);
+  assert.equal(second.events[0].attendanceTiming?.evidence,'insufficient_source_evidence');
+  assert.equal(second.selectedOfferChecks.size,1);
+  const budget=prepareCachedPublicationCandidates(publication,{...emptyFilters,maxPrice:500,partySize:2,totalBudget:1000},now);
+  assert.deepEqual(budget.events,[]); assert.equal(budget.budgetExcludedUnknownPrice,1);
+  const offer=projected('v2-cache');
+  const projectedRow=session('v2-cache',{offerTermsVersion:2,offerTerms:[offer]}); projectedRow.pinnedOfferTerms=[offer];
+  const projectedPublication={publicationId:'v2-cache',offerProjectionVersion:1,sessions:[projectedRow]};
+  prepareCachedPublicationCandidates(projectedPublication,emptyFilters,now);
+  const warm=prepareCachedPublicationCandidates(projectedPublication,emptyFilters,now);
+  assert.equal(warm.selectedOfferChecks.get('v2-cache')?.pageObservationId,offer.pageObservationId);
+  assert.equal(warm.selectedOfferChecks.get('v2-cache')?.evidenceDependencyHash,offer.evidenceDependencyHash);
+});
 
 await test('pins one publication, ignores arbitrary raw offers and revalidates every returned card', async () => {
   const repo = new Repo({ publicationId: 'old-rollback', embeddingProfile: 'test', sessions: [session('one'), session('two')] });
