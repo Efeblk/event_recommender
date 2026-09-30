@@ -80,9 +80,18 @@ run "approved_postgres_matches_bounded_staging_plan" {
       google_sql_database_instance.catalog[0].settings[0].disk_type == "PD_SSD" &&
       google_sql_database_instance.catalog[0].settings[0].disk_size == 10 &&
       google_sql_database_instance.catalog[0].settings[0].disk_autoresize == false &&
-      google_sql_database_instance.catalog[0].settings[0].disk_autoresize_limit == 10
+      coalesce(google_sql_database_instance.catalog[0].settings[0].disk_autoresize_limit, 0) == 0
     )
     error_message = "Cloud SQL storage must stay at the reviewed 10 GiB SSD cap with automatic growth disabled."
+  }
+
+  assert {
+    condition = (
+      google_sql_database_instance.catalog[0].settings[0].maintenance_window[0].day == 7 &&
+      google_sql_database_instance.catalog[0].settings[0].maintenance_window[0].hour == 3 &&
+      google_sql_database_instance.catalog[0].settings[0].maintenance_window[0].update_track == "stable"
+    )
+    error_message = "Staging maintenance must retain the reviewed Sunday 03:00 UTC stable window."
   }
 
   assert {

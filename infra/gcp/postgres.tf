@@ -20,12 +20,17 @@ resource "google_sql_database_instance" "catalog" {
     edition           = "ENTERPRISE"
     availability_type = "ZONAL"
 
-    disk_type             = "PD_SSD"
-    disk_size             = 10
-    disk_autoresize       = false
-    disk_autoresize_limit = 10
+    disk_type       = "PD_SSD"
+    disk_size       = 10
+    disk_autoresize = false
 
     deletion_protection_enabled = true
+
+    maintenance_window {
+      day          = 7
+      hour         = 3
+      update_track = "stable"
+    }
 
     backup_configuration {
       enabled                        = true
