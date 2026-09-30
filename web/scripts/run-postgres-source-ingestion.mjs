@@ -32,6 +32,41 @@ export const sourceStorageOptions = (projectId, requestTimeoutMs) => ({ projectI
 export const sourcePostgresEnv = (env, config) => ({ ...env, BIPLAN_PG_POOL_MAX: String(config.pgPoolMax),
   BIPLAN_PG_STATEMENT_TIMEOUT_MS: String(config.pgStatementTimeoutMs) });
 
+const DATABASE_STAGES = new Set(['begin_batch','load_checkpoints','find_heads','record_page','accept_batch','quarantine_record','seal']);
+const SQLSTATE = /^[0-9A-Z]{5}$/;
+const elapsedMilliseconds = (started, clock) => {
+  const elapsed = Math.round(clock() - started);
+  return Number.isSafeInteger(elapsed) && elapsed >= 0 ? elapsed : 0;
+};
+const stageOperation = async (stage, operation, clock) => {
+  const started = clock();
+  try { return await operation(); }
+  catch (cause) {
+    const driverCode = typeof cause?.code === 'string' && SQLSTATE.test(cause.code) ? cause.code : 'unknown';
+    const error = new Error(`Source ingestion database stage failed: ${stage}`, { cause });
+    error.sourceIngestionDiagnostic = Object.freeze({ stage, elapsedMs: elapsedMilliseconds(started, clock), driverCode });
+    throw error;
+  }
+};
+const instrumentStore = (store, clock) => {
+  const instrumented = { ...store };
+  for (const [method, stage] of Object.entries({ beginV2: 'begin_batch', checkpoints: 'load_checkpoints', recordPage: 'record_page',
+    accept: 'accept_batch', quarantine: 'quarantine_record', sealV2: 'seal' }))
+    if (typeof store[method] === 'function') instrumented[method] = (...args) => stageOperation(stage, () => store[method](...args), clock);
+  return instrumented;
+};
+const instrumentCanonicalStore = (store, clock) => ({ ...store,
+  ...(typeof store.findHeads === 'function' ? { findHeads: (...args) => stageOperation('find_heads', () => store.findHeads(...args), clock) } : {}) });
+
+export function sourceIngestionFailure(error, env = {}) {
+  const diagnostic = error?.sourceIngestionDiagnostic;
+  if (diagnostic) return { error: 'Source ingestion database stage failed',
+    stage: DATABASE_STAGES.has(diagnostic.stage) ? diagnostic.stage : 'unknown',
+    elapsedMs: Number.isSafeInteger(diagnostic.elapsedMs) && diagnostic.elapsedMs >= 0 ? diagnostic.elapsedMs : 0,
+    driverCode: typeof diagnostic.driverCode === 'string' && SQLSTATE.test(diagnostic.driverCode) ? diagnostic.driverCode : 'unknown' };
+  return { error: sanitize(error, env) };
+}
+
 export function sourceIngestionOutcome(result) {
   if (result?.interrupted === true) return { status: 'interrupted', exitCode: 1 };
   if (result?.remaining > 0) return { status: 'bounded_stop', exitCode: 2 };
@@ -54,8 +89,9 @@ export async function runSourceIngestionJob({ config, dependencies, signal }) {
     dependencies.validateEnvelope(envelope);
     if (signal?.aborted) throw new Error('Source ingestion interrupted before database access');
     client = dependencies.createClient();
-    return await dependencies.ingest(envelope, { store: dependencies.createStore(client.queryText),
-      canonicalStore: dependencies.createCanonicalStore(client.queryText), limit: config.limit, signal });
+    const clock = dependencies.monotonicNow ?? performance.now.bind(performance);
+    return await dependencies.ingest(envelope, { store: instrumentStore(dependencies.createStore(client.queryText), clock),
+      canonicalStore: instrumentCanonicalStore(dependencies.createCanonicalStore(client.queryText), clock), limit: config.limit, signal });
   } finally { await client?.close(); }
 }
 
@@ -92,7 +128,8 @@ export async function main(argv = process.argv.slice(2), env = process.env) {
       sealed: result.seal?.status === 'sealed', aiCalls: 0 }));
     return outcome.exitCode;
   } catch (error) {
-    console.error(JSON.stringify({ status: controller.signal.aborted ? 'interrupted' : 'failed', batchId: config.batchId, error: sanitize(error, env) }));
+    console.error(JSON.stringify({ status: controller.signal.aborted ? 'interrupted' : 'failed', batchId: config.batchId,
+      ...sourceIngestionFailure(error, env) }));
     return 1;
   } finally { clearTimeout(deadline); process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt); }
 }

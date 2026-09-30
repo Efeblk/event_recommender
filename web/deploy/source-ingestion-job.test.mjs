@@ -4,7 +4,7 @@ import { Readable } from 'node:stream';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { loadPinnedGcsArtifact } from '../lib/gcs-artifact-loader.node.mjs';
-import { runSourceIngestionJob, sourceIngestionJobConfig, sourceIngestionOutcome,
+import { runSourceIngestionJob, sourceIngestionFailure, sourceIngestionJobConfig, sourceIngestionOutcome,
   sourcePostgresEnv, sourceStorageOptions } from '../scripts/run-postgres-source-ingestion.mjs';
 
 const env = { GCP_STORAGE_BUCKET: 'biplan-staging-artifacts' };
@@ -81,6 +81,38 @@ await test('bounded ingestion receives injected stores and always closes Postgre
   assert.equal(result.remaining, 2); assert.equal(received.options.limit, 1);
   assert.equal(received.options.store.kind, 'page'); assert.equal(received.options.canonicalStore.kind, 'canonical');
   assert.equal(closed, 1);
+});
+
+await test('database stage failures identify the operation and timing without exposing SQL, parameters, or secrets', async () => {
+  const envelope = { header: { batchId: config.batchId } };
+  const cases = [
+    { stage: 'find_heads', code: '57014', invoke: options => options.canonicalStore.findHeads({ id: 'record' }) },
+    { stage: 'accept_batch', code: '23505', invoke: options => options.store.accept('batch-1', { private: 'parameter' }) },
+    { stage: 'record_page', code: 'XX001', invoke: options => options.store.recordPage('batch-1', { private: 'parameter' }) },
+    { stage: 'seal', code: '08006', invoke: options => options.store.sealV2('batch-1', { private: 'parameter' }) },
+  ];
+  for (const fixture of cases) {
+    let closed = 0; const times = [100, 112];
+    const failure = Object.assign(new Error('SELECT private_sql password=top-secret parameter=private'),
+      { code: fixture.code, query: 'SELECT private_sql', parameters: ['private'] });
+    const reject = async () => { throw failure; };
+    const dependencies = { storage: {}, loadArtifact: async () => JSON.stringify(envelope), validateEnvelope: () => {},
+      createClient: () => ({ queryText: async () => '', close: async () => { closed++; } }),
+      createStore: () => ({ beginV2: async () => {}, checkpoints: async () => {}, recordPage: reject, accept: reject,
+        quarantine: async () => {}, sealV2: reject }),
+      createCanonicalStore: () => ({ findHeads: reject }), monotonicNow: () => times.shift(),
+      ingest: async (_value, options) => fixture.invoke(options) };
+    let caught; try { await runSourceIngestionJob({ config, dependencies, signal: new AbortController().signal }); }
+    catch (error) { caught = error; }
+    assert.ok(caught); assert.equal(caught.cause, failure); assert.equal(closed, 1);
+    const output = sourceIngestionFailure(caught, { BIPLAN_PG_PASSWORD: 'top-secret' });
+    assert.deepEqual(output, { error: 'Source ingestion database stage failed', stage: fixture.stage, elapsedMs: 12, driverCode: fixture.code });
+    assert.doesNotMatch(JSON.stringify(output), /SELECT|private|top-secret|password/i);
+  }
+  const untrusted = sourceIngestionFailure({ sourceIngestionDiagnostic: { stage: 'private_stage', elapsedMs: -1,
+    driverCode: 'password=top-secret', sql: 'SELECT private_sql' } });
+  assert.deepEqual(untrusted, { error: 'Source ingestion database stage failed', stage: 'unknown', elapsedMs: 0, driverCode: 'unknown' });
+  assert.doesNotMatch(JSON.stringify(untrusted), /SELECT|private|top-secret|password/i);
 });
 
 await test('only a coherent sealed result succeeds', () => {
