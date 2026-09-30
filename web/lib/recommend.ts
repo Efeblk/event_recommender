@@ -500,14 +500,15 @@ async function recommendResolved(
         'Anlamsal aramaya şu anda ulaşılamıyor; kelime araması kullanılıyor.';
     }
   }
-  shortlist = shortlistEvents(
-    events,
-    input.message,
-    input.history,
-    16,
-    semantic,
-    intent,
-  );
+  if (semantic)
+    shortlist = shortlistEvents(
+      events,
+      input.message,
+      input.history,
+      16,
+      semantic,
+      intent,
+    );
   diagnostics.distinctShortlist = shortlist.length;
   const fallback = fallbackEvents(
     shortlist,

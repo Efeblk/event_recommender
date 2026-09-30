@@ -303,8 +303,9 @@ function calmMoodShortlistCoverage(
 }
 
 function eligibleForContext(event: EventRecord, context: SearchContext) {
-  const text = eventText(event);
   if (context.category && event.category !== context.category) return false;
+  if (!context.rejectedTerms.length) return true;
+  const text = eventText(event);
   return !context.rejectedTerms.some((term) => {
     if (term === 'cocuk') return hasChildAudienceEvidence(event);
     if (term === 'konser' || term === 'muzik')
