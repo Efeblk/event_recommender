@@ -18,6 +18,7 @@ const paths = [...migrations, 'roles.sql', 'verify-page-receipts.mjs'];
 const hashes = async () => Object.fromEntries(await Promise.all(paths.map(async p => [p, createHash('sha256').update(await readFile(resolve(import.meta.dirname, p))).digest('hex')])));
 const sourceHashes = await hashes(), startedAt = new Date().toISOString(), checks = [], runs = [];
 let created = false, databaseDropped = false, rolesDropped = false, problem = null;
+let optionalArtifactAudit = { present: false, validated: false, reason: 'optional_local_artifact_absent' };
 const query = async statement => { await assertOwned(); return docker(['exec', '-i', container, 'psql', '-X', '-qAt', '-v', 'ON_ERROR_STOP=1', '-U', 'postgres', '-d', database], `SET statement_timeout='30s';\n${statement}`); };
 const prepQuery = s => query(`SET ROLE ${roleNames.preparer};\n${s}`);
 const webQuery = s => query(`SET ROLE ${roleNames.web};\n${s}`);
@@ -155,12 +156,20 @@ try {
       await assert.rejects(prepQuery(statement), /permission denied/i);
     await assert.rejects(webQuery("SELECT biplan.begin_preparation_batch_v2('{}');"), /permission denied/i);
   });
-  await check('preserved real artifact demonstrates URL versus record units without inventing a horizon', async () => {
-    const audit = JSON.parse(await readFile(resolve(work, 'collector-artifact-audit-36638393923.json'), 'utf8'));
-    const report = JSON.parse(await readFile(resolve(work, 'latest-collector-36638393923/collector/output/report.json'), 'utf8'));
+  const artifactRoot = process.env.BIPLAN_PAGE_RECEIPT_ARTIFACT_DIR ? resolve(process.env.BIPLAN_PAGE_RECEIPT_ARTIFACT_DIR) : work;
+  let artifactInputs;
+  try { artifactInputs = await Promise.all([
+    readFile(resolve(artifactRoot, 'collector-artifact-audit-36638393923.json')),
+    readFile(resolve(artifactRoot, 'latest-collector-36638393923/collector/output/report.json')),
+  ]); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  if (artifactInputs) await check('optional preserved artifact demonstrates URL versus record units without inventing a horizon', async () => {
+    const audit = JSON.parse(artifactInputs[0].toString('utf8'));
+    const report = JSON.parse(artifactInputs[1].toString('utf8'));
     assert.equal(audit.collection.scope.declaredHorizon, null); assert.equal(audit.inventory.knownDetailUrls, 4516);
     assert.ok(report.pages.some(p => p.events.length > 1)); assert.equal(audit.preservation.reconciledReportPageRecords, 8004);
     assert.equal(audit.preservation.currentRunRefreshedRecords + audit.preservation.recoveredUnpublishedRecords, 8004);
+    optionalArtifactAudit = { present: true, validated: true,
+      auditHash: sha(artifactInputs[0]), reportHash: sha(artifactInputs[1]), databaseWritesForArtifact: 0 };
   });
   await check('full coverage cannot copy an omitted eligible legacy offer; incomplete scope remains explicit', async () => {
     const legacy = { ...event('bubilet', 20), url: `${urls.bubilet}-legacy` };
@@ -199,7 +208,7 @@ finally {
   rolesDropped = true; await mkdir(work, { recursive: true });
   await writeFile(resolve(work, `page-receipts-verification-${Date.now()}.json`), JSON.stringify({ startedAt, finishedAt: new Date().toISOString(), runtime: process.version,
     baseRevision: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8', windowsHide: true }).trim(), sourceHashes, checks, runs, problem,
-    database, databaseDropped, rolesDropped, aiCalls: 0, externalCalls: 0, syntheticCoverage: true }, null, 2));
+    database, databaseDropped, rolesDropped, optionalArtifactAudit, aiCalls: 0, externalCalls: 0, syntheticCoverage: true }, null, 2));
 }
 if (problem) throw new Error(problem.message);
 console.log(JSON.stringify({ passed: checks.length, databaseDropped, rolesDropped, aiCalls: 0, externalCalls: 0 }));
