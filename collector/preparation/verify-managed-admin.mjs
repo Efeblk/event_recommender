@@ -24,7 +24,8 @@ for (const [kind, name] of Object.entries(roleNames)) {
 const migrations = ['schema.sql', 'migrations/002-offer-revisions.sql', 'migrations/003-workers.sql',
   'migrations/004-publication-refresh.sql', 'migrations/005-canonical-preparation.sql',
   'migrations/006-batched-publication.sql', 'migrations/007-page-receipts.sql',
-  'migrations/008-offer-evidence-projections.sql'];
+  'migrations/008-offer-evidence-projections.sql', 'migrations/009-offer-identity-provider-session.sql',
+  'migrations/010-offer-identity-session-index.sql'];
 const sourcePaths = [...migrations, 'roles.sql', 'verify-managed-admin.mjs'];
 const sourceHashes = async () => Object.fromEntries(await Promise.all(sourcePaths.map(async path =>
   [path, createHash('sha256').update(await readFile(resolve(import.meta.dirname, path))).digest('hex')])));

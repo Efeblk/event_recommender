@@ -111,7 +111,7 @@ DECLARE obj record;
     'seal_preparation_batch_v2','publish_preparation_batch_v6','record_batch_page_v7','seal_preparation_batch_v2_v7',
     'publish_preparation_batch_v7','validate_publication_offers_v7','current_publication_offer_status_v7',
     'projected_session_snapshot','derive_offer_page_evidence','current_offer_page_evidence','session_projection_integrity',
-    'offer_evidence_hash','publication_offer_term','publication_offer_evidence_current'];
+    'offer_evidence_hash','publication_offer_term','publication_offer_evidence_current','sync_offer_identity_provider_session'];
 BEGIN
   FOR obj IN SELECT c.oid,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname='biplan' AND c.relkind IN ('r','p','v','m','S','f') LOOP

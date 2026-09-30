@@ -1,6 +1,7 @@
 import { hybridRank } from './hybrid.ts';
 import { isEligible, rankEvents, uniqueEvents, validateFilters } from './search.ts';
 import type { EventRecord, Filters } from './types.ts';
+import { bindDisplayIdentitySource } from './event-merge.ts';
 
 export type PreparedSearchMode = 'lexical' | 'hybrid';
 
@@ -279,8 +280,7 @@ function project(session: PreparedPublicationSession, now: Date, maxAgeMs: numbe
     (chosen.priceKind === 'starting_at' || chosen.priceKind === 'exact')
     ? { amount: advertisedMinor / 100, currency: 'TRY' as const, kind: chosen.priceKind,
       feesKnown: minor(chosen.feeMinor) !== null } : undefined;
-  return { selectedOffer: { offerId: chosen.offerId, revisionId: chosen.revisionId, pageObservationId: chosen.pageObservationId ?? null,
-    evidenceDependencyHash: chosen.evidenceDependencyHash ?? null, projected: projectionVersion === 1 }, event: {
+  const event: EventRecord = {
     id: session.sessionId,
     title,
     description: text(snapshot.description) ?? session.document?.text ?? '',
@@ -303,7 +303,10 @@ function project(session: PreparedPublicationSession, now: Date, maxAgeMs: numbe
     canonicalProductionKey: session.productionId,
     preparedSearch: prepared,
     checkedAt,
-  } };
+  };
+  bindDisplayIdentitySource(event,session);
+  return { selectedOffer: { offerId: chosen.offerId, revisionId: chosen.revisionId, pageObservationId: chosen.pageObservationId ?? null,
+    evidenceDependencyHash: chosen.evidenceDependencyHash ?? null, projected: projectionVersion === 1 }, event };
 }
 
 export function preparePublicationCandidates(publication: PreparedPublicationRead, inputFilters: Filters, now: Date, maxAgeMs = 72 * 3600000) {
