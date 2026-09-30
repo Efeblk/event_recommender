@@ -72,12 +72,18 @@ export async function POST(request: Request) {
       const requestLimit = await requestRateLimit(request, paid);
       if (!requestLimit.allowed) return limited(requestLimit);
     }
-    const catalog = await measured('catalog', () => catalogStatus());
-    if (!catalogAllowsRecommendations(catalog.status))
+    const now = new Date();
+    const capturedPinned = await measured('publication_pin', () => pinRecommendationCatalog(now));
+    const available = capturedPinned?.availability
+      ? await measured('catalog_availability', () => capturedPinned.availability!())
+      : null;
+    const catalog = available === true ? null : await measured('catalog', () =>
+      available === false && capturedPinned?.catalogStatus ? capturedPinned.catalogStatus() : catalogStatus(now));
+    if (available === false || (catalog && !catalogAllowsRecommendations(catalog.status)))
       return Response.json(
         {
           error:
-            catalog.status === 'stale'
+            catalog?.status === 'stale'
               ? 'Etkinlik kataloğu yenileniyor. Güncel olmayan sonuçları göstermiyoruz; lütfen biraz sonra yeniden dene.'
               : 'Etkinlik kataloğu henüz hazır değil. Lütfen biraz sonra yeniden dene.',
           code: 'catalog_unavailable',
@@ -96,8 +102,9 @@ export async function POST(request: Request) {
       if (!dailyLimit.allowed) return limited(dailyLimit);
     }
     const result = await recommend(input, {
-        pinCatalog: async (now) => {
-          const pinned = await measured('publication_pin', () => pinRecommendationCatalog(now));
+        now,
+        pinCatalog: async () => {
+          const pinned = capturedPinned;
           if (!pinned) return null;
           return { ...pinned,
             candidates: (filters) => measured('candidates', () => pinned.candidates(filters)),

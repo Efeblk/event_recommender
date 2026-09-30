@@ -6,19 +6,21 @@ import { fileURLToPath } from 'node:url';
 const project = 'biplan-staging-efeblk', region = 'us-central1';
 const secret = 'biplan-staging-db-preparation-password';
 const connection = `${project}:${region}:biplan-staging-catalog-pg17`;
-const allowed = ['mode','projectNumber','image','revision','secretVersion','batchId','bucket','artifact'];
+const allowed = ['mode','projectNumber','image','revision','secretVersion','batchId','publicationId','bucket','artifact'];
 const identifier = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,249}$/.test(value);
 
 /** Offline rendering only. Cloud readback and the approved saved plan precede deployment. */
 export function postgresJobManifest(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).some(k => !allowed.includes(k)))
     throw new Error('Invalid staging Job settings');
-  const { mode, projectNumber, image, revision, secretVersion, batchId } = input;
-  if (!['source','prepare','publish'].includes(mode) || !identifier(batchId) ||
+  const { mode, projectNumber, image, revision, secretVersion, batchId, publicationId } = input;
+  const jobIdentity = mode === 'export' ? publicationId : batchId;
+  if (!['source','prepare','publish','export'].includes(mode) || !identifier(jobIdentity) ||
+      (mode === 'export' ? batchId !== undefined : publicationId !== undefined) ||
       typeof projectNumber !== 'string' || !/^[1-9]\d{5,19}$/.test(projectNumber) ||
       typeof secretVersion !== 'string' || !/^[1-9]\d*$/.test(secretVersion) || !/^[a-f0-9]{40}$/.test(revision ?? ''))
     throw new Error('Invalid staging Job identity or version');
-  const imageName = mode === 'source' ? 'biplan-source-ingestion' : 'biplan-preparation';
+  const imageName = mode === 'source' ? 'biplan-source-ingestion' : mode === 'export' ? 'biplan-serving-export' : 'biplan-preparation';
   if (typeof image !== 'string' || !image.startsWith(`${region}-docker.pkg.dev/${project}/biplan-staging/${imageName}@sha256:`) ||
       !/^[a-f0-9]{64}$/.test(image.split('@sha256:')[1] ?? '')) throw new Error('Staging Job requires the expected immutable image');
   const env = [
@@ -27,7 +29,14 @@ export function postgresJobManifest(input) {
     ['BIPLAN_PG_POOL_MAX','2'], ['BIPLAN_PG_STATEMENT_TIMEOUT_MS','30000'], ['CATALOG_PROCESS_DEADLINE_MS','90000'],
   ].map(([name,value]) => ({ name,value }));
   let args;
-  if (mode === 'source') {
+  if (mode === 'export') {
+    if (batchId !== undefined || input.artifact !== undefined || input.bucket !== `${project}-biplan-staging-data`)
+      throw new Error('Invalid staging serving export settings');
+    args = [publicationId];
+    env.find(item=>item.name==='CATALOG_PROCESS_DEADLINE_MS').value='120000';
+    env.push({ name:'GCP_STORAGE_BUCKET',value:input.bucket },{ name:'CATALOG_EXPORT_LEASE_SECONDS',value:'180' },
+      { name:'CATALOG_EXPORT_PAGE_SIZE',value:'1000' },{ name:'CATALOG_EXPORT_GCS_TIMEOUT_MS',value:'20000' });
+  } else if (mode === 'source') {
     const a = input.artifact;
     if (input.bucket !== `${project}-biplan-staging-data` || !a || Object.keys(a).some(k => !['key','generation','sha256'].includes(k)) ||
         !/^[a-f0-9]{64}$/.test(a.sha256 ?? '') || a.key !== `staging/preparation/sources/${a.sha256}.json` ||

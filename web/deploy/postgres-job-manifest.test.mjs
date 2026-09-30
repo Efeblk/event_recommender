@@ -28,6 +28,20 @@ await test('source Job pins object generation and hash and stays separate from p
   assert.throws(()=>postgresJobManifest({...input,artifact:{...input.artifact,generation:'0'}}),/artifact/);
   assert.throws(()=>postgresJobManifest({...input,bucket:'unrelated-bucket'}),/artifact/);
 });
+await test('serving export Job binds the approved bucket, publication and bounded runtime',()=>{
+  const input={...base,mode:'export',batchId:undefined,publicationId:'publication-abc',
+    image:base.image.replace('biplan-preparation@','biplan-serving-export@'),bucket:'biplan-staging-efeblk-biplan-staging-data'};
+  const job=postgresJobManifest(input), task=job.spec.template.spec.template.spec, container=task.containers[0];
+  assert.equal(job.metadata.name,'biplan-staging-catalog-export');
+  assert.deepEqual(container.args,['publication-abc']);
+  assert.equal(task.maxRetries,0); assert.equal(task.timeoutSeconds,'180');
+  const env=Object.fromEntries(container.env.filter(e=>e.value!==undefined).map(e=>[e.name,e.value]));
+  assert.equal(env.CATALOG_PROCESS_DEADLINE_MS,'120000'); assert.equal(env.GCP_STORAGE_BUCKET,input.bucket);
+  assert.equal(env.CATALOG_EXPORT_LEASE_SECONDS,'180'); assert.equal(env.CATALOG_EXPORT_PAGE_SIZE,'1000');
+  assert.equal(env.CATALOG_EXPORT_GCS_TIMEOUT_MS,'20000');
+  assert.throws(()=>postgresJobManifest({...input,bucket:'foreign'}),/export/);
+  assert.throws(()=>postgresJobManifest({...input,publicationId:undefined}),/identity/);
+});
 await test('mutable images, foreign identity, raw secrets and cross-mode inputs fail closed',()=>{
   for (const input of [ {...base,image:base.image.replace(/@sha256:.+$/,':latest')}, {...base,secretVersion:'latest'},
     {...base,image:base.image.replace('biplan-staging-efeblk/','unrelated-project/')}, {...base,password:'never-log'},

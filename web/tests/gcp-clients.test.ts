@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   createGcpClients,
   createGcpStores,
+  createExactGenerationObjectReader,
   gcpStorageConfigFromEnv,
   type FirestoreLike,
   type GcpSdkConstructors,
@@ -235,6 +236,25 @@ void test('blob reads pin generation and map only 404 to missing', async () => {
     assert.equal(failure.message, 'GCP storage operation failed.');
     return true;
   });
+});
+
+void test('binary serving reads use the exact generation, disable decompression and enforce the compressed bound', async () => {
+  const seen: Array<Record<string, unknown> | undefined> = [];
+  const storage: StorageLike = { bucket: () => ({ file(_key, options) { return {
+    getMetadata: async () => [{ generation: 'unused', size: 3 }],
+    createReadStream(readOptions) { seen.push({ ...options, ...readOptions }); return Readable.from([Buffer.from([0, 1, 2])]); },
+    save: async () => undefined,
+  }; } }) };
+  const reader = createExactGenerationObjectReader(storage);
+  assert.deepEqual(await reader.read('bucket-name', 'staging/preparation/serving/v1/a/b.gz', '42', 3), Buffer.from([0, 1, 2]));
+  assert.deepEqual(seen, [{ generation: '42', validation: 'crc32c', decompress: false }]);
+  await assert.rejects(reader.read('bucket-name', 'x/y.gz', '0', 3), /GCP storage operation failed/);
+  await assert.rejects(reader.read('bucket-name', 'staging/preparation/serving/v1/a/b.gz', '42', 2), /GCP storage operation failed/);
+  const missing: StorageLike = { bucket: () => ({ file() { return {
+    getMetadata: async () => [{ generation: 'unused', size: 0 }], save: async () => undefined,
+    createReadStream: () => new Readable({ read() { this.destroy(Object.assign(new Error('missing'), { code: 404 })); } }),
+  }; } }) };
+  assert.equal(await createExactGenerationObjectReader(missing).read('bucket-name', 'x/y.gz', '42', 2), null);
 });
 
 void test('blob reads reject declared and streamed oversized objects', async () => {

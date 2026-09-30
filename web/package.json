@@ -61,6 +61,7 @@
     "catalog:verify:page-receipts": "node --experimental-strip-types ../collector/preparation/verify-page-receipts.mjs",
     "catalog:verify:page-source": "node --experimental-strip-types ../collector/preparation/verify-page-source.mjs",
     "catalog:verify:offer-projections": "node --experimental-strip-types ../collector/preparation/verify-offer-projections.mjs",
+    "catalog:verify:serving-artifacts": "node --experimental-strip-types ../collector/preparation/verify-serving-artifacts.mjs",
     "catalog:verify:batch-guards": "node --experimental-strip-types ../collector/preparation/verify-batch-guards.mjs",
     "catalog:batch:work": "node --experimental-strip-types ../collector/preparation/run-batch.mjs",
     "catalog:verify:batch": "node --experimental-strip-types ../collector/preparation/verify-batch.mjs",

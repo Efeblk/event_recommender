@@ -32,6 +32,11 @@ run "postgres_is_disabled_by_default" {
   }
 
   assert {
+    condition     = length(google_storage_bucket_iam_member.preparation_serving_artifacts) == 0
+    error_message = "Serving artifact access must remain disabled without PostgreSQL opt-in."
+  }
+
+  assert {
     condition     = length(google_secret_manager_secret.postgres_password) == 0
     error_message = "Database secret containers must not be created without explicit opt-in."
   }
@@ -58,6 +63,17 @@ run "approved_postgres_matches_bounded_staging_plan" {
   variables {
     postgres_staging_enabled                    = true
     postgres_activation_authorization_reference = "user-approval:2026-09-30-thread"
+  }
+
+  assert {
+    condition = (
+      length(google_storage_bucket_iam_member.preparation_serving_artifacts) == 2 &&
+      google_storage_bucket_iam_member.preparation_serving_artifacts["roles/storage.objectCreator"].condition[0].expression ==
+      "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.collection.name}/objects/staging/preparation/serving/v1/')" &&
+      google_storage_bucket_iam_member.preparation_serving_artifacts["roles/storage.objectViewer"].condition[0].expression ==
+      "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.collection.name}/objects/staging/preparation/serving/v1/')"
+    )
+    error_message = "Preparation may only create/read the immutable serving prefix."
   }
 
   assert {

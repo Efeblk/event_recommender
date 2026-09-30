@@ -7,11 +7,30 @@ import type { CatalogStatus } from './storage-contract.ts';
 import type { PinnedRecommendationCatalog } from './recommend.ts';
 import { readPostgresPreparedCatalogReadiness } from './postgres-readiness.node.ts';
 import { sqlLiteral as literal } from './sql-literal.ts';
+import { createGcpExactGenerationObjectReader } from './gcp-clients.node.ts';
+import { readPinnedPublicationServingArtifact, servingArtifactObjectName, type PublicationServingBinding } from './publication-serving-artifact.node.ts';
 
 export function filterRevalidatedPublicationEvents(events: EventRecord[], statuses: PublicationSessionStatus[],
   selected: Map<string, PreparedSelectedOffer>, publicationId: string) {
   const bySession = new Map(statuses.map(status => [status.sessionId, status]));
   return events.filter(event => selectedPublicationOfferUsable(bySession.get(event.id), selected.get(event.id), publicationId));
+}
+
+export function postgresPublicationAvailabilitySql(publicationId: string, now: Date) {
+  const instant = literal(now.toISOString());
+  return `SELECT EXISTS(
+    SELECT 1 FROM biplan.published_sessions ps
+    JOIN biplan.sessions c ON c.id=ps.session_id
+    JOIN biplan.publication_offers po ON po.publication_id=ps.publication_id AND po.session_id=ps.session_id
+    JOIN biplan.offer_revisions r ON r.id=po.offer_revision_id
+    JOIN biplan.offer_identities i ON i.id=r.offer_id AND i.current_revision_id=r.id
+    WHERE ps.publication_id=${literal(publicationId)} AND c.status='scheduled'
+      AND c.starts_at>=${instant}::timestamptz
+      AND r.availability IN ('available','limited')
+      AND r.observed_at<=${instant}::timestamptz
+      AND r.observed_at>=${instant}::timestamptz-interval '72 hours'
+      AND (r.valid_from IS NULL OR r.valid_from<=${instant}::timestamptz)
+      AND (r.valid_until IS NULL OR r.valid_until>=${instant}::timestamptz));`;
 }
 
 export function createPostgresCatalog(env: Record<string, string | undefined>) {
@@ -28,10 +47,35 @@ export function createPostgresCatalog(env: Record<string, string | undefined>) {
     if (!id) throw new Error('No active PostgreSQL publication');
     return id;
   };
+  const artifactEnabled = env.BIPLAN_PG_SERVING_ARTIFACTS === '1';
+  let artifactReader: ReturnType<typeof createGcpExactGenerationObjectReader> | undefined;
+  const readArtifactOrSql = async (id: string) => {
+    if (!artifactEnabled) return repository.readPublication(id);
+    const raw = await client.queryText(`SELECT biplan.read_publication_serving_artifact(${literal(id)})::text;`);
+    if (!raw) { console.info(JSON.stringify({ event: 'postgres_serving_artifact_fallback', reason: 'binding_absent' })); return repository.readPublication(id); }
+    try {
+      const binding = JSON.parse(raw) as PublicationServingBinding;
+      const environment = env.DEPLOYMENT_ENV;
+      const bucket = env.GCP_STORAGE_BUCKET?.trim();
+      if ((environment !== 'staging' && environment !== 'production') || !bucket || binding.bucket !== bucket ||
+          binding.objectName !== servingArtifactObjectName(environment, id, binding.compressedSha256) || binding.header?.publicationId !== id)
+        throw new Error('Serving artifact binding does not match configured storage or publication');
+      artifactReader ??= createGcpExactGenerationObjectReader(env);
+      const reader = await artifactReader;
+      const publication = await readPinnedPublicationServingArtifact(reader, binding, AbortSignal.timeout(30_000));
+      if (!publication) throw new Error('Serving artifact generation is absent');
+      console.info(JSON.stringify({ event: 'postgres_serving_artifact_loaded', publicationId: id, sessions: publication.sessions.length }));
+      return publication;
+    } catch (error) {
+      console.warn(JSON.stringify({ event: 'postgres_serving_artifact_fallback', reason: 'verification_failed',
+        error: error instanceof Error ? error.message : 'unknown' }));
+      return repository.readPublication(id);
+    }
+  };
   const read = (id: string) => {
     if (cachedId !== id || !cached) {
       cachedId = id;
-      const pending = repository.readPublication(id);
+      const pending = readArtifactOrSql(id);
       cached = pending.catch(error => { if (cachedId === id) cached = undefined; throw error; });
     }
     return cached;
@@ -57,6 +101,25 @@ export function createPostgresCatalog(env: Record<string, string | undefined>) {
       WHERE s.publication_id=${literal(publicationId)} AND s.session_id=ANY(${ids})
         AND d.embedding_profile=${literal(voyageCacheKey(config))} AND d.embedding IS NOT NULL`;
   };
+  const readCatalogStatus = async (id: string, now: Date): Promise<CatalogStatus> => {
+    const instant = literal(now.toISOString());
+    const stats: { stored:number; eligible:number; last:string|null; oldest:string|null } = JSON.parse(await client.queryText(`
+      WITH offers AS MATERIALIZED (SELECT p.session_id,max(r.observed_at) last,min(r.observed_at) oldest,
+        bool_or(r.availability IN ('available','limited') AND r.observed_at<=${instant}::timestamptz
+        AND r.observed_at>=${instant}::timestamptz-interval '72 hours'
+        AND (r.valid_from IS NULL OR r.valid_from<=${instant}::timestamptz)
+        AND (r.valid_until IS NULL OR r.valid_until>=${instant}::timestamptz)) usable
+        FROM biplan.publication_offers p JOIN biplan.offer_revisions r ON r.id=p.offer_revision_id
+        JOIN biplan.offer_identities i ON i.id=r.offer_id AND i.current_revision_id=r.id
+        WHERE p.publication_id=${literal(id)} GROUP BY p.session_id)
+      SELECT jsonb_build_object('stored',count(*),'eligible',count(*) FILTER (WHERE c.status='scheduled'
+        AND c.starts_at>=${instant}::timestamptz AND COALESCE(o.usable,false)),
+        'last',max(o.last),'oldest',min(o.oldest))::text
+        FROM biplan.published_sessions s JOIN biplan.sessions c ON c.id=s.session_id
+        LEFT JOIN offers o ON o.session_id=s.session_id WHERE s.publication_id=${literal(id)};`));
+    return {status:stats.eligible?'ready':stats.stored?'stale':'empty',stored:stats.stored,eligible:stats.eligible,
+      lastCheckedAt:stats.last,oldestCheckedAt:stats.oldest,expiresAt:stats.last?new Date(Date.parse(stats.last)+72*3600000).toISOString():null};
+  };
   return {
     close: client.close,
     health: async () => { await activeId(); },
@@ -69,6 +132,8 @@ export function createPostgresCatalog(env: Record<string, string | undefined>) {
       let budgetExcludedUnknownPrice = 0;
       return {
         publicationId,
+        availability: async () => (await client.queryText(postgresPublicationAvailabilitySql(publicationId, now))) === 'true',
+        catalogStatus: () => readCatalogStatus(publicationId, now),
         candidates: async (filters: Filters) => {
           const projected = preparePublicationCandidates(await read(publicationId), filters, now);
           selectedOfferChecks = projected.selectedOfferChecks;
@@ -101,22 +166,7 @@ export function createPostgresCatalog(env: Record<string, string | undefined>) {
     },
     async catalogStatus(now = new Date()): Promise<CatalogStatus> {
       const id=await activeId();
-      const stats: { stored:number; eligible:number; last:string|null; oldest:string|null } = JSON.parse(await client.queryText(`
-        WITH offers AS MATERIALIZED (SELECT p.session_id,max(r.observed_at) last,min(r.observed_at) oldest,
-          bool_or(r.availability IN ('available','limited') AND r.observed_at<=${literal(now.toISOString())}::timestamptz
-          AND r.observed_at>=${literal(now.toISOString())}::timestamptz-interval '72 hours'
-          AND (r.valid_from IS NULL OR r.valid_from<=${literal(now.toISOString())}::timestamptz)
-          AND (r.valid_until IS NULL OR r.valid_until>=${literal(now.toISOString())}::timestamptz)) usable
-          FROM biplan.publication_offers p JOIN biplan.offer_revisions r ON r.id=p.offer_revision_id
-          JOIN biplan.offer_identities i ON i.id=r.offer_id AND i.current_revision_id=r.id
-          WHERE p.publication_id=${literal(id)} GROUP BY p.session_id)
-        SELECT jsonb_build_object('stored',count(*),'eligible',count(*) FILTER (WHERE c.status='scheduled'
-          AND c.starts_at>=${literal(now.toISOString())}::timestamptz AND COALESCE(o.usable,false)),
-          'last',max(o.last),'oldest',min(o.oldest))::text
-          FROM biplan.published_sessions s JOIN biplan.sessions c ON c.id=s.session_id
-          LEFT JOIN offers o ON o.session_id=s.session_id WHERE s.publication_id=${literal(id)};`));
-      return {status:stats.eligible?'ready':stats.stored?'stale':'empty',stored:stats.stored,eligible:stats.eligible,
-        lastCheckedAt:stats.last,oldestCheckedAt:stats.oldest,expiresAt:stats.last?new Date(Date.parse(stats.last)+72*3600000).toISOString():null};
+      return readCatalogStatus(id, now);
     },
   };
 }

@@ -53,7 +53,7 @@ interface FileMetadata {
 
 interface FileLike {
   getMetadata(): Promise<[FileMetadata]>;
-  createReadStream(options?: { validation?: 'crc32c' | false }): Readable;
+  createReadStream(options?: { validation?: 'crc32c' | false; decompress?: boolean }): Readable;
   save(
     body: string,
     options: {
@@ -91,7 +91,33 @@ export interface GcpSdkConstructors {
     projectId: string;
     databaseId: string;
   }) => FirestoreLike;
-  Storage: new (options: { projectId: string }) => StorageLike;
+  Storage: new (options: { projectId: string; retryOptions?: { autoRetry: boolean; maxRetries?: number } }) => StorageLike;
+}
+
+export interface ExactGenerationObjectReader { read(bucket: string, objectName: string, generation: string, maxBytes: number, signal?: AbortSignal): Promise<Buffer | null>; }
+
+export function createExactGenerationObjectReader(storage: StorageLike): ExactGenerationObjectReader {
+  return { async read(bucketName, key, generation, maxBytes, signal) {
+    if (!/^[a-z0-9][a-z0-9._-]{1,220}[a-z0-9]$/.test(bucketName) || !/^[1-9]\d*$/.test(generation) ||
+        !Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > 32 * 1024 * 1024) throw new Error(RESOURCE_ERROR);
+    const file = storage.bucket(bucketName).file(objectKey(key), { generation });
+    const chunks: Buffer[] = []; let bytes = 0;
+    try {
+      const stream = file.createReadStream({ validation: 'crc32c', decompress: false });
+      const abort = () => stream.destroy(new Error(RESOURCE_ERROR));
+      if (signal?.aborted) abort(); else signal?.addEventListener('abort', abort, { once: true });
+      try { for await (const value of stream) { const chunk = Buffer.from(value as Uint8Array); bytes += chunk.length;
+        if (bytes > maxBytes) { stream.destroy(); throw new Error(RESOURCE_ERROR); } chunks.push(chunk); } }
+      finally { signal?.removeEventListener('abort', abort); }
+    } catch (error) { if (statusCode(error) === 404) return null; storageFailure(); }
+    return Buffer.concat(chunks, bytes);
+  }};
+}
+
+export async function createGcpExactGenerationObjectReader(env: Environment = process.env, constructors?: GcpSdkConstructors) {
+  const config = gcpStorageConfigFromEnv(env);
+  const Storage = constructors?.Storage ?? (await import('@google-cloud/storage')).Storage;
+  return createExactGenerationObjectReader(new Storage({ projectId: config.projectId, retryOptions: { autoRetry: false, maxRetries: 0 } }) as unknown as StorageLike);
 }
 
 function required(env: Environment, name: string) {

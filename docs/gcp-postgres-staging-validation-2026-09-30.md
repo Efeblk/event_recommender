@@ -36,4 +36,12 @@ Actual billed cost is unavailable and remains `null`; no zero-cost claim is made
 
 The smallest remaining path is the single reserved no-AI performance confirmation after the runtime fix, then completion of the managed publication/pointer rollback/replay drill within the existing Job allowance. Public launch additionally needs fresh declared provider coverage, trustworthy preparation receipts, fee evidence for hard budgets, capacity evidence, 48 hours of unattended monitoring, and separate publication authorization.
 
+## Prepared serving transport
+
+Migration 011 adds an optional, immutable serving-artifact binding for each publication. PostgreSQL computes its content root from exact ordered row bytes; a fenced preparation Job exports them, uploads without overwrite, verifies the exact object generation, then commits the reference. HTTP pins the database publication and verifies the bounded gzip transport before using it. Missing or invalid objects fall back once to SQL for that same publication. Dynamic offer selection, mandatory source checks, vectors and the active pointer remain database responsibilities.
+
+The full local frozen-catalog export matches every compact session and pinned offer from the existing reader: 7,719 sessions, 10,024 terms, 46,634,504 raw bytes and 9,297,908 compressed bytes. Local decode/verification took 547.6 ms; this is not Cloud Run acceptance. Evidence: `local-serving-export-latest.json`. Local SQL verification covers installation without superuser privileges, legacy/projected terms, size limits, immutable bindings and fenced retries. The successful request path also uses one publication pin and an uncached current-availability check instead of a full catalog tally.
+
+The existing preparation identity now has only create/read permissions under `staging/preparation/serving/v1/` in the existing private bucket. Its two reviewed IAM additions create no new database, bucket or paid service. Managed export and the final HTTP performance run are still outstanding at this checkpoint. Export dispatch is explicit; this slice does not yet establish continuous automatic enrichment/publication.
+
 Raw evidence is retained under ignored `web/work/catalog-foundation/gcp-preflight-20260930/`; failed receipts are preserved alongside later results.

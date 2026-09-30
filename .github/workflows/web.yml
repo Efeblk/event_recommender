@@ -128,6 +128,20 @@ jobs:
           docker run --rm --network none --entrypoint node biplan-source-ingestion-ci:${{ github.sha }} \
             --experimental-strip-types --input-type=module -e "await Promise.all([import('./lib/gcs-artifact-loader.node.mjs'), import('./lib/postgres-client.node.ts'), import('../collector/preparation/page-batch-source.mjs'), import('../collector/preparation/page-batch-source-store.mjs'), import('../collector/preparation/canonical-store.mjs')]); await import('@google-cloud/storage');"
 
+      - name: Build bounded serving-export Job without credentials
+        run: docker build -f web/deploy/Dockerfile.serving-export --tag biplan-serving-export-ci:${{ github.sha }} .
+        working-directory: .
+      - name: Verify serving-export image rejects missing configuration without networking
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none biplan-serving-export-ci:${{ github.sha }}
+          result=$?
+          set -e
+          test "$result" -eq 2
+          docker run --rm --network none --entrypoint node biplan-serving-export-ci:${{ github.sha }} \
+            --experimental-strip-types --input-type=module -e "await Promise.all([import('./scripts/run-postgres-serving-export.mjs'), import('./lib/publication-serving-artifact.node.ts'), import('./lib/gcp-clients.node.ts'), import('./lib/postgres-client.node.ts'), import('../collector/preparation/serving-export.mjs'), import('../collector/preparation/serving-export-store.mjs')]); await import('@google-cloud/storage');"
+
   terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -183,6 +197,8 @@ jobs:
         run: node --experimental-strip-types ../collector/preparation/verify-offer-identity-provider-session.mjs
       - name: Verify indexed session lookups preserve offer evidence
         run: node --experimental-strip-types ../collector/preparation/verify-offer-identity-session-index.mjs
+      - name: Verify immutable serving artifacts and fenced export
+        run: npm run catalog:verify:serving-artifacts
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -31,6 +31,7 @@ import {
 } from './input-state.ts';
 import { interpretInput } from './input-interpreter.ts';
 import { recommendationQuery, retrievalQuery } from './input-retrieval.ts';
+import type { CatalogStatus } from './storage-contract.ts';
 
 export interface RecommendInput {
   message: string;
@@ -149,6 +150,10 @@ export interface Dependencies {
 
 export interface PinnedRecommendationCatalog {
   publicationId: string;
+  /** Current request-time gate. Implementations must not cache this result. */
+  availability?: () => Promise<boolean>;
+  /** Full diagnostics for this exact pin; called only after availability fails. */
+  catalogStatus?: () => Promise<CatalogStatus>;
   candidates: Dependencies['candidates'];
   vectors: NonNullable<Dependencies['vectors']>;
   dense?: Dependencies['dense'];

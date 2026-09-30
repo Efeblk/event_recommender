@@ -93,7 +93,8 @@ DECLARE obj record;
     'publication_refresh_requests','outbox_attempts','publication_refresh_attempts','canonical_requests','canonical_revisions',
     'canonical_heads','canonical_source_mappings','canonical_preparations','offer_occurrence_bindings','canonical_occurrence_disputes',
     'preparation_storage_limits','preparation_batches','preparation_batch_items','preparation_batch_sessions',
-    'source_page_observations','source_page_heads','preparation_batch_pages','preparation_batch_page_sessions','publication_offer_evidence'];
+    'source_page_observations','source_page_heads','preparation_batch_pages','preparation_batch_page_sessions','publication_offer_evidence',
+    'publication_serving_artifacts'];
   approved_functions text[]:=ARRAY['reject_immutable_mutation','protect_publication_manifest','protect_validated_publication_rows',
     'activate_publication','claim_preparation_jobs','complete_preparation_job','ingest_prepared_payload','reject_immutable_offer_revision',
     'protect_candidate_publication_offer','accept_offer_revision','validate_publication_offers','enforce_publication_offer_validation',
@@ -111,7 +112,10 @@ DECLARE obj record;
     'seal_preparation_batch_v2','publish_preparation_batch_v6','record_batch_page_v7','seal_preparation_batch_v2_v7',
     'publish_preparation_batch_v7','validate_publication_offers_v7','current_publication_offer_status_v7',
     'projected_session_snapshot','derive_offer_page_evidence','current_offer_page_evidence','session_projection_integrity',
-    'offer_evidence_hash','publication_offer_term','publication_offer_evidence_current','sync_offer_identity_provider_session'];
+    'offer_evidence_hash','publication_offer_term','publication_offer_evidence_current','sync_offer_identity_provider_session',
+    'protect_publication_serving_artifact','publication_serving_rows','publication_serving_binding','begin_publication_serving_export',
+    'claim_publication_serving_export','publication_serving_lease','read_publication_serving_export_page','checkpoint_publication_serving_export',
+    'complete_publication_serving_export','fail_publication_serving_export','read_publication_serving_artifact'];
 BEGIN
   FOR obj IN SELECT c.oid,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname='biplan' AND c.relkind IN ('r','p','v','m','S','f') LOOP
@@ -173,6 +177,15 @@ BEGIN
   END IF;
   IF EXISTS(SELECT 1 FROM biplan.schema_migrations WHERE version='008-offer-evidence-projections') THEN
     read_api:=read_api||ARRAY['biplan.publication_offer_term(text,text)','biplan.publication_offer_evidence_current(text,text)'];
+  END IF;
+  IF EXISTS(SELECT 1 FROM biplan.schema_migrations WHERE version='011-publication-serving-artifacts') THEN
+    read_api:=read_api||ARRAY['biplan.read_publication_serving_artifact(text)'];
+    prepare_api:=prepare_api||ARRAY['biplan.begin_publication_serving_export(text,text)',
+      'biplan.claim_publication_serving_export(text,text,integer)',
+      'biplan.read_publication_serving_export_page(text,text,bigint,text,integer)',
+      'biplan.checkpoint_publication_serving_export(text,text,bigint,jsonb)',
+      'biplan.complete_publication_serving_export(text,text,bigint,jsonb)',
+      'biplan.fail_publication_serving_export(text,text,bigint,jsonb)'];
   END IF;
   FOREACH signature IN ARRAY read_api LOOP
     function_id:=to_regprocedure(signature); IF function_id IS NULL THEN RAISE EXCEPTION 'missing read API %',signature; END IF;

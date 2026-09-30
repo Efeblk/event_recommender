@@ -149,3 +149,20 @@ resource "google_storage_bucket_iam_member" "preparation_sources" {
     expression  = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.collection.name}/objects/staging/preparation/sources/')"
   }
 }
+
+# Preparation publishes and verifies immutable serving transports. These
+# conditions grant object access only under that prefix, without bucket listing,
+# overwrite or deletion; PostgreSQL remains the publication authority.
+resource "google_storage_bucket_iam_member" "preparation_serving_artifacts" {
+  for_each = var.postgres_staging_enabled ? toset(["roles/storage.objectCreator", "roles/storage.objectViewer"]) : toset([])
+
+  bucket = google_storage_bucket.collection.name
+  role   = each.value
+  member = google_service_account.preparation[0].member
+
+  condition {
+    title       = "preparation-serving-artifacts-only"
+    description = "Create and verify exact immutable publication serving objects."
+    expression  = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.collection.name}/objects/staging/preparation/serving/v1/')"
+  }
+}
