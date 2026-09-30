@@ -2,6 +2,24 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createSqlPublicationRepository } from '../lib/publication-repository.ts';
 
+const session = (index: number) => ({
+  sessionId: `session-${String(index).padStart(5, '0')}`,
+  productionId: `production-${index}`,
+  venueId: `venue-${index}`,
+  snapshot: {},
+  document: null,
+  pinnedOfferTerms: [{ offerId: `offer-${index}` }],
+});
+
+const metadata = (sessionCount: number) => JSON.stringify({
+  publicationId: 'p',
+  offerProjectionVersion: 1,
+  embeddingProfile: null,
+  sessionCount,
+  requiredSessionCount: sessionCount,
+  requiredOfferCount: sessionCount,
+});
+
 void test('publication reader uses sealed immutable terms directly for projection publications', async () => {
   let statement = '';
   const repository = createSqlPublicationRepository(async sql => {
@@ -36,18 +54,55 @@ void test('publication reader rejects a generation already missing required sess
 
 void test('publication reader rejects publication disappearance between pages', async () => {
   let calls = 0;
-  const repository = createSqlPublicationRepository(async () => ++calls === 1
-    ? JSON.stringify({ publicationId: 'p', offerProjectionVersion: 1, embeddingProfile: null, sessionCount: 1, requiredSessionCount: 1, requiredOfferCount: 1 })
-    : JSON.stringify({ publicationPresent: false, sessions: [] }));
+  const firstPage = Array.from({ length: 1000 }, (_, index) => session(index));
+  const repository = createSqlPublicationRepository(async () => {
+    calls++;
+    if (calls === 1) return metadata(1001);
+    if (calls === 2) return JSON.stringify({ publicationPresent: true, sessions: firstPage });
+    return JSON.stringify({ publicationPresent: false, sessions: [] });
+  });
   await assert.rejects(repository.readPublication('p'), /disappeared during read/);
+  assert.equal(calls, 3);
 });
 
 void test('publication reader rejects a truncated immutable page sequence', async () => {
   let calls = 0;
-  const repository = createSqlPublicationRepository(async () => ++calls === 1
-    ? JSON.stringify({ publicationId: 'p', offerProjectionVersion: 1, embeddingProfile: null, sessionCount: 1, requiredSessionCount: 1, requiredOfferCount: 1 })
-    : JSON.stringify({ publicationPresent: true, sessions: [] }));
+  const firstPage = Array.from({ length: 1000 }, (_, index) => session(index));
+  const repository = createSqlPublicationRepository(async () => {
+    calls++;
+    if (calls === 1) return metadata(1001);
+    return JSON.stringify({ publicationPresent: true, sessions: calls === 2 ? firstPage : [] });
+  });
   await assert.rejects(repository.readPublication('p'), /page set is incomplete/);
+  assert.equal(calls, 3);
+});
+
+void test('publication reader continues after a full 1000-row page and accepts a final partial page', async () => {
+  const statements: string[] = [];
+  const firstPage = Array.from({ length: 1000 }, (_, index) => session(index));
+  const finalSession = session(1000);
+  const repository = createSqlPublicationRepository(async sql => {
+    statements.push(sql);
+    if (statements.length === 1) return metadata(1001);
+    return JSON.stringify({ publicationPresent: true, sessions: statements.length === 2 ? firstPage : [finalSession] });
+  });
+  const result = await repository.readPublication('p');
+  assert.equal(result.sessions.length, 1001);
+  assert.equal(result.sessions.at(-1)?.sessionId, finalSession.sessionId);
+  assert.equal(statements.length, 3);
+  assert.match(statements[2], /s\.session_id COLLATE "C">E'session-00999' COLLATE "C"/);
+});
+
+void test('publication reader rejects ordering failure after a full 1000-row page', async () => {
+  let calls = 0;
+  const firstPage = Array.from({ length: 1000 }, (_, index) => session(index));
+  const repository = createSqlPublicationRepository(async () => {
+    calls++;
+    if (calls === 1) return metadata(1001);
+    return JSON.stringify({ publicationPresent: true, sessions: calls === 2 ? firstPage : [session(999)] });
+  });
+  await assert.rejects(repository.readPublication('p'), /page is not strictly ordered/);
+  assert.equal(calls, 3);
 });
 
 void test('revalidation preserves revision, page and dependency status fields from SQL', async () => {
