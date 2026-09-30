@@ -114,6 +114,20 @@ jobs:
           set -e
           test "$result" -eq 2
 
+      - name: Build bounded source-ingestion Job without credentials
+        run: docker build -f web/deploy/Dockerfile.source-ingestion --tag biplan-source-ingestion-ci:${{ github.sha }} .
+        working-directory: .
+      - name: Verify source image cannot default to database or storage access
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none biplan-source-ingestion-ci:${{ github.sha }}
+          result=$?
+          set -e
+          test "$result" -eq 2
+          docker run --rm --network none --entrypoint node biplan-source-ingestion-ci:${{ github.sha }} \
+            --experimental-strip-types --input-type=module -e "await Promise.all([import('./lib/gcs-artifact-loader.node.mjs'), import('./lib/postgres-client.node.ts'), import('../collector/preparation/page-batch-source.mjs'), import('../collector/preparation/page-batch-source-store.mjs'), import('../collector/preparation/canonical-store.mjs')]); await import('@google-cloud/storage');"
+
   terraform:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -159,6 +173,8 @@ jobs:
         run: npm run catalog:verify:page-receipts
       - name: Verify resumable page and multi-session source ingestion
         run: npm run catalog:verify:page-source
+      - name: Verify immutable offer evidence, provider fallback and rollback guards
+        run: npm run catalog:verify:offer-projections
       - name: Verify actual restricted database roles
         run: npm run catalog:verify:roles
       - uses: actions/upload-artifact@v4

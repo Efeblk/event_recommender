@@ -18,7 +18,7 @@ const suffix = randomBytes(6).toString('hex');
 const database = `biplan_roles_verify_${suffix}`;
 const roleNames = Object.fromEntries(['owner', 'reader', 'prepare', 'web', 'preparer'].map(name => [name, `biplan_verify_${suffix}_${name}`]));
 assert.match(database, /^biplan_roles_verify_[0-9a-f]{12}$/);
-const migrations = ['schema.sql', 'migrations/002-offer-revisions.sql', 'migrations/003-workers.sql', 'migrations/004-publication-refresh.sql', 'migrations/005-canonical-preparation.sql', 'migrations/006-batched-publication.sql', 'migrations/007-page-receipts.sql'];
+const migrations = ['schema.sql', 'migrations/002-offer-revisions.sql', 'migrations/003-workers.sql', 'migrations/004-publication-refresh.sql', 'migrations/005-canonical-preparation.sql', 'migrations/006-batched-publication.sql', 'migrations/007-page-receipts.sql', 'migrations/008-offer-evidence-projections.sql'];
 const paths = [...migrations, 'roles.sql', 'verify-roles.mjs', 'canonical-adapter.mjs', 'canonical-store.mjs', 'canonical-worker.mjs',
   'worker-store.mjs', 'worker.mjs', 'refresh-consumer.mjs', 'publication-store.mjs', 'db.mjs', 'batch-store.mjs', 'batch-worker.mjs'];
 const hashes = async () => Object.fromEntries(await Promise.all(paths.map(async path => [path, createHash('sha256').update(await readFile(resolve(import.meta.dirname, path))).digest('hex')])));
@@ -88,6 +88,9 @@ try {
     await denied('web', 'SELECT * FROM biplan.preparation_jobs;');
     await denied('web', 'SELECT * FROM biplan.source_page_observations;');
     await denied('web', 'SELECT * FROM biplan.source_page_heads;');
+    await denied('web', 'SELECT * FROM biplan.publication_offer_evidence;');
+    assert.equal(await webQuery("SELECT biplan.publication_offer_term('missing','missing') IS NULL;"), 't');
+    assert.equal(await webQuery("SELECT biplan.publication_offer_evidence_current('missing','missing');"), 'f');
     await denied('web', "SELECT biplan.accept_canonical_observation('{}'::jsonb);");
     for (const role of ['web', 'preparer']) {
       await denied(role, "SELECT biplan.ingest_prepared_payload('{}'::jsonb);");

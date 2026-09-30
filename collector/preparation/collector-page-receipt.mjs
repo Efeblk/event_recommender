@@ -109,6 +109,8 @@ export function collectorPageReceiptFromReport(report, { batchId, collectionRunI
     pages.push({ pageId, provider: sourcePage.source, url: sourcePage.url, observedAt, sourceUpdatedAt: null, evidenceHash,
       ...(/^[0-9a-f]{64}$/.test(sourcePage.contentHash ?? '') ? { rawResponseHash: sourcePage.contentHash } : {}),
       evidenceKind: 'normalized_page', parserVersion: String(sourcePage.parserVersion ?? 'unknown'), status, origin,
+      reasonCode: status === 'quarantined' ? (['session_time_conflict', 'venue_conflict', 'title_conflict', 'attendance_conflict', 'cancellation_conflict'].includes(sourcePage.quarantineReason) ? sourcePage.quarantineReason : 'unclassified_quarantine') : status === 'retired' ? 'no_verified_sessions' : status === 'failed' ? 'refresh_failed' : 'verified_page',
+      sourceReason: typeof sourcePage.quarantineReason === 'string' ? sourcePage.quarantineReason.slice(0, 1000) : null,
       originRunId: origin === 'current_run' ? runId : null, records: refs,
       complete: status === 'verified' || status === 'retired' });
   }

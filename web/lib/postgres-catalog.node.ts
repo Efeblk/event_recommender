@@ -1,12 +1,18 @@
 import { createPostgresClient } from './postgres-client.node.ts';
 import { createSqlPublicationRepository } from './publication-repository.ts';
-import { preparePublicationCandidates, type PreparedPublicationRead } from './prepared-publication-search.ts';
+import { preparePublicationCandidates, selectedPublicationOfferUsable, type PreparedPublicationRead, type PreparedSelectedOffer, type PublicationSessionStatus } from './prepared-publication-search.ts';
 import { voyageCacheKey, type VoyageConfig } from './voyage.ts';
 import type { EventRecord, Filters } from './types.ts';
 import type { CatalogStatus } from './storage-contract.ts';
 import type { PinnedRecommendationCatalog } from './recommend.ts';
 import { readPostgresPreparedCatalogReadiness } from './postgres-readiness.node.ts';
 import { sqlLiteral as literal } from './sql-literal.ts';
+
+export function filterRevalidatedPublicationEvents(events: EventRecord[], statuses: PublicationSessionStatus[],
+  selected: Map<string, PreparedSelectedOffer>, publicationId: string) {
+  const bySession = new Map(statuses.map(status => [status.sessionId, status]));
+  return events.filter(event => selectedPublicationOfferUsable(bySession.get(event.id), selected.get(event.id), publicationId));
+}
 
 export function createPostgresCatalog(env: Record<string, string | undefined>) {
   const client = createPostgresClient(env);
@@ -59,13 +65,13 @@ export function createPostgresCatalog(env: Record<string, string | undefined>) {
       const publicationId = await activeId();
       // Pin metadata before interpreting any catalog-dependent input. Loading
       // immutable records can wait until a search is actually needed.
-      let selectedOffers = new Map<string, string>();
+      let selectedOfferChecks = new Map<string, PreparedSelectedOffer>();
       let budgetExcludedUnknownPrice = 0;
       return {
         publicationId,
         candidates: async (filters: Filters) => {
           const projected = preparePublicationCandidates(await read(publicationId), filters, now);
-          selectedOffers = projected.selectedOffers;
+          selectedOfferChecks = projected.selectedOfferChecks;
           budgetExcludedUnknownPrice = projected.budgetExcludedUnknownPrice;
           return projected.events;
         },
@@ -89,12 +95,7 @@ export function createPostgresCatalog(env: Record<string, string | undefined>) {
         async finalize(events: EventRecord[]) {
           if (!events.length) return [];
           const statuses = await repository.revalidatePublication(publicationId,events.map(e=>e.id),new Date().toISOString(),72*3600000);
-          const bySession = new Map(statuses.map(s=>[s.sessionId,s]));
-          return events.filter(e => {
-            const status=bySession.get(e.id), chosen=selectedOffers.get(e.id);
-            return status?.publicationId===publicationId && status.availabilityUsable && status.canonicalSessionUsable &&
-              status.offers.some(o=>o.offerId===chosen && o.status==='usable' && o.currentRevisionId===o.pinnedRevisionId);
-          });
+          return filterRevalidatedPublicationEvents(events,statuses,selectedOfferChecks,publicationId);
         },
       };
     },

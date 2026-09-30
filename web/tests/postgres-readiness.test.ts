@@ -32,7 +32,7 @@ const valid = (overrides: Record<string, unknown> = {}) => ({
     preparationReceipt: { status: 'verified', publicationId: 'publication-1', version:'canonical-batch-v1',
       batchId:'batch-1', inputHash:'1'.repeat(64) },
   },
-  requiredSessions: 2, requiredDocuments: 2, requiredOffers: '3',
+  requiredSessions: 2, requiredDocuments: 2, requiredOffers: '3', requiredOfferEvidence: null as string | null,
   sessions: 2, documents: 2, offers: 3, missingReferences: 0, canceledSessions: 0,
   invalidOfferPins: 0, unresolvedPageOffers: 0, pendingEvaluations: 7, failedEvaluations: 2, staleEvaluations: 1,
   unknownEvaluations: 4, ...overrides,
@@ -44,6 +44,7 @@ void test('one pinned statement verifies publication integrity and reports optio
     calls++;
     assert.equal(sql, postgresPreparedCatalogReadinessSql);
     assert.match(sql, /WITH active AS MATERIALIZED/);
+    assert.match(sql, /publication_offer_evidence_current\(a\.id,r\.offer_id\)/);
     assert.doesNotMatch(sql, /GCS|checkpoint/i);
     return JSON.stringify(valid());
   });
@@ -136,4 +137,31 @@ void test('active publication and complete receipts cannot mask current adverse 
   assert.ok(assessPostgresPreparedCatalogReadiness(valid({unresolvedPageOffers:1})).reasons.includes('provider_page_reconciliation_required'));
   const raw=valid(); raw.manifest.preparationReceipt.inputHash='4'.repeat(64);
   assert.ok(assessPostgresPreparedCatalogReadiness(raw).reasons.includes('preparation_receipt_invalid'));
+});
+
+void test('projection readiness accepts coherent unsupported evidence but rejects missing or drifted evidence', () => {
+  const projected = valid();
+  projected.requiredOfferEvidence = '3';
+  Object.assign(projected.manifest, { offerProjectionVersion: 1, requiredOfferEvidenceCount: 3,
+    preparationReceipt: { status: 'verified', publicationId: 'publication-1', version: 'provider-page-offer-v1',
+      batchId: 'batch-1', inputHash: '1'.repeat(64), acceptedRecords: 3, pageAffectedSessions: 2,
+      checkedAt: new Date().toISOString(), optionalEmbeddingsRequired: false } });
+  assert.equal(assessPostgresPreparedCatalogReadiness(projected).ready, true,
+    'the reviewed helper treats intact intentionally unsupported pins as coherent');
+  const drift = structuredClone(projected); drift.unresolvedPageOffers = 1;
+  assert.ok(assessPostgresPreparedCatalogReadiness(drift).reasons.includes('provider_page_reconciliation_required'));
+  const missingCount = structuredClone(projected); missingCount.requiredOfferEvidence = '2';
+  assert.ok(assessPostgresPreparedCatalogReadiness(missingCount).reasons.includes('postgres_offer_evidence_count_mismatch'));
+});
+
+void test('projection versions and preparation receipt versions cannot cross legacy boundaries', () => {
+  const unknown = valid(); Object.assign(unknown.manifest, { offerProjectionVersion: 2, requiredOfferEvidenceCount: 3 });
+  unknown.requiredOfferEvidence = '3';
+  assert.ok(assessPostgresPreparedCatalogReadiness(unknown).reasons.includes('postgres_offer_projection_unsupported'));
+  assert.ok(assessPostgresPreparedCatalogReadiness(unknown).reasons.includes('preparation_receipt_invalid'));
+  const projectedWithLegacyReceipt = valid(); Object.assign(projectedWithLegacyReceipt.manifest, { offerProjectionVersion: 1, requiredOfferEvidenceCount: 3 });
+  projectedWithLegacyReceipt.requiredOfferEvidence = '3';
+  assert.ok(assessPostgresPreparedCatalogReadiness(projectedWithLegacyReceipt).reasons.includes('preparation_receipt_invalid'));
+  const legacyWithProjectedReceipt = valid(); legacyWithProjectedReceipt.manifest.preparationReceipt.version = 'provider-page-offer-v1';
+  assert.ok(assessPostgresPreparedCatalogReadiness(legacyWithProjectedReceipt).reasons.includes('preparation_receipt_invalid'));
 });

@@ -76,11 +76,11 @@
     },
     "databasePrincipals": {
       "owner": { "name": "biplan_owner", "login": false },
-      "readRole": { "name": "biplan_read", "login": false },
+      "readRole": { "name": "biplan_reader", "login": false },
       "prepareRole": { "name": "biplan_prepare", "login": false },
       "runtimeLogin": {
         "name": "biplan_web",
-        "memberOf": ["biplan_read"],
+        "memberOf": ["biplan_reader"],
         "secret": "biplan-staging-db-runtime-password",
         "superuser": false,
         "createDatabase": false,
@@ -102,7 +102,14 @@
       "cloudSqlRole": "roles/cloudsql.client",
       "secretRole": "roles/secretmanager.secretAccessor",
       "runtimeSecretAccess": ["biplan-staging-db-runtime-password"],
-      "preparationSecretAccess": ["biplan-staging-db-preparation-password"]
+      "preparationSecretAccess": ["biplan-staging-db-preparation-password"],
+      "preparationSourceRead": {
+        "role": "roles/storage.objectViewer",
+        "prefix": "staging/preparation/sources/",
+        "bucketScoped": true,
+        "listAllowed": false,
+        "writeAllowed": false
+      }
     },
     "runtimeLimits": {
       "cloudRunMinInstances": 0,
@@ -110,7 +117,7 @@
       "runtimePoolMax": 2,
       "runtimePoolIdleTimeoutMs": 30000,
       "runtimeStatementTimeoutMs": 5000,
-      "preparationJobMaxRetries": 1,
+      "preparationJobMaxRetries": 0,
       "preparationJobParallelism": 1,
       "preparationPoolMax": 2,
       "preparationStatementTimeoutMs": 30000,

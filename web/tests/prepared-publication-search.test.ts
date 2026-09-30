@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { preparePublicationCandidates, searchPreparedPublication, type PreparedPublicationRead, type PreparedPublicationRepository, type PreparedPublicationSession, type PublicationSessionStatus } from '../lib/prepared-publication-search.ts';
+import { preparePublicationCandidates, searchPreparedPublication, type PreparedOfferTerm, type PreparedPublicationRead, type PreparedPublicationRepository, type PreparedPublicationSession, type PublicationSessionStatus } from '../lib/prepared-publication-search.ts';
 import { emptyFilters } from '../lib/types.ts';
 
 const now = new Date('2026-09-30T09:00:00Z');
-const exact = (id: string, overrides = {}) => ({ offerId: `offer-${id}`, revisionId: `rev-${id}`, sourceUrl: `https://www.bubilet.com.tr/istanbul/etkinlik/${id}`, currency: 'TRY', price: '100', priceMinor: '10000', feeMinor: '0', priceKind: 'exact', availability: 'available', observedAt: now.toISOString(), ...overrides });
+const exact = (id: string, overrides: Partial<PreparedOfferTerm> = {}): PreparedOfferTerm => ({ offerId: `offer-${id}`, revisionId: `rev-${id}`, sourceUrl: `https://www.bubilet.com.tr/istanbul/etkinlik/${id}`, currency: 'TRY', price: '100', priceMinor: '10000', feeMinor: '0', priceKind: 'exact', availability: 'available', observedAt: now.toISOString(), ...overrides });
+const projected = (id: string, overrides: Partial<PreparedOfferTerm> = {}): PreparedOfferTerm => exact(id, { evidenceVersion: 1, evidenceStatus: 'supported', evidenceReason: 'supported_page_offer',
+  pageObservationId: `page-${id}`, evidenceDependencyHash: 'a'.repeat(64), evidencePolicyVersion: 'provider-page-offer-v1',
+  evidenceObservedAt: now.toISOString(), ...overrides });
 const session = (id: string, overrides: Record<string, unknown> = {}): PreparedPublicationSession => ({
   sessionId: id, productionId: `production-${id}`, venueId: `venue-${id}`,
   snapshot: { title: `Program ${id}`, description: 'genel etkinlik', startsAt: '2026-10-03T17:00:00Z', venue: 'Test Sahne', city: 'İstanbul', district: 'Kadıköy', address: '', category: 'Konser', imageUrl: '', offers: [{ arbitrary: { raw: true } }], ...overrides },
@@ -126,4 +129,34 @@ await test('advertised minima remain visible without satisfying budgets or hidin
   assert.equal(preparePublicationCandidates(publication,{...emptyFilters,category:'Workshop',maxPrice:500},now).budgetExcludedUnknownPrice,0);
   row.pinnedOfferTerms=[exact('advertised',{price:'99',priceMinor:'10000',feeMinor:null})];
   assert.equal(preparePublicationCandidates(publication,emptyFilters,now).events.find(e=>e.id==='advertised')?.advertisedPrice,undefined);
+});
+
+await test('v2 projection selects only supported pinned evidence and never resurrects masked raw offers', async () => {
+  const unsupported = projected('a', { evidenceStatus: 'unsupported', evidenceReason: 'page_offer_unproven', sourceUrl: null,
+    availability: 'unknown', price: null, priceMinor: null, feeMinor: null, priceKind: 'unknown' });
+  const supported = projected('b', { provider: 'biletix', sourceUrl: 'https://www.biletix.com/etkinlik/B/ISTANBUL/tr', price: '125', priceMinor: '12500' });
+  const row = session('projection', { offerTermsVersion: 2, offerTerms: [unsupported, supported],
+    offers: [{ sourceUrl: 'https://www.bubilet.com.tr/istanbul/etkinlik/a', priceMinor: '1' }] });
+  row.pinnedOfferTerms = [unsupported, supported];
+  const repo = new Repo({ publicationId: 'p-v2', offerProjectionVersion: 1, sessions: [row] }, new Map([['projection', {
+    offers: [{ offerId: supported.offerId, pinnedRevisionId: supported.revisionId, currentRevisionId: supported.revisionId, status: 'usable', reasons: [],
+      pinnedPageObservationId: supported.pageObservationId, currentPageObservationId: supported.pageObservationId,
+      evidenceDependencyHash: supported.evidenceDependencyHash }]
+  }]]));
+  const result = await searchPreparedPublication(repo, { query: '', filters: emptyFilters, mode: 'lexical', now });
+  assert.equal(result.events.length, 1); assert.equal(result.events[0].price, 125); assert.equal(result.events[0].url, supported.sourceUrl);
+  row.pinnedOfferTerms = [unsupported]; row.snapshot = { ...(row.snapshot as object), offerTerms: [unsupported] };
+  assert.equal(preparePublicationCandidates({ publicationId: 'p-v2', offerProjectionVersion: 1, sessions: [row] }, emptyFilters, now).events.length, 0);
+});
+
+await test('v2 final validation requires the selected pinned revision, page and dependency hash', async () => {
+  const offer = projected('drift');
+  const row = session('drift-v2', { offerTermsVersion: 2, offerTerms: [offer] }); row.pinnedOfferTerms = [offer];
+  for (const patch of [{ currentRevisionId: 'rev-new' }, { currentPageObservationId: 'page-new' }, { evidenceDependencyHash: 'b'.repeat(64) }]) {
+    const status = { offerId: offer.offerId, pinnedRevisionId: offer.revisionId, currentRevisionId: offer.revisionId, status: 'usable', reasons: [],
+      pinnedPageObservationId: offer.pageObservationId, currentPageObservationId: offer.pageObservationId, evidenceDependencyHash: offer.evidenceDependencyHash, ...patch };
+    const result = await searchPreparedPublication(new Repo({ publicationId: 'p-v2', offerProjectionVersion: 1, sessions: [row] },
+      new Map([['drift-v2', { offers: [status] }]])), { query: '', filters: emptyFilters, mode: 'lexical', now });
+    assert.equal(result.events.length, 0); assert.equal(result.revalidationWithheld, true);
+  }
 });

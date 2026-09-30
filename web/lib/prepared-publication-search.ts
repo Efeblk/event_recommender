@@ -19,6 +19,13 @@ export interface PreparedOfferTerm {
   observedAt?: string | null;
   validFrom?: string | null;
   validUntil?: string | null;
+  evidenceVersion?: number | null;
+  evidenceStatus?: string | null;
+  evidenceReason?: string | null;
+  pageObservationId?: string | null;
+  evidenceDependencyHash?: string | null;
+  evidencePolicyVersion?: string | null;
+  evidenceObservedAt?: string | null;
 }
 
 export interface PreparedPublicationSession {
@@ -39,6 +46,7 @@ export interface PreparedPublicationSession {
 
 export interface PreparedPublicationRead {
   publicationId: string;
+  offerProjectionVersion?: number | null;
   embeddingProfile?: string | null;
   sessions: PreparedPublicationSession[];
 }
@@ -54,6 +62,9 @@ export interface PublicationSessionStatus {
     offerId: string;
     pinnedRevisionId: string | null;
     currentRevisionId: string | null;
+    pinnedPageObservationId?: string | null;
+    currentPageObservationId?: string | null;
+    evidenceDependencyHash?: string | null;
     status: string;
     reasons: string[];
   }>;
@@ -152,10 +163,27 @@ function term(value: unknown): PreparedOfferTerm | null {
     observedAt: text(row.observedAt),
     validFrom: text(row.validFrom),
     validUntil: text(row.validUntil),
+    evidenceVersion: row.evidenceVersion === 1 ? 1 : null,
+    evidenceStatus: text(row.evidenceStatus),
+    evidenceReason: text(row.evidenceReason),
+    pageObservationId: text(row.pageObservationId),
+    evidenceDependencyHash: text(row.evidenceDependencyHash),
+    evidencePolicyVersion: text(row.evidencePolicyVersion),
+    evidenceObservedAt: text(row.evidenceObservedAt),
   };
 }
 
-function authoritativeTerms(session: PreparedPublicationSession, snapshot: Record<string, unknown>) {
+function authoritativeTerms(session: PreparedPublicationSession, snapshot: Record<string, unknown>, projectionVersion?: number | null) {
+  if (projectionVersion === 1) {
+    if (snapshot.offerTermsVersion !== 2 || !Array.isArray(snapshot.offerTerms)) return [];
+    const terms = snapshot.offerTerms.map(term).filter((item): item is PreparedOfferTerm => item !== null);
+    const pins = new Map(session.pinnedOfferTerms.map((item) => [`${item.offerId}\0${item.revisionId}`, term(item)]));
+    const fields: Array<keyof PreparedOfferTerm> = ['offerId','revisionId','provider','providerRecordId','sourceUrl','currency','price','priceMinor','feeMinor','priceKind','availability','observedAt','validFrom','validUntil','evidenceVersion','evidenceStatus','evidenceReason','pageObservationId','evidenceDependencyHash','evidencePolicyVersion','evidenceObservedAt'];
+    const keys = terms.map(item => `${item.offerId}\0${item.revisionId}`);
+    const exact = terms.length === snapshot.offerTerms.length && terms.length === pins.size && new Set(keys).size === keys.length &&
+      terms.every((item, index) => { const pinned = pins.get(keys[index]); return pinned && fields.every(field => (item[field] ?? null) === (pinned[field] ?? null)); });
+    return exact ? session.pinnedOfferTerms.map(term).filter((item): item is PreparedOfferTerm => item !== null) : [];
+  }
   if ('offerTermsVersion' in snapshot && snapshot.offerTermsVersion !== 1) return [];
   if (snapshot.offerTermsVersion === 1) {
     if (!Array.isArray(snapshot.offerTerms)) return [];
@@ -210,10 +238,22 @@ function usableTerm(item: PreparedOfferTerm, nowMs: number, maxAgeMs: number) {
   );
 }
 
-function project(session: PreparedPublicationSession, now: Date, maxAgeMs: number): { event: EventRecord; selectedOfferId: string } | null {
+export type PreparedSelectedOffer = { offerId: string; revisionId: string; pageObservationId: string | null; evidenceDependencyHash: string | null; projected: boolean };
+export function selectedPublicationOfferUsable(status: PublicationSessionStatus | undefined, selected: PreparedSelectedOffer | undefined, publicationId: string) {
+  const offer = status?.offers.find(item => item.offerId === selected?.offerId);
+  const exactRevision = !!selected && offer?.pinnedRevisionId === selected.revisionId && offer.currentRevisionId === selected.revisionId;
+  const exactEvidence = !selected?.projected || (offer?.pinnedPageObservationId === selected.pageObservationId &&
+    offer.currentPageObservationId === selected.pageObservationId && offer.evidenceDependencyHash === selected.evidenceDependencyHash);
+  return status?.publicationId === publicationId && status.availabilityUsable && status.canonicalSessionUsable &&
+    offer?.status === 'usable' && exactRevision && exactEvidence;
+}
+function project(session: PreparedPublicationSession, now: Date, maxAgeMs: number, projectionVersion?: number | null): { event: EventRecord; selectedOffer: PreparedSelectedOffer } | null {
   const snapshot = object(session.snapshot);
   if (!snapshot) return null;
-  const terms = authoritativeTerms(session, snapshot).filter((item) => item.sourceUrl && usableTerm(item, now.getTime(), maxAgeMs));
+  const terms = authoritativeTerms(session, snapshot, projectionVersion).filter((item) =>
+    item.sourceUrl && usableTerm(item, now.getTime(), maxAgeMs) &&
+    (projectionVersion !== 1 || (item.evidenceVersion === 1 && item.evidenceStatus === 'supported' && item.evidencePolicyVersion === 'provider-page-offer-v1' &&
+      !!item.pageObservationId && !!item.evidenceDependencyHash?.match(/^[a-f0-9]{64}$/))));
   if (!terms.length) return null;
   const exactTotals = terms.flatMap((item) => {
     const total = exactTotal(item);
@@ -239,7 +279,8 @@ function project(session: PreparedPublicationSession, now: Date, maxAgeMs: numbe
     (chosen.priceKind === 'starting_at' || chosen.priceKind === 'exact')
     ? { amount: advertisedMinor / 100, currency: 'TRY' as const, kind: chosen.priceKind,
       feesKnown: minor(chosen.feeMinor) !== null } : undefined;
-  return { selectedOfferId: chosen.offerId, event: {
+  return { selectedOffer: { offerId: chosen.offerId, revisionId: chosen.revisionId, pageObservationId: chosen.pageObservationId ?? null,
+    evidenceDependencyHash: chosen.evidenceDependencyHash ?? null, projected: projectionVersion === 1 }, event: {
     id: session.sessionId,
     title,
     description: text(snapshot.description) ?? session.document?.text ?? '',
@@ -268,9 +309,10 @@ function project(session: PreparedPublicationSession, now: Date, maxAgeMs: numbe
 export function preparePublicationCandidates(publication: PreparedPublicationRead, inputFilters: Filters, now: Date, maxAgeMs = 72 * 3600000) {
   const filters = validateFilters(inputFilters);
   const selectedOffers = new Map<string, string>();
+  const selectedOfferChecks = new Map<string, PreparedSelectedOffer>();
   const projected = publication.sessions.flatMap((session) => {
-    const result = project(session, now, maxAgeMs);
-    if (result) selectedOffers.set(result.event.id, result.selectedOfferId);
+    const result = project(session, now, maxAgeMs, publication.offerProjectionVersion);
+    if (result) { selectedOffers.set(result.event.id, result.selectedOffer.offerId); selectedOfferChecks.set(result.event.id, result.selectedOffer); }
     return result ? [result.event] : [];
   });
   const budgetExcludedUnknownPrice = projected.filter(event => event.price === null &&
@@ -285,7 +327,7 @@ export function preparePublicationCandidates(publication: PreparedPublicationRea
     }
     return true;
   });
-  return { events, selectedOffers, budgetExcludedUnknownPrice };
+  return { events, selectedOffers, selectedOfferChecks, budgetExcludedUnknownPrice };
 }
 
 export async function searchPreparedPublication(
@@ -303,7 +345,7 @@ export async function searchPreparedPublication(
   const publication = await repository.readPublication(input.publicationId, {
     includeVectors: requestedHybrid,
   });
-  const { events: eligible, selectedOffers } = preparePublicationCandidates(publication, filters, now, maxAgeMs);
+  const { events: eligible, selectedOfferChecks } = preparePublicationCandidates(publication, filters, now, maxAgeMs);
   const vectors = new Map(publication.sessions.flatMap((session) => {
     const document = session.document;
     if (!document || document.embeddingProfile !== publication.embeddingProfile || document.vector?.length !== 1024 || !document.vector.every(Number.isFinite) || !document.vector.some((value) => value !== 0)) return [];
@@ -328,9 +370,7 @@ export async function searchPreparedPublication(
   const excludedAtRevalidation: Array<{ sessionId: string; reasons: string[] }> = [];
   const events = shortlist.filter((event) => {
     const status = statusBySession.get(event.id);
-    const selectedOfferId = selectedOffers.get(event.id);
-    const selectedStatus = status?.offers.find((offer) => offer.offerId === selectedOfferId);
-    const valid = status?.publicationId === publication.publicationId && status.availabilityUsable && status.canonicalSessionUsable && selectedStatus?.status === 'usable';
+    const valid = selectedPublicationOfferUsable(status, selectedOfferChecks.get(event.id), publication.publicationId);
     if (!valid) excludedAtRevalidation.push({ sessionId: event.id, reasons: status?.reasons ?? ['missing_revalidation'] });
     return valid;
   });

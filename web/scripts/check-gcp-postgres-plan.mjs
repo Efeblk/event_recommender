@@ -51,6 +51,8 @@ assert.deepEqual(instance.backup, {
 assert.deepEqual(database.extensions, ['postgis', 'vector', 'pg_trgm']);
 assert.equal(databasePrincipals.owner.login, false);
 assert.equal(databasePrincipals.readRole.login, false);
+assert.equal(databasePrincipals.readRole.name, 'biplan_reader');
+assert.deepEqual(databasePrincipals.runtimeLogin.memberOf, ['biplan_reader']);
 assert.equal(databasePrincipals.prepareRole.login, false);
 assert.equal(databasePrincipals.applicationUsesPostgresRole, false);
 for (const login of [databasePrincipals.runtimeLogin, databasePrincipals.preparationLogin]) {
@@ -62,12 +64,16 @@ assert.notEqual(databasePrincipals.runtimeLogin.secret, databasePrincipals.prepa
 assert.equal(iam.cloudSqlRole, 'roles/cloudsql.client');
 assert.deepEqual(iam.runtimeSecretAccess, ['biplan-staging-db-runtime-password']);
 assert.deepEqual(iam.preparationSecretAccess, ['biplan-staging-db-preparation-password']);
+assert.deepEqual(iam.preparationSourceRead, {
+  role: 'roles/storage.objectViewer', prefix: 'staging/preparation/sources/',
+  bucketScoped: true, listAllowed: false, writeAllowed: false,
+});
 assert.deepEqual(
   [runtimeLimits.cloudRunMinInstances, runtimeLimits.cloudRunMaxInstances, runtimeLimits.runtimePoolMax],
   [0, 1, 2],
 );
 assert.equal(runtimeLimits.preparationJobParallelism, 1);
-assert.ok(runtimeLimits.preparationJobMaxRetries <= 1);
+assert.equal(runtimeLimits.preparationJobMaxRetries, 0);
 assert.ok(runtimeLimits.preparationPoolMax <= 2);
 assert.equal(runtimeLimits.transactionsMustNotSpanExternalCalls, true);
 assert.deepEqual(budget, {

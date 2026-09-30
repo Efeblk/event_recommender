@@ -27,6 +27,11 @@ run "postgres_is_disabled_by_default" {
   }
 
   assert {
+    condition     = length(google_storage_bucket_iam_member.preparation_sources) == 0
+    error_message = "Source artifact access must remain disabled without PostgreSQL opt-in."
+  }
+
+  assert {
     condition     = length(google_secret_manager_secret.postgres_password) == 0
     error_message = "Database secret containers must not be created without explicit opt-in."
   }
@@ -115,5 +120,14 @@ run "approved_postgres_matches_bounded_staging_plan" {
       length(google_secret_manager_secret_iam_member.postgres_password_accessor) == 2
     )
     error_message = "The plan must create exactly two empty secret containers with per-secret access."
+  }
+
+  assert {
+    condition = (
+      length(google_storage_bucket_iam_member.preparation_sources) == 1 &&
+      google_storage_bucket_iam_member.preparation_sources[0].role == "roles/storage.objectViewer" &&
+      endswith(google_storage_bucket_iam_member.preparation_sources[0].condition[0].expression, "/objects/staging/preparation/sources/')")
+    )
+    error_message = "Preparation must only read source artifacts under the dedicated prefix."
   }
 }

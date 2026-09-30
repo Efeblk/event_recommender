@@ -27,6 +27,7 @@ type Raw = {
   requiredSessions: number | string | null;
   requiredDocuments: number | string | null;
   requiredOffers: string | null;
+  requiredOfferEvidence: string | null;
   sessions: number | string;
   documents: number | string;
   offers: number | string;
@@ -145,11 +146,14 @@ export function assessPostgresPreparedCatalogReadiness(raw: Raw, now = Date.now(
   const sessions = count(raw.sessions), documents = count(raw.documents), offers = count(raw.offers);
   const requiredSessions = count(raw.requiredSessions), requiredDocuments = count(raw.requiredDocuments);
   const requiredOffers = count(raw.requiredOffers);
+  const requiredOfferEvidence = count(raw.requiredOfferEvidence);
   const missingReferences = count(raw.missingReferences), canceledSessions = count(raw.canceledSessions);
   const invalidOfferPins = count(raw.invalidOfferPins);
   const unresolvedPageOffers = count(raw.unresolvedPageOffers);
   const sourceCoverage = object(manifest?.collectorCoverage);
   const preparationReceipt = object(manifest?.preparationReceipt);
+  const hasProjectionVersion = !!manifest && Object.prototype.hasOwnProperty.call(manifest, 'offerProjectionVersion');
+  const projectionVersion = hasProjectionVersion ? manifest?.offerProjectionVersion : null;
 
   if (!raw.publicationId) reasons.push('postgres_publication_missing');
   if (raw.state !== 'active') reasons.push('postgres_publication_not_active');
@@ -161,6 +165,9 @@ export function assessPostgresPreparedCatalogReadiness(raw: Raw, now = Date.now(
     reasons.push('postgres_document_count_mismatch');
   if (requiredOffers < 0) reasons.push('postgres_offer_count_missing');
   else if (offers < 0 || offers !== requiredOffers) reasons.push('postgres_offer_count_mismatch');
+  if (hasProjectionVersion && projectionVersion !== 1) reasons.push('postgres_offer_projection_unsupported');
+  if (projectionVersion === 1 && (requiredOfferEvidence < 0 || requiredOfferEvidence !== requiredOffers))
+    reasons.push('postgres_offer_evidence_count_mismatch');
   if (missingReferences !== 0 || canceledSessions !== 0 || invalidOfferPins !== 0)
     reasons.push('postgres_reference_integrity_failed');
   if (unresolvedPageOffers !== 0) reasons.push('provider_page_reconciliation_required');
@@ -168,12 +175,18 @@ export function assessPostgresPreparedCatalogReadiness(raw: Raw, now = Date.now(
   if (!sourceCoverage) reasons.push('collector_coverage_missing');
   else reasons.push(...coverageReasons(sourceCoverage, now));
   if (!preparationReceipt) reasons.push('preparation_receipt_missing');
-  else if (
-    !(typeof preparationReceipt.status === 'string' && ['verified', 'completed'].includes(preparationReceipt.status)) ||
-    preparationReceipt.publicationId !== raw.publicationId || preparationReceipt.version !== 'canonical-batch-v1' ||
-    typeof preparationReceipt.batchId !== 'string' || !preparationReceipt.batchId ||
-    preparationReceipt.inputHash !== sourceCoverage?.inputHash
-  ) reasons.push('preparation_receipt_invalid');
+  else {
+    const common = preparationReceipt.publicationId === raw.publicationId &&
+      typeof preparationReceipt.batchId === 'string' && !!preparationReceipt.batchId &&
+      preparationReceipt.inputHash === sourceCoverage?.inputHash;
+    const legacy = !hasProjectionVersion && preparationReceipt.version === 'canonical-batch-v1' &&
+      typeof preparationReceipt.status === 'string' && ['verified', 'completed'].includes(preparationReceipt.status);
+    const projected = projectionVersion === 1 && preparationReceipt.version === 'provider-page-offer-v1' &&
+      preparationReceipt.status === 'verified' && count(preparationReceipt.acceptedRecords) >= 0 &&
+      count(preparationReceipt.pageAffectedSessions) >= 0 && Number.isFinite(instant(preparationReceipt.checkedAt)) &&
+      preparationReceipt.optionalEmbeddingsRequired === false;
+    if (!common || (!legacy && !projected)) reasons.push('preparation_receipt_invalid');
+  }
 
   return {
     backend: 'postgres', ready: reasons.length === 0, publicationId: raw.publicationId, reasons,
@@ -200,6 +213,8 @@ WITH active AS MATERIALIZED (
     a.required_document_count,
     CASE WHEN (a.manifest->>'requiredOfferCount') ~ '^[0-9]+$'
       THEN a.manifest->>'requiredOfferCount' END AS required_offer_count,
+    CASE WHEN (a.manifest->>'requiredOfferEvidenceCount') ~ '^[0-9]+$'
+      THEN a.manifest->>'requiredOfferEvidenceCount' END AS required_offer_evidence_count,
     (SELECT count(*) FROM biplan.published_sessions ps WHERE ps.publication_id=a.id) AS sessions,
     (SELECT count(ps.search_document_id) FROM biplan.published_sessions ps WHERE ps.publication_id=a.id) AS documents,
     (SELECT count(*) FROM biplan.publication_offers po WHERE po.publication_id=a.id) AS offers,
@@ -217,7 +232,12 @@ WITH active AS MATERIALIZED (
       WHERE po.publication_id=a.id AND (r.id IS NULL OR i.id IS NULL OR ps.session_id IS NULL
         OR r.session_id IS DISTINCT FROM po.session_id OR r.acceptance_status<>'accepted')) AS invalid_offer_pins,
     (SELECT count(*) FROM biplan.publication_offers po JOIN biplan.offer_revisions r ON r.id=po.offer_revision_id
-      WHERE po.publication_id=a.id AND (biplan.offer_page_support(r.offer_id)->>'usable') IS DISTINCT FROM 'true') AS unresolved_page_offers,
+      WHERE po.publication_id=a.id AND CASE
+        WHEN a.manifest->'offerProjectionVersion'='1'::jsonb
+          THEN biplan.publication_offer_evidence_current(a.id,r.offer_id) IS DISTINCT FROM true
+        WHEN NOT (a.manifest ? 'offerProjectionVersion')
+          THEN (biplan.offer_page_support(r.offer_id)->>'usable') IS DISTINCT FROM 'true'
+        ELSE true END) AS unresolved_page_offers,
     (SELECT count(*) FROM biplan.publication_evaluations pe JOIN biplan.evaluations e ON e.id=pe.evaluation_id
       WHERE pe.publication_id=a.id AND e.status='pending') AS pending_evaluations,
     (SELECT count(*) FROM biplan.publication_evaluations pe JOIN biplan.evaluations e ON e.id=pe.evaluation_id
@@ -232,7 +252,8 @@ SELECT jsonb_build_object(
   'publicationId',m.publication_id,'state',m.state,'switchedAt',m.switched_at,
   'validatedAt',m.validated_at,'validationHash',m.validation_hash,'manifest',m.manifest,
   'requiredSessions',m.required_session_count,'requiredDocuments',m.required_document_count,
-  'requiredOffers',m.required_offer_count,'sessions',m.sessions,'documents',m.documents,
+  'requiredOffers',m.required_offer_count,'requiredOfferEvidence',m.required_offer_evidence_count,
+  'sessions',m.sessions,'documents',m.documents,
   'offers',m.offers,'missingReferences',m.missing_references,'canceledSessions',m.canceled_sessions,
   'invalidOfferPins',m.invalid_offer_pins,'unresolvedPageOffers',m.unresolved_page_offers,'pendingEvaluations',m.pending_evaluations,
   'failedEvaluations',m.failed_evaluations,'staleEvaluations',m.stale_evaluations,
@@ -243,7 +264,7 @@ export async function readPostgresPreparedCatalogReadiness(queryText: QueryText)
   const text = await queryText(postgresPreparedCatalogReadinessSql);
   if (!text) return assessPostgresPreparedCatalogReadiness({
     publicationId: null, state: null, switchedAt: null, validatedAt: null, validationHash: null,
-    manifest: null, requiredSessions: null, requiredDocuments: null, requiredOffers: null,
+    manifest: null, requiredSessions: null, requiredDocuments: null, requiredOffers: null, requiredOfferEvidence: null,
     sessions: 0, documents: 0, offers: 0, missingReferences: 0, canceledSessions: 0,
     invalidOfferPins: 0, unresolvedPageOffers: 0, pendingEvaluations: 0, failedEvaluations: 0, staleEvaluations: 0, unknownEvaluations: 0,
   });

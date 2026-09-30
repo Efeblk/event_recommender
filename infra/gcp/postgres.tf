@@ -128,3 +128,19 @@ resource "google_secret_manager_secret_iam_member" "postgres_password_accessor" 
     : google_service_account.preparation[0].member
   )
 }
+
+# Source ingestion reads an exact content-addressed object; it cannot enumerate
+# the bucket, write artifacts, or read runtime checkpoints/application sources.
+resource "google_storage_bucket_iam_member" "preparation_sources" {
+  count = var.postgres_staging_enabled ? 1 : 0
+
+  bucket = google_storage_bucket.collection.name
+  role   = "roles/storage.objectViewer"
+  member = google_service_account.preparation[0].member
+
+  condition {
+    title       = "preparation-source-artifacts-only"
+    description = "Read immutable preparation envelopes by exact object name."
+    expression  = "resource.name.startsWith('projects/_/buckets/${google_storage_bucket.collection.name}/objects/staging/preparation/sources/')"
+  }
+}
