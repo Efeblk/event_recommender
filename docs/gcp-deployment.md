@@ -27,6 +27,10 @@ verified cutover; new database provisioning needs a concrete configuration/cost
 review. Do not infer PostgreSQL deployment or readiness from this historical
 foundation's evidence.
 
+The separately approved [September 30 PostgreSQL staging evidence](gcp-postgres-staging-validation-2026-09-30.md)
+records the provisioned database, frozen import, preparation/export Jobs and recovery
+tests. The existing snapshot services retain traffic until PostgreSQL cutover qualifies.
+
 | Component | Service | Stored data |
 | --- | --- | --- |
 | Node application | Cloud Run | Stateless Vinext standalone container |
