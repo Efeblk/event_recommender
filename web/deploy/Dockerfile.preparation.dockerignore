@@ -4,6 +4,7 @@
 !web/package-lock.json
 !web/scripts/
 !web/scripts/run-postgres-preparation.mjs
+!web/scripts/postgres-publication-client.mjs
 !web/lib/
 !web/lib/postgres-client.node.ts
 !web/lib/sql-literal.ts

@@ -10,6 +10,7 @@ RUN node -e "const fs=require('fs');const p=require('./package.json');p.dependen
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 
 COPY web/scripts/run-postgres-preparation.mjs ./scripts/run-postgres-preparation.mjs
+COPY web/scripts/postgres-publication-client.mjs ./scripts/postgres-publication-client.mjs
 COPY web/lib/postgres-client.node.ts web/lib/sql-literal.ts ./lib/
 COPY collector/preparation/batch-store.mjs collector/preparation/batch-worker.mjs collector/preparation/canonical-worker.mjs /app/collector/preparation/
 

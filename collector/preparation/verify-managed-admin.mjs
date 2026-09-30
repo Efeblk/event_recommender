@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { assertOwned, container, docker, literal, work } from './db.mjs';
+import { migrate } from './migrate.mjs';
 
 const suffix = randomBytes(6).toString('hex');
 const database = `biplan_managed_admin_${suffix}`;
@@ -25,8 +26,8 @@ const migrations = ['schema.sql', 'migrations/002-offer-revisions.sql', 'migrati
   'migrations/004-publication-refresh.sql', 'migrations/005-canonical-preparation.sql',
   'migrations/006-batched-publication.sql', 'migrations/007-page-receipts.sql',
   'migrations/008-offer-evidence-projections.sql', 'migrations/009-offer-identity-provider-session.sql',
-  'migrations/010-offer-identity-session-index.sql', 'migrations/011-publication-serving-artifacts.sql'];
-const sourcePaths = [...migrations, 'roles.sql', 'verify-managed-admin.mjs'];
+  'migrations/010-offer-identity-session-index.sql', 'migrations/011-publication-serving-artifacts.sql', 'migrations/012-bulk-seal-integrity.sql', 'migrations/013-bulk-publication-projections.sql'];
+const sourcePaths = [...migrations, 'roles.sql', 'migrate.mjs', 'verify-managed-admin.mjs'];
 const sourceHashes = async () => Object.fromEntries(await Promise.all(sourcePaths.map(async path =>
   [path, createHash('sha256').update(await readFile(resolve(import.meta.dirname, path))).digest('hex')])));
 const initialHashes = await sourceHashes();
@@ -121,7 +122,8 @@ try {
 
   await check('administrator can replay reviewed migrations and update owner objects', async () => {
     await query(admin, 'ALTER TABLE biplan.schema_metadata ADD COLUMN managed_admin_probe boolean;');
-    for (const path of migrations) await query(admin, await readFile(resolve(import.meta.dirname, path), 'utf8'));
+    await migrate(statement => query(admin, statement));
+    await migrate(statement => query(admin, statement));
     await query(admin, roleScript);
     assert.equal(await query(admin, `SELECT tableowner=${literal(roleNames.owner)} FROM pg_tables
       WHERE schemaname='biplan' AND tablename='schema_metadata';`), 't');

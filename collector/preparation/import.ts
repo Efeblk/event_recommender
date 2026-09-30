@@ -5,7 +5,7 @@ import { prepareCatalogKnowledge } from '../../web/lib/catalog-knowledge.ts';
 import { searchCatalogCandidates, type SearchCatalog } from '../../web/lib/materialized-catalog.ts';
 import { emptyFilters } from '../../web/lib/types.ts';
 import { sql, literal, work } from './db.mjs';
-import { migrate } from './migrate.mjs';
+import { initializeCatalog, backfillFrozenImportOffers } from './migrate.mjs';
 
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const expectedProfile = 'voyage-embedding-v1|endpoint=https://api.voyageai.com/v1/embeddings|model=voyage-4-large|dimensions=1024|input_type=document|text_profile=event-title-category-venue-description-v1';
@@ -48,6 +48,7 @@ const manifest = { version: 3, sourceKind: 'frozen_prepared_catalog', catalogHas
 const manifestHash = hash(JSON.stringify(manifest)), publicationId = `publication-${manifestHash}`;
 await mkdir(work, { recursive: true });
 await writeFile(resolve(work, 'import-plan.json'), JSON.stringify({ publicationId, manifest, state: 'planned' }, null, 2));
+await initializeCatalog();
 const previous = await sql('SELECT publication_id FROM biplan.active_publication WHERE singleton;');
 if (previous === publicationId) {
   await sql(`SELECT biplan.validate_publication_offers(${literal(publicationId)});`);
@@ -74,9 +75,9 @@ const enriched = { ...bundle,
     contentHash: hash(JSON.stringify(offer.raw)) })), summary };
 console.log(`Importing ${summary.sessions} sessions and ${summary.offers} offers; no AI calls`);
 await sql(`SELECT biplan.ingest_prepared_payload(${literal(JSON.stringify(enriched))}::jsonb);`);
-// Frozen import creates legacy rows; migrations pin their exact initial revisions.
+// Frozen import creates legacy rows; backfill only their initial immutable revisions.
 // Live updates must use accept_offer_revision rather than this strict importer.
-await migrate();
+await backfillFrozenImportOffers();
 for (let offset = 0; offset < documents.length; offset += 128)
   await sql(`SELECT biplan.ingest_prepared_payload(${literal(JSON.stringify({ documents: documents.slice(offset, offset + 128) }))}::jsonb);`);
 

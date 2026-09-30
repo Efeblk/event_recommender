@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
-import { preparationJobConfig, preparationJobOutcome, runPreparationJob } from '../scripts/run-postgres-preparation.mjs';
+import { PUBLICATION_ADMISSION_MS, PUBLICATION_PRECHECK_MS, preparationJobConfig, preparationJobOutcome, runPreparationJob } from '../scripts/run-postgres-preparation.mjs';
 
 const base = { mode: 'prepare', batchId: 'sealed-batch', workerId: 'worker', maxJobs: 2, leaseSeconds: 30, timeBudgetMs: 1000, processDeadlineMs: 5000 };
 function fake(overrides = {}) {
@@ -21,7 +21,12 @@ await test('requires an explicit bounded mode and sealed batch identifier', () =
   assert.throws(() => preparationJobConfig(['prepare', '../batch'], {}), /batch id/);
   assert.throws(() => preparationJobConfig(['prepare', 'batch'], { CATALOG_BATCH_MAX_JOBS: '1001' }), /job limit/);
   assert.throws(() => preparationJobConfig(['prepare', 'batch'], { CATALOG_BATCH_TIME_MS: '0' }), /time budget/);
-  assert.equal(preparationJobConfig(['publish', 'batch-1'], {}).mode, 'publish');
+  assert.equal(preparationJobConfig(['prepare', 'batch-1'], {}).processDeadlineMs, 90000);
+  const publication = preparationJobConfig(['publish', 'batch-1'], {});
+  assert.equal(publication.processDeadlineMs, 120000); assert.equal(publication.leaseSeconds, 120);
+  assert.equal(PUBLICATION_ADMISSION_MS, 95000); assert.equal(PUBLICATION_PRECHECK_MS, 110000);
+  assert.throws(() => preparationJobConfig(['publish', 'batch'], { CATALOG_PROCESS_DEADLINE_MS: '109999' }), /must cover/);
+  assert.throws(() => preparationJobConfig(['publish', 'batch'], { CATALOG_BATCH_LEASE_SECONDS: '109' }), /must cover/);
 });
 
 await test('passes finite preparation bounds and always closes the client', async () => {
@@ -62,6 +67,25 @@ await test('propagates interruption fencing and exposes no detailed receipts', a
   assert.equal(result.stopped, 'interrupted'); assert.equal('receipts' in result, false); assert.equal(harness.closed(), 1);
 });
 
+await test('publication does not claim when monotonic process budget cannot cover setup, SQL, and cleanup', async () => {
+  const harness = fake({ runPublication: async () => { throw new Error('must not claim'); } });
+  const config = { ...base, mode: 'publish', leaseSeconds: 120, processDeadlineMs: 120000 };
+  const result = await runPreparationJob({ config, dependencies: harness.dependencies, signal: new AbortController().signal,
+    processStartedAt: 0, now: () => 10001 });
+  assert.equal(result.claimed, 0); assert.equal(result.stopped, 'time_budget'); assert.equal(harness.calls.length, 0);
+  assert.equal(harness.closed(), 1); assert.deepEqual(preparationJobOutcome('publish', result), { status: 'bounded_stop', exitCode: 2 });
+});
+
+await test('publication exposes only sanitized SQL elapsed timing from the worker result', async () => {
+  const harness = fake({ runPublication: async options => ({ batchId: options.batchId, workerId: options.workerId,
+    claimed: 1, published: 1, failures: [], stopped: 'completed', publicationSqlMs: 60001.25,
+    receipt: { internal: 'hidden' } }) });
+  const config = { ...base, mode: 'publish', leaseSeconds: 120, processDeadlineMs: 120000 };
+  const result = await runPreparationJob({ config, dependencies: harness.dependencies, signal: new AbortController().signal,
+    processStartedAt: 0, now: () => 0 });
+  assert.equal(result.publicationSqlMs, 60001.25); assert.equal('receipt' in result, false); assert.equal(harness.closed(), 1);
+});
+
 await test('exit semantics distinguish completion, resumable bounds, not-ready, and failure', () => {
   const result = (stopped, extra = {}) => ({ failures: [], stopped, ...extra });
   assert.deepEqual(preparationJobOutcome('prepare', result('drained')), { status: 'completed', exitCode: 0 });
@@ -85,6 +109,6 @@ await test('image is non-root, lockfile-based, minimal, and cannot default to mu
   assert.doesNotMatch(store, /from ['"]\.\/db\.mjs['"]/, 'Cloud packaging requires the shared safe SQL literal and no Docker helper import');
   const ignore = await readFile(new URL('./Dockerfile.preparation.dockerignore', import.meta.url), 'utf8');
   for (const forbidden of ['web/work', 'node_modules', '.env', '.git']) assert.equal(ignore.includes(`!${forbidden}`), false);
-  for (const required of ['web/package-lock.json', 'web/scripts/run-postgres-preparation.mjs', 'web/lib/postgres-client.node.ts', 'collector/preparation/batch-worker.mjs'])
+  for (const required of ['web/package-lock.json', 'web/scripts/run-postgres-preparation.mjs', 'web/scripts/postgres-publication-client.mjs', 'web/lib/postgres-client.node.ts', 'collector/preparation/batch-worker.mjs'])
     assert.ok(ignore.includes(`!${required}`));
 });

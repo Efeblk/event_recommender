@@ -32,6 +32,41 @@ test('publication failure is persisted through the same fenced job boundary', as
   const result = await runBatchPublication({ store, batchId: 'batch', workerId: 'worker' });
   assert.equal(result.published, 0); assert.equal(result.failures[0].persistence, 'retry_scheduled'); assert.equal(failed, 1);
 });
+test('publication rechecks monotonic lease budget after setup and persists one controlled retry', async () => {
+  const store = memory(0), checks = []; let clock = 0, executed = 0;
+  store.claimPublication = async () => ({ id: 'publish-job', fencing_token: '5' });
+  store.publish = async (_batch, _job, _worker, _base, afterSetup) => {
+    clock = 26001; await afterSetup(); executed++; return { status: 'published' };
+  };
+  store.fail = async (_job, _worker, detail) => { assert.equal(detail.code, 'publication_budget'); return { status: 'pending' }; };
+  const result = await runBatchPublication({ store, batchId: 'batch', workerId: 'worker', leaseSeconds: 120, now: () => clock,
+    beforePublish: ({ phase, leaseRemainingMs }) => {
+      checks.push([phase, leaseRemainingMs]);
+      if (phase === 'after_setup' && leaseRemainingMs < 95000)
+        throw Object.assign(new Error('Insufficient bounded publication budget'), { code: 'publication_budget' });
+    } });
+  assert.deepEqual(checks, [['before_checkout', 120000], ['after_setup', 93999]]);
+  assert.equal(executed, 0); assert.equal(result.published, 0); assert.equal(result.failures[0].retryable, true);
+  assert.equal(result.failures[0].persistence, 'retry_scheduled');
+});
+test('publication interruption after setup never issues the activation SQL', async () => {
+  const store = memory(0), controller = new AbortController(); let executed = 0;
+  store.claimPublication = async () => ({ id: 'publish-job', fencing_token: '6' });
+  store.publish = async (_batch, _job, _worker, _base, afterSetup) => { controller.abort(); await afterSetup(); executed++; };
+  store.fail = async () => ({ status: 'pending' });
+  const result = await runBatchPublication({ store, batchId: 'batch', workerId: 'worker', signal: controller.signal,
+    beforePublish: ({ signal }) => { if (signal.aborted) throw Object.assign(new Error('interrupted'), { code: 'worker_interrupted' }); } });
+  assert.equal(executed, 0); assert.equal(result.stopped, 'interrupted'); assert.equal(result.failures[0].retryable, true);
+});
+test('publication SQL timeout keeps a safe retryable code and sanitized timing', async () => {
+  const store = memory(0); store.claimPublication = async () => ({ id: 'publish-job', fencing_token: '8' });
+  store.publish = async () => { throw Object.assign(new Error('canceling statement due to statement timeout'),
+    { code: '57014', publicationTimeout: true, publicationSqlMs: 60000.5 }); };
+  store.fail = async (_job, _worker, detail) => { assert.equal(detail.code, 'publication_timeout'); return { status: 'pending' }; };
+  const result = await runBatchPublication({ store, batchId: 'batch', workerId: 'worker' });
+  assert.equal(result.failures[0].retryable, true); assert.equal(result.failures[0].persistence, 'retry_scheduled');
+  assert.equal(result.publicationSqlMs, 60000.5);
+});
 test('SQL adapter rejects lossy fences before query execution', () => {
   const store = createBatchStore(() => { throw new Error('query must not execute'); });
   assert.throws(() => store.complete({ id: 'job', fencing_token: Number('9007199254740993') }, 'worker', {}), /Unsafe/);
@@ -41,4 +76,16 @@ test('SQL adapter escapes quotes and backslashes and rejects zero bytes before a
   await store.cancel("batch\\path'quoted", "reason\\path'quoted");
   assert.match(statements[0], /E'batch\\\\path''quoted'/); assert.match(statements[0], /E'reason\\\\path''quoted'/);
   assert.throws(() => store.cancel('batch\0invalid', 'reason'), /zero byte/i);
+});
+test('SQL adapter routes only batch publication through the dedicated executor', async () => {
+  const controls = [], publications = [], store = createBatchStore(async statement => { controls.push(statement); return '{}'; }, {
+    publishQuery: async (statement, { afterSetup, onTiming }) => {
+      publications.push(statement); await afterSetup(); onTiming(12.34); return '{"status":"published"}';
+    },
+  });
+  await store.cancel('batch', 'fixture');
+  const receipt = await store.publish('batch', { id: 'job', fencing_token: '9' }, 'worker', null, async () => {});
+  assert.equal(controls.length, 1); assert.match(controls[0], /cancel_preparation_batch/);
+  assert.equal(publications.length, 1); assert.match(publications[0], /publish_preparation_batch/);
+  assert.equal(receipt.publicationSqlMs, 12.34);
 });

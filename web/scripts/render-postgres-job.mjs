@@ -46,6 +46,10 @@ export function postgresJobManifest(input) {
   } else {
     if (input.bucket !== undefined || input.artifact !== undefined) throw new Error('Preparation Job cannot accept source upload settings');
     args = [mode,batchId];
+    if (mode === 'publish') {
+      env.find(item=>item.name==='BIPLAN_PG_STATEMENT_TIMEOUT_MS').value='5000';
+      env.find(item=>item.name==='CATALOG_PROCESS_DEADLINE_MS').value='120000';
+    }
     env.push({ name:'CATALOG_BATCH_MAX_JOBS',value:'100' },{ name:'CATALOG_BATCH_TIME_MS',value:'30000' },{ name:'CATALOG_BATCH_LEASE_SECONDS',value:'120' });
   }
   env.push({ name:'BIPLAN_PG_PASSWORD',valueFrom:{ secretKeyRef:{ name:secret,key:secretVersion } } });

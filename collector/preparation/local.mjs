@@ -1,8 +1,8 @@
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import { resolve } from 'node:path';
 import { docker, sql, container, ownership, work } from './db.mjs';
-import { migrate } from './migrate.mjs';
+import { initializeCatalog } from './migrate.mjs';
 
 await mkdir(work, { recursive: true });
 const existing = await docker(['ps', '-a', '--filter', `name=^/${container}$`, '--format', '{{.Names}}']);
@@ -23,9 +23,7 @@ for (let attempt = 0; attempt < 30; attempt++) {
   catch { await new Promise(done => setTimeout(done, 1000)); }
 }
 if (!ready) throw new Error('PostgreSQL did not become ready; inspect the task-owned container');
-const schema = await readFile(resolve(import.meta.dirname, 'schema.sql'), 'utf8');
-await sql(schema);
-await migrate();
+await initializeCatalog();
 const versions = await sql("SELECT jsonb_object_agg(extname, extversion)::text FROM pg_extension WHERE extname IN ('vector','postgis','pg_trgm');");
 await writeFile(resolve(work, 'local-receipt.json'), JSON.stringify({ at: new Date().toISOString(), container, bind: '127.0.0.1:15432', extensions: JSON.parse(versions) }, null, 2));
 console.log(JSON.stringify({ container, bind: '127.0.0.1:15432', extensions: JSON.parse(versions) }));

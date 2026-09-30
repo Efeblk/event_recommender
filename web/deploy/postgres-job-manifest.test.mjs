@@ -14,6 +14,10 @@ await test('Job binds immutable image, explicit staging identity, numeric secret
       'biplan-staging-db-preparation-password:projects/123456789012/secrets/biplan-staging-db-preparation-password');
     assert.equal(task.serviceAccountName,'biplan-staging-preparation@biplan-staging-efeblk.iam.gserviceaccount.com');
     const container=task.containers[0]; assert.deepEqual(container.args,[mode,base.batchId]);
+    const env=Object.fromEntries(container.env.filter(e=>e.value!==undefined).map(e=>[e.name,e.value]));
+    assert.equal(env.BIPLAN_PG_STATEMENT_TIMEOUT_MS,mode==='publish'?'5000':'30000');
+    assert.equal(env.CATALOG_PROCESS_DEADLINE_MS,mode==='publish'?'120000':'90000');
+    assert.equal(env.CATALOG_BATCH_LEASE_SECONDS,'120');
     assert.equal(container.env.find(e=>e.name==='BIPLAN_PG_PASSWORD').valueFrom.secretKeyRef.key,'2');
     assert.ok(container.env.find(e=>e.name==='BIPLAN_PG_HOST').value.startsWith('/cloudsql/biplan-staging-efeblk:'));
     assert.equal(container.env.some(e=>/VOYAGE|TYPESAFE|SYNC_TOKEN|GOOGLE_APPLICATION_CREDENTIALS/.test(e.name)),false);

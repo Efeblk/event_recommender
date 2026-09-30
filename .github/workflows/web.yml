@@ -193,6 +193,8 @@ jobs:
         run: npm run catalog:verify:roles
       - name: Verify installation and migration replay without PostgreSQL superuser
         run: npm run catalog:verify:managed-admin
+      - name: Verify pending-only migrations, drift rejection and frozen-import backfill
+        run: npm run catalog:verify:migration-replay
       - name: Verify historical offer identity schema upgrade
         run: node --experimental-strip-types ../collector/preparation/verify-offer-identity-provider-session.mjs
       - name: Verify indexed session lookups preserve offer evidence

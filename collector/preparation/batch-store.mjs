@@ -8,8 +8,8 @@ function unsigned(value, name) {
 }
 
 /** Injectable SQL boundary for one coherent catalog preparation batch. */
-export function createBatchStore(query = statement => import('./db.mjs').then(({ sql }) => sql(statement))) {
-  const invoke = async expression => parse(await query(`SELECT ${expression}::text;`));
+export function createBatchStore(query = statement => import('./db.mjs').then(({ sql }) => sql(statement)), { publishQuery = query } = {}) {
+  const invoke = async (expression, execute = query, options) => parse(await execute(`SELECT ${expression}::text;`, options));
   const owner = (job, worker) => `${literal(job.id)},${literal(worker)},${unsigned(job.fencing_token, 'batch fence')}`;
   return {
     begin: payload => invoke(`biplan.begin_preparation_batch(${json(payload)})`),
@@ -25,6 +25,18 @@ export function createBatchStore(query = statement => import('./db.mjs').then(({
     claimPublication: async (batchId, worker, leaseSeconds) => parse(await query(`SELECT COALESCE((SELECT to_jsonb(j)||jsonb_build_object('fencing_token',j.fencing_token::text)
       FROM biplan.claim_batch_publication(${literal(batchId)},${literal(worker)},make_interval(secs=>${unsigned(leaseSeconds, 'publication lease')})) j LIMIT 1),'null'::jsonb)::text;`)),
     activePublication: () => query('SELECT publication_id FROM biplan.active_publication WHERE singleton;'),
-    publish: (batchId, job, worker, expectedActivePublicationId) => invoke(`biplan.publish_preparation_batch(${literal(batchId)},${owner(job, worker)},${expectedActivePublicationId ? literal(expectedActivePublicationId) : 'NULL'})`),
+    publish: async (batchId, job, worker, expectedActivePublicationId, afterSetup) => {
+      let publicationSqlMs;
+      try {
+        const receipt = await invoke(`biplan.publish_preparation_batch(${literal(batchId)},${owner(job, worker)},${expectedActivePublicationId ? literal(expectedActivePublicationId) : 'NULL'})`, publishQuery, {
+          afterSetup,
+          onTiming: value => { publicationSqlMs = value; },
+        });
+        return publicationSqlMs === undefined ? receipt : { ...receipt, publicationSqlMs };
+      } catch (error) {
+        if (publicationSqlMs !== undefined && error && typeof error === 'object') error.publicationSqlMs = publicationSqlMs;
+        throw error;
+      }
+    },
   };
 }

@@ -19,7 +19,7 @@ const roles = Object.fromEntries(['owner','reader','prepare','web','preparer'].m
 const migrations = ['schema.sql','migrations/002-offer-revisions.sql','migrations/003-workers.sql','migrations/004-publication-refresh.sql',
   'migrations/005-canonical-preparation.sql','migrations/006-batched-publication.sql','migrations/007-page-receipts.sql',
   'migrations/008-offer-evidence-projections.sql','migrations/009-offer-identity-provider-session.sql',
-  'migrations/010-offer-identity-session-index.sql','migrations/011-publication-serving-artifacts.sql'];
+  'migrations/010-offer-identity-session-index.sql','migrations/011-publication-serving-artifacts.sql', 'migrations/012-bulk-seal-integrity.sql', 'migrations/013-bulk-publication-projections.sql'];
 const paths = [...migrations,'roles.sql','verify-serving-artifacts.mjs','../../web/lib/postgres-catalog.node.ts'];
 const sha = value => createHash('sha256').update(value).digest('hex');
 const hashes = async () => Object.fromEntries(await Promise.all(paths.map(async p => [p,sha(await readFile(resolve(import.meta.dirname,p)))])));
