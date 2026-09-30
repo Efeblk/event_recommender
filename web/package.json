@@ -53,6 +53,7 @@
     "catalog:verify:canonical": "node ../collector/preparation/verify-canonical.mjs",
     "catalog:verify:runtime": "node --experimental-strip-types ../collector/preparation/verify-postgres-runtime.mjs",
     "catalog:verify:roles": "node --experimental-strip-types ../collector/preparation/verify-roles.mjs",
+    "catalog:verify:managed-admin": "node ../collector/preparation/verify-managed-admin.mjs",
     "catalog:batch:source": "node --experimental-strip-types ../collector/preparation/run-batch-source.mjs",
     "catalog:page-batch:source": "node --experimental-strip-types ../collector/preparation/run-page-batch-source.mjs",
     "catalog:source:upload": "node scripts/upload-postgres-source.mjs",

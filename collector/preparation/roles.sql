@@ -34,6 +34,11 @@ BEGIN
     RAISE EXCEPTION 'application role unexpectedly owns another schema'; END IF;
 END $roles$;
 
+-- The dedicated installer retains only membership in the NOLOGIN owner. PostgreSQL
+-- requires membership to transfer ownership and to manage that owner's default
+-- privileges; INHERIT/SET also lets later reviewed migrations alter owner objects.
+-- Application logins are still excluded by the membership guard above.
+GRANT biplan_owner TO CURRENT_USER WITH INHERIT TRUE, SET TRUE;
 GRANT biplan_reader TO biplan_web WITH ADMIN FALSE;
 GRANT biplan_prepare TO biplan_preparer WITH ADMIN FALSE;
 ALTER ROLE biplan_web SET search_path=pg_catalog,biplan,public;
@@ -53,7 +58,18 @@ BEGIN
 END $database$;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC,biplan_reader,biplan_prepare,biplan_web,biplan_preparer;
 GRANT USAGE ON SCHEMA public TO biplan_owner,biplan_reader,biplan_prepare;
+-- A non-superuser may transfer a schema only to a role that can CREATE in the
+-- database. Keep that privilege inside this transaction and remove it immediately
+-- after the ownership transfer; the owner retains only the CONNECT granted above.
+DO $owner_database_create$
+BEGIN
+  EXECUTE format('GRANT CREATE ON DATABASE %I TO biplan_owner',current_database());
+END $owner_database_create$;
 ALTER SCHEMA biplan OWNER TO biplan_owner;
+DO $owner_database_create$
+BEGIN
+  EXECUTE format('REVOKE CREATE ON DATABASE %I FROM biplan_owner',current_database());
+END $owner_database_create$;
 REVOKE ALL ON SCHEMA biplan FROM PUBLIC,biplan_reader,biplan_prepare,biplan_web,biplan_preparer;
 GRANT USAGE ON SCHEMA biplan TO biplan_reader,biplan_prepare;
 DO $trusted_paths$
