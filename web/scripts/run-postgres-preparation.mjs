@@ -35,14 +35,23 @@ const safeSummary = (result) => ({
   ...(result.published !== undefined ? { published: result.published } : {}),
   failures: result.failures?.map((failure) => ({ id: failure.id, code: failure.code, retryable: failure.retryable, persistence: failure.persistence })) ?? [],
   stopped: result.stopped, elapsedMs: result.elapsedMs,
+  ...(result.idempotent ? { idempotent: true, publicationId: result.publicationId } : {}),
 });
 
 export async function runPreparationJob({ config, dependencies, signal }) {
   let client;
   try {
     client = dependencies.createClient();
-    const state = await dependencies.batchState(client, config.batchId);
-    if (state !== 'sealed') throw new Error('Requested preparation batch is not sealed');
+    const batch = await dependencies.batchState(client, config.batchId);
+    if (batch?.schemaVersion === 2 && batch.state === 'published' && typeof batch.publicationId === 'string' && batch.publicationId) {
+      // A lost response can lead to an explicit repeat execution. Report the
+      // durable completion without reclaiming work or reactivating an old version.
+      return safeSummary({ batchId: config.batchId, workerId: config.workerId, claimed: 0,
+        completed: 0, published: 0, failures: [], stopped: 'already_completed',
+        idempotent: true, publicationId: batch.publicationId });
+    }
+    if (batch?.state !== 'sealed') throw new Error('Requested preparation batch is not sealed');
+    if (batch.schemaVersion !== 2) throw new Error('Preparation Job requires a version 2 page/record receipt');
     const store = dependencies.createStore(client.queryText);
     const result = config.mode === 'prepare'
       ? await dependencies.runPreparation({
@@ -63,6 +72,8 @@ export async function runPreparationJob({ config, dependencies, signal }) {
 export function preparationJobOutcome(mode, result) {
   if (result.failures.length) return { status: 'failed', exitCode: 1 };
   if (result.stopped === 'interrupted') return { status: 'interrupted', exitCode: 1 };
+  if (result.stopped === 'already_completed' && result.idempotent === true && result.publicationId)
+    return { status: 'completed', exitCode: 0 };
   if (mode === 'prepare')
     return result.stopped === 'drained'
       ? { status: 'completed', exitCode: 0 }
@@ -81,8 +92,8 @@ async function productionDependencies(env) {
   return {
     createClient: () => createPostgresClient(env),
     batchState: async (client, batchId) => {
-      const response = await client.pool.query('SELECT state FROM biplan.preparation_batches WHERE id=$1', [batchId]);
-      return response.rowCount === 1 ? response.rows[0].state : null;
+      const response = await client.pool.query("SELECT state,publication_id,header->'schemaVersion' AS schema_version FROM biplan.preparation_batches WHERE id=$1", [batchId]);
+      return response.rowCount === 1 ? { state: response.rows[0].state, publicationId: response.rows[0].publication_id, schemaVersion: response.rows[0].schema_version } : null;
     },
     createStore: createBatchStore,
     runPreparation: workers.runBatchPreparation,

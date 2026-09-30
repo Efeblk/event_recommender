@@ -18,7 +18,7 @@ const suffix = randomBytes(6).toString('hex');
 const database = `biplan_roles_verify_${suffix}`;
 const roleNames = Object.fromEntries(['owner', 'reader', 'prepare', 'web', 'preparer'].map(name => [name, `biplan_verify_${suffix}_${name}`]));
 assert.match(database, /^biplan_roles_verify_[0-9a-f]{12}$/);
-const migrations = ['schema.sql', 'migrations/002-offer-revisions.sql', 'migrations/003-workers.sql', 'migrations/004-publication-refresh.sql', 'migrations/005-canonical-preparation.sql', 'migrations/006-batched-publication.sql'];
+const migrations = ['schema.sql', 'migrations/002-offer-revisions.sql', 'migrations/003-workers.sql', 'migrations/004-publication-refresh.sql', 'migrations/005-canonical-preparation.sql', 'migrations/006-batched-publication.sql', 'migrations/007-page-receipts.sql'];
 const paths = [...migrations, 'roles.sql', 'verify-roles.mjs', 'canonical-adapter.mjs', 'canonical-store.mjs', 'canonical-worker.mjs',
   'worker-store.mjs', 'worker.mjs', 'refresh-consumer.mjs', 'publication-store.mjs', 'db.mjs', 'batch-store.mjs', 'batch-worker.mjs'];
 const hashes = async () => Object.fromEntries(await Promise.all(paths.map(async path => [path, createHash('sha256').update(await readFile(resolve(import.meta.dirname, path))).digest('hex')])));
@@ -86,6 +86,8 @@ try {
   await check('reader has no preparation or raw-evidence access and preparer cannot bypass guarded entrypoints', async () => {
     await denied('web', 'SELECT * FROM biplan.source_observations;');
     await denied('web', 'SELECT * FROM biplan.preparation_jobs;');
+    await denied('web', 'SELECT * FROM biplan.source_page_observations;');
+    await denied('web', 'SELECT * FROM biplan.source_page_heads;');
     await denied('web', "SELECT biplan.accept_canonical_observation('{}'::jsonb);");
     for (const role of ['web', 'preparer']) {
       await denied(role, "SELECT biplan.ingest_prepared_payload('{}'::jsonb);");
@@ -121,6 +123,7 @@ try {
     assert.equal(read.sessions[0].sessionId, accepted.sessionId); assert.equal(read.sessions[0].document.vector, null);
     const status = await publication.revalidatePublication(read.publicationId, [accepted.sessionId], new Date().toISOString(), 72 * 3600000);
     assert.equal(status[0].canonicalSessionUsable, true); assert.equal(status[0].availabilityUsable, true);
+    assert.equal(JSON.parse(await webQuery(`SELECT biplan.offer_page_support(${literal(accepted.offerId)})::text;`)).usable, true);
     const vector = `[${Array.from({ length: 1024 }, (_, i) => i ? 0 : 1).join(',')}]`;
     // Administrator fixture only: a real vector row, read through the production
     // reader's table privileges. The application cannot insert or alter it.

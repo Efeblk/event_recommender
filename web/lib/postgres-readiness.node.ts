@@ -33,6 +33,7 @@ type Raw = {
   missingReferences: number | string;
   canceledSessions: number | string;
   invalidOfferPins: number | string;
+  unresolvedPageOffers: number | string;
   pendingEvaluations: number | string;
   failedEvaluations: number | string;
   staleEvaluations: number | string;
@@ -48,6 +49,96 @@ const count = (value: unknown) => {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : -1;
 };
+const instant = (value: unknown) => {
+  const parsed = typeof value === 'string' ? Date.parse(value) : NaN;
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value ? parsed : NaN;
+};
+
+function coverageReasons(coverage: Record<string, unknown>, now: number): string[] {
+  const reasons: string[] = [];
+  const finished = instant(coverage.finishedAt);
+  if (!Number.isFinite(finished) || finished > now + 300000)
+    reasons.push('collector_coverage_time_invalid');
+  else if (now - finished >= 24 * 3600000) reasons.push('collector_coverage_stale');
+  // Legacy URL totals and normalized record totals use different units. The
+  // v2 publisher verifies the page inventory; v1 fixture receipts cannot qualify
+  // a managed service as ready, even when their declared complete flag is true.
+  if (coverage.schemaVersion !== 2) return [...reasons, 'collector_coverage_version_unsupported'];
+  const discovery = object(coverage.discovery), records = object(coverage.records);
+  const freshness = object(coverage.freshness);
+  if (discovery?.unit !== 'detail_url' || records?.unit !== 'event_record' ||
+      typeof discovery.listingConfigHash !== 'string' || !/^[a-f0-9]{64}$/.test(discovery.listingConfigHash) ||
+      typeof discovery.inventoryHash !== 'string' || !/^[a-f0-9]{64}$/.test(discovery.inventoryHash) ||
+      !Array.isArray(coverage.inventory) || !coverage.inventory.length)
+    reasons.push('collector_coverage_invalid');
+  if (coverage.complete !== true || coverage.scope !== 'full' || discovery?.exhausted !== true)
+    reasons.push('source_coverage_incomplete');
+  const scopeEvidence = object(coverage.scopeEvidence);
+  const providers = coverage.providers;
+  const from = instant(coverage.horizonStart), to = instant(coverage.horizonEnd), started = instant(coverage.startedAt);
+  if (scopeEvidence?.geography !== 'Istanbul' || scopeEvidence.listingConfigHash !== discovery?.listingConfigHash ||
+      !Array.isArray(providers) || !providers.length ||
+      providers.some(p => typeof p !== 'string' || !['biletix', 'bubilet', 'biletinial'].includes(p)) ||
+      new Set(providers).size !== providers.length || !Number.isFinite(from) || !Number.isFinite(to) || to <= from ||
+      !Number.isFinite(started) || started > finished || typeof coverage.collectionRunId !== 'string' || !coverage.collectionRunId ||
+      typeof coverage.inputHash !== 'string' || !/^[a-f0-9]{64}$/.test(coverage.inputHash))
+    reasons.push('collector_coverage_scope_invalid');
+  const inventory = Array.isArray(coverage.inventory) ? coverage.inventory : [];
+  const seen = new Set<string>();
+  const knownByProvider = new Map<string, number>();
+  for (const value of inventory) {
+    const entry = object(value);
+    const fields = ['known', 'attemptedThisRun', 'verifiedThisRun', 'retiredThisRun', 'failedThisRun',
+      'quarantinedThisRun', 'unattemptedThisRun', 'neverVisited', 'stale', 'outstandingFailures'] as const;
+    if (!entry || typeof entry.provider !== 'string' || seen.has(entry.provider) ||
+        !Array.isArray(providers) || !providers.includes(entry.provider) || fields.some(f => count(entry[f]) < 0)) {
+      reasons.push('collector_coverage_invalid'); continue;
+    }
+    seen.add(entry.provider);
+    const counts = Object.fromEntries(fields.map(f => [f, count(entry[f])]));
+    knownByProvider.set(entry.provider, counts.known);
+    if (counts.known !== counts.attemptedThisRun + counts.unattemptedThisRun ||
+        counts.attemptedThisRun !== counts.verifiedThisRun + counts.retiredThisRun + counts.failedThisRun + counts.quarantinedThisRun ||
+        ['neverVisited', 'stale', 'outstandingFailures'].some(f => counts[f] > counts.known))
+      reasons.push('collector_coverage_invalid');
+    if (counts.outstandingFailures > 0 || counts.failedThisRun > 0 || counts.quarantinedThisRun > 0)
+      reasons.push('source_refresh_failed');
+    if (counts.neverVisited > 0 || counts.stale > 0) reasons.push('source_coverage_incomplete');
+    if (counts.unattemptedThisRun > 0) reasons.push('source_coverage_incomplete');
+  }
+  if (Array.isArray(providers) && seen.size !== providers.length) reasons.push('collector_coverage_invalid');
+  const urls = discovery?.urls, urlIds = new Set<string>(), urlCounts = new Map<string, number>();
+  if (!Array.isArray(urls) || !urls.length || urls.length > 20000) reasons.push('collector_coverage_inventory_invalid');
+  else {
+    for (const value of urls) {
+      const entry = object(value);
+      if (!entry || typeof entry.provider !== 'string' || !knownByProvider.has(entry.provider) ||
+          typeof entry.url !== 'string' || !entry.url || /[\r\n\t]/.test(entry.url)) {
+        reasons.push('collector_coverage_inventory_invalid'); continue;
+      }
+      const id = `${entry.provider}\t${entry.url}`;
+      if (urlIds.has(id)) reasons.push('collector_coverage_inventory_invalid');
+      urlIds.add(id);
+      urlCounts.set(entry.provider, (urlCounts.get(entry.provider) ?? 0) + 1);
+    }
+    if ([...knownByProvider].some(([provider, known]) => urlCounts.get(provider) !== known))
+      reasons.push('collector_coverage_inventory_invalid');
+  }
+  const recordFields = ['submitted', 'currentRun', 'recovered', 'carried', 'sourceQuarantined'];
+  if (!records || recordFields.some(f => count(records[f]) < 0) ||
+      count(records.submitted) !== count(records.currentRun) + count(records.recovered))
+    reasons.push('collector_coverage_invalid');
+  else if (count(records.sourceQuarantined) > 0) reasons.push('source_refresh_failed');
+  if (records && coverage.complete === true && count(records.recovered) !== 0)
+    reasons.push('collector_coverage_invalid');
+  const maxAge = count(freshness?.maxSourceAgeMs);
+  const oldest = instant(freshness?.oldestResolvedAt), until = instant(freshness?.validUntil);
+  if (maxAge <= 0 || maxAge > 24 * 3600000 || !Number.isFinite(oldest) || !Number.isFinite(until) ||
+      oldest > finished || until !== oldest + maxAge)
+    reasons.push('collector_coverage_freshness_invalid');
+  else if (until <= now) reasons.push('collector_coverage_stale');
+  return [...new Set(reasons)];
+}
 
 export function assessPostgresPreparedCatalogReadiness(raw: Raw, now = Date.now()): PostgresPreparedCatalogReadiness {
   const reasons: string[] = [], manifest = object(raw.manifest);
@@ -56,6 +147,7 @@ export function assessPostgresPreparedCatalogReadiness(raw: Raw, now = Date.now(
   const requiredOffers = count(raw.requiredOffers);
   const missingReferences = count(raw.missingReferences), canceledSessions = count(raw.canceledSessions);
   const invalidOfferPins = count(raw.invalidOfferPins);
+  const unresolvedPageOffers = count(raw.unresolvedPageOffers);
   const sourceCoverage = object(manifest?.collectorCoverage);
   const preparationReceipt = object(manifest?.preparationReceipt);
 
@@ -71,26 +163,16 @@ export function assessPostgresPreparedCatalogReadiness(raw: Raw, now = Date.now(
   else if (offers < 0 || offers !== requiredOffers) reasons.push('postgres_offer_count_mismatch');
   if (missingReferences !== 0 || canceledSessions !== 0 || invalidOfferPins !== 0)
     reasons.push('postgres_reference_integrity_failed');
+  if (unresolvedPageOffers !== 0) reasons.push('provider_page_reconciliation_required');
 
   if (!sourceCoverage) reasons.push('collector_coverage_missing');
-  else {
-    const failed = count(sourceCoverage.failedPages), unvisited = count(sourceCoverage.unvisited);
-    const complete = sourceCoverage.complete === true;
-    const finishedAt = sourceCoverage.finishedAt;
-    const finished = typeof finishedAt === 'string' ? Date.parse(finishedAt) : NaN;
-    if (!Number.isFinite(finished) || new Date(finished).toISOString() !== finishedAt || finished > now + 300000)
-      reasons.push('collector_coverage_time_invalid');
-    else if (now - finished >= 24 * 3600000) reasons.push('collector_coverage_stale');
-    if (failed < 0 || unvisited < 0) reasons.push('collector_coverage_invalid');
-    else {
-      if (failed > 0) reasons.push('source_refresh_failed');
-      if (!complete || unvisited > 0) reasons.push('source_coverage_incomplete');
-    }
-  }
+  else reasons.push(...coverageReasons(sourceCoverage, now));
   if (!preparationReceipt) reasons.push('preparation_receipt_missing');
   else if (
     !(typeof preparationReceipt.status === 'string' && ['verified', 'completed'].includes(preparationReceipt.status)) ||
-    preparationReceipt.publicationId !== raw.publicationId
+    preparationReceipt.publicationId !== raw.publicationId || preparationReceipt.version !== 'canonical-batch-v1' ||
+    typeof preparationReceipt.batchId !== 'string' || !preparationReceipt.batchId ||
+    preparationReceipt.inputHash !== sourceCoverage?.inputHash
   ) reasons.push('preparation_receipt_invalid');
 
   return {
@@ -134,6 +216,8 @@ WITH active AS MATERIALIZED (
       LEFT JOIN biplan.published_sessions ps ON ps.publication_id=po.publication_id AND ps.session_id=po.session_id
       WHERE po.publication_id=a.id AND (r.id IS NULL OR i.id IS NULL OR ps.session_id IS NULL
         OR r.session_id IS DISTINCT FROM po.session_id OR r.acceptance_status<>'accepted')) AS invalid_offer_pins,
+    (SELECT count(*) FROM biplan.publication_offers po JOIN biplan.offer_revisions r ON r.id=po.offer_revision_id
+      WHERE po.publication_id=a.id AND (biplan.offer_page_support(r.offer_id)->>'usable') IS DISTINCT FROM 'true') AS unresolved_page_offers,
     (SELECT count(*) FROM biplan.publication_evaluations pe JOIN biplan.evaluations e ON e.id=pe.evaluation_id
       WHERE pe.publication_id=a.id AND e.status='pending') AS pending_evaluations,
     (SELECT count(*) FROM biplan.publication_evaluations pe JOIN biplan.evaluations e ON e.id=pe.evaluation_id
@@ -150,7 +234,7 @@ SELECT jsonb_build_object(
   'requiredSessions',m.required_session_count,'requiredDocuments',m.required_document_count,
   'requiredOffers',m.required_offer_count,'sessions',m.sessions,'documents',m.documents,
   'offers',m.offers,'missingReferences',m.missing_references,'canceledSessions',m.canceled_sessions,
-  'invalidOfferPins',m.invalid_offer_pins,'pendingEvaluations',m.pending_evaluations,
+  'invalidOfferPins',m.invalid_offer_pins,'unresolvedPageOffers',m.unresolved_page_offers,'pendingEvaluations',m.pending_evaluations,
   'failedEvaluations',m.failed_evaluations,'staleEvaluations',m.stale_evaluations,
   'unknownEvaluations',m.unknown_evaluations)::text
 FROM metrics m;`;
@@ -161,7 +245,7 @@ export async function readPostgresPreparedCatalogReadiness(queryText: QueryText)
     publicationId: null, state: null, switchedAt: null, validatedAt: null, validationHash: null,
     manifest: null, requiredSessions: null, requiredDocuments: null, requiredOffers: null,
     sessions: 0, documents: 0, offers: 0, missingReferences: 0, canceledSessions: 0,
-    invalidOfferPins: 0, pendingEvaluations: 0, failedEvaluations: 0, staleEvaluations: 0, unknownEvaluations: 0,
+    invalidOfferPins: 0, unresolvedPageOffers: 0, pendingEvaluations: 0, failedEvaluations: 0, staleEvaluations: 0, unknownEvaluations: 0,
   });
   return assessPostgresPreparedCatalogReadiness(JSON.parse(text) as Raw);
 }

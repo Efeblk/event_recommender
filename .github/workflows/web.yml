@@ -155,6 +155,10 @@ jobs:
         run: npm run catalog:verify:batch
       - name: Verify storage, provenance, interruption and publication guards
         run: npm run catalog:verify:batch-guards
+      - name: Verify URL evidence, source expiry and empty-page publication guards
+        run: npm run catalog:verify:page-receipts
+      - name: Verify resumable page and multi-session source ingestion
+        run: npm run catalog:verify:page-source
       - name: Verify actual restricted database roles
         run: npm run catalog:verify:roles
       - uses: actions/upload-artifact@v4

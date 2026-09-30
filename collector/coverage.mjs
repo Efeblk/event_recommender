@@ -17,6 +17,8 @@ export function normalizeCoverage(value) {
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : null,
     entries: value.entries.filter(validEntry).map((entry) => ({ ...entry })),
     listings: value.listings && typeof value.listings === 'object' && !Array.isArray(value.listings) ? { ...value.listings } : {},
+    ...(value.cycle && typeof value.cycle === 'object' && !Array.isArray(value.cycle)
+      ? { cycle: structuredClone(value.cycle) } : {}),
   };
 }
 
@@ -41,20 +43,28 @@ export function addCoverageEntries(state, entries, now = new Date().toISOString(
   return state;
 }
 
-export function fairCoverageOrder(state, selectedSources, now = new Date().toISOString(), retiredRecheckMs = 7 * 86400000) {
+export function fairCoverageOrder(state, selectedSources, now = new Date().toISOString(), retiredRecheckMs = 7 * 86400000, cycleId = null) {
   const allowed = new Set(selectedSources);
   const buckets = new Map(selectedSources.map((source) => [source, []]));
   const current = Date.parse(now);
   for (const entry of state.entries) {
     if (!allowed.has(entry.source)) continue;
     if (entry.retiredAt) {
+      const unobservedInCycle = cycleId !== null && entry.cycleObservation?.cycleId !== cycleId;
       const due = Number.isFinite(Date.parse(entry.retiredAt)) && current - Date.parse(entry.retiredAt) >= retiredRecheckMs;
       const reactive = Number.isFinite(Date.parse(entry.reactivateAt)) && Date.parse(entry.reactivateAt) > Date.parse(entry.lastAttemptAt ?? 0);
-      if (!due && !reactive) continue;
+      if (!unobservedInCycle && !due && !reactive) continue;
     }
     buckets.get(entry.source).push(entry);
   }
-  for (const entries of buckets.values()) entries.sort(priority);
+  for (const entries of buckets.values()) entries.sort((a, b) => {
+    if (cycleId !== null) {
+      const aObserved = a.cycleObservation?.cycleId === cycleId;
+      const bObserved = b.cycleObservation?.cycleId === cycleId;
+      if (aObserved !== bObserved) return aObserved ? 1 : -1;
+    }
+    return priority(a, b);
+  });
   const ordered = [];
   for (let index = 0; ; index++) {
     let added = false;

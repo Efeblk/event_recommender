@@ -76,7 +76,8 @@ DECLARE obj record;
     'preparation_jobs','job_attempts','outbox','offer_identities','offer_revisions','publication_offers','offer_derivations',
     'publication_refresh_requests','outbox_attempts','publication_refresh_attempts','canonical_requests','canonical_revisions',
     'canonical_heads','canonical_source_mappings','canonical_preparations','offer_occurrence_bindings','canonical_occurrence_disputes',
-    'preparation_storage_limits','preparation_batches','preparation_batch_items','preparation_batch_sessions'];
+    'preparation_storage_limits','preparation_batches','preparation_batch_items','preparation_batch_sessions',
+    'source_page_observations','source_page_heads','preparation_batch_pages'];
   approved_functions text[]:=ARRAY['reject_immutable_mutation','protect_publication_manifest','protect_validated_publication_rows',
     'activate_publication','claim_preparation_jobs','complete_preparation_job','ingest_prepared_payload','reject_immutable_offer_revision',
     'protect_candidate_publication_offer','accept_offer_revision','validate_publication_offers','enforce_publication_offer_validation',
@@ -89,7 +90,9 @@ DECLARE obj record;
     'current_publication_offer_status_v4','refresh_publication_request_v4',
     'check_preparation_storage','begin_preparation_batch','accept_batch_observation','record_batch_quarantine','seal_preparation_batch',
     'cancel_preparation_batch','claim_batch_preparation_jobs','batch_preparation_input','complete_batch_preparation_job',
-    'fail_batch_preparation_job','claim_batch_publication','batch_session_snapshot','publish_preparation_batch'];
+    'fail_batch_preparation_job','claim_batch_publication','batch_session_snapshot','publish_preparation_batch',
+    'begin_preparation_batch_v2','record_batch_page','offer_page_support','canonical_offer_support_v5',
+    'seal_preparation_batch_v2','publish_preparation_batch_v6'];
 BEGIN
   FOR obj IN SELECT c.oid,c.relname,c.relkind FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     WHERE n.nspname='biplan' AND c.relkind IN ('r','p','v','m','S','f') LOOP
@@ -143,6 +146,12 @@ DECLARE signature text; function_id regprocedure;
     'biplan.fail_batch_preparation_job(text,text,bigint,jsonb)','biplan.claim_batch_publication(text,text,interval)',
     'biplan.publish_preparation_batch(text,text,text,bigint,text)'];
 BEGIN
+  IF EXISTS(SELECT 1 FROM biplan.schema_migrations WHERE version='007-page-receipts') THEN
+    read_api:=read_api||ARRAY['biplan.offer_page_support(text)'];
+    prepare_api:=prepare_api||ARRAY['biplan.begin_preparation_batch_v2(jsonb)','biplan.record_batch_page(text,jsonb)',
+      'biplan.seal_preparation_batch_v2(text,jsonb)'];
+    GRANT SELECT ON biplan.source_page_observations,biplan.preparation_batch_pages TO biplan_prepare;
+  END IF;
   FOREACH signature IN ARRAY read_api LOOP
     function_id:=to_regprocedure(signature); IF function_id IS NULL THEN RAISE EXCEPTION 'missing read API %',signature; END IF;
     EXECUTE format('ALTER FUNCTION %s SECURITY DEFINER',function_id);

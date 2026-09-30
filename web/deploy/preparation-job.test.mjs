@@ -8,7 +8,7 @@ function fake(overrides = {}) {
   const calls = []; let closed = 0;
   const dependencies = {
     createClient: () => ({ queryText: async () => '', close: async () => { closed++; } }),
-    batchState: async () => 'sealed', createStore: () => ({ marker: true }),
+    batchState: async () => ({ state: 'sealed', schemaVersion: 2 }), createStore: () => ({ marker: true }),
     runPreparation: async (options) => { calls.push(options); return { batchId: options.batchId, workerId: options.workerId, claimed: 2, completed: 2, failures: [], stopped: 'item_limit', elapsedMs: 4 }; },
     runPublication: async (options) => { calls.push(options); return { batchId: options.batchId, workerId: options.workerId, claimed: 1, published: 1, failures: [], stopped: 'completed' }; },
     ...overrides,
@@ -33,9 +33,25 @@ await test('passes finite preparation bounds and always closes the client', asyn
 });
 
 await test('refuses non-sealed batches before claims and closes on failure', async () => {
-  const harness = fake({ batchState: async () => 'collecting' });
+  const harness = fake({ batchState: async () => ({ state: 'collecting', schemaVersion: 2 }) });
   await assert.rejects(runPreparationJob({ config: base, dependencies: harness.dependencies, signal: new AbortController().signal }), /not sealed/);
   assert.equal(harness.calls.length, 0); assert.equal(harness.closed(), 1);
+});
+
+await test('production Job refuses a legacy records-only batch before claiming work', async () => {
+  const harness = fake({ batchState: async () => ({ state: 'sealed', schemaVersion: 1 }) });
+  await assert.rejects(runPreparationJob({ config: base, dependencies: harness.dependencies, signal: new AbortController().signal }), /version 2/);
+  assert.equal(harness.calls.length, 0); assert.equal(harness.closed(), 1);
+});
+
+await test('repeat execution reports durable publication without claims or pointer activation', async () => {
+  for (const mode of ['prepare','publish']) {
+    const harness=fake({batchState:async()=>({state:'published',schemaVersion:2,publicationId:'older-retained-publication'})});
+    const result=await runPreparationJob({config:{...base,mode},dependencies:harness.dependencies,signal:new AbortController().signal});
+    assert.equal(result.idempotent,true);assert.equal(result.publicationId,'older-retained-publication');
+    assert.equal(result.claimed,0);assert.equal(result.published,0);assert.equal(harness.calls.length,0);assert.equal(harness.closed(),1);
+    assert.deepEqual(preparationJobOutcome(mode,result),{status:'completed',exitCode:0});
+  }
 });
 
 await test('propagates interruption fencing and exposes no detailed receipts', async () => {
