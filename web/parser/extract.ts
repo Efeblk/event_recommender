@@ -8,9 +8,10 @@ import {
   CATEGORY_TERMS, COMPANION_TERMS, CONTENT_TERMS, CURRENCIES, DISTRICTS, EXPERIENCE_TERMS, fold, MONTHS,
   NEIGHBORHOODS, NUMBER_WORDS, OUTSIDE_ISTANBUL, TOPIC_TERMS, WEEKDAYS,
 } from './lexicon.ts';
+import type { Proposal } from './gliner.ts';
 
 export type MentionKind = 'amount' | 'date' | 'time' | 'party' | 'companion' | 'location' | 'outside_location'
-  | 'category' | 'topic' | 'experience' | 'content';
+  | 'category' | 'topic' | 'experience' | 'content' | 'open_condition';
 
 interface Base { id: string; start: number; end: number; text: string }
 export type Mention = Base & (
@@ -25,6 +26,7 @@ export type Mention = Base & (
   | { kind: 'topic'; value: string }
   | { kind: 'experience'; value: string }
   | { kind: 'content'; value: 'profanity' | 'sexual_content' }
+  | { kind: 'open_condition'; value: string }
 );
 type Draft = Mention extends infer M ? (M extends Mention ? Omit<M, 'id'> : never) : never;
 
@@ -70,7 +72,7 @@ const CURRENCY_ALT = Object.keys(CURRENCIES).sort((a, b) => b.length - a.length)
 
 export interface Extraction { mentions: Mention[]; folded: string }
 
-export function extract(text: string, referenceDate: string): Extraction {
+export function extract(text: string, referenceDate: string, proposals: Proposal[] = []): Extraction {
   const f = fold(text);
   const drafts: Draft[] = [];
   const taken: boolean[] = Array.from({ length: text.length }, () => false);
@@ -95,7 +97,7 @@ export function extract(text: string, referenceDate: string): Extraction {
     add({ kind: 'amount', amount, currency, ...span(m.index!, m.index! + m[0].length) });
   }
 
-  for (const m of f.matchAll(new RegExp(`${B}(?:ucretsiz|bedava|free(?:\\s+(?:of\\s+charge|entry|admission))?)${E}`, 'gu')))
+  for (const m of f.matchAll(new RegExp(`(?<![\\p{L}\\p{N}-])(?:ucretsiz|bedava|free(?:\\s+(?:of\\s+charge|entry|admission))?)${E}`, 'gu')))
     add({ kind: 'amount', amount: 0, currency: 'TRY', ...span(m.index!, m.index! + m[0].length) });
 
   // --- Times.
@@ -283,6 +285,48 @@ export function extract(text: string, referenceDate: string): Extraction {
     if (amount !== null) add({ kind: 'amount', amount, currency: 'TRY', ...span(s, e) });
   }
 
+  // --- Typo-tolerant place names ("Kadikiy'de"): one edit away from a name of six or more letters.
+  for (const m of f.matchAll(/(?<![\p{L}\p{N}])(\p{L}{6,})(?:'?\p{L}{0,5})?(?![\p{L}\p{N}])/gu)) {
+    const s0 = m.index!, word = m[1];
+    if (!free(s0, s0 + word.length) || (text[s0] === text[s0].toLocaleLowerCase('tr-TR') && text !== text.toLocaleLowerCase('tr-TR'))) continue;
+    for (const [name, precision] of [...DISTRICTS.map((n) => [n, 'district'] as const), ...NEIGHBORHOODS.map((n) => [n, 'neighborhood'] as const)]) {
+      const target = fold(name);
+      if (target.length < 6 || /\s/u.test(target)) continue;
+      // Allow inflection: compare the target with the same-length prefix and one character either side.
+      const near = [target.length - 1, target.length, target.length + 1].some((n) => n <= word.length && editDistance(word.slice(0, n), target) <= 1);
+      if (near) { add({ kind: 'location', name, precision, ...span(s0, s0 + m[0].length) }); break; }
+    }
+  }
+
+  // --- Open-vocabulary proposals (GLiNER). Only spans that do not overlap typed mentions,
+  // or that strictly extend a closed-vocabulary topic ("Türkçe pop" ⊃ "pop"), are kept.
+  const STOP = /^(?:istanbul|etkinlik|etkinlikler|event|events|something|bir sey|sey|zorunlu|sart|kesin|mutlaka|tercih|tercihen|mandatory|required|must|optional|preferred|preference)$/u;
+  // Generic theme words around a known topic ("history-themed", "tarih temalı") add nothing.
+  const THEME = /[\s-]*(?:themed|theme|temali|tema|konulu|odakli)$/u;
+  for (const p of [...proposals].sort((a, b) => b.score - a.score)) {
+    if (p.score < 0.5 || p.end - p.start < 3 || STOP.test(f.slice(p.start, p.end).trim())) continue;
+    const overlapping = drafts.filter((d) => d.start < p.end && p.start < d.end);
+    const extendsTopics = overlapping.length > 0 && overlapping.every((d) => d.kind === 'topic' && d.start >= p.start && d.end <= p.end && d.end - d.start < p.end - p.start);
+    // A condition mostly covered by known vocabulary ("oturma düzeni", "tekerlekli sandalye erişimi") is supported.
+    const covered = overlapping.filter((d) => d.kind === 'experience' || d.kind === 'content').reduce((n, d) => n + Math.min(d.end, p.end) - Math.max(d.start, p.start), 0);
+    if (p.label === 'condition' && covered / (p.end - p.start) >= 0.5) continue;
+    // An open condition may contain softer vocabulary ("adjacent aisle seats" ⊃ "seats"); both stay and Jev
+    // judges whether the condition is supported. It never absorbs dates, places, prices or types.
+    if (p.label === 'condition' && overlapping.every((d) => ['experience', 'topic', 'content', 'companion'].includes(d.kind) || (d.kind === 'amount' && d.amount === 0))) {
+      for (const d of overlapping.filter((x) => x.kind === 'amount')) drafts.splice(drafts.indexOf(d), 1);
+      drafts.push({ kind: 'open_condition', value: p.text.trim(), ...span(p.start, p.end) });
+      claim(p.start, p.end);
+      continue;
+    }
+    if (overlapping.length && !extendsTopics) continue;
+    if (extendsTopics && p.label === 'topic' && overlapping.length === 1 && TOPIC_TERMS[(overlapping[0] as { value: string }).value]?.some((t) => fold(p.text).trim().replace(THEME, '') === t)) continue;
+    for (const d of overlapping) drafts.splice(drafts.indexOf(d), 1);
+    drafts.push(p.label === 'topic'
+      ? { kind: 'topic', value: p.text.trim(), ...span(p.start, p.end) }
+      : { kind: 'open_condition', value: p.text.trim(), ...span(p.start, p.end) });
+    claim(p.start, p.end);
+  }
+
   drafts.sort((a, b) => a.start - b.start);
   // A clause-initial imperative "Show ..." / "Göster ..." is a verb, not the show category.
   for (let i = drafts.length - 1; i >= 0; i--) {
@@ -317,4 +361,18 @@ export function segments(text: string): Array<{ start: number; end: number; text
   }
   push(last, text.length);
   return out;
+}
+
+function editDistance(a: string, b: string): number {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const current = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
+      previous = current;
+    }
+  }
+  return row[b.length];
 }

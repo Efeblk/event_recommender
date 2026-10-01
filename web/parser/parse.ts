@@ -11,6 +11,7 @@ import { emptyPlan } from './contract.ts';
 import { applyOperations } from './state.ts';
 import { extract, segments, type Mention } from './extract.ts';
 import { fold } from './lexicon.ts';
+import { propose, type Proposal } from './gliner.ts';
 import { ask, type ChoiceAnswer, type JevResponse, type NoulAnswer, type Question } from './jev.ts';
 
 export type ParseResult =
@@ -70,6 +71,7 @@ function mentionMeaning(m: Mention): string {
       return inverse ? `experience: ${m.value === 'uncrowded' ? 'crowdedness' : m.value === 'quiet' ? 'noise' : 'standing'}` : `experience: ${m.value.replaceAll('_', ' ')}`;
     }
     case 'content': return `content: ${m.value.replace('_', ' ')}`;
+    case 'open_condition': return `condition: ${m.value}`;
   }
 }
 
@@ -77,8 +79,24 @@ const SUPPORTED = 'The search can check only: Istanbul districts and neighbourho
 
 const choice = (instructions: unknown, criteria: Record<string, string>): Question => ({ type: 'choice', instructions, criteria });
 
-export function buildRequest(input: ParserInput) {
-  const { mentions } = extract(input.utterance, input.referenceDate);
+/**
+ * Hedge markers make a condition optional. They form a small closed class, so code finds them and
+ * Jev only judges which phrases each one covers; without a hedge every condition is mandatory.
+ */
+const HEDGE = new RegExp([
+  "olsa (?:iyi|guzel|harika|super|hos) (?:olur|olurdu)", 'olsa fena olmaz', 'olursa (?:iyi|guzel) olur',
+  '(?:sart|zorunlu|mecburi) degil', 'tercih(?:en|im|imiz|ederim|ederiz|imdir)?(?! degil)', 'mumkunse', 'imkan varsa', 'ideal(?:i|de|olarak)?',
+  'preferabl[ey]', 'preferred', 'ideally', 'if possible', "would be (?:nice|great|good|lovely|a plus)", 'nice to have', 'a plus',
+  "i(?:'d| would)? prefer", 'as a preference', 'not (?:required|essential|necessary|a must)', 'optional(?:ly)?',
+  "(?:doesn't|does not|don't|do not) (?:have|need) to", 'if you can', 'bonus', 'would love',
+].join('|'), 'gu');
+
+export function hedgeMarkers(text: string) {
+  return [...fold(text).matchAll(HEDGE)].map((m) => ({ start: m.index!, end: m.index! + m[0].length, text: text.slice(m.index!, m.index! + m[0].length) }));
+}
+
+export function buildRequest(input: ParserInput, proposals: Proposal[] = []) {
+  const { mentions } = extract(input.utterance, input.referenceDate, proposals);
   const segs = segments(input.utterance);
   const prev = input.previousState?.plan ?? null;
   const existing = prev ? [...topLevel(prev).map((c) => ({ c, strength: 'required' })), ...prev.preferences.map((c) => ({ c, strength: 'preferred' }))] : [];
@@ -95,6 +113,27 @@ export function buildRequest(input: ParserInput) {
   };
   const questions: Record<string, Question> = {};
   const scopes: Array<{ x: string; a: string; b: string; near: string }> = [];
+  // Each hedge covers one contiguous run of phrases next to it inside its clause; Jev picks which run.
+  const hedges = hedgeMarkers(input.utterance).map((h) => {
+    const clause = (i: number) => input.utterance.slice(0, i).split(/[;.!?]/u).length;
+    const inClause = mentions.filter((m) => clause(m.start) === clause(h.start));
+    const before = inClause.filter((m) => m.end <= h.start), after = inClause.filter((m) => m.start >= h.end);
+    const runs = [
+      ...before.map((_, i) => before.slice(i)).reverse(),
+      ...after.map((_, i) => after.slice(0, i + 1)),
+    ].map((run) => run.map((m) => m.id));
+    return { ...h, runs };
+  });
+  hedges.forEach((h, k) => {
+    if (!h.runs.length) return;
+    questions[`hedge_${k}`] = choice(
+      { hedge: h.text, question: 'Which phrases does `hedge` make only an optional wish in `message`? A hedge covers just the phrases it is attached to: in "Saturday, jazz would be nice" only jazz; in "Cumartesi caz olsa güzel olur" only caz; in "I prefer a beginner-friendly ceramics course" all three.' },
+      Object.fromEntries([
+        ...h.runs.map((run, r) => [`run${r}`, `Covers exactly: ${run.map((id) => JSON.stringify(mentions.find((m) => m.id === id)!.text)).join(', ')}`]),
+        ['none', 'The hedge is negated ("artık tercih değil, zorunlu") or covers only other words that are not listed here (e.g. "sakin bir ortam olsa güzel olur" covers "sakin bir ortam").'],
+      ]),
+    );
+  });
   mentions.forEach((m, i) => {
     const path = `mentions[${i}]`;
     questions[`polarity_${m.id}`] = choice(
@@ -106,13 +145,12 @@ export function buildRequest(input: ParserInput) {
         not_condition: 'Not about the events at all: a verb such as "show me", a word with a different meaning here (e.g. "tarih" meaning a date, "sıra" meaning order), or part of a sorting instruction.',
       },
     );
-    questions[`strength_${m.id}`] = choice(
-      { question: `Is the user's condition about \`${path}.text\` mandatory or only an optional wish? Judge the hedging that applies to this phrase itself.` },
-      {
-        mandatory: 'Mandatory (the default): stated plainly, as what to find, as must/required/"şart"/"olsun"/"zorunlu", or as the acceptable options ("X or Y is fine", "olabilir", "uygun"). Limits and approximations ("up to", "at most", "max", "around 500 TL") are still mandatory.',
-        optional: 'Only a wish: the phrase is governed by a hedge such as "I prefer", preferably, ideally, if possible, would be nice, as a preference, "tercih ederim", "tercihen", "mümkünse", "olsa güzel olur", "şart değil". A hedge governs every word of the noun phrase it introduces ("I prefer a beginner-friendly ceramics course" hedges all three).',
-      },
-    );
+    if (m.kind === 'open_condition') {
+      questions[`supported_${m.id}`] = {
+        type: 'noul',
+        instructions: { supportedConditions: SUPPORTED, question: `Can the search check \`${path}.text\` using only \`supportedConditions\`? Yes if it is just a price, budget basis, date, time, place, attendee, event type, topic or a listed experience; no for food, parking, seat positions, assistive devices, guarantees or anything else.` },
+      };
+    }
     if (m.kind === 'amount') {
       questions[`cmp_${m.id}`] = choice(
         { question: `Which price comparison does the user apply to the amount \`${path}.text\`?` },
@@ -171,6 +209,7 @@ export function buildRequest(input: ParserInput) {
       {
         or: 'Either one is enough: listed options ("veya", "ya da", "or", "either"), including types or places joined by "and"/"ve" when one event could not be both at once.',
         and: 'Both must hold for the same event at the same time (for example a topic and a theme together), or one of them is not actually wanted.',
+        undecided: 'The user says they cannot decide between the two ("X mi Y mi emin değilim", "not sure whether X or Y", "karar veremedim").',
         ...(a.kind === 'date' ? { range: 'The two dates are the start and end of one period: "from X through Y", "X to Y", "X\'den Y\'ye kadar", "X ile Y arası".' } : {}),
       },
     );
@@ -219,6 +258,7 @@ export function buildRequest(input: ParserInput) {
           replace: 'Its value is changed to a new value stated in the message (e.g. a new amount, date, place, count, or type of the same kind).',
           make_preferred: 'Kept, but changed from required to only preferred/optional.',
           make_required: 'Kept, but changed from preferred to required/mandatory.',
+          ...(c.type === 'any' ? { remove_option: 'One of its alternatives is removed and the others stay ("tiyatro şartını kaldır" when it is "concert or theatre").' } : {}),
         },
       );
     });
@@ -253,19 +293,19 @@ export function buildRequest(input: ParserInput) {
       instructions: { supportedConditions: SUPPORTED, question: `Does \`segments[${i}]\` make the search depend on something outside \`supportedConditions\` (for example a guarantee, ratings, awards, travel time, weather, admission rules, seat availability, final fees, subjective quality, a place relative to a landmark, or filtering on what a venue explicitly says it does NOT offer)? Ordinary supported conditions, sorting instructions (including asking for no particular order), edits to earlier conditions, politeness and commands are not.` },
     };
   });
-  return { state, questions, mentions, segments: segs, existing, scopes };
+  return { state, questions, mentions, segments: segs, existing, scopes, hedges };
 }
 
 type Built = ReturnType<typeof buildRequest>;
 
 export async function parse(input: ParserInput, options: { offline?: boolean } = {}): Promise<ParseResult> {
-  const built = buildRequest(input);
+  const built = buildRequest(input, await propose(input.utterance, options));
   const response = await ask(built.state, built.questions, options);
   return compose(input, built, response);
 }
 
 export function compose(input: ParserInput, built: Built, response: JevResponse): ParseResult {
-  const { mentions, segments: segs, existing, scopes } = built;
+  const { mentions, segments: segs, existing, scopes, hedges } = built;
   const a = response.answers;
   const pick = (id: string) => (a[id] as ChoiceAnswer | undefined)?.choice;
   const dist = (id: string) => (a[id] as ChoiceAnswer | undefined)?.probabilities ?? {};
@@ -273,7 +313,9 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
   const debug: Debug = { mentions, answers: Object.fromEntries(Object.entries(a).map(([k, v]) => [k, v.type === 'choice' ? Object.entries(v.probabilities).sort((x, y) => y[1] - x[1]).slice(0, 2).filter(([, p], i) => i === 0 || p >= 0.1).map(([o, p]) => `${o}:${p.toFixed(2)}`).join('/') : (v as NoulAnswer).noul.toFixed(2)])), usage: response.usage };
   const role = (m: Mention) => {
     const polarity = pick(`polarity_${m.id}`) ?? 'not_condition';
-    const optional = pick(`strength_${m.id}`) === 'optional';
+    // Runs are nested; with an uncertain scope every plausible run counts (the widest wins).
+    const optional = hedges.some((h, k) => Object.entries(dist(`hedge_${k}`))
+      .some(([option, p]) => p >= 0.3 && /^run\d+$/u.test(option) && h.runs[Number(option.slice(3))]?.includes(m.id)));
     if (polarity === 'wanted') return optional ? 'prefer' : 'require';
     if (polarity === 'unwanted') return optional ? 'avoid' : 'exclude';
     return polarity === 'old_value' ? 'existing' : 'other';
@@ -283,7 +325,9 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
   // --- Unsupported: deterministic checks first, then Jev's segment judgments.
   const unsupported = mentions.filter((m) => (m.kind === 'amount' && m.currency === 'OTHER' && wanted(m))
     || (m.kind === 'outside_location' && ['require', 'prefer'].includes(role(m)))
-    || (m.kind === 'date' && m.past && ['require', 'prefer'].includes(role(m))));
+    || (m.kind === 'date' && m.past && ['require', 'prefer'].includes(role(m)))
+    // Open-vocabulary conditions matter only when mandatory and outside the supported vocabulary.
+    || (m.kind === 'open_condition' && ['require', 'exclude'].includes(role(m)) && noul(`supported_${m.id}`) < 0.5));
   // No supported condition is expressed as a percentage (occupancy, ratings, discounts).
   const percent = /(?:yuzde\s*\d+|%\s*\d+|\d+\s*%|\d+\s*percent)/u;
   const unsupportedSegments = segs.filter((seg, i) => noul(`unsupported_s${i}`) > 0.55 || percent.test(fold(seg.text)));
@@ -325,6 +369,8 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
     const top = Math.max(...edits.map((e) => noul(`could_refer_${e.id}`)));
     vagueTargets = top >= 0.4 ? edits.filter((e) => noul(`could_refer_${e.id}`) >= Math.max(0.4, top - 0.15))
       : edits.filter((e) => (target[e.id] ?? 0) === Math.max(...Object.values(target)));
+    // A vague reference never overrides an explicit keep of the same condition ("diğerleri aynı").
+    vagueTargets = vagueTargets.filter((e) => e.decision !== 'keep');
   }
   let vagueSlot: number | null = null;
   if (vagueTargets.length) {
@@ -347,11 +393,13 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
   if (!vagueTargets.length) {
     const replaceP = (e: Edit) => dist(`edit_${e.id}`).replace ?? 0;
     for (const kind of new Set(edits.map((e) => e.kind))) {
-      const same = edits.filter((e) => e.kind === kind && replaceP(e) >= 0.25);
-      if (same.length >= 2 && Math.max(...same.map(replaceP)) < 0.8) {
-        replaceSlot = slots.push({ options: same.map((e) => e.id) }) - 1;
-        break;
-      }
+      // Only when the message actually supplies a new value of that kind.
+      const newValue = mentions.some((m) => m.kind === (kind === 'budget' ? 'amount' : kind) && role(m) === 'require'
+        && !edits.some((e) => atoms(e.condition).some((x) => { const y = mentionAtom(m); return y && sameValue(x, y); })));
+      const same = edits.filter((e) => e.kind === kind && replaceP(e) >= 0.2);
+      if (!newValue || !same.length || Math.max(...same.map(replaceP)) < 0.4) continue;
+      if (same.length === 1) { if (same[0].decision === 'unchanged') same[0].decision = 'replace'; continue; }
+      if (Math.max(...same.map(replaceP)) < 0.8) { replaceSlot = slots.push({ options: same.map((e) => e.id) }) - 1; break; }
     }
   }
   // Changing a condition's strength requires the message to point at it.
@@ -381,6 +429,7 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
     basis: (basis === 'unstated' && inheritFrom?.kind === 'budget' ? inheritFrom.basis : basis) as 'per_person',
   });
   const budgetSlots = new Map<string, number>();
+  const undecidedSlots = new Map<string, number>();
   const dateSlots = new Map<string, number>();
   const atomFor = (m: Mention, pickSlot: (slot: number) => unknown): Atom | null => {
     if (m.kind === 'amount') {
@@ -422,7 +471,14 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
       if ((decision === 'make_preferred' || decision === 'make_required') && !pointed(e)) decision = 'unchanged';
       if (decision === 'replace_with') ops.push({ op: 'replace', targetId: e.id, condition: vague!.condition! });
       else if (decision === 'keep') ops.push({ op: 'keep', targetId: e.id });
-      else if (decision === 'remove') ops.push({ op: 'remove', targetId: e.id });
+      else if (decision === 'remove' || decision === 'remove_option') {
+        // Removing one named option of an OR group keeps the remaining options ("Tiyatro şartını kaldır").
+        const named = e.condition.type === 'any' ? e.condition.children.filter((child) => child.type === 'atom'
+          && mentions.some((m) => { const a = mentionAtom(m); return a && sameValue(child.atom, a); })) : [];
+        const rest = e.condition.type === 'any' ? e.condition.children.filter((child) => !named.includes(child)) : [];
+        if (named.length && rest.length) ops.push({ op: 'replace', targetId: e.id, condition: rest.length === 1 ? strip(rest[0]) : { type: 'any', children: rest.map(strip) } });
+        else ops.push({ op: 'remove', targetId: e.id });
+      }
       else if (decision === 'make_preferred' || decision === 'make_required') {
         ops.push({ op: 'replace', targetId: e.id, condition: strip(e.condition), strength: decision === 'make_preferred' ? 'preferred' : 'hard' });
       } else if (decision === 'replace') {
@@ -497,6 +553,21 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
         if (nextAtom?.kind === 'date' && nextAtom.to >= atom.from) {
           fresh.splice(fresh.indexOf(next!), 1);
           adds.push({ kind: 'date', strength, condition: { type: 'atom', atom: { kind: 'date', from: atom.from, to: nextAtom.to } }, start: m.start });
+          continue;
+        }
+      }
+      // "Kadıköy mü Bakırköy mü emin değilim": an explicit indecision branches over the options.
+      const undecided = fresh.find((x, k) => k >= i && x.kind === m.kind && pick(`link_${m.id}_${x.id}`) === 'undecided');
+      if (undecided) {
+        const otherAtom = atomFor(undecided, choose);
+        fresh.splice(fresh.indexOf(undecided), 1);
+        if (otherAtom) {
+          if (!undecidedSlots.has(m.id)) undecidedSlots.set(m.id, slots.push({ options: [atom, otherAtom] }) - 1);
+          const chosen: Condition = { type: 'atom', atom: choose(undecidedSlots.get(m.id)!) as Atom };
+          // Indecision about a value that already has a condition replaces that condition.
+          const current = edits.find((e) => e.kind === atom.kind && !ops.some((o) => 'targetId' in o && o.targetId === e.id));
+          if (current) ops.push({ op: 'replace', targetId: current.id, condition: chosen });
+          else adds.push({ kind: atom.kind, strength: 'hard', condition: chosen, start: m.start });
           continue;
         }
       }

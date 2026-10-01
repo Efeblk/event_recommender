@@ -56,7 +56,7 @@ export const TOPIC_TERMS: Record<string, string[]> = {
   science: ['bilim', 'science'],
   technology: ['teknoloji', 'technology', 'tech'],
   architecture: ['mimari', 'mimarlik', 'architecture'],
-  cooking: ['yemek', 'mutfak', 'cooking', 'food', 'gastronomi', 'gastronomy'],
+  cooking: ['yemek yapimi', 'yemek atolyesi', 'mutfak', 'cooking', 'cookery', 'gastronomi', 'gastronomy'],
   wine: ['sarap', 'wine'],
   coffee: ['kahve', 'coffee'],
   design: ['tasarim', 'design'],
