@@ -82,7 +82,7 @@ const summary = {
   unsupportedAccepted: by((r) => r.slice === 'unsupported' && r.result?.status === 'accepted'),
   falseUnsupported: by((r) => r.slice !== 'unsupported' && r.result?.status === 'unsupported'),
   errors: by((r) => r.error),
-  medianMs: [...records.map((r) => r.ms)].sort((a, b) => a - b)[Math.floor(records.length / 2)],
+  medianMs: records.map((r) => r.ms).sort((a, b) => a - b)[Math.floor(records.length / 2)],
   spendThisRunUsd: Number((spentUsd() - startSpend).toFixed(5)), spendTotalUsd: Number(spentUsd().toFixed(5)),
 };
 console.log(JSON.stringify(summary, null, 2));

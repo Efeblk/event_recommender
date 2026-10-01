@@ -51,6 +51,7 @@ function describe(condition: Condition): string {
 function firstAtom(condition: Condition): Atom {
   return condition.type === 'atom' ? condition.atom : condition.type === 'not' ? firstAtom(condition.child) : firstAtom(condition.children[0]);
 }
+const topLevel = (plan: Plan): Condition[] => (plan.hard.type === 'all' ? plan.hard.children : []);
 const atoms = (c: Condition): Atom[] => c.type === 'atom' ? [c.atom] : c.type === 'not' ? atoms(c.child) : c.children.flatMap(atoms);
 
 function mentionMeaning(m: Mention): string {
@@ -80,7 +81,7 @@ export function buildRequest(input: ParserInput) {
   const { mentions } = extract(input.utterance, input.referenceDate);
   const segs = segments(input.utterance);
   const prev = input.previousState?.plan ?? null;
-  const existing = prev ? [...prev.hard.children.map((c) => ({ c, strength: 'required' })), ...prev.preferences.map((c) => ({ c, strength: 'preferred' }))] : [];
+  const existing = prev ? [...topLevel(prev).map((c) => ({ c, strength: 'required' })), ...prev.preferences.map((c) => ({ c, strength: 'preferred' }))] : [];
   const ref = new Date(`${input.referenceDate}T12:00:00Z`);
   const state = {
     message: input.utterance,
@@ -108,19 +109,21 @@ export function buildRequest(input: ParserInput) {
     questions[`strength_${m.id}`] = choice(
       { question: `Is the user's condition about \`${path}.text\` mandatory or only an optional wish? Judge the hedging that applies to this phrase itself.` },
       {
-        mandatory: 'Mandatory (the default): stated plainly, as what to find, as must/required/"şart"/"olsun", or as the acceptable options ("X or Y is fine", "olabilir", "uygun").',
-        optional: 'Explicitly hedged as only a wish for this phrase: preferably, ideally, if possible, would be nice, as a preference, "tercih", "tercihen", "mümkünse", "olsa güzel olur", "şart değil".',
+        mandatory: 'Mandatory (the default): stated plainly, as what to find, as must/required/"şart"/"olsun"/"zorunlu", or as the acceptable options ("X or Y is fine", "olabilir", "uygun"). Limits and approximations ("up to", "at most", "max", "around 500 TL") are still mandatory.',
+        optional: 'Only a wish: the phrase is governed by a hedge such as "I prefer", preferably, ideally, if possible, would be nice, as a preference, "tercih ederim", "tercihen", "mümkünse", "olsa güzel olur", "şart değil". A hedge governs every word of the noun phrase it introduces ("I prefer a beginner-friendly ceramics course" hedges all three).',
       },
     );
     if (m.kind === 'amount') {
       questions[`cmp_${m.id}`] = choice(
         { question: `Which price comparison does the user apply to the amount \`${path}.text\`?` },
         {
-          lte: 'At most / maximum / up to / does not exceed / budget is X / can spend X / "en fazla", "en çok", "maksimum", "-e kadar", "geçmesin", "üstüne çıkma", "harcayabiliriz".',
+          lte: 'At most / maximum / up to / does not exceed / budget is X / can spend X / a plain amount (shorthand such as 2.5k is exact) / "en fazla", "en çok", "maksimum", "-e kadar", "geçmesin", "üstüne çıkma", "harcayabiliriz".',
           lt: 'Strictly under / below / less than / cheaper than: "altında", "-den az", "-den ucuz", "under".',
           gte: 'At least / minimum / X or more: "en az", "minimum", "ve üzeri".',
           gt: 'Strictly more than / over / above: "-den fazla", "üstünde", "over".',
           approx: 'Approximately / around / about: "yaklaşık", "civarı", "gibi", "around".',
+          range_low: 'The lower end of a price range: the first amount in "between X and Y", "X ile Y arası", "X-Y TL".',
+          range_high: 'The upper end of a price range: the second amount in "between X and Y", "X ile Y arası".',
         },
       );
       questions[`basis_${m.id}`] = choice(
@@ -130,6 +133,16 @@ export function buildRequest(input: ParserInput) {
           per_ticket: 'Each ticket: "bilet başına", "per ticket", "ticket price", "bilet fiyatı".',
           group_total: 'The whole group in total: "toplam", "total", "grup toplamı", "whole group", "hepimiz için".',
           unstated: 'The message does not say whether it is per person, per ticket, or total (for example a bare budget or "we can spend X").',
+        },
+      );
+    }
+    if (m.kind === 'party' && prev && [...topLevel(prev), ...prev.preferences].some((c) => atoms(c).some((x) => x.kind === 'party'))) {
+      questions[`delta_${m.id}`] = choice(
+        { question: `Is \`${path}.text\` the new total number of attendees, or a change to the existing number?` },
+        {
+          total: 'The new total number of attendees ("we will be three").',
+          fewer: 'That many fewer people will attend ("one person cannot come", "bir kişi gelemiyor").',
+          more: 'That many more people will attend ("two more friends are joining", "iki kişi daha").',
         },
       );
     }
@@ -158,13 +171,15 @@ export function buildRequest(input: ParserInput) {
       {
         or: 'Either one is enough: listed options ("veya", "ya da", "or", "either"), including types or places joined by "and"/"ve" when one event could not be both at once.',
         and: 'Both must hold for the same event at the same time (for example a topic and a theme together), or one of them is not actually wanted.',
+        ...(a.kind === 'date' ? { range: 'The two dates are the start and end of one period: "from X through Y", "X to Y", "X\'den Y\'ye kadar", "X ile Y arası".' } : {}),
       },
     );
   }
   // Scope of a modifier next to a coordinated pair ("quiet concerts and theatre", "theatre or a workshop in Taksim").
   for (let i = 0; i + 1 < mentions.length; i++) {
     const a = mentions[i], b = mentions[i + 1];
-    if (a.kind !== b.kind || !['category', 'topic'].includes(a.kind)) continue;
+    // Only coordinated event types: "a rock or jazz concert" attaches its head noun to both.
+    if (a.kind !== b.kind || a.kind !== 'category') continue;
     const before = mentions[i - 1], after = mentions[i + 2];
     for (const [x, near] of [[before, a], [after, b]] as const) {
       if (!x || x.kind === a.kind || !['experience', 'location', 'time', 'topic', 'category'].includes(x.kind)) continue;
@@ -235,7 +250,7 @@ export function buildRequest(input: ParserInput) {
   segs.forEach((s, i) => {
     questions[`unsupported_s${i}`] = {
       type: 'noul',
-      instructions: { supportedConditions: SUPPORTED, question: `Does \`segments[${i}]\` make the search depend on something outside \`supportedConditions\` (for example a guarantee, ratings, awards, travel time, weather, admission rules, seat availability, final fees, subjective quality, or a place relative to a landmark)? Ordinary supported conditions, politeness and commands are not.` },
+      instructions: { supportedConditions: SUPPORTED, question: `Does \`segments[${i}]\` make the search depend on something outside \`supportedConditions\` (for example a guarantee, ratings, awards, travel time, weather, admission rules, seat availability, final fees, subjective quality, a place relative to a landmark, or filtering on what a venue explicitly says it does NOT offer)? Ordinary supported conditions, sorting instructions (including asking for no particular order), edits to earlier conditions, politeness and commands are not.` },
     };
   });
   return { state, questions, mentions, segments: segs, existing, scopes };
@@ -269,7 +284,9 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
   const unsupported = mentions.filter((m) => (m.kind === 'amount' && m.currency === 'OTHER' && wanted(m))
     || (m.kind === 'outside_location' && ['require', 'prefer'].includes(role(m)))
     || (m.kind === 'date' && m.past && ['require', 'prefer'].includes(role(m))));
-  const unsupportedSegments = segs.filter((_, i) => noul(`unsupported_s${i}`) > 0.55);
+  // No supported condition is expressed as a percentage (occupancy, ratings, discounts).
+  const percent = /(?:yuzde\s*\d+|%\s*\d+|\d+\s*%|\d+\s*percent)/u;
+  const unsupportedSegments = segs.filter((seg, i) => noul(`unsupported_s${i}`) > 0.55 || percent.test(fold(seg.text)));
   if (unsupported.length || unsupportedSegments.length) {
     return {
       status: 'unsupported',
@@ -283,7 +300,8 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
   type Slot = { options: unknown[] };
   const slots: Slot[] = [];
   const consumed = new Set<string>();
-  const reset = pick('action') === 'reset';
+  // Discarding every condition is destructive; require a confident judgment.
+  const reset = (dist('action').reset ?? 0) >= 0.8;
   const previous = reset ? null : input.previousState?.plan ?? null;
 
   // Existing-condition edits.
@@ -302,8 +320,11 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
   // A vague reference ("that day", "they") branches over the conditions it could mean.
   let vagueTargets: typeof edits = [];
   if (noul('vague') > 0.5) {
-    vagueTargets = edits.filter((e) => noul(`could_refer_${e.id}`) > 0.5);
-    if (!vagueTargets.length) vagueTargets = edits.filter((e) => e.id === pick('vague_target'));
+    const target = dist('vague_target');
+    // Every referent about as plausible as the most plausible one is an alternative.
+    const top = Math.max(...edits.map((e) => noul(`could_refer_${e.id}`)));
+    vagueTargets = top >= 0.4 ? edits.filter((e) => noul(`could_refer_${e.id}`) >= Math.max(0.4, top - 0.15))
+      : edits.filter((e) => (target[e.id] ?? 0) === Math.max(...Object.values(target)));
   }
   let vagueSlot: number | null = null;
   if (vagueTargets.length) {
@@ -315,9 +336,23 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
         return e.condition.children.map((child) => ({ id: e.id, decision: 'replace_with', condition: strip(child) }));
       // A replacement needs a value: drop branches that would have nothing to replace with.
       if (decision === 'replace' && !newValue) return [];
+      // Strength changes that would not change anything cannot be what was meant.
+      if ((decision === 'make_required' && !e.preferred) || (decision === 'make_preferred' && e.preferred)) return [];
       return [{ id: e.id, decision }];
     });
     if (options.length) vagueSlot = slots.push({ options }) - 1;
+  }
+  // A new value whose kind matches several existing conditions, none clearly targeted, branches over them.
+  let replaceSlot: number | null = null;
+  if (!vagueTargets.length) {
+    const replaceP = (e: Edit) => dist(`edit_${e.id}`).replace ?? 0;
+    for (const kind of new Set(edits.map((e) => e.kind))) {
+      const same = edits.filter((e) => e.kind === kind && replaceP(e) >= 0.25);
+      if (same.length >= 2 && Math.max(...same.map(replaceP)) < 0.8) {
+        replaceSlot = slots.push({ options: same.map((e) => e.id) }) - 1;
+        break;
+      }
+    }
   }
   // Changing a condition's strength requires the message to point at it.
   const pointed = (e: Edit) => vagueTargets.includes(e as never) || mentions.some((m) => {
@@ -333,15 +368,24 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
   }
 
   // New conditions from mentions.
+  // Range ends are judged independently; the smaller amount of a range is its lower bound.
+  const rangeAmounts = mentions.filter((m): m is Extract<Mention, { kind: 'amount' }> => m.kind === 'amount' && (pick(`cmp_${m.id}`) ?? '').startsWith('range_'));
+  const comparisonOf = (m: Extract<Mention, { kind: 'amount' }>) => {
+    const c = pick(`cmp_${m.id}`) ?? 'lte';
+    if (!c.startsWith('range_')) return c;
+    if (rangeAmounts.length === 2) return m.amount === Math.min(...rangeAmounts.map((x) => x.amount)) ? 'gte' : 'lte';
+    return c === 'range_low' ? 'gte' : 'lte';
+  };
   const amountAtom = (m: Extract<Mention, { kind: 'amount' }>, basis: string, inheritFrom?: Atom): Atom => ({
-    kind: 'budget', comparison: (pick(`cmp_${m.id}`) ?? 'lte') as 'lte', amount: m.amount, currency: 'TRY',
+    kind: 'budget', comparison: comparisonOf(m) as 'lte', amount: m.amount, currency: 'TRY',
     basis: (basis === 'unstated' && inheritFrom?.kind === 'budget' ? inheritFrom.basis : basis) as 'per_person',
   });
   const budgetSlots = new Map<string, number>();
   const dateSlots = new Map<string, number>();
   const atomFor = (m: Mention, pickSlot: (slot: number) => unknown): Atom | null => {
     if (m.kind === 'amount') {
-      const basis = pick(`basis_${m.id}`) ?? 'unstated';
+      // Free admission has no per-person/total distinction.
+      const basis = m.amount === 0 ? 'per_person' : pick(`basis_${m.id}`) ?? 'unstated';
       if (basis !== 'unstated') return amountAtom(m, basis);
       if (!budgetSlots.has(m.id)) budgetSlots.set(m.id, slots.push({ options: ['per_person', 'per_ticket', 'group_total'] }) - 1);
       return amountAtom(m, pickSlot(budgetSlots.get(m.id)!) as string);
@@ -360,8 +404,20 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
     if (reset) ops.push({ op: 'reset' });
     // Edits of existing conditions, in their stored order.
     const vague = vagueSlot !== null ? choose(vagueSlot) as { id: string; decision: string; condition?: Condition } : null;
+    // Relative attendee changes ("one person cannot come") rewrite the existing count.
+    for (const m of mentions) {
+      const delta = pick(`delta_${m.id}`);
+      if (m.kind !== 'party' || !delta || delta === 'total') continue;
+      const e = edits.find((x) => x.kind === 'party');
+      const old = e && firstAtom(e.condition);
+      if (!e || old?.kind !== 'party') continue;
+      const count = old.count + (delta === 'more' ? m.count : -m.count);
+      used.add(m.id);
+      if (count >= 1) { ops.push({ op: 'replace', targetId: e.id, condition: { type: 'atom', atom: { kind: 'party', count } } }); e.decision = 'handled'; }
+    }
     for (const e of edits) {
       let decision = e.decision;
+      if (replaceSlot !== null && (slots[replaceSlot].options as string[]).includes(e.id)) decision = choose(replaceSlot) === e.id ? 'replace' : 'unchanged';
       if (vagueSlot !== null) decision = vague!.id === e.id ? vague!.decision : (vagueTargets.some((t) => t.id === e.id) ? 'unchanged' : decision);
       if ((decision === 'make_preferred' || decision === 'make_required') && !pointed(e)) decision = 'unchanged';
       if (decision === 'replace_with') ops.push({ op: 'replace', targetId: e.id, condition: vague!.condition! });
@@ -372,7 +428,8 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
       } else if (decision === 'replace') {
         const kind = e.kind === 'budget' ? 'amount' : e.kind;
         const m = mentions.find((x) => x.kind === kind && !used.has(x.id) && ['require', 'prefer', 'existing'].includes(role(x)) && !atoms(e.condition).some((y) => { const z = mentionAtom(x); return z && sameValue(y, z); }));
-        if (!m) { ops.push({ op: 'remove', targetId: e.id }); continue; }
+        // No new value: never drop an existing constraint without evidence.
+        if (!m) continue;
         used.add(m.id);
         const old = firstAtom(e.condition);
         let atom: Atom | null;
@@ -384,6 +441,10 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
           // A bare replacement amount keeps the old comparison unless the wording sets one.
           if (atom?.kind === 'budget' && old.kind === 'budget' && (cmp.lte ?? 0) < 0.5 && Math.max(...Object.values(cmp)) < 0.5) atom.comparison = old.comparison;
         } else atom = atomFor(m, choose);
+        // A bare new clock keeps the bound the old time condition had ("change it to 9 PM").
+        if (atom?.kind === 'time' && old.kind === 'time' && m.kind === 'time' && (pick(`clock_${m.id}`) ?? 'at') === 'at') {
+          atom = { kind: 'time', ...(old.from ? { from: m.clock, ...(old.fromExclusive ? { fromExclusive: true } : {}) } : {}), ...(old.to && !old.from ? { to: m.clock, ...(old.toExclusive ? { toExclusive: true } : {}) } : {}) };
+        }
         if (!atom) continue;
         const condition: Condition = e.condition.type === 'not' ? { type: 'not', child: { type: 'atom', atom } } : { type: 'atom', atom };
         ops.push({ op: 'replace', targetId: e.id, condition });
@@ -414,10 +475,33 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
         if (r === 'exclude' || r === 'avoid') adds.push({ kind: 'experience', strength, condition: { type: 'atom', atom }, start: m.start });
         continue;
       }
-      if (r === 'exclude' || r === 'avoid') { adds.push({ kind: atom.kind, strength, condition: { type: 'not', child: { type: 'atom', atom } }, start: m.start }); continue; }
+      if (r === 'exclude' || r === 'avoid') {
+        // Excluded options of the same kind form one NOT(ANY(...)) ("no concerts or theatre").
+        const group: Condition[] = [{ type: 'atom', atom }];
+        for (let k = i; k < fresh.length; k++) {
+          const x = fresh[k];
+          if (x.kind !== m.kind || role(x) !== r || scopedIds.has(x.id)) continue;
+          const xAtom = atomFor(x, choose);
+          if (xAtom) group.push({ type: 'atom', atom: xAtom });
+          fresh.splice(k--, 1);
+        }
+        const child: Condition = group.length > 1 ? { type: 'any', children: group } : group[0];
+        adds.push({ kind: atom.kind, strength, condition: { type: 'not', child }, start: m.start });
+        continue;
+      }
       // Coordinated alternatives of the same kind and role become one ANY node.
+      // Two dates given as the ends of one period become a single range.
+      if (atom.kind === 'date') {
+        const next = fresh.find((x, k) => k >= i && x.kind === 'date');
+        const nextAtom = next && role(next) === r && pick(`link_${m.id}_${next.id}`) === 'range' ? atomFor(next, choose) : null;
+        if (nextAtom?.kind === 'date' && nextAtom.to >= atom.from) {
+          fresh.splice(fresh.indexOf(next!), 1);
+          adds.push({ kind: 'date', strength, condition: { type: 'atom', atom: { kind: 'date', from: atom.from, to: nextAtom.to } }, start: m.start });
+          continue;
+        }
+      }
       const group: Atom[] = [atom];
-      let cursor = m;
+      let cursor: Mention = m;
       for (;;) {
         const next = fresh.find((x, k) => k >= i && x.kind === cursor.kind);
         if (!next || role(next) !== r || pick(`link_${cursor.id}_${next.id}`) !== 'or') break;
@@ -453,6 +537,12 @@ export function compose(input: ParserInput, built: Built, response: JevResponse)
       }
       if (atom.from && atom.to && atom.from > atom.to) continue;
       adds.push({ kind: 'time', strength, condition: { type: 'atom', atom }, start: times[strength][0].start });
+    }
+    // The same condition stated twice ("tiyatro oyunu") is one condition.
+    const seenAdds = new Set<string>();
+    for (let k = 0; k < adds.length; k++) {
+      const key = `${adds[k].strength}:${JSON.stringify(strip(adds[k].condition))}`;
+      if (seenAdds.has(key)) adds.splice(k--, 1); else seenAdds.add(key);
     }
     adds.sort((x, y) => KIND_ORDER.indexOf(x.kind) - KIND_ORDER.indexOf(y.kind) || x.start - y.start);
     const addOps: Operation[] = adds.map((x) => ({ op: 'add', strength: x.strength, condition: x.condition }));

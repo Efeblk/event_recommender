@@ -26,7 +26,7 @@ export type Mention = Base & (
   | { kind: 'experience'; value: string }
   | { kind: 'content'; value: 'profanity' | 'sexual_content' }
 );
-type Draft = Omit<Mention, 'id'>;
+type Draft = Mention extends infer M ? (M extends Mention ? Omit<M, 'id'> : never) : never;
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 const B = '(?<![\\p{L}\\p{N}])';
@@ -47,6 +47,8 @@ const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86400000);
 
 function parseNumber(raw: string): number | null {
   const s = raw.trim();
+  const k = /^(\d+(?:[.,]\d+)?)\s?k$/u.exec(s);
+  if (k) return Math.round(Number(k[1].replace(',', '.')) * 1000);
   if (/^\d{1,3}(?:[.,]\d{3})+$/u.test(s)) return Number(s.replace(/[.,]/gu, ''));
   if (/^\d+(?:[.,]\d{1,2})?$/u.test(s)) return Number(s.replace(',', '.'));
   // Word numbers: "iki bin beş yüz", "two thousand".
@@ -63,7 +65,7 @@ function parseNumber(raw: string): number | null {
 }
 
 const NUMBER_WORD_ALT = Object.keys(NUMBER_WORDS).sort((a, b) => b.length - a.length).join('|');
-const NUM = `(?:\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d{1,2})?|(?:(?:${NUMBER_WORD_ALT})(?:\\s+(?:${NUMBER_WORD_ALT}))*))`;
+const NUM = `(?:\\d+(?:[.,]\\d+)?\\s?k(?![a-z])|\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d{1,2})?|(?:(?:${NUMBER_WORD_ALT})(?:\\s+(?:${NUMBER_WORD_ALT}))*))`;
 const CURRENCY_ALT = Object.keys(CURRENCIES).sort((a, b) => b.length - a.length).map(escape).join('|');
 
 export interface Extraction { mentions: Mention[]; folded: string }
@@ -71,7 +73,7 @@ export interface Extraction { mentions: Mention[]; folded: string }
 export function extract(text: string, referenceDate: string): Extraction {
   const f = fold(text);
   const drafts: Draft[] = [];
-  const taken = new Array<boolean>(text.length).fill(false);
+  const taken: boolean[] = Array.from({ length: text.length }, () => false);
   const free = (start: number, end: number) => !taken.slice(start, end).some(Boolean);
   const claim = (start: number, end: number) => { for (let i = start; i < end; i++) taken[i] = true; };
   const add = (draft: Draft, claimSpan = true) => {
@@ -92,6 +94,9 @@ export function extract(text: string, referenceDate: string): Extraction {
     const currency = CURRENCIES[(m[1] ?? m[4]).trim()] ?? 'TRY';
     add({ kind: 'amount', amount, currency, ...span(m.index!, m.index! + m[0].length) });
   }
+
+  for (const m of f.matchAll(new RegExp(`${B}(?:ucretsiz|bedava|free(?:\\s+(?:of\\s+charge|entry|admission))?)${E}`, 'gu')))
+    add({ kind: 'amount', amount: 0, currency: 'TRY', ...span(m.index!, m.index! + m[0].length) });
 
   // --- Times.
   const hourWithMeridiem = (h: number, meridiem: string | undefined, context: string) => {
@@ -149,10 +154,10 @@ export function extract(text: string, referenceDate: string): Extraction {
     const month = MONTHS[m[1]];
     dateDraft(m.index!, m.index! + m[0].length, resolveYear(month, Number(m[2])), resolveYear(month, Number(m[3])));
   }
-  for (const m of f.matchAll(new RegExp(`${B}(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(${monthAlt})(?:'?[a-z]{0,6})?${E}|${B}(${monthAlt})\\s+(\\d{1,2})(?:st|nd|rd|th)?${E}`, 'gu'))) {
-    const month = MONTHS[m[2] ?? m[3]], day = Number(m[1] ?? m[4]);
+  for (const m of f.matchAll(new RegExp(`${B}(\\d{1,2})(?:st|nd|rd|th)?\\s+(?:of\\s+)?(${monthAlt})(?:,?\\s+(\\d{4}))?(?:'?[a-z]{0,6})?${E}|${B}(${monthAlt})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?${E}`, 'gu'))) {
+    const month = MONTHS[m[2] ?? m[4]], day = Number(m[1] ?? m[5]), year = m[3] ?? m[6];
     if (day < 1 || day > 31) continue;
-    const d = resolveYear(month, day);
+    const d = year ? new Date(Date.UTC(Number(year), month - 1, day, 12)) : resolveYear(month, day);
     dateDraft(m.index!, m.index! + m[0].length, d, d);
   }
   for (const m of f.matchAll(new RegExp(`${B}(\\d{4})-(\\d{2})-(\\d{2})${E}|${B}(\\d{1,2})[./](\\d{1,2})(?:[./](\\d{4}))?${E}`, 'gu'))) {
@@ -185,6 +190,12 @@ export function extract(text: string, referenceDate: string): Extraction {
   const modifier = '(?:(bu|this|gelecek|onumuzdeki|next|haftaya|coming|gecen|last|ilk|first)\\s+)?';
   for (const m of f.matchAll(new RegExp(`${B}${modifier}(hafta\\s?sonu|weekend|${weekdayAlt})(?:'?[a-z]{0,6})?${E}`, 'gu'))) {
     const mod = m[1] ?? '';
+    // "11 Ekim Pazar" / "Sunday, October 11": the weekday restates an adjacent explicit date.
+    const adjacent = (a: number, b: number) => a <= b && /^[\s,]{0,3}$/u.test(text.slice(a, b));
+    if (!mod && drafts.some((d) => d.kind === 'date' && (adjacent(d.end, m.index!) || adjacent(m.index! + m[0].length, d.start)))) {
+      claim(m.index!, m.index! + m[0].length);
+      continue;
+    }
     const isWeekend = /^(?:hafta\s?sonu|weekend)$/u.test(m[2]);
     const day = isWeekend ? 6 : WEEKDAYS[m[2]];
     const start = m.index!, end = start + m[0].length;
@@ -209,6 +220,12 @@ export function extract(text: string, referenceDate: string): Extraction {
     }
   }
 
+  const abbreviations: Record<string, number> = { sun: 0, mon: 1, tue: 2, tues: 2, wed: 3, thu: 4, thur: 4, thurs: 4, fri: 5, sat: 6 };
+  for (const m of f.matchAll(new RegExp(`${B}(${Object.keys(abbreviations).join('|')})\\.?(?![\\p{L}\\p{N}'])`, 'gu'))) {
+    const d = nextWeekday(abbreviations[m[1]], false);
+    dateDraft(m.index!, m.index! + m[0].length, d, d);
+  }
+
   // --- Outside-Istanbul and Istanbul locations (before generic vocabulary).
   const places: Array<[string, Draft['kind'], 'district' | 'neighborhood' | null]> = [
     ...OUTSIDE_ISTANBUL.map((n) => [n, 'outside_location', null] as [string, Draft['kind'], null]),
@@ -226,6 +243,23 @@ export function extract(text: string, referenceDate: string): Extraction {
     }
   }
 
+  // --- Party size: "dört kişiyiz", "4 kişi", "three people", "four of us", "üçümüz".
+  const partyRes = [
+    new RegExp(`${B}(${NUM})\\s*(?:yetiskin|adults?)\\s*(?:,|ve|and|\\+|&)?\\s*(${NUM})\\s*(?:cocuk|child|children|kids?)${E}`, 'gu'),
+    new RegExp(`${B}(?:we're|we are|biz)\\s+(${NUM})(?!\\s*(?:tl|lira|kisi|people|of))${E}`, 'gu'),
+    new RegExp(`${B}(${NUM})\\s*(?:kisi(?:[a-z]{0,6})|kisilik|people|persons|person|adults|yetiskin(?:[a-z]{0,4})|of us)${E}`, 'gu'),
+    new RegExp(`${B}(iki|uc|dord|bes|alti|yedi|sekiz)(?:imiz|umuz|miz|muz)${E}`, 'gu'),
+    new RegExp(`${B}(?:party|group) of (${NUM})${E}`, 'gu'),
+  ];
+  for (const [index, re] of partyRes.entries()) {
+    for (const m of f.matchAll(re)) {
+      const count = index === 0 ? (parseNumber(m[1]) ?? 0) + (parseNumber(m[2]) ?? 0)
+        : index === 3 ? ({ iki: 2, uc: 3, dord: 4, bes: 5, alti: 6, yedi: 7, sekiz: 8 } as Record<string, number>)[m[1]] : parseNumber(m[1]);
+      if (!count || !Number.isInteger(count) || count < 1 || count > 1000) continue;
+      add({ kind: 'party', count, ...span(m.index!, m.index! + m[0].length) });
+    }
+  }
+
   // --- Closed vocabularies, longest term first.
   const vocab: Array<[string, (s: number, e: number) => Draft]> = [];
   const push = <K extends string>(table: Record<K, string[]>, make: (key: K, s: number, e: number) => Draft) => {
@@ -239,31 +273,23 @@ export function extract(text: string, referenceDate: string): Extraction {
   vocab.sort((a, b) => b[0].length - a[0].length);
   for (const [term, make] of vocab) for (const m of f.matchAll(termRegex(term))) add(make(m.index!, m.index! + m[0].length));
 
-  // --- Party size: "dört kişiyiz", "4 kişi", "three people", "four of us", "üçümüz".
-  const partyRes = [
-    new RegExp(`${B}(${NUM})\\s*(?:kisi(?:[a-z]{0,6})|kisilik|people|persons|person|adults|yetiskin(?:[a-z]{0,4})|of us)${E}`, 'gu'),
-    new RegExp(`${B}(iki|uc|dord|bes|alti|yedi|sekiz)(?:imiz|umuz|miz|muz)${E}`, 'gu'),
-    new RegExp(`${B}(?:party|group) of (${NUM})${E}`, 'gu'),
-  ];
-  for (const [index, re] of partyRes.entries()) {
-    for (const m of f.matchAll(re)) {
-      const count = index === 1 ? ({ iki: 2, uc: 3, dord: 4, bes: 5, alti: 6, yedi: 7, sekiz: 8 } as Record<string, number>)[m[1]] : parseNumber(m[1]);
-      if (!count || !Number.isInteger(count) || count < 1 || count > 1000) continue;
-      add({ kind: 'party', count, ...span(m.index!, m.index! + m[0].length) });
-    }
-  }
-
   // --- Bare amounts with spending context but no currency ("bütçe 800", "800'ün altında").
   for (const m of f.matchAll(new RegExp(`${B}(\\d{2,6}(?:[.,]\\d{3})?)(?:'?[a-z]{0,6})?${E}`, 'gu'))) {
     const s = m.index!, e = s + m[0].length;
     if (!free(s, e)) continue;
     const context = f.slice(Math.max(0, s - 25), Math.min(f.length, e + 25));
-    if (!/(?:butce|fiyat|ucret|bilet|budget|price|cost|spend|harca|para|ticket)/u.test(context)) continue;
+    if (!/(?:butce|fiyat|ucret|bilet|kisi basi|toplam|en fazla|en cok|budget|price|cost|spend|harca|para|ticket|per person|each|total|under|up to|max)/u.test(context)) continue;
     const amount = parseNumber(m[1]);
     if (amount !== null) add({ kind: 'amount', amount, currency: 'TRY', ...span(s, e) });
   }
 
   drafts.sort((a, b) => a.start - b.start);
+  // A clause-initial imperative "Show ..." / "Göster ..." is a verb, not the show category.
+  for (let i = drafts.length - 1; i >= 0; i--) {
+    const d = drafts[i];
+    if (d.kind === 'category' && d.value === 'show' && /^(?:show|gosterin?)$/u.test(f.slice(d.start, d.end))
+      && /(?:^|[.;!?])\s*$/u.test(f.slice(0, d.start))) drafts.splice(i, 1);
+  }
   // A generic head noun right after a specific type names that same event ("stand-up gösterileri", "jazz concerts").
   for (let i = drafts.length - 1; i > 0; i--) {
     const d = drafts[i], prev = drafts[i - 1];

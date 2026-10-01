@@ -69,7 +69,7 @@ export const TOPIC_TERMS: Record<string, string[]> = {
 
 export const EXPERIENCE_TERMS: Record<string, string[]> = {
   quiet: ['sessiz', 'sakin ortam', 'quiet', 'silent', 'gurultu', 'gurultulu', 'gurultusuz', 'noise', 'noisy', 'loud'],
-  seated: ['oturmali', 'oturarak', 'oturacak yer', 'koltuklu', 'seated', 'seating', 'seat', 'ayakta', 'standing'],
+  seated: ['oturmali', 'oturma duzeni', 'oturma yeri', 'oturarak', 'sitting', 'oturacak yer', 'koltuklu', 'seated', 'seating', 'seat', 'ayakta', 'standing'],
   outdoors: ['acik hava', 'acik havada', 'disarida', 'outdoor', 'outdoors', 'open-air', 'open air'],
   wheelchair_accessible: ['tekerlekli sandalye', 'engelli erisimi', 'engelli dostu', 'erisilebilir', 'basamaksiz', 'wheelchair', 'accessible', 'accessibility', 'step-free', 'step free'],
   family_friendly: ['aile dostu', 'ailece izlenebilir', 'aileye uygun', 'ailelere uygun', 'family-friendly', 'family friendly', 'suitable for families'],
