@@ -15,11 +15,17 @@ import { hybridRank, type SemanticRanking } from './hybrid.ts';
 import { displayShowIdentity } from './event-merge.ts';
 import type { IntentState } from './input-state.ts';
 import { retrievalQuery } from './input-retrieval.ts';
+import {
+  applySoftPreferences,
+  type SoftPreferences,
+} from './soft-preferences.ts';
 
 /** This query is already resolved; never reinterpret it or historical user text. */
 export interface ResolvedRetrievalContext {
   query: string;
   order: 'none' | 'soonest' | 'cheapest';
+  /** Bounded soft location/budget nudges; never admission rules. */
+  softPreferences?: SoftPreferences;
 }
 
 export interface SearchContext {
@@ -433,9 +439,12 @@ function rankedCandidates(
     allowed,
     ranked: uniqueEvents(
       demoteChildDirectedPartnerResults(
-        semantic
-          ? hybridRank(allowed, context.query, semantic)
-          : rankEvents(allowed, context.query),
+        applySoftPreferences(
+          semantic
+            ? hybridRank(allowed, context.query, semantic)
+            : rankEvents(allowed, context.query),
+          resolved?.softPreferences,
+        ),
         intent,
       ),
       allowed.length,

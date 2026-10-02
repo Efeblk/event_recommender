@@ -419,6 +419,19 @@ const ADDRESS_DISTRICT_PATTERNS = ISTANBUL_DISTRICTS.map(
     ] as const,
 );
 
+/** Normalized district names; neighborhoods are not districts. */
+export const isIstanbulDistrict = (normalized: string) =>
+  ISTANBUL_DISTRICT_SET.has(normalized);
+/** The single district written before "/İstanbul" (or at the end) of an
+ * address, or null when none or several are present. */
+export function addressDistrict(address: string): string | null {
+  const normalizedAddress = normalize(address);
+  const matches = ADDRESS_DISTRICT_PATTERNS.filter(([, pattern]) =>
+    pattern.test(normalizedAddress),
+  ).map(([district]) => district);
+  return matches.length === 1 ? matches[0] : null;
+}
+
 const displayDistrict = (district: string) =>
   district.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase('tr-TR'));
 
@@ -1067,23 +1080,18 @@ export function isEligible(
   const eventDistrict = normalize(e.district);
   const requestedDistrict = normalize(f.district);
   const hasSpecificDistrict = ISTANBUL_DISTRICT_SET.has(eventDistrict);
-  const normalizedAddress = normalize(e.address);
-  const addressDistricts = ADDRESS_DISTRICT_PATTERNS.filter(([, pattern]) =>
-    pattern.test(normalizedAddress),
-  ).map(([district]) => district);
-  const addressDistrict =
-    addressDistricts.length === 1 ? addressDistricts[0] : null;
+  const fromAddress = addressDistrict(e.address);
   const hasDistrictConflict =
     hasSpecificDistrict &&
-    addressDistrict !== null &&
-    addressDistrict !== eventDistrict;
+    fromAddress !== null &&
+    fromAddress !== eventDistrict;
   const venueEvidence = normalize(e.venue);
   return (
     !hasDistrictConflict &&
     (eventDistrict === requestedDistrict ||
       (!hasSpecificDistrict &&
-        (addressDistrict
-          ? addressDistrict === requestedDistrict
+        (fromAddress
+          ? fromAddress === requestedDistrict
           : new RegExp(`\\b${requestedDistrict}\\b`).test(venueEvidence))))
   );
 }
