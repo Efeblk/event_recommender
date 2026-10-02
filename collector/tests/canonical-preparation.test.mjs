@@ -1,13 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { adaptCanonicalRecord, canonicalRequestId } from '../preparation/canonical-adapter.mjs';
+import { mergeSupportedPreparedEvents, normalizeSupportedCanonicalRecord, supportedCanonicalIdentity } from '../preparation/canonical-identity.mjs';
 import { createCanonicalStore } from '../preparation/canonical-store.mjs';
 import { prepareCanonicalSearch, runCanonicalWorker } from '../preparation/canonical-worker.mjs';
+import { stableJson } from '../preparation/source-adapter.mjs';
 
 const record = { id: 'raw-283820', source: 'bubilet', sourceSessionIds: ['283820'], title: 'Bir Oyun', description: 'Dostluk üzerine bir oyun.',
   venue: 'Sahne', district: 'Kadıköy', address: 'Moda Caddesi', city: 'İstanbul', category: 'Tiyatro',
   startsAt: '2026-10-03T17:00:00.000Z', checkedAt: '2026-09-30T10:00:00.000Z', attendanceTiming: null,
   price: 19.99, currency: 'TRY', availability: 'available', url: 'https://www.bubilet.com.tr/istanbul/etkinlik/bir-oyun', imageUrl: '' };
+const sosyalFamily = JSON.parse(await readFile(new URL('./fixtures/social-sanathane-family.json', import.meta.url), 'utf8'));
 
 test('canonical adapter preserves the validated observation and typed evidence without inventing clocks or fees', () => {
   const adapted = adaptCanonicalRecord(record, [{ sessionId: 'session', canonicalRevisionId: 'canonical-old', offerRevisionId: 'offer-old' }]);
@@ -32,6 +37,60 @@ test('new identities remain isolated by default while an explicit supported prod
   assert.equal(supported.payload.record.canonicalProductionKey, 'supported-title:bir-oyun');
   const { sourceSessionIds: _ids, ...withoutOptionalIds } = record;
   assert.equal(adaptCanonicalRecord({ ...withoutOptionalIds, description: '' }, []).status, 'ready');
+});
+
+test('reviewed Sosyal Sanathane general programme gets deterministic canonical facts and retains source presentation', () => {
+  const normalized = sosyalFamily.sameSession.map(normalizeSupportedCanonicalRecord);
+  assert.equal(new Set(normalized.map(item => item.title)).size, 1);
+  assert.equal(new Set(normalized.map(item => item.description)).size, 1);
+  assert.equal(new Set(normalized.map(item => item.district)).size, 1);
+  assert.equal(new Set(normalized.map(item => item.canonicalProductionKey)).size, 1);
+  assert.deepEqual(normalized.map(item => item.sourceObservedPresentation.title),
+    sosyalFamily.sameSession.map(item => item.title));
+  assert.deepEqual(normalized.map(item => item.sourceObservedRecord), sosyalFamily.sameSession);
+  assert.ok(normalized.every(item => /^[a-f0-9]{64}$/.test(item.sourceObservedRecordHash)));
+  assert.deepEqual(normalized.map(item => item.sourceObservedRecordHash), sosyalFamily.sameSession.map(item =>
+    createHash('sha256').update(stableJson(item)).digest('hex')));
+  assert.deepEqual(normalized.map(item => item.id), sosyalFamily.sameSession.map(item => item.id));
+  assert.deepEqual(normalized.map(item => item.url), sosyalFamily.sameSession.map(item => item.url));
+  assert.deepEqual(normalized.map(item => item.price), [500, 500]);
+  const legacyRequestId = `canonical-request-${createHash('sha256').update(stableJson({
+    provider: sosyalFamily.sameSession[0].source,
+    providerRecordId: sosyalFamily.sameSession[0].id,
+    record: sosyalFamily.sameSession[0],
+  })).digest('hex').slice(0, 32)}`;
+  assert.notEqual(canonicalRequestId(sosyalFamily.sameSession[0]), legacyRequestId);
+});
+
+test('reviewed Sosyal Sanathane identity stays closed across activity, time, venue, address and provider counterexamples', () => {
+  const [general] = sosyalFamily.sameSession;
+  assert.ok(supportedCanonicalIdentity(general));
+  for (const title of sosyalFamily.distinctActivities)
+    assert.equal(supportedCanonicalIdentity({ ...general, title }), undefined, title);
+  const anotherTime = { ...general, startsAt: '2026-09-30T13:30:00.000Z' };
+  assert.equal(mergeSupportedPreparedEvents([general, anotherTime]).length, 2);
+  for (const changed of [
+    { venue: 'Sosyal Sanathane Beşiktaş' },
+    { address: 'Başka Sokak No:51a, Kadıköy/İstanbul' },
+    { city: 'Ankara' },
+    { category: 'Konser' },
+    { source: 'other', url: 'https://other.example/workshop' },
+  ]) assert.equal(supportedCanonicalIdentity({ ...general, ...changed }), undefined);
+});
+
+test('prepared reconciliation merges exact reviewed sessions and preserves offers, ids and search artifacts', () => {
+  const prepared = sosyalFamily.sameSession.map((item, index) => ({
+    ...item,
+    offers: [{ id: item.id, source: item.source, url: item.url, price: item.price }],
+    mergedIds: [item.id, `old-session-${index}`],
+    preparedSearch: { version: 1, documentHash: `unchanged-${index}`, embedding: [index] },
+  }));
+  const [merged] = mergeSupportedPreparedEvents(prepared);
+  assert.equal(merged.offers.length, 2);
+  assert.ok(merged.mergedIds.includes(sosyalFamily.sameSession[0].id));
+  assert.ok(merged.mergedIds.includes(sosyalFamily.sameSession[1].id));
+  assert.equal(merged.preparedSearch.documentHash, 'unchanged-1');
+  assert.deepEqual(merged.preparedSearch.embedding, [1]);
 });
 
 test('title, venue, time and category changes produce distinct immutable requests for SQL CAS handling', () => {

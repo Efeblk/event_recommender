@@ -64,40 +64,39 @@ await test('Jev compares candidates through explicit state paths, with bounded i
     ),
   );
 });
-await test('Jev criteria require program and audience fit for partner outings', () => {
-  const childDirected = {
+await test('Jev separates mandatory source support from optional preference utility', () => {
+  const incidental = {
     ...candidates[0],
-    id: 'child-character-show',
-    title: 'Character Birthday Show',
+    id: 'incidental-photo',
+    title: 'Photography Star Talk',
     description:
-      'A character birthday celebration with familiar songs, dancing, and dental-health instruction for children. All ages require a ticket.',
+      'A performer biography mentions photography and offers a photo opportunity after an unrelated show.',
   };
   const body = buildJevRequest(
     'jev-1.13.0',
     {
       ...input,
-      message: 'Bu cumartesi sevgilimle gidebileceğim konser dışı etkinlik',
+      message: 'Fotoğrafla ilgili bir etkinlik; workshop olsa güzel olur ama şart değil.',
+      primaryTopics: ['fotoğraf'],
+      preferences: { mood: null, companion: null, interests: ['workshop'] },
     },
-    [childDirected],
+    [incidental],
   );
   const criteria = body.questions.candidate_0.criteria;
-  assert.match(criteria[1], /program and intended audience are a weak fit/);
-  assert.match(
-    criteria[1],
-    /predominantly child-directed educational or character show/,
-  );
-  assert.match(
-    criteria[1],
-    /all-age ticket rule alone does not establish adult-program relevance/,
-  );
-  assert.match(criteria[1], /explicitly names that event or program/);
-  assert.match(criteria[2], /intended audience that fits/);
-  assert.match(
-    criteria[2],
-    /positive evidence of the user's audience preference/,
-  );
-  assert.match(criteria[2], /never overrides a mandatory requirement/);
-  assert.equal(body.state.candidates[0].description, childDirected.description);
+  assert.match(criteria[1], /performer biography/);
+  assert.match(criteria[1], /incidental photo opportunity/);
+  assert.match(criteria[2], /every mandatory requirement/);
+  assert.equal(body.questions.preference_0.type, 'score');
+  assert.match(body.questions.preference_0.instructions, /Do not add mandatory requirements/);
+  assert.match(body.state.rankingPolicies.optionalFit, /never admission requirements/);
+  assert.equal(body.state.candidates[0].description, incidental.description);
+});
+await test('Jev omits optional questions when there is no semantic preference', () => {
+  const body = buildJevRequest('jev-1.13.0', {
+    ...input,
+    preferences: { mood: null, companion: null, interests: [], order: 'soonest' },
+  }, candidates);
+  assert.equal(body.questions.preference_0, undefined);
 });
 await test('Jev can reorder only supplied events and preserves authoritative event facts', () => {
   const r = parseJevRanking(response(), candidates);
@@ -111,6 +110,20 @@ await test('Jev can reorder only supplied events and preserves authoritative eve
   assert.deepEqual(r.ranked[1].probabilities, [0, 1, 0, 0]);
   assert.equal(r.ranked[1].supportProbability, 0);
   assert.equal(r.usage.inputTokens, 1500);
+});
+await test('Jev retains separate optional scores and requires every expected optional answer', () => {
+  const withPreferences = structuredClone(response());
+  Object.assign(withPreferences.answers, {
+    preference_0: { type: 'score', score: 1, confidence: 0.7, probabilities: { '0': 0, '1': 1, '2': 0, '3': 0 } },
+    preference_1: { type: 'score', score: 3, confidence: 0.9, probabilities: { '0': 0, '1': 0, '2': 0, '3': 1 } },
+  });
+  const ranked = parseJevRanking(withPreferences, candidates, true);
+  assert.equal(ranked.ranked[0].optionalScore, 3);
+  assert.deepEqual(ranked.ranked[0].optionalProbabilities, [0, 0, 0, 1]);
+  delete (withPreferences.answers as Record<string, unknown>).preference_1;
+  assert.throws(() => parseJevRanking(withPreferences, candidates, true));
+  // Old saved responses and unit fixtures remain readable only through explicit legacy mode.
+  assert.equal(parseJevRanking(response(), candidates).ranked[0].optionalScore, undefined);
 });
 await test('Jev rejects missing answers and malformed probability/score outputs', () => {
   assert.throws(() =>

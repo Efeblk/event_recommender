@@ -1,11 +1,14 @@
 import { createHash } from 'node:crypto';
 import { stableJson, validateSourceRecord } from './source-adapter.mjs';
+import { normalizeSupportedCanonicalRecord, supportedCanonicalIdentity } from './canonical-identity.mjs';
 
 const digest = value => createHash('sha256').update(value).digest('hex');
 const text = value => typeof value === 'string' ? value.trim() : '';
 
 export function canonicalRequestId(record) {
-  return `canonical-request-${digest(stableJson({ provider: record?.source, providerRecordId: record?.id, record })).slice(0, 32)}`;
+  const reviewed = supportedCanonicalIdentity(record);
+  return `canonical-request-${digest(stableJson({ provider: record?.source, providerRecordId: record?.id, record,
+    ...(reviewed ? { canonicalIdentityProfile: 'reviewed-identity-v1', canonicalIdentityKey: reviewed.key } : {}) })).slice(0, 32)}`;
 }
 
 export function validateCanonicalRecord(record) {
@@ -26,7 +29,7 @@ export function adaptCanonicalRecord(record, heads = []) {
   if (!Array.isArray(heads)) return { status: 'quarantined', requestId, reason: 'invalid_identity_lookup' };
   if (heads.length > 1) return { status: 'quarantined', requestId, reason: 'ambiguous_provider_identity', details: heads.map(h => h.sessionId).sort() };
   const head = heads[0] ?? {};
-  const normalized = structuredClone(record);
+  const normalized = normalizeSupportedCanonicalRecord(record);
   if (normalized.sourceSessionIds === undefined) normalized.sourceSessionIds = [String(normalized.id)];
   return { status: 'ready', requestId, payload: {
     requestId, adapterVersion: 'normalized-source-v1', normalizerVersion: 'canonical-base-v1',

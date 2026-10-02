@@ -470,6 +470,10 @@ function withoutRecognizedLocalTimes(q: string): string {
       `\\b(?:after|before|once|until|by|sonra|itibaren|from)\\s+(?:saat\\s*)?${localClock}\\b`,
       'g',
     ),
+    new RegExp(
+      `\\b(?:saat\\s*)?${localClock}\\s+(?:ve\\s+)?sonrasi(?:nda)?\\b`,
+      'g',
+    ),
   ].reduce((text, pattern) => text.replace(pattern, ' '), q);
 }
 
@@ -512,6 +516,11 @@ function parseLocalTimes(q: string) {
       `\\b(?:saat\\s*)?(${localClock})['’]?(?:dan|den|tan|ten)\\s+sonra\\b`,
     ),
   );
+  const fromPostfix = q.match(
+    new RegExp(
+      `\\b(?:saat\\s*)?(${localClock})\\s+(ve\\s+)?sonrasi(?:nda)?\\b`,
+    ),
+  );
   const eveningFromPrefix = q.match(
     /\b(?:aksam|gece)\s+([1-9]|1[01])['’]?(?:dan|den|tan|ten)\s+sonra\b/,
   );
@@ -533,8 +542,16 @@ function parseLocalTimes(q: string) {
     (!fromPrefix || eveningFromPrefix.index! <= fromPrefix.index!)
       ? eveningFromPrefix
       : fromPrefix;
+  const chosenPostfix =
+    fromPostfix &&
+    (!chosenFromPrefix || fromPostfix.index! <= chosenFromPrefix.index!) &&
+    (!from || fromPostfix.index! <= from.index!)
+      ? fromPostfix
+      : null;
   const fromUsesPrefix =
-    !!chosenFromPrefix && (!from || chosenFromPrefix.index! <= from.index!);
+    !chosenPostfix &&
+    !!chosenFromPrefix &&
+    (!from || chosenFromPrefix.index! <= from.index!);
   const toUsesPrefix = !!toPrefix && (!to || toPrefix.index! <= to.index!);
   const chosenFrom =
     fromMeridiem && (!from || fromMeridiem.index! <= from.index!)
@@ -542,7 +559,11 @@ function parseLocalTimes(q: string) {
       : from;
   const chosenTo =
     toMeridiem && (!to || toMeridiem.index! <= to.index!) ? toMeridiem : to;
-  let fromMatch = fromUsesPrefix ? chosenFromPrefix![1] : chosenFrom?.[2];
+  let fromMatch = chosenPostfix
+    ? chosenPostfix[1]
+    : fromUsesPrefix
+      ? chosenFromPrefix![1]
+      : chosenFrom?.[2];
   if (fromUsesPrefix && chosenFromPrefix === eveningFromPrefix)
     fromMatch = String(Number(fromMatch) + 12);
   const toMatch = toUsesPrefix ? toPrefix[1] : chosenTo?.[2];
@@ -551,8 +572,9 @@ function parseLocalTimes(q: string) {
       fromMatch,
       fromUsesPrefix ? undefined : chosenFrom?.[3],
     );
-    result.startTimeFromExclusive =
-      fromUsesPrefix || /\b(?:after|sonra)\b/.test(chosenFrom![1]);
+    result.startTimeFromExclusive = chosenPostfix
+      ? !chosenPostfix[2]
+      : fromUsesPrefix || /\b(?:after|sonra)\b/.test(chosenFrom![1]);
   }
   if (toMatch) {
     result.startTimeTo = format(
@@ -788,10 +810,14 @@ function dateIssue(
     if (!previous.dateFrom && !previous.dateTo) return 'date_ambiguous';
     q = q.replace(sameDate, ' ');
   }
+  const dateConstraintText = q.replace(
+    /\b(?:en yakin|en erken|ilk uygun|soonest|earliest|nearest)(?:\s+(?:tarih|date|day|event))?\b/g,
+    ' ',
+  );
   const dateSalient =
     /\b(?:tarih|gun|hafta|haftasonu|ay|ayin|bugun|yarin|pazartesi|sali|carsamba|persembe|cuma|cumartesi|pazar)\b/.test(
-      q,
-    ) || /\bbu aksam\b/.test(q);
+      dateConstraintText,
+    ) || /\bbu aksam\b/.test(dateConstraintText);
   if (namedDateLike || !dateSalient) return null;
   if (
     /tarih.*(?:fark etmez|kaldir)|herhangi bir gun|any date (?:is )?fine/.test(
@@ -801,7 +827,7 @@ function dateIssue(
     return null;
   const supported =
     /\b(?:bugun|bu aksam|yarin|hafta sonu|haftasonu|bu hafta|pazartesi|sali|carsamba|persembe|cuma|cumartesi|pazar)\b/.test(
-      q,
+      dateConstraintText,
     );
   return supported ? null : 'date_ambiguous';
 }
@@ -1046,9 +1072,10 @@ export function isEligible(
   }
   if (f.startTimeFrom || f.startTimeTo) {
     // A validity-window boundary or unresolved admission timestamp is not
-    // evidence of a booked start time. Preserve legacy session behavior when
-    // the source has not supplied timing semantics yet.
-    if (e.attendanceTiming && e.attendanceTiming.kind !== 'timed_session')
+    // evidence of a booked start time. A hard clock constraint therefore
+    // requires explicit timed-session semantics; missing legacy metadata is
+    // unknown evidence and fails closed as well.
+    if (e.attendanceTiming?.kind !== 'timed_session')
       return false;
     const localTime = istanbulTimeFormatter.format(new Date(start));
     if (

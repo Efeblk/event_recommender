@@ -216,3 +216,11 @@ void test('validates the closed soonest order preference', () => {
     preferences: { ...state.preferences, order: 'latest' },
   }));
 });
+
+void test('accepts old v1 state and validates bounded required primary topics', () => {
+  const legacy = emptyIntentState();
+  assert.equal(validateIntentState(legacy).primaryTopics, undefined);
+  const current = validateIntentState({ ...legacy, primaryTopics: ['fotoğraf', 'seramik veya çini'] });
+  assert.deepEqual(current.primaryTopics, ['fotoğraf', 'seramik veya çini']);
+  assert.throws(() => validateIntentState({ ...legacy, primaryTopics: Array(9).fill('x') }));
+});

@@ -593,18 +593,50 @@ export function deriveRequirements(
         policy: 'require_support',
       });
 
-    const explicitlyMandatory =
-      /\b(?:must|has to|only|strictly|mutlaka|sart|olmak zorunda)\b/.test(text);
-    if (explicitlyMandatory && /\b(?:quiet|sessiz|sakin)\b/.test(text))
+    const experienceClauses = text.split(
+      /[,.!?;]|\b(?:ama|fakat|ancak|but)\b/,
+    );
+    const mandatoryClause = (clause: string) =>
+      /\b(?:must|has to|required|only|strictly|mutlaka|sart|zorunlu|olmak zorunda)\b/.test(
+        clause,
+      ) &&
+      !/\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary|does not have to|doesn't have to|need not)\b/.test(
+        clause,
+      );
+    const quietWaived = experienceClauses.some(
+      (clause) =>
+        /\b(?:quiet|sessiz|sakin)\b/.test(clause) &&
+        /\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary|does not have to|doesn't have to|need not)\b/.test(
+          clause,
+        ),
+    );
+    const seatingWaived = experienceClauses.some(
+      (clause) =>
+        /\b(?:seated|seating|oturmali|numarali koltuk)\b/.test(clause) &&
+        /\b(?:sart degil|gerekli degil|zorunlu degil|not required|not necessary|does not have to|doesn't have to|need not)\b/.test(
+          clause,
+        ),
+    );
+    if (quietWaived)
+      removeRequiredValues(requirements, 'activity', ['quiet']);
+    if (seatingWaived)
+      removeRequiredValues(requirements, 'activity', ['seated']);
+    const quietMandatory = experienceClauses.some(
+      (clause) =>
+        /\b(?:quiet|sessiz|sakin)\b/.test(clause) && mandatoryClause(clause),
+    );
+    if (quietMandatory)
       addIndependentRequirement(requirements, {
         kind: 'activity',
         value: 'quiet',
         policy: 'require_support',
       });
-    if (
-      explicitlyMandatory &&
-      /\b(?:seated|oturmali|numarali koltuk)\b/.test(text)
-    )
+    const seatingMandatory = experienceClauses.some(
+        (clause) =>
+          /\b(?:seated|seating|oturmali|numarali koltuk)\b/.test(clause) &&
+          mandatoryClause(clause),
+      );
+    if (seatingMandatory)
       addIndependentRequirement(requirements, {
         kind: 'activity',
         value: 'seated',

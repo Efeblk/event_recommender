@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { batchInputHash, ingestBatchSource, validateBatchEnvelope } from '../preparation/batch-source.mjs';
 import { canonicalRequestId } from '../preparation/canonical-adapter.mjs';
 import { createBatchSourceStore } from '../preparation/batch-source-store.mjs';
+
+const sosyalFamily = JSON.parse(await readFile(new URL('./fixtures/social-sanathane-family.json', import.meta.url), 'utf8'));
 
 const event = (id, changes = {}) => ({ id, source: 'bubilet', sourceSessionIds: [id], title: `Oyun ${id}`, description: 'Bir oyun.',
   venue: 'Sahne', district: 'Kadıköy', address: 'Moda Caddesi', city: 'İstanbul', category: 'Tiyatro',
@@ -16,14 +19,14 @@ function envelope(records, coverageChanges = {}, headerChanges = {}) {
   value.header.inputHash = batchInputHash(value); return value;
 }
 function stores({ loseOnce = false, abort } = {}) {
-  const items = new Map(), calls = { begin: 0, checkpoints: 0, heads: 0, seal: 0, publish: 0 }; let lost = false;
+  const items = new Map(), calls = { begin: 0, checkpoints: 0, heads: 0, headRecords: [], seal: 0, publish: 0 }; let lost = false;
   const save = async (requestId, result) => {
     if (items.has(requestId)) return { ...items.get(requestId), idempotent: true };
     items.set(requestId, result); abort?.();
     if (loseOnce && !lost) { lost = true; throw new Error('lost response'); }
     return result;
   };
-  return { calls, items, canonicalStore: { findHeads: async record => { calls.heads++; return [{ sessionId: record.id,
+  return { calls, items, canonicalStore: { findHeads: async record => { calls.heads++; calls.headRecords.push(record); return [{ sessionId: record.id,
     canonicalRevisionId: `head-${calls.heads}`, offerRevisionId: `offer-${calls.heads}` }]; } }, batchStore: {
     begin: async header => { calls.begin++; return { batchId: header.batchId, status: 'collecting', idempotent: calls.begin > 1 }; },
     checkpoints: async batchId => { calls.checkpoints++; return [...items.values()].map(receipt => ({ requestId: receipt.requestId, status: receipt.status, receipt: { ...receipt, batchId } })); },
@@ -32,6 +35,16 @@ function stores({ loseOnce = false, abort } = {}) {
     seal: async (_batch, receipt) => { calls.seal++; return { status: items.size === receipt.recordCount && [...items.values()].every(x => x.status === 'accepted') ? 'sealed' : 'blocked' }; },
   } };
 }
+
+test('durable batch lookup uses reviewed canonical identity while the envelope remains source-exact', async () => {
+  const source = sosyalFamily.sameSession[0];
+  const value = envelope([source]), fake = stores();
+  await ingestBatchSource(value, fake);
+  assert.equal(value.records[0].title, source.title);
+  assert.equal(fake.calls.headRecords[0].title, 'Sosyal Sanathane Karma Workshop');
+  assert.equal(fake.calls.headRecords[0].district, 'Kadıköy');
+  assert.equal(fake.calls.headRecords[0].sourceObservedPresentation.title, source.title);
+});
 
 test('validates the complete hash and coverage envelope before any database call', async () => {
   const value = envelope([event('one')]), fake = stores(); value.collectorCoverage.inventory[0].verified = 0;

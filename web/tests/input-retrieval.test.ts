@@ -174,3 +174,12 @@ void test('experience expansions respect genre exclusions and never expand a lit
   assert.equal(retrievalQuery(literal), 'Dancing to Learn');
   assert.equal(recommendationQuery(literal), 'Dancing to Learn');
 });
+
+void test('required primary topics are prominent while optional interests remain distinct', () => {
+  const current = emptyIntentState();
+  current.primaryTopics = ['fotoğraf'];
+  current.preferences.interests = ['workshop'];
+  assert.match(retrievalQuery(current), /^fotoğraf fotoğraf photography photographic workshop$/);
+  assert.match(recommendationQuery(current), /must be about fotoğraf/);
+  assert.match(recommendationQuery(current), /workshop/);
+});

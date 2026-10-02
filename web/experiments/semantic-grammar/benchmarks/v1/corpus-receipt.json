@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 2,
+  "frozenAt": "2026-10-01",
+  "referenceDate": "2026-10-01",
+  "timezone": "Europe/Istanbul",
+  "corpus": {
+    "path": "web/work/semantic-grammar-20261001/heldout.json",
+    "sha256": "f8504b03f23fa73e5ad109ae16da1355caa3aae32530c354eba5b3f1cb59b46b",
+    "bytes": 421543
+  },
+  "originals": {
+    "corpus": {
+      "path": "web/work/semantic-grammar-20261001/heldout.original.json",
+      "sha256": "9fd43e143f65a40e54eeca706a1f9e180c25901cdfa931ac4e87ae598b6ed9ed",
+      "bytes": 408982
+    },
+    "receipt": {
+      "path": "web/work/semantic-grammar-20261001/corpus-receipt.original.json",
+      "sha256": "c9823c031d159b34d4820e42361f1087fcb8a2fcb1cd61adb363813e458a9902"
+    },
+    "byteForBytePreservedBeforeCorrections": true
+  },
+  "contract": {
+    "path": "web/experiments/semantic-grammar/contract.ts",
+    "sha256": "2a868b59d3e8a2d35dc1741f171bab8cc13af66dcf3671fbc94f340aa9a7752d"
+  },
+  "counts": {
+    "cases": 200,
+    "languages": {
+      "tr": 100,
+      "en": 100
+    },
+    "slices": {
+      "clear": 120,
+      "ambiguous": 40,
+      "unsupported": 40
+    },
+    "languageSliceMatrix": {
+      "tr": {
+        "clear": 60,
+        "ambiguous": 20,
+        "unsupported": 20
+      },
+      "en": {
+        "clear": 60,
+        "ambiguous": 20,
+        "unsupported": 20
+      }
+    },
+    "independentlySeededCases": 55,
+    "trueChainCases": 20,
+    "trueChains": 10,
+    "changedCasesFromOriginal": 23
+  },
+  "goldMethod": {
+    "agentAuthored": true,
+    "independentlyHumanInterpreted": false,
+    "independentAstraLinguisticReview": true,
+    "frozenBeforeRuntimeScoring": true,
+    "runtimeOutputsRead": false,
+    "parserImplementationRead": false,
+    "lexiconImplementationRead": false,
+    "developmentCorpusRead": false,
+    "providerOrModelCalls": 0,
+    "inferenceRuns": 0,
+    "applicationRuns": 0,
+    "notes": "The corpus was authored from the shared contract by an agent and received a bounded independent Astra linguistic/gold review. It is not represented as independently human-interpreted."
+  },
+  "preCallCorrections": [
+    "clear-27 TR/EN now asks for a museum tomorrow with a 300 TRY per-person maximum and adds date h0, museum h1 and budget h2.",
+    "ambiguous-03 TR/EN removes 'each' wording and enumerates approximate 500 TRY under all three budget bases.",
+    "ambiguous-05 TR/EN now uses a Kadikoy h0 plus concert h1 seed and two remove-target alternatives.",
+    "tr-ambiguous-06 now uses museum h0 with history p0 and Fatih p1, with two preference-removal alternatives; en-ambiguous-06 is unchanged.",
+    "ambiguous-07 TR/EN now uses photography h0 plus workshop h1 and moves either referenced hard condition to preferences.",
+    "ambiguous-10 TR/EN keeps the entire request preferred while distinguishing quiet scope over both categories versus concert alone.",
+    "ambiguous-01, -02 and -08 TR/EN add per-ticket alternatives; ambiguous-09 TR/EN adds per-person alternatives. Existing companion and party atoms remain present.",
+    "clear-48 TR/EN now explicitly keeps h0, h1 and p0 with the seeded plan unchanged.",
+    "clear-49 TR/EN wording now expresses direct replacement of the group-total limit by an 800 TRY per-person maximum; gold is unchanged."
+  ],
+  "changedCaseIds": [
+    "tr-clear-27",
+    "en-clear-27",
+    "tr-clear-48",
+    "en-clear-48",
+    "tr-clear-49",
+    "en-clear-49",
+    "tr-ambiguous-01",
+    "en-ambiguous-01",
+    "tr-ambiguous-02",
+    "en-ambiguous-02",
+    "tr-ambiguous-03",
+    "en-ambiguous-03",
+    "tr-ambiguous-05",
+    "en-ambiguous-05",
+    "tr-ambiguous-06",
+    "tr-ambiguous-07",
+    "en-ambiguous-07",
+    "tr-ambiguous-08",
+    "en-ambiguous-08",
+    "tr-ambiguous-09",
+    "en-ambiguous-09",
+    "tr-ambiguous-10",
+    "en-ambiguous-10"
+  ],
+  "review": {
+    "reviewedBeforeRuntimeScoring": true,
+    "exactAuthorizedChangedCaseCount": 23,
+    "enAmbiguous06Unchanged": true,
+    "operationsMatchResultingPlans": true,
+    "correctedBudgetAlternativesPreserveNonBudgetAtoms": true,
+    "familyLabelLimitation": "Family strings were intentionally left frozen under the exact-only correction scope. Some now describe the original case rather than corrected semantics, including factual-control, seeded-factual-preserve, each-budget-basis, negation-attachment and the Turkish location-coordination-scope case. Do not use those strings as authoritative semantic descriptions."
+  },
+  "preflight": {
+    "jsonParsed": true,
+    "uniqueIds": 200,
+    "allUnsupportedQuotesAreSourceSubstrings": true,
+    "allIndependentSeedTargetsExist": true,
+    "allClearStatusesAccepted": true,
+    "allAmbiguousStatusesAmbiguous": true,
+    "allUnsupportedStatusesUnsupported": true,
+    "originalHashesPreserved": true
+  },
+  "freezePolicy": "No gold changes after runtime results. This corrected hash supersedes the original for the first parser scoring run; both original artifacts remain preserved byte-for-byte."
+}

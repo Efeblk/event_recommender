@@ -30,7 +30,7 @@ import {
   type IntentState,
 } from './input-state.ts';
 import { interpretInput } from './input-interpreter.ts';
-import { recommendationQuery, retrievalQuery } from './input-retrieval.ts';
+import { retrievalQuery } from './input-retrieval.ts';
 import type { CatalogStatus } from './storage-contract.ts';
 
 export interface RecommendInput {
@@ -101,6 +101,7 @@ export function validateInput(value: unknown): RecommendInput {
       ![
         'budget_ambiguous',
         'date_ambiguous',
+        'arrival_time_ambiguous',
         'constraint_ambiguous',
         'unsupported_location',
         'unsupported_constraint',
@@ -174,7 +175,7 @@ export function selectJevEvents(
 ): EventRecord[] {
   const byId = new Map(candidates.map((event) => [event.id, event]));
   const supported = ranking.ranked
-    .filter(({ event, score, probabilities, supportProbability }) => {
+    .filter(({ event, score, probabilities, supportProbability, optionalScore, optionalConfidence, optionalProbabilities }) => {
       if (
         !byId.has(event.id) ||
         !Number.isFinite(score) ||
@@ -194,6 +195,27 @@ export function selectJevEvents(
       )
         return false;
       const derivedSupport = probabilities[2] + probabilities[3];
+      const hasOptionalJudgment =
+        optionalScore !== undefined ||
+        optionalConfidence !== undefined ||
+        optionalProbabilities !== undefined;
+      if (hasOptionalJudgment && (
+        typeof optionalScore !== 'number' ||
+        !Number.isFinite(optionalScore) ||
+        optionalScore < 0 ||
+        optionalScore > 3 ||
+        typeof optionalConfidence !== 'number' ||
+        !Number.isFinite(optionalConfidence) ||
+        optionalConfidence < 0 ||
+        optionalConfidence > 1 ||
+        !Array.isArray(optionalProbabilities) ||
+        optionalProbabilities.length !== 4 ||
+        !optionalProbabilities.every((value) =>
+          typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
+        ) ||
+        Math.abs(optionalProbabilities.reduce((sum, value) => sum + value, 0) - 1) > 0.02 ||
+        Math.abs(optionalScore - optionalProbabilities.reduce((sum, value, level) => sum + value * level, 0)) > 0.05
+      )) return false;
       return (
         Number.isFinite(supportProbability) &&
         supportProbability >= MIN_JEV_SUPPORT_PROBABILITY &&
@@ -201,7 +223,13 @@ export function selectJevEvents(
         Math.abs(supportProbability - derivedSupport) <= 1e-9
       );
     })
-    .sort((a, b) => b.score - a.score)
+    .sort(
+      (a, b) =>
+        (b.optionalScore ?? Number.NEGATIVE_INFINITY) -
+          (a.optionalScore ?? Number.NEGATIVE_INFINITY) ||
+        b.score - a.score ||
+        a.event.id.localeCompare(b.event.id),
+    )
     .map(({ event }) => byId.get(event.id)!);
   const selected = diverseEvents(
     uniqueEvents(supported, supported.length),
@@ -217,11 +245,18 @@ export function selectJevEvents(
 
 const basicNotice =
   'Sonuçlar tarih, bütçe, kategori ve kelime eşleşmesine göre listeleniyor.';
+const folded = (value: string) => value.toLocaleLowerCase('tr-TR').normalize('NFD').replace(/\p{M}/gu, '').replaceAll('ı', 'i');
+const requestsSoonest = (value: string) => {
+  const text = folded(value);
+  return !/\b(?:siralama fark etmez|en erken olmasi sart degil|not necessarily the soonest|relevance order)\b/u.test(text) && /\b(?:en yakin tarih|en erken(?: tarih| etkinlik)?|ilk uygun tarih|mumkun olan ilk tarih|soonest|earliest(?: date| event)?|next available(?: date| event)?)\b/u.test(text);
+};
 const issueNotices = {
   budget_ambiguous:
     'Bu bütçe kişi başı mı, toplam mı? Örneğin: kişi başı 800 TL veya iki kişi toplam 800 TL.',
   date_ambiguous:
     'Tarihi daha açık belirt. Örneğin: yarın, bu hafta sonu veya YYYY-AA-GG biçiminde bir tarih.',
+  arrival_time_ambiguous:
+    'İş çıkışı için etkinliğe en erken saat kaçta varabilirsin? Örneğin: 18:30.',
   constraint_ambiguous:
     'Koşulları ayrı ve açık biçimde belirt. Örneğin: cumartesi, kişi başı 800 TL, konser hariç.',
   unsupported_location:
@@ -249,7 +284,7 @@ export async function recommend(
   const recommendations = result.recommendations.filter(item => allowed.has(item.event.id));
   const withheld = recommendations.length < before.length;
   return { ...result, publicationId: pinned.publicationId, recommendations,
-    ...(!recommendations.length && result.status === 'empty' && pinned.emptyResultNotice?.()
+    ...(!result.intentState?.primaryTopics?.length && !recommendations.length && result.status === 'empty' && pinned.emptyResultNotice?.()
       ? { notice: pinned.emptyResultNotice() } : {}),
     ...(withheld ? {
       status: recommendations.length ? 'results' as const : 'empty' as const,
@@ -366,6 +401,7 @@ async function recommendUnpinned(input: RecommendInput, deps: Dependencies): Pro
     },
     deps,
     intentState,
+    input.message,
   );
   return { ...result, intentState, excludedIds: excludeIds };
 }
@@ -374,6 +410,7 @@ async function recommendResolved(
   input: RecommendInput,
   deps: Dependencies,
   intent?: IntentState,
+  currentUserMessage?: string,
 ): Promise<SearchResult> {
   const now = deps.now ?? new Date();
   const { filters, issue } = intent
@@ -411,6 +448,9 @@ async function recommendResolved(
   const context = intent
     ? { history: [] }
     : searchContext(input.message, input.history);
+  const effectiveIntent = intent ?? (requestsSoonest(input.message)
+    ? { ...emptyIntentState(filters), preferences: { ...emptyIntentState(filters).preferences, order: 'soonest' as const } }
+    : undefined);
   const requirements =
     intent?.requirements ?? deriveRequirements(input.message, context.history);
   const hardRequirements = requirements.map((requirement) => ({
@@ -451,7 +491,9 @@ async function recommendResolved(
       notice:
         beforeEvidence && requirements.length
           ? 'Zorunlu koşullarını etkinlik açıklamalarından doğrulayamadık. Bilgisi eksik seçenekleri göstermiyoruz.'
-          : 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
+          : (filters.startTimeFrom || filters.startTimeTo)
+            ? 'Saat koşulunu kaynaklardan doğrulayamadık; saat bilgisi belirsiz etkinlikleri göstermiyoruz.'
+            : 'Bu koşullara uyan güncel bir etkinlik bulunamadı.',
       totalCandidates,
       diagnostics,
     };
@@ -461,7 +503,7 @@ async function recommendResolved(
     input.history,
     16,
     undefined,
-    intent,
+    effectiveIntent,
   );
   if (!shortlist.length)
     return {
@@ -512,7 +554,7 @@ async function recommendResolved(
       input.history,
       16,
       semantic,
-      intent,
+      effectiveIntent,
     );
   diagnostics.distinctShortlist = shortlist.length;
   const fallback = fallbackEvents(
@@ -521,7 +563,7 @@ async function recommendResolved(
     input.history,
     shortlist.length,
     semantic,
-    intent,
+    effectiveIntent,
   ).map((event) => ({ event }));
   if (deps.config) {
     try {
@@ -529,10 +571,11 @@ async function recommendResolved(
         deps.config,
         {
           ...input,
-          ...(intent ? { message: recommendationQuery(intent) } : {}),
+          ...(intent ? { message: currentUserMessage ?? input.message } : {}),
           filters,
           history: context.history,
           requirements,
+          ...(intent?.primaryTopics?.length ? { primaryTopics: intent.primaryTopics } : {}),
           ...(intent ? { preferences: intent.preferences } : {}),
         },
         shortlist,
@@ -540,7 +583,7 @@ async function recommendResolved(
       const recommendations = selectJevEvents(
         shortlist,
         result,
-        intent?.preferences.order,
+        effectiveIntent?.preferences.order,
       ).map(
         (event) => ({
           event,
@@ -561,6 +604,10 @@ async function recommendResolved(
         },
       };
     } catch {
+      if (intent?.primaryTopics?.length) return {
+        recommendations: [], filters, mode: 'filters', status: 'empty', totalCandidates, diagnostics,
+        notice: [retrievalNotice, 'Zorunlu ana konuları kaynak açıklamalarından doğrulayan değerlendirme şu anda kullanılamıyor; doğrulanmamış etkinlik göstermiyoruz.'].filter(Boolean).join(' '),
+      };
       return {
         recommendations: fallback,
         filters,
@@ -578,12 +625,12 @@ async function recommendResolved(
     }
   }
   return {
-    recommendations: fallback,
+    recommendations: intent?.primaryTopics?.length ? [] : fallback,
     filters,
     mode: 'filters',
-    status: fallback.length ? 'results' : 'empty',
+    status: !intent?.primaryTopics?.length && fallback.length ? 'results' : 'empty',
     notice:
-      retrievalNotice ??
+      (intent?.primaryTopics?.length ? 'Zorunlu ana konuları kaynak açıklamalarından doğrulayan değerlendirme şu anda kullanılamıyor; doğrulanmamış etkinlik göstermiyoruz.' : retrievalNotice) ??
       (semantic
         ? 'Sonuçlar anlamsal benzerlik ve kelime eşleşmesine göre listeleniyor.'
         : basicNotice),

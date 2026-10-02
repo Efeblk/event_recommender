@@ -1,0 +1,2388 @@
+{
+  "schemaVersion": 1,
+  "name": "gliner-input-independent-quality-corpus-v1",
+  "referenceTime": "2026-09-30T09:00:00.000Z",
+  "timeZone": "Europe/Istanbul",
+  "freezePolicy": {
+    "purpose": "Independent frozen semantic quality corpus for comparing the same Jev compiler with and without GLiNER candidate extraction.",
+    "goldSource": "Human interpretation of only the user text, the frozen reference time, and for follow-ups the preceding gold meaning. The experiment must feed each arm its own actual returned state, never this gold prior.",
+    "provenance": {
+      "constructedBeforeExperimentCalls": true,
+      "historicalGold": "web/work/response-quality-20260930/representation-confirmation/heldout-cases.json",
+      "historicalReview": "web/work/response-quality-20260930/representation-confirmation/interpretation-human-review.json",
+      "schemaSource": "web/lib/input-state.ts",
+      "runtimePrototypeRead": false
+    },
+    "dateResolution": {
+      "Cumartesi|Saturday": "2026-10-03",
+      "Pazar|Sunday": "2026-10-04",
+      "bu hafta sonu|this weekend": [
+        "2026-10-03",
+        "2026-10-04"
+      ]
+    },
+    "supportedSemanticSchema": {
+      "state": "IntentState v1 from web/lib/input-state.ts",
+      "filters": [
+        "dateFrom",
+        "dateTo",
+        "maxPrice",
+        "maxPriceExclusive",
+        "partySize",
+        "totalBudget",
+        "category",
+        "categories",
+        "excludedCategories",
+        "district"
+      ],
+      "requirements": [
+        "genre",
+        "activity",
+        "audience",
+        "content",
+        "accessibility"
+      ],
+      "preferences": [
+        "mood",
+        "companion",
+        "interests",
+        "experiences",
+        "order"
+      ],
+      "primaryTopics": "Source-grounded required topic predicates; an explicitly alternative topic remains one pipe-delimited predicate rather than separate AND entries."
+    },
+    "unknownAndUnsupportedPolicy": {
+      "unknownEvidence": "A supported predicate whose event evidence may be unknown is still part of intent and is not an unsupported request.",
+      "mandatoryUnsupported": "Return unsupported and preserve the complete actual previous state atomically.",
+      "optionalUnsupported": "May remain executable only when explicitly optional; record the exact raw phrase in unappliedPreferences and do not turn it into a hard predicate or claim it can be verified.",
+      "ambiguity": "Return clarify and preserve the complete actual previous state; do not invent a budget basis, location, or category logic."
+    },
+    "expectedFormat": {
+      "state": "Every turn carries a full canonical IntentState v1. Executable follow-ups are expanded from the preceding GOLD state for scoring only.",
+      "armFeeding": "The harness must feed each arm its own actual prior state. It must never feed expected.state.",
+      "notApplied": "Explicit optional requests outside IntentState v1 are exact-span annotations for manual review and are not committed hard constraints.",
+      "freeTextReview": "Free-text primaryTopics, interests, and notApplied preferences require exact-span/manual semantic review; they are not auto-scored by loose string similarity.",
+      "strictness": "Scoring compares the complete canonical state and rejects unexpected extra fields or predicates."
+    },
+    "disputedGoldPolicy": "A turn marked goldDisputed is frozen for diagnostic reporting but excluded from the automatic accuracy gate until independent human adjudication."
+  },
+  "cohorts": [
+    {
+      "id": "regression-original",
+      "turnCount": 8,
+      "evaluationRole": "regression",
+      "description": "The exact eight historical turns and reference time from representation-confirmation-8-turns."
+    },
+    {
+      "id": "development-unseen",
+      "turnCount": 28,
+      "evaluationRole": "development",
+      "description": "Previously unseen Turkish and English turns grouped by linguistic family."
+    },
+    {
+      "id": "final-confirmation",
+      "turnCount": 4,
+      "evaluationRole": "final_holdout",
+      "description": "Four standalone, previously unseen confirmation turns kept separate from development analysis."
+    }
+  ],
+  "conversations": [
+    {
+      "id": "reg-optional-2000s-category-or",
+      "cohort": "regression-original",
+      "family": "optional-topic-category-or",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi 2000'ler müziği olsa güzel olur ama şart değil; konser veya stand-up, kişi başı en çok 900 TL.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 900,
+                "maxPriceExclusive": false,
+                "categories": [
+                  "Konser",
+                  "Stand-up"
+                ]
+              },
+              "preferences": {
+                "interests": [
+                  "2000'ler müziği"
+                ]
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 900,
+                "category": null,
+                "maxPriceExclusive": false,
+                "categories": [
+                  "Konser",
+                  "Stand-up"
+                ]
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": [
+                  "2000'ler müziği"
+                ]
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Cumartesi",
+              "supports": "date 2026-10-03"
+            },
+            {
+              "span": "2000'ler müziği olsa güzel olur ama şart değil",
+              "supports": "optional interest 2000'ler müziği"
+            },
+            {
+              "span": "konser veya stand-up",
+              "supports": "Konser OR Stand-up"
+            },
+            {
+              "span": "kişi başı en çok 900 TL",
+              "supports": "inclusive per-person ceiling 900 TRY"
+            }
+          ],
+          "rationale": "Every value and the OR/optional roles are explicit; no price or topic guarantee is inferred."
+        }
+      ]
+    },
+    {
+      "id": "reg-relative-group-total",
+      "cohort": "regression-original",
+      "family": "party-delta-total-budget-keep",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi dört kişiyiz, toplam 2000 TL, tiyatro olsun.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "partySize": 4,
+                "totalBudget": 2000,
+                "maxPrice": 500,
+                "maxPriceExclusive": false,
+                "category": "Tiyatro"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 500,
+                "category": "Tiyatro",
+                "partySize": 4,
+                "totalBudget": 2000,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Cumartesi",
+              "supports": "date 2026-10-03"
+            },
+            {
+              "span": "dört kişiyiz",
+              "supports": "party size 4"
+            },
+            {
+              "span": "toplam 2000 TL",
+              "supports": "inclusive group total 2000 TRY and derived per-person ceiling 500 TRY"
+            },
+            {
+              "span": "tiyatro olsun",
+              "supports": "category Tiyatro"
+            }
+          ],
+          "rationale": "The total budget is explicit; 2000 / 4 = 500."
+        },
+        {
+          "id": "turn-2",
+          "message": "Bir kişi gelmiyor; toplam bütçe aynı kalsın.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "partySize": 3,
+                "totalBudget": 2000,
+                "maxPrice": 666.6666666666666,
+                "maxPriceExclusive": false
+              }
+            },
+            "correction": {
+              "partyOperation": "delta:-1",
+              "budgetOperation": "keep_group_total"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 666.6666666666666,
+                "category": "Tiyatro",
+                "partySize": 3,
+                "totalBudget": 2000,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Bir kişi gelmiyor",
+              "supports": "party delta -1"
+            },
+            {
+              "span": "toplam bütçe aynı kalsın",
+              "supports": "retain group total and recompute per-person ceiling"
+            }
+          ],
+          "rationale": "The prior party of four becomes three; 2000 / 3 is repeating and must not be rounded in gold."
+        }
+      ]
+    },
+    {
+      "id": "reg-quiet-no-concert",
+      "cohort": "regression-original",
+      "family": "hard-quiet-category-exclusion",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi mutlaka sessiz bir etkinlik; konser istemiyorum.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "excludedCategories": [
+                  "Konser"
+                ]
+              },
+              "requirements": [
+                {
+                  "kind": "activity",
+                  "value": "quiet",
+                  "policy": "require_support"
+                }
+              ]
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": null,
+                "excludedCategories": [
+                  "Konser"
+                ]
+              },
+              "requirements": [
+                {
+                  "kind": "activity",
+                  "value": "quiet",
+                  "policy": "require_support"
+                }
+              ],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Cumartesi",
+              "supports": "date 2026-10-03"
+            },
+            {
+              "span": "mutlaka sessiz",
+              "supports": "mandatory quiet activity evidence"
+            },
+            {
+              "span": "konser istemiyorum",
+              "supports": "exclude Konser"
+            }
+          ],
+          "rationale": "Mutlaka makes quiet mandatory; the concert clause is an independent exclusion."
+        }
+      ]
+    },
+    {
+      "id": "reg-original-root-and-correction",
+      "cohort": "regression-original",
+      "family": "budget-replacement-district-hardening",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar 4 kişiyiz, toplam 3200 liraya komedi oyunu ya da standup bakalım; Anadolu yakası tercihimiz.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "partySize": 4,
+                "totalBudget": 3200,
+                "maxPrice": 800,
+                "maxPriceExclusive": false,
+                "categories": [
+                  "Tiyatro",
+                  "Stand-up"
+                ]
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 800,
+                "category": null,
+                "partySize": 4,
+                "totalBudget": 3200,
+                "maxPriceExclusive": false,
+                "categories": [
+                  "Stand-up",
+                  "Tiyatro"
+                ]
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            },
+            "notApplied": [
+              {
+                "span": "Anadolu yakası tercihimiz",
+                "kind": "optional_location",
+                "value": "Anadolu yakası"
+              }
+            ]
+          },
+          "sourceEvidence": [
+            {
+              "span": "Pazar",
+              "supports": "date 2026-10-04"
+            },
+            {
+              "span": "4 kişiyiz",
+              "supports": "party size 4"
+            },
+            {
+              "span": "toplam 3200 liraya",
+              "supports": "group total 3200 TRY and derived per-person ceiling 800 TRY"
+            },
+            {
+              "span": "komedi oyunu ya da standup",
+              "supports": "Tiyatro OR Stand-up"
+            },
+            {
+              "span": "Anadolu yakası tercihimiz",
+              "supports": "optional region preference, not a hard district"
+            }
+          ],
+          "rationale": "Anadolu yakası is broader than the district field and is explicitly a preference, so it is recorded without becoming a hard filter."
+        },
+        {
+          "id": "turn-2",
+          "message": "pardon toplam değil kişi başı 800 demek istemiştim; bir de kesin Kadıköy olsun, diğerleri aynı",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "partySize": 4,
+                "totalBudget": null,
+                "maxPrice": 800,
+                "maxPriceExclusive": false,
+                "district": "Kadıköy"
+              }
+            },
+            "removeUnappliedPreferences": [
+              "Anadolu yakası tercihimiz"
+            ],
+            "correction": {
+              "budgetOperation": "replace_group_total_with_per_person",
+              "districtOperation": "set_hard"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 800,
+                "category": null,
+                "partySize": 4,
+                "maxPriceExclusive": false,
+                "categories": [
+                  "Stand-up",
+                  "Tiyatro"
+                ],
+                "district": "Kadıköy"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "toplam değil kişi başı 800",
+              "supports": "replace group total with per-person ceiling 800 TRY"
+            },
+            {
+              "span": "kesin Kadıköy olsun",
+              "supports": "hard district Kadıköy"
+            },
+            {
+              "span": "diğerleri aynı",
+              "supports": "inherit date, party, and category alternatives"
+            }
+          ],
+          "rationale": "The correction replaces rather than adds a second budget basis, and the exact district supersedes the earlier broad location preference."
+        }
+      ]
+    },
+    {
+      "id": "reg-english-per-person",
+      "cohort": "regression-original",
+      "family": "english-budget-wrapper",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Saturday stand-up, maximum 700 TL per person.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 700,
+                "maxPriceExclusive": false,
+                "category": "Stand-up"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 700,
+                "category": "Stand-up",
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Saturday",
+              "supports": "date 2026-10-03"
+            },
+            {
+              "span": "stand-up",
+              "supports": "category Stand-up"
+            },
+            {
+              "span": "maximum 700 TL per person",
+              "supports": "inclusive per-person ceiling 700 TRY"
+            }
+          ],
+          "rationale": "Maximum is inclusive and per person is explicit."
+        }
+      ]
+    },
+    {
+      "id": "reg-outside-coverage",
+      "cohort": "regression-original",
+      "family": "unsupported-city",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Ankara'da cumartesi sakin bir tiyatro bul.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "unsupported",
+            "issue": "unsupported_location",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "unsupported": [
+              {
+                "span": "Ankara'da",
+                "kind": "location",
+                "mandatory": true,
+                "reason": "catalog scope is Istanbul"
+              }
+            ],
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Ankara'da",
+              "supports": "mandatory unsupported city Ankara"
+            }
+          ],
+          "rationale": "Other supported clauses must not be partially committed when the required city is outside coverage."
+        }
+      ]
+    },
+    {
+      "id": "dev-consistent-dual-budget",
+      "cohort": "development-unseen",
+      "family": "amount-ordering-consistent",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Dört kişiyiz; kişi başı en fazla 600 TL, yani toplam 2400 TL. Cumartesi konser olsun.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "partySize": 4,
+                "totalBudget": 2400,
+                "maxPrice": 600,
+                "maxPriceExclusive": false,
+                "category": "Konser"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 600,
+                "category": "Konser",
+                "partySize": 4,
+                "totalBudget": 2400,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Dört kişiyiz",
+              "supports": "party size 4"
+            },
+            {
+              "span": "kişi başı en fazla 600 TL",
+              "supports": "inclusive per-person ceiling 600 TRY"
+            },
+            {
+              "span": "toplam 2400 TL",
+              "supports": "consistent group total 2400 TRY"
+            },
+            {
+              "span": "Cumartesi konser olsun",
+              "supports": "date 2026-10-03 and category Konser"
+            }
+          ],
+          "rationale": "Both amounts describe the same limit because 4 × 600 = 2400; textual order does not change the basis."
+        }
+      ]
+    },
+    {
+      "id": "dev-conflicting-dual-budget",
+      "cohort": "development-unseen",
+      "family": "amount-ordering-conflict",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Üç kişiyiz, kişi başı 600 TL sınır; toplam bütçe 1500 TL. Pazar tiyatro.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "clarify",
+            "issue": "budget_ambiguous",
+            "goldDisputed": true,
+            "accuracyGate": false,
+            "goldDisputeReason": "The two stated ceilings may be simultaneously satisfiable: for three people, total 1500 TRY implies a stricter 500 TRY per-person ceiling beneath the stated 600 TRY per-person maximum. Independent adjudication is required before treating clarification as uniquely correct.",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "parsedFacts": {
+              "partySize": 3,
+              "perPersonAmount": 600,
+              "groupTotalAmount": 1500,
+              "date": "2026-10-04",
+              "category": "Tiyatro"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Üç kişiyiz",
+              "supports": "party size 3"
+            },
+            {
+              "span": "kişi başı 600 TL sınır",
+              "supports": "per-person amount 600 TRY"
+            },
+            {
+              "span": "toplam bütçe 1500 TL",
+              "supports": "group total 1500 TRY"
+            }
+          ],
+          "rationale": "3 × 600 = 1800, which conflicts with the stated 1500 total; neither amount may silently win because of order."
+        }
+      ]
+    },
+    {
+      "id": "dev-budget-basis-ambiguous",
+      "cohort": "development-unseen",
+      "family": "budget-basis-ambiguity",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi iki kişiyiz, bütçe 1000 TL; stand-up bakalım.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "clarify",
+            "issue": "budget_ambiguous",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "parsedFacts": {
+              "partySize": 2,
+              "amountTRY": 1000,
+              "basis": "ambiguous",
+              "ambiguityReason": "arithmetic_conflict",
+              "date": "2026-10-03",
+              "category": "Stand-up"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "bütçe 1000 TL",
+              "supports": "amount 1000 TRY with no per-person or group-total basis"
+            }
+          ],
+          "rationale": "With two people, bare bütçe does not state whether 1000 TRY is total or per person."
+        }
+      ]
+    },
+    {
+      "id": "dev-exclusive-price-boundary",
+      "cohort": "development-unseen",
+      "family": "budget-boundary",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar bilet kişi başı 750 TL'den az olsun, sergi ya da müze olabilir.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 750,
+                "maxPriceExclusive": true,
+                "categories": [
+                  "Sergi",
+                  "Müze"
+                ]
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 750,
+                "category": null,
+                "maxPriceExclusive": true,
+                "categories": [
+                  "Müze",
+                  "Sergi"
+                ]
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Pazar",
+              "supports": "date 2026-10-04"
+            },
+            {
+              "span": "kişi başı 750 TL'den az",
+              "supports": "exclusive per-person ceiling 750 TRY"
+            },
+            {
+              "span": "sergi ya da müze",
+              "supports": "Sergi OR Müze"
+            }
+          ],
+          "rationale": "Az is strict: an event priced exactly 750 TRY fails the boundary."
+        }
+      ]
+    },
+    {
+      "id": "dev-group-total-arithmetic",
+      "cohort": "development-unseen",
+      "family": "group-budget-arithmetic",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Saturday, five of us, theatre, total budget at most 2500 TL.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "partySize": 5,
+                "totalBudget": 2500,
+                "maxPrice": 500,
+                "maxPriceExclusive": false,
+                "category": "Tiyatro"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 500,
+                "category": "Tiyatro",
+                "partySize": 5,
+                "totalBudget": 2500,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Saturday",
+              "supports": "date 2026-10-03"
+            },
+            {
+              "span": "five of us",
+              "supports": "party size 5"
+            },
+            {
+              "span": "total budget at most 2500 TL",
+              "supports": "inclusive group total 2500 TRY and derived per-person ceiling 500 TRY"
+            }
+          ],
+          "rationale": "At most is inclusive; 2500 / 5 = 500."
+        }
+      ]
+    },
+    {
+      "id": "dev-party-delta-chain",
+      "cohort": "development-unseen",
+      "family": "sequential-party-delta",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar altı kişilik aile olarak müzeye gidelim, toplam en çok 3600 TL.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "partySize": 6,
+                "totalBudget": 3600,
+                "maxPrice": 600,
+                "maxPriceExclusive": false,
+                "category": "Müze"
+              },
+              "preferences": {
+                "companion": "family"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 600,
+                "category": "Müze",
+                "partySize": 6,
+                "totalBudget": 3600,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": "family",
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "altı kişilik aile",
+              "supports": "party size 6 and family companion"
+            },
+            {
+              "span": "toplam en çok 3600 TL",
+              "supports": "inclusive group total 3600 TRY"
+            }
+          ],
+          "rationale": "The explicit group total yields 600 TRY per person."
+        },
+        {
+          "id": "turn-2",
+          "message": "İki kişi daha katılıyor, toplam bütçeyi değiştirme.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "partySize": 8,
+                "totalBudget": 3600,
+                "maxPrice": 450,
+                "maxPriceExclusive": false
+              }
+            },
+            "correction": {
+              "partyOperation": "delta:+2",
+              "budgetOperation": "keep_group_total"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 450,
+                "category": "Müze",
+                "partySize": 8,
+                "totalBudget": 3600,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": "family",
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "İki kişi daha katılıyor",
+              "supports": "party delta +2"
+            },
+            {
+              "span": "toplam bütçeyi değiştirme",
+              "supports": "retain group total 3600 TRY"
+            }
+          ],
+          "rationale": "Six becomes eight and 3600 / 8 = 450."
+        },
+        {
+          "id": "turn-3",
+          "message": "Sonra üç kişi vazgeçti; toplam yine aynı.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "partySize": 5,
+                "totalBudget": 3600,
+                "maxPrice": 720,
+                "maxPriceExclusive": false
+              }
+            },
+            "correction": {
+              "partyOperation": "delta:-3",
+              "budgetOperation": "keep_group_total"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 720,
+                "category": "Müze",
+                "partySize": 5,
+                "totalBudget": 3600,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": "family",
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "üç kişi vazgeçti",
+              "supports": "party delta -3"
+            },
+            {
+              "span": "toplam yine aynı",
+              "supports": "retain group total 3600 TRY"
+            }
+          ],
+          "rationale": "The harness must apply this to the arm's actual prior party; on the intended chain eight becomes five and 3600 / 5 = 720."
+        }
+      ]
+    },
+    {
+      "id": "dev-budget-replacement-chain",
+      "cohort": "development-unseen",
+      "family": "sequential-budget-replacement",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Saturday, three friends, a concert, 1800 TL total maximum.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "partySize": 3,
+                "totalBudget": 1800,
+                "maxPrice": 600,
+                "maxPriceExclusive": false,
+                "category": "Konser"
+              },
+              "preferences": {
+                "companion": "friends"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 600,
+                "category": "Konser",
+                "partySize": 3,
+                "totalBudget": 1800,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": "friends",
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "three friends",
+              "supports": "party size 3 and friends companion"
+            },
+            {
+              "span": "1800 TL total maximum",
+              "supports": "inclusive group total 1800 TRY"
+            }
+          ],
+          "rationale": "The group total yields 600 TRY per person."
+        },
+        {
+          "id": "turn-2",
+          "message": "Change that to 700 TL per person; keep everything else.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "totalBudget": null,
+                "maxPrice": 700,
+                "maxPriceExclusive": false
+              }
+            },
+            "correction": {
+              "budgetOperation": "replace_group_total_with_per_person"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 700,
+                "category": "Konser",
+                "partySize": 3,
+                "maxPriceExclusive": false
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": "friends",
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Change that to 700 TL per person",
+              "supports": "replace group total with inclusive per-person ceiling 700 TRY"
+            },
+            {
+              "span": "keep everything else",
+              "supports": "inherit date, party, category, and companion"
+            }
+          ],
+          "rationale": "Change that to is replacement, so totalBudget is cleared rather than retained as a conflicting second limit."
+        },
+        {
+          "id": "turn-3",
+          "message": "Actually, under 650 each.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "totalBudget": null,
+                "maxPrice": 650,
+                "maxPriceExclusive": true
+              }
+            },
+            "correction": {
+              "budgetOperation": "replace_per_person"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 650,
+                "category": "Konser",
+                "partySize": 3,
+                "maxPriceExclusive": true
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": "friends",
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "under 650 each",
+              "supports": "replace with exclusive per-person ceiling 650 TRY"
+            }
+          ],
+          "rationale": "Under is exclusive and each preserves the per-person basis."
+        }
+      ]
+    },
+    {
+      "id": "dev-category-chain",
+      "cohort": "development-unseen",
+      "family": "category-or-exclusion-optional-removal",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi konser veya tiyatro olsun.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "categories": [
+                  "Konser",
+                  "Tiyatro"
+                ]
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": null,
+                "categories": [
+                  "Konser",
+                  "Tiyatro"
+                ]
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "konser veya tiyatro",
+              "supports": "Konser OR Tiyatro"
+            }
+          ],
+          "rationale": "Veya denotes alternatives, not an AND requirement."
+        },
+        {
+          "id": "turn-2",
+          "message": "Stand-up olmasın; diğerleri aynı.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "excludedCategories": [
+                  "Stand-up"
+                ]
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": null,
+                "categories": [
+                  "Konser",
+                  "Tiyatro"
+                ],
+                "excludedCategories": [
+                  "Stand-up"
+                ]
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Stand-up olmasın",
+              "supports": "exclude Stand-up"
+            },
+            {
+              "span": "diğerleri aynı",
+              "supports": "inherit date and positive category alternatives"
+            }
+          ],
+          "rationale": "The new exclusion does not erase the prior Konser OR Tiyatro choice."
+        },
+        {
+          "id": "turn-3",
+          "message": "Tiyatro şartını kaldır; sergi olsa güzel olur ama şart değil.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "category": "Konser",
+                "categories": null
+              }
+            },
+            "correction": {
+              "categoryOperation": "remove:Tiyatro"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": "Konser",
+                "excludedCategories": [
+                  "Stand-up"
+                ]
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            },
+            "notApplied": [
+              {
+                "span": "sergi olsa güzel olur ama şart değil",
+                "kind": "optional_category",
+                "value": "Sergi"
+              }
+            ]
+          },
+          "sourceEvidence": [
+            {
+              "span": "Tiyatro şartını kaldır",
+              "supports": "remove Tiyatro from positive alternatives"
+            },
+            {
+              "span": "sergi olsa güzel olur ama şart değil",
+              "supports": "optional category preference Sergi, not a hard filter"
+            }
+          ],
+          "rationale": "Removing one side of the OR leaves Konser; the explicitly optional Sergi clause must not become mandatory."
+        }
+      ]
+    },
+    {
+      "id": "dev-category-and-unrepresentable",
+      "cohort": "development-unseen",
+      "family": "category-and-ambiguity",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar hem konser hem tiyatro olan tek bir etkinlik istiyorum.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "clarify",
+            "issue": "constraint_ambiguous",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "parsedFacts": {
+              "date": "2026-10-04",
+              "categories": [
+                "Konser",
+                "Tiyatro"
+              ],
+              "logic": "and_same_event"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "hem konser hem tiyatro olan tek bir etkinlik",
+              "supports": "Konser AND Tiyatro on the same event"
+            }
+          ],
+          "rationale": "IntentState categories represent alternatives, so this explicit conjunction cannot be rewritten as OR or partially committed."
+        }
+      ]
+    },
+    {
+      "id": "dev-district-chain",
+      "cohort": "development-unseen",
+      "family": "district-hard-optional-replace-remove",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar Beyoğlu'nda bir stand-up bul.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "district": "Beyoğlu",
+                "category": "Stand-up"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": null,
+                "category": "Stand-up",
+                "district": "Beyoğlu"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Beyoğlu'nda",
+              "supports": "hard district Beyoğlu"
+            }
+          ],
+          "rationale": "The locative clause is unqualified and therefore mandatory."
+        },
+        {
+          "id": "turn-2",
+          "message": "Kadıköy olsun; Taksim de olursa güzel ama şart değil.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "district": "Kadıköy"
+              }
+            },
+            "correction": {
+              "districtOperation": "replace_hard"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": null,
+                "category": "Stand-up",
+                "district": "Kadıköy"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            },
+            "notApplied": [
+              {
+                "span": "Taksim de olursa güzel ama şart değil",
+                "kind": "optional_location",
+                "value": "Taksim"
+              }
+            ]
+          },
+          "sourceEvidence": [
+            {
+              "span": "Kadıköy olsun",
+              "supports": "replace hard district with Kadıköy"
+            },
+            {
+              "span": "Taksim de olursa güzel ama şart değil",
+              "supports": "optional Taksim preference"
+            }
+          ],
+          "rationale": "Kadıköy replaces Beyoğlu; Taksim is explicitly non-mandatory and does not create a second hard district."
+        },
+        {
+          "id": "turn-3",
+          "message": "Kadıköy şartını kaldır; Anadolu yakası tercih olsun.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "district": null
+              }
+            },
+            "removeUnappliedPreferences": [
+              "Taksim de olursa güzel ama şart değil"
+            ],
+            "correction": {
+              "districtOperation": "remove_hard"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": null,
+                "category": "Stand-up"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            },
+            "notApplied": [
+              {
+                "span": "Anadolu yakası tercih olsun",
+                "kind": "optional_location",
+                "value": "Anadolu yakası"
+              }
+            ]
+          },
+          "sourceEvidence": [
+            {
+              "span": "Kadıköy şartını kaldır",
+              "supports": "remove hard district"
+            },
+            {
+              "span": "Anadolu yakası tercih olsun",
+              "supports": "optional broad-side preference"
+            }
+          ],
+          "rationale": "The district filter is cleared; Anadolu yakası is a region preference and must not be narrowed to an invented district."
+        },
+        {
+          "id": "turn-4",
+          "message": "Tercihi de bırak, kesin Taksim olsun.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "filters": {
+                "district": "Taksim"
+              }
+            },
+            "removeUnappliedPreferences": [
+              "Anadolu yakası tercih olsun"
+            ],
+            "correction": {
+              "districtOperation": "set_hard"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": null,
+                "category": "Stand-up",
+                "district": "Taksim"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Tercihi de bırak",
+              "supports": "remove prior optional location preference"
+            },
+            {
+              "span": "kesin Taksim olsun",
+              "supports": "hard exact location Taksim in the current district field"
+            }
+          ],
+          "rationale": "Kesin makes Taksim mandatory; the corpus records the current state schema's exact location string without silently converting it to Beyoğlu."
+        }
+      ]
+    },
+    {
+      "id": "dev-quiet-strength-chain",
+      "cohort": "development-unseen",
+      "family": "quiet-preference-vs-requirement",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi sakin bir ortam olsa güzel olur; müze bakalım.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "category": "Müze"
+              },
+              "preferences": {
+                "mood": "calm"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": "Müze"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": "calm",
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "sakin bir ortam olsa güzel olur",
+              "supports": "calm preference"
+            }
+          ],
+          "rationale": "Olsa güzel olur expresses preference, not mandatory evidence-backed quiet."
+        },
+        {
+          "id": "turn-2",
+          "message": "Güzel olur değil: sessiz ortam zorunlu.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "inherit",
+            "semanticExpected": {
+              "requirements": [
+                {
+                  "kind": "activity",
+                  "value": "quiet",
+                  "policy": "require_support"
+                }
+              ],
+              "preferences": {
+                "mood": null
+              }
+            },
+            "correction": {
+              "quietOperation": "replace_preference_with_requirement"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": "Müze"
+              },
+              "requirements": [
+                {
+                  "kind": "activity",
+                  "value": "quiet",
+                  "policy": "require_support"
+                }
+              ],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Güzel olur değil",
+              "supports": "retract optional strength"
+            },
+            {
+              "span": "sessiz ortam zorunlu",
+              "supports": "mandatory quiet requirement"
+            }
+          ],
+          "rationale": "The correction promotes the same concept to a hard evidence requirement and clears the redundant calm preference."
+        }
+      ]
+    },
+    {
+      "id": "dev-typo-then-explicit-ambiguity",
+      "cohort": "development-unseen",
+      "family": "location-typo-and-ambiguity",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar Kadikiy'de tiyatro istiyorum.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "district": "Kadıköy",
+                "category": "Tiyatro"
+              }
+            },
+            "normalizations": [
+              {
+                "span": "Kadikiy",
+                "value": "Kadıköy",
+                "kind": "high_confidence_typo"
+              }
+            ],
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": null,
+                "category": "Tiyatro",
+                "district": "Kadıköy"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Kadikiy'de",
+              "supports": "unambiguous typo for hard district Kadıköy"
+            }
+          ],
+          "rationale": "The one-letter keyboard/diacritic typo has a single clear Istanbul district target."
+        },
+        {
+          "id": "turn-2",
+          "message": "Yok, Kadıköy mü Bakırköy mü emin değilim.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "clarify",
+            "issue": "constraint_ambiguous",
+            "unmentionedFields": "inherit",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "parsedFacts": {
+              "districtAlternatives": [
+                "Kadıköy",
+                "Bakırköy"
+              ],
+              "certainty": "explicitly_ambiguous"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": null,
+                "category": "Tiyatro",
+                "district": "Kadıköy"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Kadıköy mü Bakırköy mü emin değilim",
+              "supports": "explicit unresolved district ambiguity"
+            }
+          ],
+          "rationale": "The system must ask rather than choose one location; the previously committed state remains unchanged until clarification."
+        }
+      ]
+    },
+    {
+      "id": "dev-lexical-decade-topic",
+      "cohort": "development-unseen",
+      "family": "turkish-lexical-decade",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi 2000'ler Türkçe pop temalı bir konser şart.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "category": "Konser"
+              },
+              "primaryTopics": [
+                "2000'ler Türkçe pop"
+              ]
+            },
+            "manualReviewRequired": [
+              "primaryTopics"
+            ],
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": "Konser"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              },
+              "primaryTopics": [
+                "2000'ler Türkçe pop"
+              ]
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "2000'ler Türkçe pop temalı",
+              "supports": "required primary topic 2000'ler Türkçe pop"
+            },
+            {
+              "span": "konser şart",
+              "supports": "mandatory category Konser"
+            }
+          ],
+          "rationale": "The apostrophe-bearing decade is preserved verbatim as a required topic; no specific artist or repertoire is invented."
+        }
+      ]
+    },
+    {
+      "id": "dev-unsupported-ankara-atomic",
+      "cohort": "development-unseen",
+      "family": "unsupported-city-atomicity",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Sunday in Ankara, under 400 TL per person, any comedy show.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "unsupported",
+            "issue": "unsupported_location",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "unsupported": [
+              {
+                "span": "in Ankara",
+                "kind": "location",
+                "mandatory": true,
+                "reason": "catalog scope is Istanbul"
+              }
+            ],
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "in Ankara",
+              "supports": "mandatory unsupported city Ankara"
+            }
+          ],
+          "rationale": "Date, amount, and comedy are parseable but must not be partially committed around an unsupported mandatory city."
+        }
+      ]
+    },
+    {
+      "id": "dev-unsupported-accessibility-seat",
+      "cohort": "development-unseen",
+      "family": "mandatory-unsupported-accessibility-and-seat",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar işitme döngüsü ve ön sırada yan yana numaralı koltuk şart; tiyatro olsun.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "unsupported",
+            "issue": "unsupported_constraint",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "unsupported": [
+              {
+                "span": "işitme döngüsü",
+                "kind": "accessibility:hearing_loop",
+                "mandatory": true,
+                "reason": "not represented in IntentState v1"
+              },
+              {
+                "span": "ön sırada yan yana numaralı koltuk",
+                "kind": "seat_assignment",
+                "mandatory": true,
+                "reason": "seat inventory and adjacency are not supported intent facts"
+              }
+            ],
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "işitme döngüsü",
+              "supports": "mandatory unsupported hearing-loop constraint"
+            },
+            {
+              "span": "ön sırada yan yana numaralı koltuk şart",
+              "supports": "mandatory unsupported exact-seat constraint"
+            }
+          ],
+          "rationale": "Neither constraint can be weakened to generic step-free accessibility or seated activity, and the theatre clause must not be committed alone."
+        }
+      ]
+    },
+    {
+      "id": "dev-food-optional-to-mandatory",
+      "cohort": "development-unseen",
+      "family": "unsupported-optional-vs-mandatory",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Cumartesi konser olsun; vegan yemek seçeneği olsa güzel olur ama şart değil.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "category": "Konser"
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": "Konser"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            },
+            "notApplied": [
+              {
+                "span": "vegan yemek seçeneği olsa güzel olur ama şart değil",
+                "kind": "food",
+                "value": "vegan yemek seçeneği"
+              }
+            ]
+          },
+          "sourceEvidence": [
+            {
+              "span": "vegan yemek seçeneği olsa güzel olur ama şart değil",
+              "supports": "explicitly optional unsupported food preference"
+            }
+          ],
+          "rationale": "The supported search may proceed, but the food wish stays visibly unapplied and cannot be claimed as verified."
+        },
+        {
+          "id": "turn-2",
+          "message": "Vegan yemek artık zorunlu.",
+          "previousStateSource": "prior_turn_actual",
+          "expected": {
+            "status": "unsupported",
+            "issue": "unsupported_constraint",
+            "unmentionedFields": "inherit",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "unsupported": [
+              {
+                "span": "Vegan yemek artık zorunlu",
+                "kind": "food",
+                "mandatory": true,
+                "reason": "food availability is not a supported hard predicate"
+              }
+            ],
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": null,
+                "category": "Konser"
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Vegan yemek artık zorunlu",
+              "supports": "mandatory unsupported food constraint"
+            }
+          ],
+          "rationale": "Promoting the wish to mandatory changes the status to unsupported; the arm's actual previous state remains atomic and unchanged."
+        }
+      ]
+    },
+    {
+      "id": "final-tr-group-district-or",
+      "cohort": "final-confirmation",
+      "family": "holdout-composed-turkish",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Pazar üç kişiyiz; toplam 1800 TL'yi geçmeden Kadıköy'de stand-up veya tiyatro bakalım.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "partySize": 3,
+                "totalBudget": 1800,
+                "maxPrice": 600,
+                "maxPriceExclusive": false,
+                "district": "Kadıköy",
+                "categories": [
+                  "Stand-up",
+                  "Tiyatro"
+                ]
+              }
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-04",
+                "dateTo": "2026-10-04",
+                "maxPrice": 600,
+                "category": null,
+                "partySize": 3,
+                "totalBudget": 1800,
+                "maxPriceExclusive": false,
+                "district": "Kadıköy",
+                "categories": [
+                  "Stand-up",
+                  "Tiyatro"
+                ]
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Pazar",
+              "supports": "date 2026-10-04"
+            },
+            {
+              "span": "üç kişiyiz",
+              "supports": "party size 3"
+            },
+            {
+              "span": "toplam 1800 TL'yi geçmeden",
+              "supports": "inclusive group total 1800 TRY and derived per-person ceiling 600 TRY"
+            },
+            {
+              "span": "Kadıköy'de",
+              "supports": "hard district Kadıköy"
+            },
+            {
+              "span": "stand-up veya tiyatro",
+              "supports": "Stand-up OR Tiyatro"
+            }
+          ],
+          "rationale": "All constraints and the 1800 / 3 arithmetic are explicit."
+        }
+      ]
+    },
+    {
+      "id": "final-en-exclusive-quiet",
+      "cohort": "final-confirmation",
+      "family": "holdout-composed-english",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "On Saturday, strictly under 500 TL per person, no concerts; a quiet theatre is mandatory.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "executable",
+            "issue": null,
+            "unmentionedFields": "empty",
+            "semanticExpected": {
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 500,
+                "maxPriceExclusive": true,
+                "category": "Tiyatro",
+                "excludedCategories": [
+                  "Konser"
+                ]
+              },
+              "requirements": [
+                {
+                  "kind": "activity",
+                  "value": "quiet",
+                  "policy": "require_support"
+                }
+              ]
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": "2026-10-03",
+                "dateTo": "2026-10-03",
+                "maxPrice": 500,
+                "category": "Tiyatro",
+                "maxPriceExclusive": true,
+                "excludedCategories": [
+                  "Konser"
+                ]
+              },
+              "requirements": [
+                {
+                  "kind": "activity",
+                  "value": "quiet",
+                  "policy": "require_support"
+                }
+              ],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Saturday",
+              "supports": "date 2026-10-03"
+            },
+            {
+              "span": "strictly under 500 TL per person",
+              "supports": "exclusive per-person ceiling 500 TRY"
+            },
+            {
+              "span": "no concerts",
+              "supports": "exclude Konser"
+            },
+            {
+              "span": "a quiet theatre is mandatory",
+              "supports": "category Tiyatro and hard quiet requirement"
+            }
+          ],
+          "rationale": "Strictly under excludes exactly 500 TRY; mandatory requires quiet source support."
+        }
+      ]
+    },
+    {
+      "id": "final-weekend-budget-ambiguous",
+      "cohort": "final-confirmation",
+      "family": "holdout-ambiguity",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Bu hafta sonu iki kişiyiz, bütçe 1200 TL; en erken uygun etkinliği göster.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "clarify",
+            "issue": "budget_ambiguous",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "parsedFacts": {
+              "dateFrom": "2026-10-03",
+              "dateTo": "2026-10-04",
+              "partySize": 2,
+              "amountTRY": 1200,
+              "basis": "ambiguous",
+              "order": "soonest"
+            },
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Bu hafta sonu",
+              "supports": "date range 2026-10-03 through 2026-10-04"
+            },
+            {
+              "span": "iki kişiyiz",
+              "supports": "party size 2"
+            },
+            {
+              "span": "bütçe 1200 TL",
+              "supports": "amount with ambiguous basis"
+            },
+            {
+              "span": "en erken uygun etkinliği göster",
+              "supports": "soonest order"
+            }
+          ],
+          "rationale": "The date, party, and order are clear, but the budget could be total or per person and the atomic compiler must ask before committing any part."
+        }
+      ]
+    },
+    {
+      "id": "final-en-unsupported-composite",
+      "cohort": "final-confirmation",
+      "family": "holdout-unsupported",
+      "turns": [
+        {
+          "id": "turn-1",
+          "message": "Sunday in Istanbul: a hearing loop, adjacent aisle seats, and a gluten-free meal are all mandatory.",
+          "previousStateSource": "initial_empty",
+          "expected": {
+            "status": "unsupported",
+            "issue": "unsupported_constraint",
+            "unmentionedFields": "empty",
+            "stateEffect": "preserve_previous",
+            "semanticExpected": {},
+            "unsupported": [
+              {
+                "span": "a hearing loop",
+                "kind": "accessibility:hearing_loop",
+                "mandatory": true,
+                "reason": "not represented in IntentState v1"
+              },
+              {
+                "span": "adjacent aisle seats",
+                "kind": "seat_assignment",
+                "mandatory": true,
+                "reason": "seat inventory and adjacency are not supported"
+              },
+              {
+                "span": "a gluten-free meal",
+                "kind": "food",
+                "mandatory": true,
+                "reason": "food availability is not a supported hard predicate"
+              }
+            ],
+            "state": {
+              "version": 1,
+              "filters": {
+                "dateFrom": null,
+                "dateTo": null,
+                "maxPrice": null,
+                "category": null
+              },
+              "requirements": [],
+              "preferences": {
+                "mood": null,
+                "companion": null,
+                "interests": []
+              }
+            }
+          },
+          "sourceEvidence": [
+            {
+              "span": "Sunday",
+              "supports": "date 2026-10-04"
+            },
+            {
+              "span": "a hearing loop",
+              "supports": "mandatory unsupported accessibility constraint"
+            },
+            {
+              "span": "adjacent aisle seats",
+              "supports": "mandatory unsupported seat constraint"
+            },
+            {
+              "span": "a gluten-free meal",
+              "supports": "mandatory unsupported food constraint"
+            },
+            {
+              "span": "are all mandatory",
+              "supports": "mandatory strength for all three listed constraints"
+            }
+          ],
+          "rationale": "The Istanbul date is supported, but all three non-schema constraints are mandatory, so the result is an atomic unsupported response with no partial state."
+        }
+      ]
+    }
+  ]
+}

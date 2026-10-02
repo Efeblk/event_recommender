@@ -490,6 +490,45 @@ await test('mood remains soft unless explicitly mandatory', () => {
     { kind: 'activity', value: 'quiet', policy: 'require_support' },
     { kind: 'activity', value: 'seated', policy: 'require_support' },
   ]);
+  for (const message of [
+    'Oturmalı olması zorunlu',
+    'Oturmalı etkinlik şart',
+    'Seating is required',
+    'The event must be seated',
+  ])
+    assert.deepEqual(deriveRequirements(message, []), [
+      { kind: 'activity', value: 'seated', policy: 'require_support' },
+    ]);
+  assert.deepEqual(deriveRequirements('Oturmalı olabilir', []), []);
+  assert.deepEqual(
+    deriveRequirements('Seating preferred, photography required', []),
+    [],
+  );
+  assert.deepEqual(
+    deriveRequirements('Quiet preferred, photography required', []),
+    [],
+  );
+  for (const message of [
+    'Oturmalı olması zorunlu değil',
+    'Seating is not required',
+    'Sessiz olması şart değil',
+    'Quiet is not necessary',
+  ])
+    assert.deepEqual(deriveRequirements(message, []), [], message);
+  const mandatoryHistory: Message[] = [
+    {
+      role: 'user',
+      content: 'Mutlaka sessiz ve oturmalı olsun',
+    },
+  ];
+  assert.deepEqual(
+    deriveRequirements('Oturmalı olması zorunlu değil', mandatoryHistory),
+    [{ kind: 'activity', value: 'quiet', policy: 'require_support' }],
+  );
+  assert.deepEqual(
+    deriveRequirements('Sessiz olması şart değil', mandatoryHistory),
+    [{ kind: 'activity', value: 'seated', policy: 'require_support' }],
+  );
 });
 
 await test('mandatory romance and crowd level require explicit source evidence', () => {

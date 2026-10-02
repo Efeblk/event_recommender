@@ -6,6 +6,7 @@ import {
   isEligible,
   normalize,
   parseFilters,
+  interpretConstraints,
   rankEvents,
   todayInIstanbul,
   uniqueEvents,
@@ -52,6 +53,106 @@ await test('follow-up preserves previous date and category', () => {
     ...old,
     maxPrice: 800,
   });
+});
+await test('natural category exclusions do not become positive category filters', () => {
+  for (const message of [
+    'Cumartesi partnerimle konser olmayan bir etkinlik istiyorum',
+    'Cumartesi sevgilimle konser olmayan etkinliklere gidelim',
+  ]) {
+    const filters = parseFilters(message, emptyFilters, now);
+    assert.equal(filters.category, null, message);
+    assert.deepEqual(filters.excludedCategories, ['Konser'], message);
+  }
+  const alternatives = parseFilters(
+    'konser veya tiyatro olmasın, workshop olabilir, en yakın tarih',
+    emptyFilters,
+    now,
+  );
+  assert.equal(alternatives.category, null);
+  assert.equal(alternatives.categories, undefined);
+  assert.deepEqual(alternatives.excludedCategories, ['Konser', 'Tiyatro']);
+  assert.equal(
+    parseFilters('konser olan bir etkinlik', emptyFilters, now).category,
+    'Konser',
+  );
+});
+await test('soonest wording orders elsewhere without requiring an exact date', () => {
+  for (const message of [
+    'en yakın tarih',
+    'en erken tarih',
+    'soonest date',
+    'earliest event',
+  ])
+    assert.equal(interpretConstraints(message, emptyFilters, now).issue, null);
+  assert.equal(
+    interpretConstraints(
+      'en yakın tarih ama gelecek ayın son günlerinde',
+      emptyFilters,
+      now,
+    ).issue,
+    'date_ambiguous',
+  );
+});
+await test('Turkish postfix clock bounds preserve inclusive and strict wording', () => {
+  for (const message of ['21:00 ve sonrasında', 'saat 21.00 ve sonrasında']) {
+    const filters = parseFilters(message, emptyFilters, now);
+    assert.equal(filters.startTimeFrom, '21:00', message);
+    assert.equal(filters.startTimeFromExclusive, false, message);
+  }
+  for (const message of ['21:00 sonrası', 'saat 21.00 sonrasında']) {
+    const filters = parseFilters(message, emptyFilters, now);
+    assert.equal(filters.startTimeFrom, '21:00', message);
+    assert.equal(filters.startTimeFromExclusive, true, message);
+  }
+});
+await test('clock constraints require explicit timed-session evidence', () => {
+  const filters = { ...emptyFilters, startTimeFrom: '21:00' };
+  const lateEvent = { ...event, startsAt: '2026-09-12T18:00:00Z' };
+  assert.equal(isEligible(lateEvent, filters, now), false);
+  assert.equal(
+    isEligible(
+      {
+        ...lateEvent,
+        attendanceTiming: {
+          kind: 'timed_session',
+          evidence: 'provider_sessions_and_source_text',
+        },
+      },
+      filters,
+      now,
+    ),
+    true,
+  );
+  assert.equal(
+    isEligible(
+      {
+        ...lateEvent,
+        attendanceTiming: {
+          kind: 'admission_window',
+          evidence: 'provider_flexible_window',
+          validFrom: '2026-09-12T18:00:00Z',
+          validThrough: '2026-09-12T21:00:00Z',
+        },
+      },
+      filters,
+      now,
+    ),
+    false,
+  );
+  assert.equal(
+    isEligible(
+      {
+        ...lateEvent,
+        attendanceTiming: {
+          kind: 'unknown',
+          evidence: 'insufficient_source_evidence',
+        },
+      },
+      filters,
+      now,
+    ),
+    false,
+  );
 });
 await test('Sunday weekend means remaining Sunday, not yesterday', () => {
   const f = parseFilters(

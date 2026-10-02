@@ -131,7 +131,7 @@ void test('current and pending literal identities remain masked and distinct acr
   const body = buildInputInterpreterRequest('jev-test', input);
   const literalCandidates = body.state.sourceCandidates.interests.filter((item) => item.value.startsWith('LITERAL'));
   assert.equal(literalCandidates.length, 2);
-  const first = firstResponse(body, Object.fromEntries(literalCandidates.map((item) => [`interest_${item.id}`, 'select'])));
+  const first = firstResponse(body, Object.fromEntries(literalCandidates.map((item) => [`interest_${item.id}`, 'optional'])));
   const proposal = parseInputInterpreterProposal(first, input);
   assert.ok(proposal.plans.length);
   const audit = buildInputPlanAuditRequest('jev-test', input, proposal);

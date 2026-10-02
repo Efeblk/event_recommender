@@ -37,7 +37,7 @@ const theatrePlay =
 const tabletopGame =
   /\b(?:kutu|masa|kart|video|bilgisayar|konsol)\s+oyun(?:u|lari?)?\b/;
 export const CATEGORY_NEGATION =
-  '(?:istemiyorum|istemiyoruz|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|degil|haric|disi|disinda|disindaki|yerine|bosver)';
+  '(?:istemiyorum|istemiyoruz|istemem|istemeyiz|aramiyorum|aramayiz|olmasin|olmasinlar|olmayan|degil|haric|disi|disinda|disindaki|yerine|bosver)';
 
 const rejectionTerms = [
   ['workshop', /\b(?:workshops?|atolye(?:ler)?)\b/, 'Workshop'],

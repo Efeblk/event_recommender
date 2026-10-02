@@ -4,11 +4,17 @@ import {
   type InputSpellingCandidate,
 } from './input-spelling.ts';
 import { addDays, todayInIstanbul, validDay } from './search.ts';
+import { harvestInputPropositions, type InputPropositionScope } from './input-propositions.ts';
 
 export interface Span<T> {
   id: string;
   text: string;
   value: T;
+  sourceSpans?: Array<{ start: number; end: number }>;
+  scope?: InputPropositionScope;
+  sourceMessage?: 'current' | 'pending';
+  role?: 'optional-location';
+  operation?: { kind: 'delta'; delta: number };
 }
 export type NumberSpan = Span<number>;
 export interface DateValue {
@@ -304,7 +310,7 @@ function wordNumber(raw: string) {
   const value = total + current;
   return saw && value <= 100000 ? value : null;
 }
-function push<T>(array: Span<T>[], prefix: string, text: string, value: T) {
+function push<T>(array: Span<T>[], prefix: string, text: string, value: T, extra: Partial<Span<T>> = {}) {
   const clean = text.trim();
   if (
     !clean ||
@@ -316,7 +322,7 @@ function push<T>(array: Span<T>[], prefix: string, text: string, value: T) {
   )
     return false;
   if (array.length >= LIMIT) return true;
-  array.push({ id: `${prefix}${array.length}`, text: clean, value });
+  array.push({ id: `${prefix}${array.length}`, text: clean, value, ...extra });
   return false;
 }
 
@@ -345,8 +351,9 @@ export function buildInputCandidates(
     prefix: string,
     text: string,
     value: T,
+    extra: Partial<Span<T>> = {},
   ) => {
-    if (push(pool[key] as Span<T>[], prefix, text, value)) pool.overflow = true;
+    if (push(pool[key] as Span<T>[], prefix, text, value, extra)) pool.overflow = true;
   };
   const source = normalizedSource(message),
     q = source.text,
@@ -372,13 +379,14 @@ export function buildInputCandidates(
     '(?<![\\p{L}\\p{N}_.,:/+\\-])(?:\u20ba\\s*)?\\d[\\d.,]*(?:\\s*(?:k|bin))?(?:\\s*(?:tl|try|lira|\u20ba))?(?![\\p{L}\\p{N}_:/-])';
   for (const match of scan(numericToken)) {
     const raw = match[0].trim().replace(/[.,]$/, '');
+    const sourceRange = source.range(match.index!, match.index! + match[0].length);
+    if (/^[\u2018\u2019']\p{L}+/u.test(message.slice(sourceRange.end))) continue;
+    if (/^\s*(?:kisi(?:yiz|lik)?|people|persons?|adults?|yetiskin|cocuk|children|child|kids?)\b/u.test(q.slice(match.index! + match[0].length))) continue;
     const explicit =
       /(?:tl|try|lira|\u20ba|k|bin)$/.test(raw) || raw.startsWith('\u20ba');
-    const budgetContext =
-      previous.filters.maxPrice != null ||
-      /\b(?:butce|budget|kisi basi|per person|each|toplam|total|instead)\b/.test(
-        q,
-      );
+    const localContext = q.slice(Math.max(0, match.index! - 32), match.index! + match[0].length + 32);
+    const budgetContext = previous.filters.maxPrice != null ||
+      /\b(?:butce|budget|kisi basi|per person|each|toplam|total|instead|under|below|up to|at most|en fazla|en cok)\b/.test(localContext);
     if (!explicit && !budgetContext) continue;
     const number = raw
       .replace(/^\u20ba\s*/, '')
@@ -416,6 +424,8 @@ export function buildInputCandidates(
   }> = [];
   const partyPattern = `${boundaryStart}(${countToken})\\s*(kisi(?:yiz|lik)?|people|persons?|adults?|yetiskin|cocuk|children|child|kids?)${boundaryEnd}`;
   for (const match of scan(partyPattern)) {
+    const following = q.slice(match.index! + match[0].length);
+    if (/^\s+(?:daha\s+katildi|more\s+(?:are\s+|is\s+)?joining|joined|gelmiyor|gelemiyor|katilmayacak|ayrildi|is\s+not\s+coming|are\s+not\s+coming|dropped\s+out|cancelled)\b/u.test(following)) continue;
     const value = /^\d+$/.test(match[1])
       ? Number(match[1])
       : wordNumber(match[1].replace(/-/g, ' '));
@@ -452,7 +462,7 @@ export function buildInputCandidates(
   ))
     add('parties', 'p', original(match), 2);
   for (const match of scan(
-    `${boundaryStart}we(?:'re| are)\\s+(${countToken})${boundaryEnd}`,
+    `${boundaryStart}we(?:'re| are)\\s+(${countToken})(?:\\s+of\\s+us)?${boundaryEnd}`,
   )) {
     const value = /^\d+$/.test(match[1])
       ? Number(match[1])
@@ -462,11 +472,32 @@ export function buildInputCandidates(
     else pool.overflow = true;
   }
   for (const match of scan(
-    `${boundaryStart}(?:bir|one)\\s+(?:kisi|person)\\s+(?:daha\\s+katildi|more\\s+(?:is\\s+)?joining)${boundaryEnd}`,
+    `${boundaryStart}(${countToken})\\s+of\\s+us${boundaryEnd}`,
   )) {
-    if (previous.filters.partySize && previous.filters.partySize < 100)
-      add('parties', 'p', original(match), previous.filters.partySize + 1);
+    if (/we(?:'re| are)\\s+$/u.test(q.slice(Math.max(0, match.index! - 8), match.index!))) continue;
+    const value = /^\d+$/.test(match[1])
+      ? Number(match[1])
+      : wordNumber(match[1].replace(/-/g, ' '));
+    if (value != null && value >= 1 && value <= 100)
+      add('parties', 'p', original(match), value);
     else pool.overflow = true;
+  }
+  const addPartyDelta = (match: RegExpMatchArray, magnitude: number, direction: 1 | -1) => {
+    const delta = direction * magnitude;
+    const resolved = previous.filters.partySize == null ? magnitude : previous.filters.partySize + delta;
+    add('parties', 'p', original(match), resolved, { operation: { kind: 'delta', delta } });
+  };
+  for (const match of scan(
+    `${boundaryStart}(${countToken})\\s+(?:kisi|people|persons?)\\s+(?:daha\\s+katildi|more\\s+(?:are\\s+|is\\s+)?joining|joined)${boundaryEnd}`,
+  )) {
+    const value = /^\\d+$/.test(match[1]) ? Number(match[1]) : wordNumber(match[1].replace(/-/g, ' '));
+    if (value != null && value >= 1 && value <= 100) addPartyDelta(match, value, 1); else pool.overflow = true;
+  }
+  for (const match of scan(
+    `${boundaryStart}(${countToken})\\s+(?:kisi|people|persons?)\\s+(?:gelmiyor|gelemiyor|katilmayacak|ayrildi|is\\s+not\\s+coming|are\\s+not\\s+coming|dropped\\s+out|cancelled)${boundaryEnd}`,
+  )) {
+    const value = /^\\d+$/.test(match[1]) ? Number(match[1]) : wordNumber(match[1].replace(/-/g, ' '));
+    if (value != null && value >= 1 && value <= 100) addPartyDelta(match, value, -1); else pool.overflow = true;
   }
   for (const spelling of pool.spellingCandidates ?? []) {
     if (spelling.kind !== 'companion') continue;
@@ -518,6 +549,13 @@ export function buildInputCandidates(
       amountRanges.some(
         ([start, end]) => match.index! >= start && match.index! < end,
       )
+    )
+      continue;
+    const after = q.slice(match.index! + match[0].length);
+    if (
+      match[3] == null &&
+      match[0].includes('.') &&
+      /^\s*(?:hours?|hrs?|minutes?|mins?|days?|saat|dakika|gun)(?!\p{L})/u.test(after)
     )
       continue;
     const a = Number(match[1]),
@@ -800,79 +838,44 @@ export function buildInputCandidates(
     if (value) add('districts', 'l', spelling.text, value);
   }
 
-  for (const match of message.matchAll(
-    /["\u201c\u201d']([^"\u201c\u201d']{1,160})["\u201c\u201d']/gu,
-  ))
-    add('interests', 'i', match[0], match[1]);
-  for (const match of scan(
-    `${boundaryStart}(?:kalabalik olmayan|canli muzik|date night|low-key|cultural|intimate|improv|exhibitions?|workshops?|atolye(?:ler)?|sergi(?:ler)?|romantik|sakin)${boundaryEnd}`,
-  ))
-    add('interests', 'i', original(match), original(match));
-  // Offer the interpreter topical words independently from hard constraints.
-  // Mask only spans already grounded by deterministic extractors. Residue that
-  // still looks like a negation or an unsupported mandatory condition is left
-  // unselected rather than weakened into an optional interest.
-  const masked = message.split('');
-  const hard = [
-    ...pool.amounts,
-    ...pool.parties,
-    ...pool.dates,
-    ...pool.times,
-    ...pool.districts,
-    ...pool.ages,
-  ];
-  for (const { text } of hard) {
+  const hardRanges: Array<{ start: number; end: number }> = [];
+  for (const item of [
+    ...pool.amounts, ...pool.parties, ...pool.dates, ...pool.times,
+    ...pool.districts, ...pool.ages,
+  ]) {
+    if (item.sourceSpans?.length) {
+      hardRanges.push(...item.sourceSpans);
+      continue;
+    }
     let offset = 0;
-    while ((offset = message.indexOf(text, offset)) >= 0) {
-      for (let index = offset; index < offset + text.length; index++)
-        masked[index] = ' ';
-      offset += text.length;
+    while ((offset = message.indexOf(item.text, offset)) >= 0) {
+      hardRanges.push({ start: offset, end: offset + item.text.length });
+      offset += item.text.length;
     }
   }
-  // Quoted text is already copied literally above; do not manufacture a
-  // second, partially stripped candidate from inside or around the title.
-  for (const match of message.matchAll(
-    /["\u201c\u201d']([^"\u201c\u201d']{1,160})["\u201c\u201d']/gu,
-  ))
-    for (let index = match.index!; index < match.index! + match[0].length; index++)
-      masked[index] = ' ';
-  const residual = masked.join('');
-  for (const part of residual.split(/[,;!?\n]+|\b(?:veya|or)\b/giu)) {
-    const clean = part
-      .trim()
-      .replace(/^(?:da|de|ta|te)\b\s*/iu, '')
-      .replace(/\b(?:konser(?:i|ler)?|concerts?|etkinlik(?:ler)?|events?|tiyatro|theatre|theater|oyun(?:u|lar)?|show|gosteri|sergi(?:ler)?|exhibitions?)\b/giu, ' ')
-      .replace(/\b(?:dinlemek\s+istiyoz|dinlemek\s+istiyoruz|dinlemek\s+istiyorum|ariyorum|arıyorum|bakiyorum|bakıyorum|bakiyom|bakıyom|istiyorum|isterim|bul|bulur musun|goster|göster|oner|öner|looking for|find|show me|recommend)\b/giu, ' ')
-      .replace(/\b(?:mumkunse|mümkünse|tercihen|please|lutfen|lütfen)\b/giu, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    const normalized = fold(clean);
-    if (
-      !clean ||
-      clean.length > 160 ||
-      !/\p{L}/u.test(clean) ||
-      /\b(?:degil|istemiyorum|olmasin|olmasın|without|except|must not|no)\b/u.test(normalized) ||
-      /\b(?:sart|zorunlu|mecbur|required|must|need(?:ed)?|accessible|eris(?:im|imi)|baslamasin|bitmesin)\b/u.test(normalized) ||
-      /^(?:ok|okay|olur)$/u.test(normalized) ||
-      /^(?:en fazla|en az|kisi basi|kişi başı|toplam|under|over|at most|at least|per person|each)$/u.test(normalized) ||
-      /^(?:en yakin tarih|en yakın tarih|en erken(?: tarih)?|ilk uygun tarih|mumkun olan ilk tarih|mümkün olan ilk tarih|soonest|earliest|next available date)$/u.test(normalized)
-    )
+  for (const harvested of harvestInputPropositions(message, hardRanges)) {
+    if (pool.interests.length >= LIMIT) {
+      pool.overflow = true;
       continue;
-    add('interests', 'i', clean, clean);
+    }
+    const candidate: Span<string> = {
+      id: `i${pool.interests.length}`,
+      text: harvested.text,
+      value: harvested.text,
+      sourceSpans: [{ start: harvested.start, end: harvested.end }],
+      scope: harvested.scope,
+    };
+    pool.interests.push(candidate);
   }
-  for (const clause of message.split(/[,;!?\n]+/)) {
-    const clean = clause.trim();
-    const normalized = fold(clean);
-    if (
-      clean &&
-      clean.length <= 160 &&
-      /\p{L}/u.test(clean) &&
-      !hard.some(({ text }) => clean.includes(text)) &&
-      !/["\u201c\u201d']/.test(clean) &&
-      !/^(?:en yakin tarih|en erken(?: tarih)?|ilk uygun tarih|mumkun olan ilk tarih|soonest|earliest|next available date)$/u.test(normalized.trim()) &&
-      !/\b(?:no|not|without|degil|istemiyorum|olmasin|sart|zorunlu|mecbur|required|must|accessible|eris(?:im|imi)|baslamasin|bitmesin)\b/u.test(normalized)
-    )
-      add('interests', 'i', clean, clean);
+  for (const target of pool.interests) {
+    if (target.scope?.ownership?.kind !== 'operation-target') continue;
+    target.scope.ownership.references = pool.interests
+      .filter((candidate) =>
+        candidate.scope?.ownership?.kind === 'operation-replacement' &&
+        candidate.scope.proposition.start === target.scope!.proposition.start &&
+        candidate.scope.proposition.end === target.scope!.proposition.end)
+      .map(({ id }) => id);
   }
   return pool;
+
 }

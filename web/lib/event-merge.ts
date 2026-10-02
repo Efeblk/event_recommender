@@ -195,6 +195,49 @@ const FABRIKAFA_NAMED_VENUES = new Set([
 const FABRIKAFA_DISTRICTS = new Set(['', normalize('Üsküdar'), normalize('İstanbul Anadolu')]);
 const FABRIKAFA_VENUE_KEY = 'reviewed:fabrikafa-make-and-coffee';
 
+// Frozen September 2026 source observations identify these literal programme
+// spellings as the same Anka Workshop activities. Bubilet supplies the full
+// Kadıköy address, while Biletix uses the compact Ankaworkshop venue spelling;
+// Biletinial independently names Anka Workshop in the Art Day description.
+// Keep the programme list closed so unrelated organizer-prefixed workshops do
+// not acquire identity through a general title-prefix rule.
+const ANKA_PROGRAMS = [
+  ['comlek', 'Anka Workshop: Çömlek Atölyesi', 'Çömlek Atölyesi'],
+  ['kintsugi', 'Anka Workshop: Kintsugi Atölyesi', 'Kintsugi Atölyesi'],
+  ['kuru-cicek', 'Anka Workshop: Kuru Çiçek Atölyesi', 'Kuru Çiçek Atölyesi'],
+  ['mozaik-ayna', 'Anka Workshop: Mozaik Ayna', 'Mozaik Ayna Atölyesi'],
+  ['mozaik-lamba', 'Anka Workshop: Mozaik Lamba', 'Mozaik Lamba Atölyesi'],
+  ['mozaik-mumluk', 'Anka Workshop: Mozaik Mumluk', 'Mozaik Mumluk Atölyesi'],
+  ['mum', 'Anka Workshop: Mum Atölyesi', 'Mum Atölyesi'],
+  ['tasli-tuval', 'Anka Workshop: Taşlı Tuval', 'Taşlı Tuval Atölyesi'],
+  ['vitray-boyama', 'Anka Workshop: Vitray Boyama Atölyesi', 'Vitray Boyama Atölyesi'],
+  ['art-day', 'Art Day'],
+] as const;
+const ankaPrograms = new Map<string, string>();
+for (const [program, ...titles] of ANKA_PROGRAMS)
+  for (const title of titles) ankaPrograms.set(normalize(title), program);
+const ANKA_ADDRESS = normalize('Osmanağa Mah. Serasker cad. Arın Apt. No:61/4 Kadıköy / İSTANBUL');
+const ANKA_VENUE_KEY = 'reviewed:anka-workshop-kadikoy';
+const ANKA_BUBILET_VENUE = normalize('Anka Workshop');
+const ANKA_BILETIX_VENUE = normalize('Ankaworkshop');
+const ANKA_BILETINIAL_VENUE = normalize('Anka Workshop (İstanbul)');
+const ANKA_DISTRICTS = new Set(['', normalize('Kadıköy'), normalize('İstanbul Anadolu')]);
+
+function ankaProgram(event: EventRecord): string | undefined {
+  if (event.category !== 'Workshop' || normalize(event.city) !== 'istanbul') return undefined;
+  const program = ankaPrograms.get(normalize(event.title));
+  if (!program || !ANKA_DISTRICTS.has(normalize(event.district))) return undefined;
+  const venue = normalize(event.venue);
+  const address = normalize(event.address);
+  if (venue === ANKA_BUBILET_VENUE)
+    return address === ANKA_ADDRESS ? program : undefined;
+  if (venue === ANKA_BILETIX_VENUE)
+    return !address || address === ANKA_ADDRESS ? program : undefined;
+  if (venue === ANKA_BILETINIAL_VENUE && program === 'art-day')
+    return !address && /\banka workshop\b/.test(normalize(event.description)) ? program : undefined;
+  return undefined;
+}
+
 const REVIEWED_WORKSHOP_VENUES = [
   {
     key: 'reviewed:bagimsiz-sanat-vakfi',
@@ -241,6 +284,12 @@ function fabrikafaProgram(event: EventRecord): string | undefined {
 }
 
 function reviewedWorkshopIdentity(event: EventRecord): { title: string; venue: string } | undefined {
+  const anka = ankaProgram(event);
+  if (anka)
+    return {
+      title: `reviewed:anka-workshop-program:${anka}`,
+      venue: ANKA_VENUE_KEY,
+    };
   const fabrikafa = fabrikafaProgram(event);
   if (fabrikafa)
     return {

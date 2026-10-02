@@ -11,10 +11,10 @@ import {
   isFullPreferenceReset,
 } from './intent.ts';
 import type { Category } from './types.ts';
-import { hybridRank, type SemanticRanking } from './hybrid.ts';
+import { hybridRank, lexicalRank, type SemanticRanking } from './hybrid.ts';
 import { displayShowIdentity } from './event-merge.ts';
 import type { IntentState } from './input-state.ts';
-import { retrievalQuery } from './input-retrieval.ts';
+import { primaryTopicRetrievalQuery, retrievalQuery } from './input-retrieval.ts';
 
 export interface SearchContext {
   query: string;
@@ -525,6 +525,24 @@ export function shortlistEvents(
       ) ?? diverseRanked.slice(0, limit)
     )
     : diverseRanked;
+  // Dense+lexical RRF otherwise gives two-list candidates an inherent edge
+  // over exact topic matches whose vectors are absent. Reserve a bounded,
+  // production-distinct lexical lane so the final Jev judge can evaluate them.
+  if (semantic && intent?.primaryTopics?.length) {
+    const topicQuery = primaryTopicRetrievalQuery(intent);
+    // Reserve half of the judge budget for direct topic recall and retain the
+    // other half for semantic paraphrases. The final judge still establishes
+    // source support; a lexical match alone is never treated as proof.
+    const topicCandidates = diverseEvents(
+      lexicalRank(allowed, topicQuery),
+      Math.ceil(limit / 2),
+    );
+    const reserved = diverseEvents(
+      [...topicCandidates, ...relevanceCovered],
+      limit,
+    );
+    relevanceCovered.splice(0, relevanceCovered.length, ...reserved);
+  }
   if (intent?.preferences.order === 'soonest')
     {
       const chronological = soonestProductionRepresentatives(allowed, intent);

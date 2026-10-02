@@ -1,0 +1,783 @@
+{
+  "schemaVersion": 1,
+  "id": "response-quality-baseline-control-v1",
+  "provenance": {
+    "captureType": "frozen-contract-control",
+    "runtimeRevision": null,
+    "note": "Synthetic pass control for scorer reproducibility; it is not evidence from an older application runtime."
+  },
+  "cases": [
+    {
+      "id": "dev_photo_tr",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Cumartesi fotoğraf öğrenebileceğim bir atölye istiyorum.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "categories": [
+                "Atölye"
+              ]
+            },
+            "required": [
+              "topic:photography",
+              "format:workshop",
+              "experience:learning"
+            ],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "topic": "photography"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "photo-101",
+              "familyId": "photo-workshop",
+              "sourceReferences": [
+                "src-photo"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dev_photo_en",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "A photography workshop on Saturday; learning by doing is required.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "categories": [
+                "Atölye"
+              ]
+            },
+            "required": [
+              "topic:photography",
+              "format:workshop",
+              "experience:learning"
+            ],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "topic": "photography"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "photo-101",
+              "familyId": "photo-workshop",
+              "sourceReferences": [
+                "src-photo"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dev_compound_2000",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Cumartesi 2000'ler müziği olsa güzel olur ama şart değil; konser veya stand-up, kişi başı en çok 900 TL.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "maxPrice": 900,
+              "categoryAny": [
+                "Konser",
+                "Stand-up"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [
+              "topic:2000s"
+            ],
+            "logic": "OR",
+            "committed": {
+              "date": "2026-10-03",
+              "maxPrice": 900,
+              "categoryAny": [
+                "Konser",
+                "Stand-up"
+              ]
+            }
+          },
+          "cards": [
+            {
+              "recordId": "concert-501",
+              "familyId": "pop-2000",
+              "sourceReferences": [
+                "src-concert"
+              ]
+            },
+            {
+              "recordId": "standup-401",
+              "familyId": "laugh-night",
+              "sourceReferences": [
+                "src-standup"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dev_group_budget",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Cumartesi dört kişiyiz, toplam 2000 TL, tiyatro olsun.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "partySize": 4,
+              "totalBudget": 2000,
+              "maxPrice": 500,
+              "categories": [
+                "Tiyatro"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "partySize": 4,
+              "totalBudget": 2000,
+              "maxPrice": 500,
+              "categories": ["Tiyatro"]
+            }
+          },
+          "cards": [],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        },
+        {
+          "id": "t2",
+          "message": "Bir kişi gelmiyor; toplam bütçe aynı kalsın.",
+          "priorState": {
+            "committed": {
+              "date": "2026-10-03",
+              "partySize": 4,
+              "totalBudget": 2000,
+              "maxPrice": 500,
+              "categories": ["Tiyatro"]
+            }
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "partySize": 3,
+              "totalBudget": 2000,
+              "maxPrice": 666.6667,
+              "categories": [
+                "Tiyatro"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "partySize": 3,
+              "totalBudget": 2000,
+              "maxPrice": 666.6667
+            }
+          },
+          "cards": [],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dev_botany_proven",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Pazar botanik konusu kesin olsun, çocuk etkinliği olmasın.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-04"
+            },
+            "required": [
+              "topic:botany"
+            ],
+            "excluded": [
+              "audience:children"
+            ],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-04",
+              "topic": "botany"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "botany-201",
+              "familyId": "botany-walk",
+              "sourceReferences": [
+                "src-botany"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dev_quiet_required",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Cumartesi mutlaka sessiz bir etkinlik; konser istemiyorum.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03"
+            },
+            "required": [
+              "environment:quiet"
+            ],
+            "excluded": [
+              "category:concert"
+            ],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "quiet": true
+            }
+          },
+          "cards": [
+            {
+              "recordId": "theatre-301",
+              "familyId": "moon-play",
+              "sourceReferences": [
+                "src-theatre"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "dev_optional_control",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Cumartesi tiyatro; mümkünse sessiz olsun ama şart değil.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "categories": [
+                "Tiyatro"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [
+              "environment:quiet"
+            ],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "category": "Tiyatro"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "theatre-301",
+              "familyId": "moon-play",
+              "sourceReferences": [
+                "src-theatre"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_excluded_topic",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Saturday theatre, but nothing with a political theme.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "categories": [
+                "Tiyatro"
+              ]
+            },
+            "required": [],
+            "excluded": [
+              "topic:politics"
+            ],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "category": "Tiyatro"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "theatre-301",
+              "familyId": "moon-play",
+              "sourceReferences": [
+                "src-theatre"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_or_preserved",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Either theatre or stand-up this Saturday, maximum 700 lira.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "maxPrice": 700,
+              "categoryAny": [
+                "Tiyatro",
+                "Stand-up"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [],
+            "logic": "OR",
+            "committed": {
+              "date": "2026-10-03",
+              "maxPrice": 700,
+              "categoryAny": [
+                "Tiyatro",
+                "Stand-up"
+              ]
+            }
+          },
+          "cards": [
+            {
+              "recordId": "theatre-301",
+              "familyId": "moon-play",
+              "sourceReferences": [
+                "src-theatre"
+              ]
+            },
+            {
+              "recordId": "standup-401",
+              "familyId": "laugh-night",
+              "sourceReferences": [
+                "src-standup"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_atomic_clarify",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Keep everything, but make the budget 500.",
+          "priorState": {
+            "committed": {
+              "date": "2026-10-03",
+              "partySize": 4,
+              "totalBudget": 2000
+            }
+          },
+          "pendingState": {
+            "unresolvedRequest": "Keep everything, but make the budget 500."
+          },
+          "state": {
+            "action": "clarify",
+            "filters": {},
+            "required": [],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "partySize": 4,
+              "totalBudget": 2000
+            }
+          },
+          "atomicStateUnchanged": true,
+          "cards": [],
+          "usage": {
+            "retrievalCalls": 0
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_required_and",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Pazar hem botanik kanıtı hem sessiz ortam kanıtı şart.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-04"
+            },
+            "required": [
+              "topic:botany",
+              "environment:quiet"
+            ],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-04",
+              "botany": true,
+              "quiet": true
+            }
+          },
+          "cards": [
+            {
+              "recordId": "botany-201",
+              "familyId": "botany-walk",
+              "sourceReferences": [
+                "src-botany"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_correction",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Saturday stand-up under 700.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "maxPrice": 700,
+              "categories": [
+                "Stand-up"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "maxPrice": 700,
+              "categories": ["Stand-up"]
+            }
+          },
+          "cards": [
+            {
+              "recordId": "standup-401",
+              "familyId": "laugh-night",
+              "sourceReferences": [
+                "src-standup"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        },
+        {
+          "id": "t2",
+          "message": "Tiyatro olsun, bütçe ve tarih kalsın.",
+          "priorState": {
+            "committed": {
+              "date": "2026-10-03",
+              "maxPrice": 700,
+              "categories": ["Stand-up"]
+            }
+          },
+          "pendingState": {
+            "unresolvedRequest": "Saturday stand-up under 700."
+          },
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "maxPrice": 700,
+              "categories": [
+                "Tiyatro"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "maxPrice": 700,
+              "category": "Tiyatro"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "theatre-301",
+              "familyId": "moon-play",
+              "sourceReferences": [
+                "src-theatre"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_negative_control",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Saturday stand-up. Quiet is irrelevant.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "categories": [
+                "Stand-up"
+              ]
+            },
+            "required": [],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "category": "Stand-up"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "standup-401",
+              "familyId": "laugh-night",
+              "sourceReferences": [
+                "src-standup"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_no_false_clarify",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Pazar botanik yürüyüşü, 300 TL veya daha az.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-04",
+              "maxPrice": 300
+            },
+            "required": [
+              "topic:botany"
+            ],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-04",
+              "maxPrice": 300,
+              "topic": "botany"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "botany-201",
+              "familyId": "botany-walk",
+              "sourceReferences": [
+                "src-botany"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_duplicate_family",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Saturday photography workshop.",
+          "priorState": {
+            "committed": {}
+          },
+          "pendingState": null,
+          "state": {
+            "action": "search",
+            "filters": {
+              "date": "2026-10-03",
+              "categories": [
+                "Atölye"
+              ]
+            },
+            "required": [
+              "topic:photography",
+              "format:workshop"
+            ],
+            "excluded": [],
+            "optional": [],
+            "logic": "AND",
+            "committed": {
+              "date": "2026-10-03",
+              "topic": "photography"
+            }
+          },
+          "cards": [
+            {
+              "recordId": "photo-101",
+              "familyId": "photo-workshop",
+              "sourceReferences": [
+                "src-photo"
+              ]
+            }
+          ],
+          "usage": {
+            "retrievalCalls": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "holdout_unsupported_location",
+      "turns": [
+        {
+          "id": "t1",
+          "message": "Ankara'da cumartesi sakin bir tiyatro bul.",
+          "priorState": { "committed": {} },
+          "pendingState": null,
+          "state": { "action": "refuse", "filters": {}, "required": [], "excluded": [], "optional": [], "logic": "AND", "committed": {} },
+          "atomicStateUnchanged": true,
+          "cards": [],
+          "usage": { "retrievalCalls": 0 }
+        }
+      ]
+    }
+  ]
+}

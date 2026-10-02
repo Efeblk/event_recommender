@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { buildInputCandidates } from '../lib/input-candidates.ts';
+import { buildInputInterpreterRequest } from '../lib/input-interpreter.ts';
 import { emptyIntentState } from '../lib/input-state.ts';
 
 const now = new Date('2026-09-28T09:00:00Z');
@@ -19,25 +20,32 @@ void test('grounds a residual topic independently from date, district and budget
   assert.ok(pool.districts.length > 0);
   assert.ok(pool.amounts.some(({ value }) => value === 900));
   assert.ok(pool.interests.some(({ value }) => value === 'indie'));
-  assert.ok(!pool.interests.some(({ value }) => /yarın|kadıköy|900|başlamasın/iu.test(value)));
+  assert.ok(!pool.interests.some(({ value }) => /yarın|kadıköy|900/iu.test(value)));
+  const unsupportedTiming = pool.interests.find(({ value }) => /başlamasın/iu.test(value));
+  assert.ok(unsupportedTiming);
+  assert.equal(unsupportedTiming.scope?.kind, 'subject');
+  assert.equal(unsupportedTiming.scope?.context.text, 'çok geç başlamasın mümkünse');
+  assert.equal(
+    unsupportedTiming.sourceSpans?.map(({ start, end }) =>
+      'yarın kadıköyde indie konser bakıyom, kişi başı en fazla 900tl; çok geç başlamasın mümkünse'.slice(start, end)).join(''),
+    unsupportedTiming.value,
+  );
 });
 
 void test('preserves an optional time-context phrase as a selectable interest', () => {
   assert.ok(interests('iş çıkışı indie konser bakıyorum').includes('iş çıkışı indie'));
 });
 
-void test('does not weaken negation or unsupported mandatory conditions into interests', () => {
+void test('retains negation and unsupported mandatory scope for typed interpretation or audit', () => {
   for (const message of [
     'indie olmasın',
     'tekerlekli sandalye erişimi şart',
     'konser gece bitmesin',
-  ])
-    assert.ok(
-      !interests(message).some((value) =>
-        /indie|tekerlekli|erişim|gece|bitmesin/iu.test(value),
-      ),
-      message,
-    );
+  ]) {
+    const candidates = buildInputCandidates(message, now, emptyIntentState()).interests;
+    assert.ok(candidates.length > 0, message);
+    assert.ok(candidates.some(({ scope }) => /olmasın|şart|bitmesin/iu.test(scope?.context.text ?? '')), message);
+  }
 });
 
 void test('keeps literal quoted titles intact without residual fragments', () => {
@@ -47,14 +55,19 @@ void test('keeps literal quoted titles intact without residual fragments', () =>
 });
 
 void test('grounds a colloquial suffixed per-ticket upper bound', () => {
+  const message = 'cmt beşiktaşta caz dinlemek istiyoz, elektronik olmasın. 2 kişi, bilet başı 1100e kadar ok';
   const pool = buildInputCandidates(
-    'cmt beşiktaşta caz dinlemek istiyoz, elektronik olmasın. 2 kişi, bilet başı 1100e kadar ok',
+    message,
     now,
     emptyIntentState(),
   );
   assert.ok(pool.amounts.some(({ value }) => value === 1100));
   assert.ok(pool.dates.some(({ value }) => value.dateFrom === '2026-10-03'));
-  assert.ok(pool.interests.some(({ value }) => value === 'caz'));
+  assert.ok(!pool.interests.some(({ value }) => value === 'caz'));
+  const request = buildInputInterpreterRequest('jev-test', { message, previous: emptyIntentState(), now });
+  assert.match(request.state.constraintText, /caz/u);
+  const jazzQuestion = Object.entries(request.questions).find(([id]) => id === 'req_genre_jazz')?.[1];
+  assert.ok(jazzQuestion && 'require' in jazzQuestion.criteria);
   assert.ok(!pool.interests.some(({ value }) => value === 'ok'));
 });
 

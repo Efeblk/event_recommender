@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "scope": "Offline isolated semantic parsing; no production integration or model calls",
+  "referenceDate": "2026-10-01",
+  "corpus": { "total": 200, "languages": { "tr": 100, "en": 100 }, "slices": { "clear": 120, "ambiguous": 40, "unsupported": 40 } },
+  "gates": {
+    "correctClearAutomaticMinimum": 108,
+    "exactAcceptedRatioMinimum": 0.98,
+    "acceptedUnsupportedMaximum": 0,
+    "hardConstraintWeakeningMaximum": 0,
+    "completeAmbiguitiesMinimum": 38,
+    "warmParserP95MillisecondsMaximum": 25,
+    "invariantViolationsMaximum": 0
+  },
+  "comparison": "Ignore evidence and condition IDs, preserve Boolean tree scope, modality, exact values, edit target IDs and operation order. Only consecutive additions commute. Separately report resulting-plan equality. No post-outcome Boolean rewrites.",
+  "sourceCoverage": "Every non-whitespace character must have an ownership span except ordinary punctuation . , ; ! ? apostrophes quotes parentheses colon. Ignored numbers, operators, currency symbols and other material characters invalidate acceptance.",
+  "chains": "Supply actual preceding accepted state; refusal preserves actual previous state. Never substitute gold state. Report direct failures and subsequent chain failures separately.",
+  "freeze": "Seal all runtime/scoring/policy sources and independently reviewed corpus before parsing. One corpus pass, no tuning against held-out results. Keep every raw result and pre-call corpus revision.",
+  "goldProvenance": "Independent agent-authored and agent-reviewed constructed bilingual gold, not external human annotation; paired translations are correlated and do not establish population accuracy.",
+  "exposureLimitation": "The parent reviewed benchmark labels before the structural grammar rewrite. The original implementation worker was blinded; the final parent implementation was not completely blinded. This frozen benchmark is diagnostic, not an independent certification of generalization.",
+  "calls": { "paidProviderCalls": 0, "modelInferenceCalls": 0 }
+}

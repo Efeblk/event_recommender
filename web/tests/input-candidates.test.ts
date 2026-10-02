@@ -9,6 +9,37 @@ const now = new Date('2026-09-28T09:00:00Z');
 const build = (message: string, previous = emptyIntentState()) =>
   buildInputCandidates(message, now, previous);
 
+void test('topic residual family removes typed/request wrappers while retaining complete source Boolean clauses', () => {
+  for (const message of [
+    'Pazar 4 kişiyiz, toplam 3200 liraya komedi oyunu ya da standup bakalım',
+    'Sunday, four people, total 3200 TL, comedy or stand-up please',
+    'kişi başı 800 TL, Kadıköy, caz veya rock konseri arıyorum',
+  ]) assert.deepEqual(build(message).interests, [], message);
+  for (const [message, expected] of [
+    ['Pazar fotoğraf veya seramik olsun', 'fotoğraf veya seramik'],
+    ['Sunday, photography or ceramics please', 'photography or ceramics'],
+    ['fotoğraf ve seramik', 'fotoğraf ve seramik'],
+    ['photography and ceramics', 'photography and ceramics'],
+    ['photography or jazz concert', 'photography or jazz concert'],
+  ]) {
+    const topics = build(message).interests;
+    assert.deepEqual(topics.map((item) => item.value), [expected], message);
+    assert.equal(topics[0].sourceSpans?.map(({ start, end }) => message.slice(start, end)).join(' '), expected);
+  }
+  const correction = build('fotoğraf değil seramik').interests;
+  assert.deepEqual(correction.map(({ value }) => value), ['fotoğraf', 'seramik']);
+  assert.equal(correction[0]?.scope?.ownership?.kind, 'operation-target');
+  assert.equal(correction[1]?.scope?.ownership?.kind, 'operation-replacement');
+});
+
+void test('side subjects retain source context for role judgment and opaque quoted titles survive typed masking', () => {
+  for (const message of ['Anadolu yakası tercihimiz', 'tercihen Avrupa yakası', 'preferably Asian side', 'ideally European side']) {
+    assert.ok(build(message).interests.some(({ scope }) => /side|yaka/iu.test(scope?.context.text ?? '')), message);
+  }
+  assert.ok(build('Anadolu yakası zorunlu').interests.some(({ value }) => /Anadolu yakası/iu.test(value)));
+  assert.equal(build('"Sunday Jazz 3200"').interests[0].value, 'Sunday Jazz 3200');
+});
+
 void test('normalizes localized, shorthand, word, correction and free amounts', () => {
   assert.equal(build('under 1,000 TL').amounts[0].value, 1000);
   assert.equal(build('1.000 TL altı').amounts[0].value, 1000);
@@ -93,6 +124,16 @@ void test('normalizes relative dates, same weekday, ranges, leap dates and numer
       .length,
     2,
   );
+});
+
+void test('decimal durations do not manufacture ambiguous numeric dates', () => {
+  for (const message of ['2.5 hours maximum', '2.5 saat sürsün', '1.5 dakika']) {
+    const pool = build(message);
+    assert.equal(pool.dates.length, 0, message);
+    assert.ok(pool.interests.some(({ scope }) => scope?.context.text.includes(message)), message);
+  }
+  assert.ok(build('5.10').dates.length > 0);
+  assert.ok(build('05/10/2026').dates.some(({ value }) => value.dateFrom === '2026-10-05'));
 });
 
 void test('extracts English-prefix, Turkish-suffix, exact and evening time policies', () => {

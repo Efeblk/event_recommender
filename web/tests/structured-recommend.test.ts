@@ -12,7 +12,7 @@ import {
   type Dependencies,
 } from '../lib/recommend.ts';
 import type { EventRecord } from '../lib/types.ts';
-import { recommendationQuery, retrievalQuery } from '../lib/input-retrieval.ts';
+import { retrievalQuery } from '../lib/input-retrieval.ts';
 
 const now = new Date('2026-09-28T09:00:00Z');
 const config = { apiKey: 'test-only', model: 'jev-test' };
@@ -105,7 +105,7 @@ void test('structured integration ignores stale history and passes only canonica
   );
   assert.deepEqual(rankedInput?.history, []);
   assert.deepEqual(rankedInput?.requirements, []);
-  assert.match(rankedInput?.message ?? '', /konser concert music/);
+  assert.equal(rankedInput?.message, 'Keep the current search');
   assert.doesNotMatch(rankedInput?.message ?? '', /category:|mood:|companion:/);
   assert.deepEqual(rankedInput?.preferences, state.preferences);
   assert.deepEqual(
@@ -142,7 +142,7 @@ void test('experience search terms reach retrieval but never become hard filters
     },
   });
   assert.deepEqual(embedded, [retrievalQuery(state)]);
-  assert.equal(rankedInput?.message, recommendationQuery(state));
+  assert.equal(rankedInput?.message, 'Birlikte gülelim');
   assert.notEqual(rankedInput?.message, embedded[0]);
   assert.deepEqual(rankedInput?.requirements, []);
   assert.deepEqual(rankedInput?.preferences?.experiences, ['laughter']);

@@ -1,0 +1,10 @@
+{
+  "name": "biplan-semantic-grammar-experiment",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-strip-types --test parser-development.test.ts state.test.ts",
+    "parse": "node --experimental-strip-types cli.mjs"
+  }
+}

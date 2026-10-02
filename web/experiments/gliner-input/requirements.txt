@@ -1,0 +1,9 @@
+# Local CPU-only GLiNER input extraction benchmark.
+# Resolve a complete lock with:
+#   uv pip compile requirements.txt -o ../../work/gliner-input-20261001/runtime/requirements.lock
+gliner2[local]==2.0.0
+psutil==7.1.0
+# Required by the mDeBERTa-v3 SentencePiece tokenizer. The gliner2 local extra
+# currently omits these runtime dependencies.
+protobuf==6.32.1
+sentencepiece==0.2.1

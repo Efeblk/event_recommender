@@ -83,14 +83,14 @@ function responseFor(
   const defaults: Record<string, string> = {
     action: 'search', issue: 'none',
     budget: 'keep', budget_basis: 'none', budget_boundary: 'none', party: 'keep', date: 'keep', order: 'keep', time: 'keep',
-    district: 'keep', companion: 'keep', mood: 'keep', interest_clear: 'keep',
+    district: 'keep', companion: 'keep', mood: 'keep', interest_clear: 'keep', topic_clear: 'keep',
     genre_logic: 'keep', activity_logic: 'keep', candidate_coverage: 'complete',
   };
   return {
     model: 'jev-1.13.0',
     answers: Object.fromEntries(Object.entries(request.questions).map(([id, question]) => {
       const options = Object.keys(question.criteria);
-      const selected = overrides[id] ?? defaults[id] ?? (id.startsWith('interest_') ? 'skip' : undefined) ?? (id.startsWith('experience_') || id.startsWith('req_') || id.startsWith('age_') || id.startsWith('category_') ? 'keep' : undefined);
+      const selected = overrides[id] ?? defaults[id] ?? (id.startsWith('interest_') ? 'skip' : undefined) ?? (id.startsWith('prior_topic_') || id.startsWith('experience_') || id.startsWith('req_') || id.startsWith('age_') || id.startsWith('category_') ? 'keep' : undefined);
       assert.ok(options.includes(selected), `${selected} is available for ${id}`);
       return [id, { type: 'choice', choice: selected, confidence: 1, probabilities: Object.fromEntries(options.map((option) => [option, option === selected ? 1 : 0])) }];
     })),
@@ -437,7 +437,7 @@ void test('quoted literal interest removes wrapper candidates and remains select
     'LITERALCURRENTTITLEA',
   ]);
   const parsed = parseInputInterpreterResponse(responseFor(message, {
-    category_theatre: 'include', interest_i0: 'select',
+    category_theatre: 'include', interest_i0: 'optional',
   }), { message, previous: emptyIntentState(), now });
   assert.equal(parsed.issue, null);
   assert.deepEqual(parsed.state.preferences.interests, [
@@ -498,7 +498,7 @@ void test('exact Turkish request keeps workshop optional and applies soonest wit
     budget: amountId(message, 2000), budget_basis: 'per_person', budget_boundary: 'inclusive',
     party: 'p0', companion: 'set:partner', category_concert: 'exclude',
     category_theatre: 'exclude', category_workshop: 'keep', order: 'soonest',
-    [`interest_${workshop.id}`]: 'select',
+    [`interest_${workshop.id}`]: 'optional',
   }), { message, previous: emptyIntentState(), now });
   assert.equal(parsed.issue, null);
   assert.equal(parsed.state.filters.maxPrice, 2000);
@@ -521,7 +521,7 @@ void test('workshop category distinguishes a hard request from a permissive opti
   const optional = 'Workshop olabilir';
   const candidate = buildInputCandidates(optional, now, emptyIntentState()).interests.find(({ value }) => value === 'Workshop');
   assert.ok(candidate);
-  const kept = parseInputInterpreterResponse(responseFor(optional, { [`interest_${candidate.id}`]: 'select' }), { message: optional, previous: emptyIntentState(), now });
+  const kept = parseInputInterpreterResponse(responseFor(optional, { [`interest_${candidate.id}`]: 'optional' }), { message: optional, previous: emptyIntentState(), now });
   assert.equal(kept.state.filters.category, null);
   assert.deepEqual(kept.state.preferences.interests, ['Workshop']);
 });
@@ -562,7 +562,8 @@ void test('step-free access does not imply an accessible toilet requirement', ()
   const body = buildInputInterpreterRequest('jev-test', { message, previous: emptyIntentState(), now });
   assert.match(body.questions.issue.instructions, /step-free or wheelchair access; accessible toilet/i);
   const toiletQuestion = (body.questions as Record<string, { instructions: string; criteria: Record<string, string> }>).req_accessibility_accessible_toilet;
-  assert.match(toiletQuestion.criteria.require, /alone does not establish this/i);
+  assert.match(body.state.supportedConstraints.requirements.accessible_toilet, /alone does not establish this/i);
+  assert.match(toiletQuestion.instructions, /supportedConstraints\.requirements/);
   const parsed = parseInputInterpreterResponse(responseFor(message, {
     req_accessibility_step_free: 'require', req_accessibility_accessible_toilet: 'keep',
   }), { message, previous: emptyIntentState(), now });
@@ -606,19 +607,17 @@ void test('independent optional interests retain multiple topics and hedged pref
   const message = 'Exhibitions or workshops, preferably romantic';
   const body = buildInputInterpreterRequest('jev-test', { message, previous: emptyIntentState(), now });
   const interests = body.state.sourceCandidates.interests as Array<{ id: string; value: string }>;
-  const exhibitions = interests.find((item) => item.value.toLowerCase() === 'exhibitions');
-  const workshops = interests.find((item) => item.value.toLowerCase() === 'workshops');
+  const alternatives = interests.find((item) => item.value.toLowerCase() === 'exhibitions or workshops');
   const romantic = interests.find((item) => item.value.toLowerCase().includes('romantic'));
-  assert.ok(exhibitions && workshops && romantic);
+  assert.ok(alternatives && romantic);
   const parsed = parseInputInterpreterResponse(responseFor(message, {
-    [`interest_${exhibitions.id}`]: 'select',
-    [`interest_${workshops.id}`]: 'select',
-    [`interest_${romantic.id}`]: 'select',
+    [`interest_${alternatives.id}`]: 'optional',
+    [`interest_${romantic.id}`]: 'optional',
     req_activity_romantic: 'prefer',
   }), { message, previous: emptyIntentState(), now });
   assert.equal(parsed.issue, null);
   assert.deepEqual(parsed.state.requirements, []);
-  assert.deepEqual(parsed.state.preferences.interests.map((value) => value.toLowerCase()).sort(), ['exhibitions', 'preferably romantic', 'workshops']);
+  assert.deepEqual(parsed.state.preferences.interests.map((value) => value.toLowerCase()).sort(), ['exhibitions or workshops', 'romantic']);
 });
 
 void test('positive genre alternatives form one source-evidence OR requirement', () => {
@@ -639,7 +638,7 @@ void test('new interests append, while provider state keeps prior interests opaq
   const intimate = body.state.sourceCandidates.interests.find((item) => item.value === 'intimate');
   assert.ok(intimate);
   const parsed = parseInputInterpreterResponse(responseFor(message, {
-    action: 'alternatives', [`interest_${intimate.id}`]: 'select',
+    action: 'alternatives', [`interest_${intimate.id}`]: 'optional',
   }, previous), { message, previous, now });
   assert.deepEqual(parsed.state.preferences.interests, ['acoustic', 'intimate']);
 });
@@ -846,6 +845,32 @@ void test('children do not imply family-friendly and unsupported negative eviden
     message: negativeMessage, previous: emptyIntentState(), now,
   });
   assert.equal(negative.issue, 'unsupported_constraint');
+});
+
+void test('required primary topic is distinct from an optional workshop and survives follow-ups', () => {
+  const message = 'Pazar fotoğrafla ilgili bir etkinlik olsun, workshop tercihen';
+  const input = { message, previous: emptyIntentState(), now };
+  const body = buildInputInterpreterRequest('jev-contract-check', input);
+  const photo = body.state.sourceCandidates.interests.find((item) => item.value.includes('fotoğraf'))!;
+  const workshop = body.state.sourceCandidates.interests.find((item) => item.value.toLowerCase().includes('workshop'))!;
+  const first = parseInputInterpreterResponse(responseFor(message, { [`interest_${photo.id}`]: 'primary', [`interest_${workshop.id}`]: 'optional' }), input);
+  assert.ok(first.state.primaryTopics?.some((topic) => topic.includes('fotoğraf')));
+  assert.ok(first.state.preferences.interests.some((interest) => interest.includes('workshop')));
+  const follow = parseInputInterpreterResponse(responseFor('bütçe kişi başı 800 TL', { budget: 'a0', budget_basis: 'per_person', budget_boundary: 'inclusive' }, first.state), { message: 'bütçe kişi başı 800 TL', previous: first.state, now });
+  assert.deepEqual(follow.state.primaryTopics, first.state.primaryTopics);
+});
+
+void test('topic OR clause survives an exact-date span as one source candidate', () => {
+  const pool = buildInputCandidates('Pazar fotoğraf veya seramik olsun', now, emptyIntentState());
+  assert.ok(pool.interests.some((item) => /fotoğraf veya seramik/u.test(item.value)));
+});
+
+void test('mandatory after-work request asks for arrival and a bare reply becomes a lower bound', async () => {
+  const previous = emptyIntentState();
+  const first = await interpretInput({ message: 'İş çıkışı bir etkinlik olsun', previous, now }, { config: null });
+  assert.equal(first.issue, 'arrival_time_ambiguous');
+  const body = buildInputInterpreterRequest('jev-contract-check', { message: '18:30', unresolvedRequest: 'İş çıkışı bir etkinlik olsun', previous, now });
+  assert.ok(body.state.sourceCandidates.times.some((item) => item.value.startTimeFrom === '18:30' && item.value.startTimeTo === undefined));
 });
 
 void test('audience questions distinguish child cancellation from family suitability', () => {

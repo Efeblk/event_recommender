@@ -66,7 +66,7 @@ void test('cancellation of an arbitrary laughter paraphrase leaves no stale quer
   assert.doesNotMatch(parsed.query, /experience:/);
 });
 
-void test('typed interest classification is atomic unless reliable and matched to an active experience', () => {
+void test('typed interest classification is atomic unless reliable and free of removal conflicts', () => {
   const message = 'Bol bol güleyim';
   const built = response(message, { experience_laughter: 'include' });
   const interest = built.request.state.sourceCandidates.interests[0];
@@ -80,6 +80,8 @@ void test('typed interest classification is atomic unless reliable and matched t
   choose('experience_laughter');
   assert.deepEqual(parseInputInterpreterResponse(built.value, { message, previous: emptyIntentState(), now }).state.preferences.interests, []);
   choose('experience_learning');
+  built.value.answers.experience_learning.choice = 'remove';
+  built.value.answers.experience_learning.probabilities = { keep: 0, include: 0, remove: 1 };
   const mismatch = parseInputInterpreterResponse(built.value, { message, previous: emptyIntentState(), now });
   assert.equal(mismatch.issue, 'constraint_ambiguous');
   assert.deepEqual(mismatch.state, emptyIntentState());
@@ -136,8 +138,8 @@ void test('reliable add then remove leaves no generic residue while concrete and
   const remove = response(removeMessage, { experience_laughter: 'remove' }, added);
   const concrete = remove.request.state.sourceCandidates.interests.find((item) => item.value.toLocaleLowerCase('tr-TR').includes('arkeoloji'));
   assert.ok(concrete);
-  remove.value.answers[`interest_${concrete.id}`].choice = 'select';
-  remove.value.answers[`interest_${concrete.id}`].probabilities = Object.fromEntries(Object.keys((remove.request.questions as Record<string, { criteria: Record<string, string> }>)[`interest_${concrete.id}`].criteria).map((option) => [option, option === 'select' ? 1 : 0]));
+  remove.value.answers[`interest_${concrete.id}`].choice = 'optional';
+  remove.value.answers[`interest_${concrete.id}`].probabilities = Object.fromEntries(Object.keys((remove.request.questions as Record<string, { criteria: Record<string, string> }>)[`interest_${concrete.id}`].criteria).map((option) => [option, option === 'optional' ? 1 : 0]));
   const removed = parseInputInterpreterResponse(remove.value, { message: removeMessage, previous: added, now });
   assert.equal(removed.issue, null); assert.equal(removed.state.preferences.experiences, undefined);
   assert.ok(removed.state.preferences.interests.includes('opaque legacy phrase'));
@@ -158,7 +160,7 @@ void test('low-confidence clear-all proposal preserves every prior soft preferen
   for (const plan of proposal.plans) assert.deepEqual(plan.result.state.preferences, previous.preferences);
 });
 
-void test('reset cannot bypass typed experience atomicity when the feature mutation is uncertain', () => {
+void test('reset cannot bypass typed experience atomicity when the source role is uncertain', () => {
   const previous = emptyIntentState(); previous.preferences.mood = 'calm'; previous.preferences.interests = ['legacy'];
   const message = 'Sıfırla, dans edeyim';
   const built = response(message, { action: 'reset', experience_dancing: 'include' }, previous);
@@ -167,8 +169,7 @@ void test('reset cannot bypass typed experience atomicity when the feature mutat
   const criteria = (built.request.questions as Record<string, { criteria: Record<string, string> }>)[id].criteria;
   built.value.answers[id].choice = 'experience_dancing';
   built.value.answers[id].probabilities = Object.fromEntries(Object.keys(criteria).map((option) => [option, option === 'experience_dancing' ? 1 : 0]));
-  built.value.answers.experience_dancing.confidence = 0.05;
-  built.value.answers.experience_dancing.probabilities = { keep: 0.3, include: 0.6, remove: 0.1 };
+  built.value.answers[id].confidence = 0.05;
   const direct = parseInputInterpreterResponse(built.value, { message, previous, now });
   assert.equal(direct.issue, 'constraint_ambiguous'); assert.deepEqual(direct.state, previous);
   assert.deepEqual(parseInputInterpreterProposal(built.value, { message, previous, now }).plans, []);

@@ -17,6 +17,11 @@ const tokens = (text: string) =>
     .split(/[^a-z0-9]+/)
     .filter((word) => word.length > 2 && !stop.has(word));
 
+// Prepared Turkish tokens retain suffixes. Keep morphology narrowly scoped to
+// this established concept family instead of applying a lossy global stemmer.
+const lexicalTermMatches = (word: string, term: string) =>
+  word === term || (term === 'fotograf' && /^fotograf(?:i|in|la|lar|ci)/u.test(word));
+
 export function prepareLexicalDocumentTokens(event: EventRecord): string[] {
   return tokens(
     [event.title, event.category, event.venue, event.description].join(' '),
@@ -71,14 +76,14 @@ export function hybridRankFromDenseOrder(
   const frequencies = new Map(
     queryTerms.map((term) => [
       term,
-      documents.filter((words) => words.includes(term)).length,
+      documents.filter((words) => words.some((word) => lexicalTermMatches(word, term))).length,
     ]),
   );
   const lexical = events
     .map((event, index) => {
       const words = documents[index];
       const score = queryTerms.reduce((sum, term) => {
-        const tf = words.filter((word) => word === term).length;
+        const tf = words.filter((word) => lexicalTermMatches(word, term)).length;
         if (!tf) return sum;
         const df = frequencies.get(term)!;
         const idf = Math.log(1 + (events.length - df + 0.5) / (df + 0.5));
@@ -114,4 +119,34 @@ export function hybridRankFromDenseOrder(
       a.startsAt.localeCompare(b.startsAt) ||
       a.id.localeCompare(b.id),
   );
+}
+
+/** BM25 lexical order, including records without prepared vectors. */
+export function lexicalRank(events: EventRecord[], query: string): EventRecord[] {
+  const queryTerms = [...new Set(tokens(query))];
+  if (!queryTerms.length) return [];
+  const documents = events.map(preparedLexicalTokens);
+  const averageLength = documents.reduce((sum, words) => sum + words.length, 0) /
+    Math.max(1, documents.length) || 1;
+  const frequencies = new Map(queryTerms.map((term) => [
+    term,
+    documents.filter((words) => words.some((word) => lexicalTermMatches(word, term))).length,
+  ]));
+  return events.map((event, index) => {
+    const words = documents[index];
+    const score = queryTerms.reduce((sum, term) => {
+      const tf = words.filter((word) => lexicalTermMatches(word, term)).length;
+      if (!tf) return sum;
+      const df = frequencies.get(term)!;
+      const idf = Math.log(1 + (events.length - df + 0.5) / (df + 0.5));
+      // Topic recall should not bury a richly described program beneath a
+      // short record with one incidental credit. Keep length normalization,
+      // but soften it for this dedicated lexical lane.
+      return sum + (idf * tf * 2.2) /
+        (tf + 1.2 * (0.65 + (0.35 * words.length) / averageLength));
+    }, 0);
+    return { event, score };
+  }).filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || a.event.id.localeCompare(b.event.id))
+    .map(({ event }) => event);
 }

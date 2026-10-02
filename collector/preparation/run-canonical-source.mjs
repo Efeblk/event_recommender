@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { adaptCanonicalRecord, canonicalRequestId, validateCanonicalRecord } from './canonical-adapter.mjs';
+import { normalizeSupportedCanonicalRecord } from './canonical-identity.mjs';
 import { createCanonicalStore } from './canonical-store.mjs';
 import { assertOwned, work } from './db.mjs';
 import { stableJson } from './source-adapter.mjs';
@@ -62,7 +63,7 @@ export async function replayCanonicalRecords(records, {
     const errors = validateCanonicalRecord(record);
     const adapted = errors.length
       ? { status: 'quarantined', requestId, reason: 'invalid_source_record', details: errors }
-      : adaptCanonicalRecord(record, await store.findHeads(record));
+      : adaptCanonicalRecord(record, await store.findHeads(normalizeSupportedCanonicalRecord(record)));
     let decision;
     if (adapted.status === 'ready') {
       decision = { requestId, ...(await store.accept(adapted.payload)) };

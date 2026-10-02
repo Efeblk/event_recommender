@@ -1231,3 +1231,71 @@ await test('reviewed İstanbul Workshops venue aliases reject weak or contradict
   const mosaicBare = event({ id: 'mosaic-bare', title: 'Mozaik Lamba Atölyesi', category: 'Workshop', venue: 'Bağımsız Sanat Vakfı', district: 'FATİH', address: '' });
   assert.equal(mergeEventSessions([mosaicPrefixWithoutAddress, mosaicBare]).length, 2);
 });
+
+await test('reviewed Anka Workshop programmes merge exact sessions and retain raw provider offers', () => {
+  const startsAt = '2026-09-30T09:00:00.000Z';
+  const bubilet = event({
+    id: '213a2d5e25c17f571c276aa2', source: 'bubilet',
+    title: 'Anka Workshop: Çömlek Atölyesi', description: 'Anka Workshop: Çömlek Atölyesi',
+    category: 'Workshop', venue: 'Anka Workshop', district: '',
+    address: 'Osmanağa Mah. Serasker cad. Arın Apt. No:61/4 Kadıköy / İSTANBUL',
+    startsAt, price: 1500, sourceSessionIds: ['281266'],
+    url: 'https://www.bubilet.com.tr/istanbul/etkinlik/anka-workshop-comlek-atolyesi',
+  });
+  const biletix = event({
+    id: '282aa318c3dc343c8c08d314', source: 'biletix',
+    title: 'Çömlek Atölyesi', description: 'Ankaworkshop çömlek etkinliği.',
+    category: 'Workshop', venue: 'Ankaworkshop', district: 'KADIKÖY', address: '',
+    startsAt, price: 1500, sourceSessionIds: ['101'],
+    url: 'https://www.biletix.com/etkinlik/5MB70/ISTANBUL/tr',
+  });
+  const [merged] = mergeEventSessions([bubilet, biletix]);
+  assert.deepEqual(merged.mergedIds, [
+    '213a2d5e25c17f571c276aa2',
+    '282aa318c3dc343c8c08d314',
+    merged.id,
+  ].sort());
+  assert.deepEqual(new Set(merged.offers?.map(({ id, source, url, sourceSessionIds }) =>
+    `${id}|${source}|${url}|${sourceSessionIds?.[0]}`)), new Set([
+    `${bubilet.id}|bubilet|${bubilet.url}|281266`,
+    `${biletix.id}|biletix|${biletix.url}|101`,
+  ]));
+  assert.deepEqual(mergeEventSessions([merged]), [merged]);
+});
+
+await test('Anka aliases cover the reviewed family but reject session, activity, venue, and weak-evidence counterexamples', () => {
+  const address = 'Osmanağa Mah. Serasker cad. Arın Apt. No:61/4 Kadıköy / İSTANBUL';
+  const pairs = [
+    ['Anka Workshop: Kintsugi Atölyesi', 'Kintsugi Atölyesi'],
+    ['Anka Workshop: Kuru Çiçek Atölyesi', 'Kuru Çiçek Atölyesi'],
+    ['Anka Workshop: Mozaik Ayna', 'Mozaik Ayna Atölyesi'],
+    ['Anka Workshop: Mozaik Lamba', 'Mozaik Lamba Atölyesi'],
+    ['Anka Workshop: Mozaik Mumluk', 'Mozaik Mumluk Atölyesi'],
+    ['Anka Workshop: Mum Atölyesi', 'Mum Atölyesi'],
+    ['Anka Workshop: Taşlı Tuval', 'Taşlı Tuval Atölyesi'],
+    ['Anka Workshop: Vitray Boyama Atölyesi', 'Vitray Boyama Atölyesi'],
+  ] as const;
+  for (const [prefixed, plain] of pairs) {
+    const bubilet = event({ id: `bubilet:${prefixed}`, source: 'bubilet', title: prefixed, category: 'Workshop', venue: 'Anka Workshop', district: '', address });
+    const biletix = event({ id: `biletix:${plain}`, source: 'biletix', title: plain, category: 'Workshop', venue: 'Ankaworkshop', district: 'KADIKÖY', address: '' });
+    assert.equal(mergeEventSessions([bubilet, biletix]).length, 1, plain);
+  }
+
+  const pottery = event({ title: 'Anka Workshop: Çömlek Atölyesi', category: 'Workshop', venue: 'Anka Workshop', district: '', address });
+  const plain = event({ id: 'plain', source: 'biletix', title: 'Çömlek Atölyesi', category: 'Workshop', venue: 'Ankaworkshop', district: 'KADIKÖY', address: '' });
+  for (const other of [
+    { ...plain, startsAt: '2026-09-30T11:00:00.000Z' },
+    { ...plain, title: 'Seramik Atölyesi' },
+    { ...plain, venue: 'Başka Atölye' },
+    { ...pottery, address: '' },
+    { ...pottery, address: 'Başka Sokak No:61/4 Kadıköy' },
+    { ...plain, district: 'Beşiktaş' },
+    { ...plain, city: 'Ankara' },
+    { ...plain, category: 'Konser' },
+  ]) assert.equal(mergeEventSessions([pottery, other]).length, 2);
+
+  const artDay = event({ id: 'art-bubilet', source: 'bubilet', title: 'Art Day', description: 'Art Day', category: 'Workshop', venue: 'Anka Workshop', district: '', address });
+  const artDayBiletinial = event({ id: 'art-biletinial', source: 'biletinial', title: 'Art Day', description: 'ANKA WORKSHOP tüm gün sanat etkinliği.', category: 'Workshop', venue: 'Anka Workshop (İstanbul)', district: 'İstanbul Anadolu', address: '' });
+  assert.equal(mergeEventSessions([artDay, artDayBiletinial]).length, 1);
+  assert.equal(mergeEventSessions([artDay, { ...artDayBiletinial, description: 'Başka organizatör.' }]).length, 2);
+});

@@ -134,5 +134,7 @@ export function maskPriorInterests(state: IntentState): IntentState {
   copy.preferences.interests = state.preferences.interests.map(
     (_, index) => `PRIORINTEREST${alphabeticIndex(index)}`,
   );
+  if (state.primaryTopics?.length)
+    copy.primaryTopics = state.primaryTopics.map((_, index) => `PRIORTOPIC${String.fromCharCode(65 + index)}`);
   return copy;
 }

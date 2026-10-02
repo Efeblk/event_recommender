@@ -75,6 +75,34 @@ export function recommendationQuery(state: IntentState): string {
   return queryText(state, false);
 }
 
+/**
+ * A lexical-only view of mandatory topics. State and Jev retain the exact
+ * source span; this removes only request framing that cannot describe an event.
+ */
+export function primaryTopicRetrievalQuery(state: IntentState): string {
+  const current = validateIntentState(state);
+  return (current.primaryTopics ?? [])
+    .map((topic) => {
+      const unframed = topic
+        .replace(/\b(?:etkinlik(?:ler)?|events?)\b.*$/iu, ' ')
+        .replace(/\b(?:ariyorum|arıyorum|bakiyorum|bakıyorum|istiyorum|looking for|find|recommend)\b.*$/iu, ' ')
+        .replace(/\s+/gu, ' ')
+        .trim();
+      const subject = unframed
+        .replace(/^(.*?)(?:\s+ile|yla|yle|la|le)\s+ilgili(?:\s+bir)?$/iu, '$1')
+        .replace(/^(.+?)[-\s]+related$/iu, '$1')
+        .trim();
+      // Bounded bilingual concept expansion is preferable to destructive
+      // Turkish stemming. These forms occur in the prepared catalog and keep
+      // Turkish and English requests on the same lexical footing.
+      if (/^(?:fotoğraf|photography)$/iu.test(subject))
+        return `${subject} fotoğraf photography photographic`;
+      return subject;
+    })
+    .filter(Boolean)
+    .join(' ');
+}
+
 function queryText(state: IntentState, expandExperiences: boolean): string {
   const current = validateIntentState(state);
   const prohibited = new Set(
@@ -96,6 +124,8 @@ function queryText(state: IntentState, expandExperiences: boolean): string {
     current.filters.categories ??
     (current.filters.category ? [current.filters.category] : []);
   for (const category of categories) add(CATEGORY_TEXT[category]);
+  if (expandExperiences) add(primaryTopicRetrievalQuery(current));
+  else for (const topic of current.primaryTopics ?? []) add(`must be about ${topic}`);
   add(current.filters.district);
 
   for (const requirement of current.requirements) {

@@ -112,6 +112,7 @@ export interface PendingInput {
   reason:
     | 'budget_ambiguous'
     | 'date_ambiguous'
+    | 'arrival_time_ambiguous'
     | 'constraint_ambiguous'
     | 'unsupported_location'
     | 'unsupported_constraint'

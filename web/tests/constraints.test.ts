@@ -754,6 +754,7 @@ await test('English weekdays, exact district and strict local time are hard filt
   const late = {
     ...event,
     startsAt: '2026-09-12T18:00:00Z', // 21:00 Europe/Istanbul
+    attendanceTiming: { kind: 'timed_session' as const, evidence: 'provider_sessions_and_source_text' as const },
     category: 'Stand-up',
     price: 499,
   };

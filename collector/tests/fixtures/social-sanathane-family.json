@@ -1,0 +1,48 @@
+{
+  "sameSession": [
+    {
+      "id": "1aff8ca43d5374d8165a0c8c",
+      "source": "bubilet",
+      "title": "Workshop: Sosyal Sanathane İstanbul | Etkinlik Takvimi",
+      "description": "Workshop: Sosyal Sanathane İstanbul | Etkinlik Takvimi",
+      "venue": "Sosyal Sanathane (Kadıköy)",
+      "district": "",
+      "address": "Osmanağa, Canan Sk. No:51a, 34714 Kadıköy/İstanbul",
+      "city": "İstanbul",
+      "category": "Workshop",
+      "startsAt": "2026-09-30T11:00:00.000Z",
+      "checkedAt": "2026-09-28T16:30:24.278Z",
+      "price": 500,
+      "currency": "TRY",
+      "availability": "available",
+      "url": "https://www.bubilet.com.tr/istanbul/etkinlik/workshop-sosyal-sanathane-istanbul-etkinlik-takvimi",
+      "imageUrl": "https://cdn.bubilet.com.tr/general.jpg",
+      "sourceSessionIds": ["286390"]
+    },
+    {
+      "id": "d257454636018b63118987ab",
+      "source": "biletinial",
+      "title": "Workshop: Etkinlik Takvimi - Sosyal Sanathane İstanbul",
+      "description": "Karma Workshop etkinliklerimizde aynı anda ve aynı ortamda gerçekleşen 5 adet seçenek bulunur: Heykel, Resim, Plak Boyama, Maske Boyama ve Bez Çanta Boyama.",
+      "venue": "Sosyal Sanathane (Kadıköy)",
+      "district": "İstanbul Anadolu",
+      "address": "Osmanağa, Canan Sk. No:51a, 34714 Kadıköy/İstanbul",
+      "city": "İstanbul",
+      "category": "Workshop",
+      "startsAt": "2026-09-30T11:00:00.000Z",
+      "checkedAt": "2026-09-28T23:22:23.230Z",
+      "price": 500,
+      "currency": "TRY",
+      "availability": "available",
+      "url": "https://biletinial.com/tr-tr/egitim/workshop-etkinlik-takvimi-sosyal-sanathane-istanbul",
+      "imageUrl": "https://b6s54eznn8xq.merlincdn.net/general.jpeg"
+    }
+  ],
+  "distinctActivities": [
+    "3D Figür Boyama Workshop: Sosyal Sanathane İstanbul | Etkinlik Takvimi",
+    "Mozaik Workshop: Sosyal Sanathane İstanbul | Etkinlik Takvimi",
+    "Taşlı Tuval Workshop: Sosyal Sanathane İstanbul | Etkinlik Takvimi",
+    "Punch Workshop: Sosyal Sanathane İstanbul | Etkinlik Takvimi",
+    "Tişört Boyama Workshop: Sosyal Sanathane İstanbul | Etkinlik Takvimi"
+  ]
+}

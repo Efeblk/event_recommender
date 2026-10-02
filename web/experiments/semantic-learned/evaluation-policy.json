@@ -1,0 +1,16 @@
+{
+  "scope": "One isolated Gemini source-grounded semantic extraction experiment",
+  "model": "gemini-3.1-flash-lite",
+  "sample": { "total": 24, "languages": { "tr": 12, "en": 12 }, "clear": 16, "ambiguous": 4, "unsupported": 4 },
+  "selection": "Metadata only before outcomes: include all true-chain members, fill eight clear per language prioritizing two independent seeds, then first two ambiguous and two unsupported per language by ID. Reserve one non-chain clear and one unsupported per language for final confirmation.",
+  "gates": { "clearCorrectMinimum": 15, "exactAcceptedRatioMinimum": 0.98, "completeAmbiguitiesMinimum": 4, "acceptedUnsupportedMaximum": 0, "hardWeakeningMaximum": 0, "warmP95MsMaximum": 2000, "successfulMaximumMs": 5000 },
+  "knownRegressionCalls": 1,
+  "maximumProviderCalls": 25,
+  "previousReservedUsd": 0.8380000000000003,
+  "maximumAdditionalReservedUsd": 0.06,
+  "cumulativeReservationCapUsd": 0.9,
+  "freeze": "Implementation worker does not read fresh corpus/gold/results. Freeze runtime/prompt/schema/value rules and fresh sample before one pass. No tuning against outputs. Fresh annotations are independent agent labels, not external human annotation.",
+  "comparison": "Reuse canonicalInterpretation; source IDs ignored, Boolean scope, modality, exact values, transition targets and resulting plans retained. Report resulting-plan equality separately.",
+  "chains": "Actual accepted state flows to the next turn; refusal preserves actual prior state. Never substitute gold. All chain members must be selected.",
+  "limitations": "Small constructed diagnostic, not production certification. Token admission is an estimate; actual provider usage and finite reservations are checked. Jev/search/cloud serving remain outside this test."
+}

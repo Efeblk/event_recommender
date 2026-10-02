@@ -48,3 +48,27 @@ void test('new category exclusions support coordinated Turkish and English lists
   assert.deepEqual(new Set(english.excludedCategories), new Set(['Müze', 'Gezi']));
   assert.deepEqual(english.requestedCategories, ['Sinema']);
 });
+
+void test('Turkish adjective category exclusions are not positive retrieval intent', () => {
+  for (const message of [
+    'Cumartesi partnerimle konser olmayan bir etkinlik istiyorum',
+    'konser olmayan etkinliklere gidelim',
+  ]) {
+    const intent = categoryIntent(message);
+    assert.deepEqual(intent.requestedCategories, [], message);
+    assert.deepEqual(intent.excludedCategories, ['Konser'], message);
+    assert.doesNotMatch(intent.positiveText, /konser/, message);
+  }
+  const coordinated = categoryIntent(
+    'konser veya tiyatro olmayan bir etkinlik istiyorum',
+  );
+  assert.deepEqual(coordinated.requestedCategories, []);
+  assert.deepEqual(
+    new Set(coordinated.excludedCategories),
+    new Set(['Konser', 'Tiyatro']),
+  );
+  assert.deepEqual(
+    categoryIntent('konser olan bir etkinlik').requestedCategories,
+    ['Konser'],
+  );
+});

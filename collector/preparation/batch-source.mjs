@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { adaptCanonicalRecord, canonicalRequestId, validateCanonicalRecord } from './canonical-adapter.mjs';
+import { normalizeSupportedCanonicalRecord } from './canonical-identity.mjs';
 import { createCanonicalStore } from './canonical-store.mjs';
 import { createBatchSourceStore } from './batch-source-store.mjs';
 import { stableJson } from './source-adapter.mjs';
@@ -99,7 +100,7 @@ export async function ingestBatchSource(envelope, {
     let receipt;
     if (errors.length) receipt = await batchStore.quarantine(input.header.batchId, requestId, record, 'invalid_source_record');
     else {
-      const adapted = adaptCanonicalRecord(record, await canonicalStore.findHeads(record));
+      const adapted = adaptCanonicalRecord(record, await canonicalStore.findHeads(normalizeSupportedCanonicalRecord(record)));
       receipt = adapted.status === 'ready'
         ? await batchStore.accept(input.header.batchId, adapted.payload)
         : await batchStore.quarantine(input.header.batchId, requestId, record, adapted.reason);

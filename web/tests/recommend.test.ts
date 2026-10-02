@@ -237,6 +237,31 @@ await test('Jev admission uses support probability while score only orders admit
   );
 });
 
+await test('optional preference scores order admitted events without changing mandatory admission', () => {
+  const lowPreference = {
+    event: { ...event, id: 'low-preference', title: 'Low preference', url: 'https://example.test/low-preference' },
+    score: 3, confidence: 1, probabilities: [0, 0, 0, 1] as const, supportProbability: 1,
+    optionalScore: 1, optionalConfidence: 1, optionalProbabilities: [0, 1, 0, 0] as const,
+  };
+  const highPreference = {
+    event: { ...event, id: 'high-preference', title: 'High preference', url: 'https://example.test/high-preference' },
+    score: 2, confidence: 1, probabilities: [0, 0, 1, 0] as const, supportProbability: 1,
+    optionalScore: 3, optionalConfidence: 1, optionalProbabilities: [0, 0, 0, 1] as const,
+  };
+  const rejected = {
+    event: { ...event, id: 'optional-cannot-rescue', title: 'Rejected', url: 'https://example.test/optional-cannot-rescue' },
+    score: 1.69, confidence: 1, probabilities: [0, 0.31, 0.69, 0] as const, supportProbability: 0.69,
+    optionalScore: 3, optionalConfidence: 1, optionalProbabilities: [0, 0, 0, 1] as const,
+  };
+  const candidates = [lowPreference.event, highPreference.event, rejected.event];
+  assert.deepEqual(
+    selectJevEvents(candidates, { ranked: [lowPreference, highPreference, rejected], model: 'test', usage: { inputTokens: 0, outputTokens: 0 } }).map(({ id }) => id),
+    ['high-preference', 'low-preference'],
+  );
+  const malformed = { ...highPreference, optionalProbabilities: [0, 0, 0.5, 0.5] as const };
+  assert.deepEqual(selectJevEvents([malformed.event], { ranked: [malformed], model: 'test', usage: { inputTokens: 0, outputTokens: 0 } }), []);
+});
+
 await test('Jev returns every distinct supported event without padding rejected matches', () => {
   for (const count of [3, 8, 12]) {
     const supported = Array.from({ length: count }, (_, index) => ({
@@ -1118,6 +1143,7 @@ await test('late district sessions survive earlier siblings before production se
     venue: 'Ada Bar Kadıköy',
     district: 'Kadıköy',
     startsAt: '2026-09-12T16:00:00Z',
+    attendanceTiming: { kind: 'timed_session', evidence: 'provider_sessions_and_source_text' } as const,
     price: 250,
   };
   const late = { ...early, id: 'late', startsAt: '2026-09-12T18:45:00Z' };

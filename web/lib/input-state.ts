@@ -5,6 +5,8 @@ import { EXPERIENCES, EXPERIENCE_VALUES, type Experience } from './input-experie
 
 export interface IntentState {
   version: 1;
+  /** Required source-grounded attendee-program predicates. Entries are ANDed. */
+  primaryTopics?: string[];
   filters: Filters;
   requirements: Requirement[];
   preferences: {
@@ -16,7 +18,7 @@ export interface IntentState {
   };
 }
 
-const STATE_KEYS = ['version', 'filters', 'requirements', 'preferences'];
+const STATE_KEYS = ['version', 'filters', 'requirements', 'preferences', 'primaryTopics'];
 const FILTER_KEYS = [
   'dateFrom',
   'dateTo',
@@ -157,8 +159,13 @@ function validateStrictFilters(value: unknown) {
 
 export function validateIntentState(value: unknown): IntentState {
   const input = record(value, 'Intent state');
-  exactKeys(input, STATE_KEYS, STATE_KEYS, 'Intent state');
+  exactKeys(input, STATE_KEYS, ['version', 'filters', 'requirements', 'preferences'], 'Intent state');
   if (input.version !== 1) throw new Error('Intent state version is invalid.');
+  if (input.primaryTopics !== undefined && (
+    !Array.isArray(input.primaryTopics) || input.primaryTopics.length > 8 ||
+    input.primaryTopics.some((topic) => typeof topic !== 'string' || topic.trim() !== topic || !topic.length || topic.length > 160) ||
+    new Set(input.primaryTopics).size !== input.primaryTopics.length
+  )) throw new Error('Primary topics are invalid.');
 
   if (!Array.isArray(input.requirements) || input.requirements.length > 24)
     throw new Error('Requirements are invalid.');
@@ -220,6 +227,7 @@ export function validateIntentState(value: unknown): IntentState {
 
   return {
     version: 1,
+    ...(Array.isArray(input.primaryTopics) && input.primaryTopics.length ? { primaryTopics: [...input.primaryTopics] as string[] } : {}),
     filters: validateStrictFilters(input.filters),
     requirements,
     preferences: {
@@ -247,6 +255,7 @@ export function intentQuery(state: IntentState): string {
   const categories = current.filters.categories ??
     (current.filters.category ? [current.filters.category] : []);
   categories.forEach((category) => add(`category:${category}`));
+  current.primaryTopics?.forEach((topic) => add(`primary-topic:${topic}`));
   add(current.filters.district ? `district:${current.filters.district}` : null);
   current.requirements
     // Strict content requirements mean evidence of absence. Emitting their

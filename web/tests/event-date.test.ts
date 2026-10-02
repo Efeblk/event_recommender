@@ -19,13 +19,13 @@ await test('validity end is neither displayed nor filtered as an appointment tim
   assert.doesNotMatch(label, /17:00|10:00/);
   assert.match(label, /Ziyaret saatlerini kontrol edin/);
 });
-await test('unknown admission time stays unknown while explicit and legacy sessions retain clock time', () => {
+await test('unknown and legacy attendance cannot satisfy clock bounds while explicit timed sessions can', () => {
   const unknown = { ...event, attendanceTiming: { kind: 'unknown' as const, evidence: 'insufficient_source_evidence' as const } };
   assert.equal(isEligible(unknown, { ...emptyFilters, startTimeTo: '18:00' }, now), false);
   assert.doesNotMatch(eventDateLabel(unknown), /17:00/);
   for (const attendanceTiming of [undefined, { kind: 'timed_session' as const, evidence: 'provider_sessions_and_source_text' as const }]) {
     const timed = { ...event, attendanceTiming };
-    assert.equal(isEligible(timed, { ...emptyFilters, startTimeFrom: '17:00' }, now), true);
+    assert.equal(isEligible(timed, { ...emptyFilters, startTimeFrom: '17:00' }, now), attendanceTiming?.kind === 'timed_session');
     assert.match(eventDateLabel(timed), /17:00/);
   }
 });

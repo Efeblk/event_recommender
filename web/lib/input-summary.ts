@@ -50,6 +50,7 @@ export function intentSummary(
   if (f.excludedCategories?.length) required.push(`${f.excludedCategories.join(', ')} hariç`);
   if (f.district) required.push(f.district);
   required.push(...state.requirements.map(requirementLabel));
+  required.push(...(state.primaryTopics ?? []).map((topic) => `Ana konu: ${topic}`));
 
   const preferred: string[] = [];
   const { mood, companion, interests } = state.preferences;

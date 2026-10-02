@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { canonicalRecordsFrom, replayCanonicalRecords } from '../preparation/run-canonical-source.mjs';
+import { readFile } from 'node:fs/promises';
+import { canonicalInputProvenance, canonicalRecordsFrom, replayCanonicalRecords } from '../preparation/run-canonical-source.mjs';
 
 const record = id => ({ id, source: 'bubilet', sourceSessionIds: [id], title: `Oyun ${id}`, description: 'Dostluk üzerine bir oyun.',
   venue: 'Sahne', district: 'Kadıköy', address: 'Moda Caddesi', city: 'İstanbul', category: 'Tiyatro',
@@ -21,6 +22,17 @@ test('bounded replay checkpoints every new decision and skips prior decisions wi
   const second = await replayCanonicalRecords(records, { store: secondStore, receipt: first.receipt, limit: 1 });
   assert.equal(second.replayed, 1); assert.equal(second.processed, 1); assert.equal(second.remaining, 1);
   assert.deepEqual(secondStore.calls.heads, ['two']);
+});
+
+test('reviewed preparation identity is used for head lookup while receipts retain original source evidence', async () => {
+  const family = JSON.parse(await readFile(new URL('./fixtures/social-sanathane-family.json', import.meta.url), 'utf8'));
+  const seen = [];
+  const store = memoryStore({ findHeads: async value => { seen.push(value); return []; } });
+  const result = await replayCanonicalRecords([family.sameSession[0]], { store });
+  assert.equal(seen[0].title, 'Sosyal Sanathane Karma Workshop');
+  assert.equal(seen[0].district, 'Kadıköy');
+  assert.equal(seen[0].sourceObservedPresentation.title, family.sameSession[0].title);
+  assert.deepEqual(result.receipt.input, canonicalInputProvenance([family.sameSession[0]]));
 });
 
 test('crash after database commit but before checkpoint replays the same deterministic request', async () => {

@@ -1,0 +1,20 @@
+[
+  { "id": "tr-composed", "language": "tr", "utterance": "Kişi başı maksimum 2.000 TL, konser veya tiyatro olmasın, workshop olabilir, en yakın tarih", "status": "accepted" },
+  { "id": "en-composed", "language": "en", "utterance": "Maximum 700 TL per person, no concert or theatre, maybe a workshop, earliest", "status": "accepted" },
+  { "id": "tr-ambiguous-basis", "language": "tr", "utterance": "700 TL altı konser", "status": "ambiguous" },
+  { "id": "en-ambiguous-basis", "language": "en", "utterance": "concert under 700 TRY", "status": "ambiguous" },
+  { "id": "tr-group-total", "language": "tr", "utterance": "Grup toplam 3000 TL altında tiyatro", "status": "accepted" },
+  { "id": "en-ticket-min", "language": "en", "utterance": "At least 200 TL per ticket for theatre", "status": "accepted" },
+  { "id": "tr-date-time", "language": "tr", "utterance": "Bu cumartesi akşam Kadıköy'de konser", "status": "accepted" },
+  { "id": "en-time-range", "language": "en", "utterance": "Friday from 19:00 to 22:00 in Taksim", "status": "accepted" },
+  { "id": "tr-companion", "language": "tr", "utterance": "Sevgilimle romantik tiyatro", "status": "accepted" },
+  { "id": "tr-partner-phrase", "language": "tr", "utterance": "Kız arkadaşımla, konser dışı, tiyatro", "status": "accepted" },
+  { "id": "en-party", "language": "en", "utterance": "Three people, quiet seated theatre", "status": "accepted" },
+  { "id": "mixed-max-typo", "language": "tr", "utterance": "Kişi başı maxmimum 900 TL workshop", "status": "accepted" },
+  { "id": "cross-field-or", "language": "en", "utterance": "concert or jazz", "status": "accepted" },
+  { "id": "quoted-topic", "language": "en", "utterance": "workshop about \"paper marbling\"", "status": "accepted" },
+  { "id": "unknown-mandatory", "language": "en", "utterance": "concert must have valet parking", "status": "unsupported" },
+  { "id": "historical-price", "language": "en", "utterance": "I paid 700 TL last year", "status": "unsupported" },
+  { "id": "unrelated-count", "language": "en", "utterance": "maximum 18 years old", "status": "unsupported" },
+  { "id": "empty-facts", "language": "tr", "utterance": "Bana bir şey bul", "status": "unsupported" }
+]
