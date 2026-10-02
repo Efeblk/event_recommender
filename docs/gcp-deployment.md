@@ -74,7 +74,7 @@ npm run test:deploy-config
 npm run test:deploy:gcp
 npm run build:node
 npm run test:smoke:node
-docker build -t biplan-gcp-local .
+docker build -f Dockerfile -t biplan-gcp-local ..
 ```
 
 `build:node` copies source into an isolated temporary directory and writes only
