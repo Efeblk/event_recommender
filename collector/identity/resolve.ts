@@ -466,19 +466,21 @@ function policies(listing: IdentityListing): Set<Policy> {
     /\byetiskinlere ozel\b/.test(text)
   )
     result.add("adult-only");
+  // Format comes from what the listing says, not the provider category:
+  // providers disagree routinely (Biletix files a Semazen ceremony as Workshop).
   if (
-    normalizeTitleKey(listing.title, listing.category).category === "workshop" ||
-    /\b(?:atolye|workshop)\b/.test(title)
+    /\b(?:atolye|workshop)(?:si|u)?\b/.test(title) ||
+    /\buygulamali\b(?: \S+){0,4} (?:atolye|workshop) calismasi\b/.test(text)
   )
     result.add("workshop");
-  if (
-    ["concert", "theatre", "standup"].includes(
-      normalizeTitleKey(listing.title, listing.category).category,
-    ) ||
-    /\b(?:tiyatro oyunu|canli konser)\b/.test(title)
-  )
+  if (/\b(?:tiyatro oyunu|canli konser)\b/.test(title) || /\bcanli sahne gosterisidir\b/.test(text))
     result.add("performance");
-  const adaptation = /\buyarlama\s+([^.;\n]{1,60})/.exec(text)?.[1]?.trim();
+  // Only an explicit "Uyarlama: …" credit names an adaptation; prose that
+  // merely contains the word must not become a conflicting adaptation.
+  const credit = /\buyarlama\s*:\s*([^.;\n]{1,60})/i.exec(
+    `${listing.title} ${listing.description}`.toLocaleLowerCase("tr-TR"),
+  )?.[1];
+  const adaptation = normalizeIdentityText(credit);
   if (adaptation) result.add(`adaptation:${adaptation}`);
   return result;
 }

@@ -273,8 +273,17 @@ test("audience, workshop/performance, and adaptation conflicts are mandatory fai
       }),
     ],
     [
-      listing({ listingId: "a2", category: "Workshop" }),
-      listing({ listingId: "b2", provider: "bubilet", category: "Tiyatro" }),
+      listing({
+        listingId: "a2",
+        category: "Workshop",
+        description: "Uygulamalı bir atölye çalışması.",
+      }),
+      listing({
+        listingId: "b2",
+        provider: "bubilet",
+        category: "Tiyatro",
+        description: "Canlı sahne gösterisidir.",
+      }),
     ],
     [
       listing({ listingId: "a3", description: "Uyarlama: Yazar A" }),
@@ -550,4 +559,26 @@ test("identical titles match even when providers disagree on category", () => {
     listing({ listingId: "r", provider: "biletinial", title: "Alpay Erdem Stand Up", category: "Tiyatro" }),
   ]);
   assert.equal(result.sessions.length, 1);
+});
+
+test("provider category and uncredited prose are not format or adaptation evidence", () => {
+  // Biletix files the Kasımpaşa Semazen ceremony as Workshop; others as Konser.
+  const ceremony = resolveIdentity([
+    listing({ listingId: "a", title: "Semazen Töreni", category: "Workshop" }),
+    listing({ listingId: "b", provider: "bubilet", title: "Semazen Töreni", category: "Konser" }),
+  ]);
+  assert.equal(ceremony.sessions.length, 1);
+  // The same production description quoted with different lengths.
+  const play = resolveIdentity([
+    listing({
+      listingId: "c",
+      description: "Romandan sahneye uyarlama olarak izleyici ile buluşuyor; Serdar Biliş'in yönetmenliğinde.",
+    }),
+    listing({
+      listingId: "d",
+      provider: "bubilet",
+      description: "Romandan sahneye uyarlama olarak izleyici ile buluşuyor. Hayri İrdal çocukluğunu anlatıyor.",
+    }),
+  ]);
+  assert.equal(play.sessions.length, 1);
 });
