@@ -37,6 +37,10 @@ function addressNeighborhood(address: string): Place | null {
   return matches.length === 1 ? NEIGHBORHOODS[matches[0][0]] : null;
 }
 const SIDE_LABELS: Record<string, IstanbulSide> = {'istanbul avrupa':'europe','istanbul anadolu':'asia','avrupa yakasi':'europe','anadolu yakasi':'asia'};
+/** The side named by a normalized label such as "anadolu yakasi". */
+export function sideNamed(normalized: string): IstanbulSide | null {
+  return SIDE_LABELS[normalized] ?? null;
+}
 export function placeOf(normalized: string): Place | null {
   const side = districtSide(normalized);
   return side ? { district: normalized, side } : NEIGHBORHOODS[normalized] ?? null;

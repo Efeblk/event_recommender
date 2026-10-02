@@ -1,5 +1,8 @@
 import { stable } from './semantics.ts';
 import { emptyPlan, type Atom, type Condition, type Operation, type Plan, type PreviousState } from './contract.ts';
+import { SIDES } from './lexicon.ts';
+
+const SIDE_NAMES = new Set(Object.keys(SIDES));
 
 const categories = new Set(['concert', 'theatre', 'standup', 'workshop', 'exhibition', 'festival',
   'sport', 'cinema', 'talk', 'dance', 'show', 'course', 'tour', 'museum']);
@@ -48,7 +51,8 @@ function validateAtom(atom: Atom) {
       return;
     case 'location':
       assert(typeof atom.name === 'string' && atom.name.trim().length > 0 && atom.name.length <= 64, 'invalid location');
-      assert(['district', 'neighborhood'].includes(atom.precision), 'invalid location precision'); return;
+      assert(['district', 'neighborhood', 'side'].includes(atom.precision), 'invalid location precision');
+      assert(atom.precision !== 'side' || SIDE_NAMES.has(atom.name), 'invalid Istanbul side'); return;
     case 'category': assert(categories.has(atom.value), 'invalid category'); return;
     case 'topic': assert(typeof atom.value === 'string' && atom.value.trim().length > 0 && atom.value.length <= 160, 'invalid topic'); return;
     case 'experience': assert(experiences.has(atom.value), 'invalid experience'); return;

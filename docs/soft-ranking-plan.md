@@ -1,6 +1,6 @@
 # Soft ranking signals: location and price (plan)
 
-Status (2026-10-02): Phase 1 in PR #28 (offline checks only). Phases 2–4 are not started on this branch.
+Status (2026-10-02): Phase 1 in PR #28 (offline checks only). Phase 2 in PR #29, live parser evaluation recorded below. Phases 3–4 are not started.
 
 ## Goal
 
@@ -126,6 +126,39 @@ Other preference kinds (topic, experience, …) are neutral in Phase 1.
   `npm run build:node`, `npm run test:smoke:node`, `npm run test:deploy:gcp`.
   There were no live Jev/Voyage calls, so live relevance impact is not yet
   measured.
+
+## Phase 2 result (2026-10-02, offline)
+
+- `location` atoms gain `precision: 'side'` with canonical names
+  `Avrupa yakası` / `Anadolu yakası`. The parser extracts Turkish (including
+  inflected and lowercase forms) and English ("European/Asian/Anatolian side")
+  surfaces. These are no longer in `OUTSIDE_ISTANBUL`, and Jev's
+  supported-capabilities text lists them.
+- A required side is supported or contradicted by the resolved venue side;
+  unresolved or conflicting locations stay unknown and therefore do not pass.
+  A preferred side scores +1 for the same side and −0.5 for the other side.
+- The legacy (non-span) interpreter is unchanged and still reports sides as
+  unsupported.
+- Offline checks: parser composition tests with synthetic Jev answers, plus
+  plan-evidence, validation and soft-scoring tests. `npm test`, typecheck,
+  lint and release cases pass. The parser bench cannot run offline here (no
+  Jev response cache), and the instruction text changed.
+- Live evaluation (2026-10-02, branch revision `53e7558`, clean tree, no
+  GLiNER proposals on either side; USD 0.10 cap, spent USD 0.0186 in 212 Jev
+  parser calls: 200 benchmark cases plus 6 side turns each on the branch and master):
+  - Frozen 200-case parser benchmark: master `4b2cdce` replayed from the PR #26
+    response cache (no live calls) at 194/200; the branch scored 193/200 live.
+    The differences are not side-related: `en-clear-54` (fixed) and
+    `en-clear-60` (new) both failed with incomplete provider judgments, and
+    `en-ambiguous-12` returned one of two acceptable district-removal readings.
+    The benchmark contains no side phrases.
+  - The two `gliner-cases-v2` conversations that mention sides (6 turns): master
+    rejects "Anadolu yakası" as unsupported in both conversations, and that
+    failure leaves a stale Kadıköy requirement in a later turn. The branch
+    records the side as an optional preference and applies the later
+    corrections. These turns still expect the old capability ("not applied");
+    the frozen file is unchanged, and this note records the policy difference.
+  - Raw benchmark output: `web/parser/.runtime/results/` (local, ignored).
 
 ## Non-goals
 

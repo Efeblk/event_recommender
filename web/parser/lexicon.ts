@@ -110,8 +110,13 @@ export const OUTSIDE_ISTANBUL = ['Ankara', 'İzmir', 'Izmir', 'Bursa', 'Antalya'
   'Fethiye', 'Kapadokya', 'Cappadocia', 'Mersin', 'Kayseri', 'Samsun', 'Diyarbakır', 'Mardin', 'Van', 'Erzurum',
   'Bolu', 'Yalova', 'Alaçatı', 'Çeşme', 'Marmaris', 'Kaş', 'Londra', 'London', 'Paris', 'Berlin', 'Roma', 'Rome',
   'New York', 'Amsterdam', 'Atina', 'Athens', 'Barselona', 'Barcelona', 'Viyana', 'Vienna', 'Madrid', 'Milano',
-  'Milan', 'Prag', 'Prague', 'Budapeşte', 'Budapest', 'Dubai', 'Tokyo', 'Bakü', 'Baku', 'Sofya', 'Sofia',
-  'Avrupa yakası', 'European side', 'Anadolu yakası', 'Asian side', 'Anatolian side'];
+  'Milan', 'Prag', 'Prague', 'Budapeşte', 'Budapest', 'Dubai', 'Tokyo', 'Bakü', 'Baku', 'Sofya', 'Sofia'];
+
+/** Istanbul sides: canonical name → folded surface pattern (inflected Turkish forms included). */
+export const SIDES: Record<string, string> = {
+  'Avrupa yakası': String.raw`avrupa[\s-]?yakas[a-z']{0,8}|european[\s-]side`,
+  'Anadolu yakası': String.raw`anadolu[\s-]?yakas[a-z']{0,8}|(?:asian|anatolian)[\s-]side`,
+};
 
 export const NUMBER_WORDS: Record<string, number> = {
   bir: 1, iki: 2, uc: 3, dort: 4, bes: 5, alti: 6, yedi: 7, sekiz: 8, dokuz: 9, on: 10, yirmi: 20, otuz: 30,
