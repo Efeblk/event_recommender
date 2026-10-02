@@ -18,6 +18,11 @@ interpreter availability failures. The subsequent
 the enlarged inventory, remaining source failures and updated embedding coverage.
 This testing link does not establish readiness for a public production launch.
 
+The [September 30 PostgreSQL staging activation](gcp-postgres-staging-validation-2026-09-30.md)
+verifies managed import, restricted roles, source/preparation/publication Jobs,
+serving export, guarded rollback, idempotent replay and isolated restore/cleanup.
+HTTP latency and cutover acceptance remain open; snapshot staging retains traffic.
+
 1. **Exact-revision verification:** pass web/collector tests, typecheck, lint,
    deployment validation, Node standalone startup and Linux container checks on
    the candidate revision. Keep the Cloudflare build/smoke green for recovery.

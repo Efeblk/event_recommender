@@ -11,6 +11,58 @@ import { buildInputCandidates } from '../lib/input-candidates.ts';
 import { CATEGORIES } from '../lib/types.ts';
 
 const now = new Date('2026-09-24T09:00:00Z');
+
+void test('all frozen spelling cases fit the existing provider request budget', () => {
+  const fixture = JSON.parse(readFileSync(new URL('../fixtures/input-spelling-v1.json', import.meta.url), 'utf8'));
+  for (const item of fixture.cases) {
+    const request = buildInputInterpreterRequest('jev-contract-check', { message: item.message, now: new Date(item.now), previous: emptyIntentState() });
+    assert.ok(Buffer.byteLength(JSON.stringify(request)) <= 48000, item.id);
+  }
+});
+
+void test('typo candidates remain suggestions and selected original spans build exact filters', () => {
+  const message = 'bu cmrtesi kadkoyde sevgilmle konsr olmasn kişi başı 1000tl altı';
+  const input = { message, previous: emptyIntentState(), now };
+  const request = buildInputInterpreterRequest('jev-contract-check', input);
+  assert.equal(request.state.message, message);
+  assert.ok(request.state.spellingCandidates.some((item) => item.text === 'konsr' && item.normalized === 'konser'));
+  const { amounts, dates, districts, partySizes } = request.state.sourceCandidates;
+  const result = parseInputInterpreterResponse(responseFor(message, {
+    budget: amounts.find((item) => item.value === 1000)!.id,
+    budget_basis: 'per_person', budget_boundary: 'exclusive',
+    date: dates.find((item) => item.value.dateFrom === '2026-09-26')!.id,
+    district: districts.find((item) => item.value === 'Kadıköy')!.id,
+    party: partySizes.find((item) => item.value === 2)!.id,
+    companion: 'set:partner', category_concert: 'exclude',
+  }), input);
+  assert.equal(result.issue, null);
+  assert.equal(result.state.filters.district, 'Kadıköy');
+  assert.equal(result.state.filters.dateFrom, '2026-09-26');
+  assert.equal(result.state.filters.maxPrice, 1000);
+  assert.equal(result.state.filters.maxPriceExclusive, true);
+  assert.deepEqual(result.state.filters.excludedCategories, ['Konser']);
+  assert.equal(result.state.preferences.companion, 'partner');
+  // Suggestions must never be applied when the semantic selector rejects them.
+  const rejected = parseInputInterpreterResponse(responseFor(message), input);
+  assert.equal(rejected.state.filters.district, undefined);
+  assert.equal(rejected.state.filters.dateFrom, null);
+  assert.equal(rejected.state.filters.excludedCategories, undefined);
+});
+
+void test('preferred amount and explicit maximum expose both spans without inventing amounts', () => {
+  const message = 'İkimiz toplam 2000 TL tercih ederiz, olmadı en fazla 2500 TL.';
+  const input = { message, previous: emptyIntentState(), now };
+  const request = buildInputInterpreterRequest('jev-contract-check', input);
+  assert.deepEqual(request.state.sourceCandidates.amounts.map((item) => item.value), [2000, 2500]);
+  assert.match(request.questions.budget.instructions, /preferred target/);
+  const result = parseInputInterpreterResponse(responseFor(message, {
+    budget: amountId(message, 2500), budget_basis: 'group_total', budget_boundary: 'inclusive',
+    party: 'p0', companion: 'set:partner',
+  }), input);
+  assert.equal(result.issue, null);
+  assert.equal(result.state.filters.totalBudget, 2500);
+  assert.equal(result.state.filters.maxPrice, 1250);
+});
 const amountId = (message: string, value: number, previous = emptyIntentState()) => {
   const match = buildInputCandidates(message, now, previous).amounts.find((item) => item.value === value);
   assert.ok(match, `amount ${value} is available`);

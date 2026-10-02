@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "kind": "gcp-postgres-staging-proposal",
+  "status": "approved-staging-bundle",
+  "authorization": {
+    "authorizationReference": "user-approval-2026-09-30-gcp-postgres-staging-bundle",
+    "provisioningAuthorized": true,
+    "deploymentAuthorized": true,
+    "publicRolloutAuthorized": false,
+    "interactiveAuthenticationRequiredBeforeApply": true,
+    "approvedExistingScope": "private Cloud Run, Firestore, private Storage, three application secrets, and the existing TRY 100 project budget alert",
+    "requestedActivationBundle": {
+      "ongoingMonthlyEstimateUsd": { "minimum": 10, "maximum": 12 },
+      "oneTimeValidationUsageCapUsd": 3,
+      "newPaidProviderCalls": 0,
+      "isolatedRestoreMaximumHours": 2,
+      "includes": [
+        "Cloud SQL instance, database, extensions, roles, and least-privilege IAM",
+        "preparation service account and two database-password Secret Manager secrets with secure value generation and transfer",
+        "verified frozen import with compatible cached vectors",
+        "existing private and preview staging deployment plus bounded preparation Jobs",
+        "authenticated integration, capacity, interruption, recovery, isolated restore, cutover, and rollback drills within the stated caps"
+      ]
+    },
+    "additionalApprovalRequiredFor": [
+      "public or production publication",
+      "new paid-provider calls or a provider-call budget extension",
+      "database tier increase, high availability, replica, or additional long-lived instance",
+      "storage above 10 GiB or automatic storage growth",
+      "PITR, backup retention beyond seven, or an isolated restore beyond two hours",
+      "one-time validation usage above USD 3 or a revised ongoing estimate above USD 12 per month"
+    ]
+  },
+  "location": {
+    "projectId": "biplan-staging-efeblk",
+    "region": "us-central1",
+    "environment": "staging"
+  },
+  "resources": {
+    "instance": {
+      "name": "biplan-staging-catalog-pg17",
+      "edition": "ENTERPRISE",
+      "databaseVersion": "POSTGRES_17",
+      "tier": "db-f1-micro",
+      "availabilityType": "ZONAL",
+      "highAvailability": false,
+      "deletionProtection": true,
+      "disk": {
+        "type": "PD_SSD",
+        "sizeGiB": 10,
+        "autoResize": false,
+        "hardCapacityGiB": 10
+      },
+      "network": {
+        "ipv4Enabled": true,
+        "authorizedNetworks": [],
+        "privateIp": false,
+        "connection": "Cloud SQL connector through the Cloud Run /cloudsql Unix socket",
+        "vpcConnector": false,
+        "publicDatabaseExposure": false
+      },
+      "backup": {
+        "enabled": true,
+        "retentionCount": 7,
+        "pointInTimeRecovery": false
+      },
+      "maintenance": {
+        "denyPeriodConfigured": false,
+        "stagingWindowMustBeChosenBeforeApply": true
+      }
+    },
+    "database": {
+      "name": "biplan_catalog",
+      "schema": "biplan",
+      "extensions": ["postgis", "vector", "pg_trgm"]
+    },
+    "databasePrincipals": {
+      "owner": { "name": "biplan_owner", "login": false },
+      "readRole": { "name": "biplan_reader", "login": false },
+      "prepareRole": { "name": "biplan_prepare", "login": false },
+      "runtimeLogin": {
+        "name": "biplan_web",
+        "memberOf": ["biplan_reader"],
+        "secret": "biplan-staging-db-runtime-password",
+        "superuser": false,
+        "createDatabase": false,
+        "createRole": false
+      },
+      "preparationLogin": {
+        "name": "biplan_preparer",
+        "memberOf": ["biplan_prepare"],
+        "secret": "biplan-staging-db-preparation-password",
+        "superuser": false,
+        "createDatabase": false,
+        "createRole": false
+      },
+      "applicationUsesPostgresRole": false
+    },
+    "iam": {
+      "runtimeServiceAccount": "biplan-staging-runtime@biplan-staging-efeblk.iam.gserviceaccount.com",
+      "preparationServiceAccount": "biplan-staging-preparation@biplan-staging-efeblk.iam.gserviceaccount.com",
+      "cloudSqlRole": "roles/cloudsql.client",
+      "secretRole": "roles/secretmanager.secretAccessor",
+      "runtimeSecretAccess": ["biplan-staging-db-runtime-password"],
+      "preparationSecretAccess": ["biplan-staging-db-preparation-password"],
+      "preparationSourceRead": {
+        "role": "roles/storage.objectViewer",
+        "prefix": "staging/preparation/sources/",
+        "bucketScoped": true,
+        "listAllowed": false,
+        "writeAllowed": false
+      }
+    },
+    "runtimeLimits": {
+      "cloudRunMinInstances": 0,
+      "cloudRunMaxInstances": 1,
+      "runtimePoolMax": 2,
+      "runtimePoolIdleTimeoutMs": 30000,
+      "runtimeStatementTimeoutMs": 5000,
+      "preparationJobMaxRetries": 0,
+      "preparationJobParallelism": 1,
+      "preparationPoolMax": 2,
+      "preparationStatementTimeoutMs": 30000,
+      "transactionsMustNotSpanExternalCalls": true
+    },
+    "budget": {
+      "existingAlertCurrency": "TRY",
+      "existingAlertAmount": 100,
+      "changeExistingAlert": false,
+      "alertIsSpendingCap": false
+    }
+  },
+  "cost": {
+    "pricingRegion": "us-central1",
+    "currency": "USD",
+    "hoursPerMonthAssumption": 730,
+    "computeHourly": 0.0105,
+    "computeMonthlyEstimate": 7.67,
+    "ssdGiBHourly": 0.000232877,
+    "tenGiBStorageMonthlyEstimate": 1.7,
+    "backupGiBHourly": 0.000109589,
+    "tenGiBAverageBackupMonthlyEstimate": 0.8,
+    "expectedMonthlyRange": { "minimum": 10, "maximum": 12 },
+    "excluded": ["network egress", "tax", "temporary restore instances", "storage beyond the proposed hard capacity"],
+    "tryConversionProvided": false,
+    "sla": false,
+    "productionSizingClaimed": false,
+    "pricingSource": "https://cloud.google.com/sql/pricing"
+  },
+  "migration": {
+    "source": "verified local PostgreSQL catalog publication and preserved private GCS artifacts",
+    "localSchemaAndImportFirst": true,
+    "reuseCompatibleCachedVectors": true,
+    "newAiCalls": 0,
+    "includedInRequestedActivationBundle": true,
+    "atomicCutoverRequired": true,
+    "keepFirestoreAndSnapshotsOperational": true,
+    "keepPreviousImmutableImage": true,
+    "requiredChecks": [
+      "full schema and migration replay on a disposable local PostgreSQL 17 database",
+      "extension availability and exact version readback",
+      "role and default-privilege denial tests",
+      "full counts, pins, hashes, family fixtures, and lexical/vector coverage comparison",
+      "Cloud Run authenticated health/readiness against the exact candidate revision",
+      "bounded preparation Job interruption, lease, retry, and stale-completion checks",
+      "rollback to the previous immutable image and Firestore/GCS publication"
+    ]
+  },
+  "scaleUpGate": {
+    "tier": "db-g1-small",
+    "allowedWithoutNewApproval": false,
+    "requiredEvidence": ["measured import or representative query memory exhaustion", "recorded p50/p95 latency and working set", "updated recurring cost proposal"]
+  }
+}

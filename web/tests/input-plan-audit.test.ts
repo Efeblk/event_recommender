@@ -5,6 +5,16 @@ import { buildInputPlanAuditRequest, parseInputPlanAuditResponse } from '../lib/
 import { emptyIntentState } from '../lib/input-state.ts';
 const now = new Date('2026-09-28T09:00:00Z');
 
+void test('whole-plan audit sees original typo text and the same possible readings', () => {
+  const input = { message: 'konsr olmasn', previous: emptyIntentState(), now };
+  const first = buildInputInterpreterRequest('jev-test', input);
+  const proposal = parseInputInterpreterProposal(firstResponse(first, { category_concert: 'exclude' }), input);
+  const audit = buildInputPlanAuditRequest('jev-test', input, proposal);
+  assert.equal(audit.state.effectiveRequest, input.message);
+  assert.deepEqual(audit.state.spellingCandidates, first.state.spellingCandidates);
+  assert.ok(audit.state.spellingCandidates.some((item) => item.normalized === 'konser'));
+});
+
 function firstResponse(body: ReturnType<typeof buildInputInterpreterRequest>, overrides: Record<string, string> = {}) {
   return { model: 'jev-test', answers: Object.fromEntries(Object.entries(body.questions).map(([id, q]) => {
     const options = Object.keys(q.criteria), selected = overrides[id] ?? (id === 'action' ? 'search' : id === 'issue' ? 'none' : id === 'candidate_coverage' ? 'complete' : id === 'budget_basis' || id === 'budget_boundary' ? 'none' : options.includes('keep') ? 'keep' : id.startsWith('interest_') ? 'skip' : options[0]);

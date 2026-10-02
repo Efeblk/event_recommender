@@ -4,6 +4,8 @@ import type { EventRecord, Message } from './types.ts';
 export interface SemanticRanking {
   queryVector: number[];
   vectors: Map<string, number[]>;
+  /** Pre-ranked dense IDs, for stores that compute cosine similarity themselves. */
+  denseOrder?: string[];
 }
 const stop = new Set(
   'bir biraz icin olsun bana gore olan var neler ne bu ve ile etkinlik istiyorum plan daha tl lira hafta sonu'.split(
@@ -45,6 +47,22 @@ export function hybridRank(
   query: string,
   semantic: SemanticRanking,
 ): EventRecord[] {
+  const denseIds = semantic.denseOrder ?? events
+    .filter((event) => semantic.vectors.has(event.id))
+    .map((event) => ({
+      event,
+      score: cosine(semantic.queryVector, semantic.vectors.get(event.id)!),
+    }))
+    .sort((a, b) => b.score - a.score)
+    .map(({ event }) => event.id);
+  return hybridRankFromDenseOrder(events, query, denseIds);
+}
+
+export function hybridRankFromDenseOrder(
+  events: EventRecord[],
+  query: string,
+  denseIds: string[],
+): EventRecord[] {
   const queryTerms = [...new Set(tokens(query))];
   const documents = events.map(preparedLexicalTokens);
   const averageLength =
@@ -74,13 +92,14 @@ export function hybridRank(
     })
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
-  const dense = events
-    .filter((event) => semantic.vectors.has(event.id))
-    .map((event) => ({
-      event,
-      score: cosine(semantic.queryVector, semantic.vectors.get(event.id)!),
-    }))
-    .sort((a, b) => b.score - a.score);
+  const byId = new Map(events.map((event) => [event.id, event]));
+  const seenDense = new Set<string>();
+  const dense = denseIds.flatMap((id) => {
+    const event = byId.get(id);
+    if (!event || seenDense.has(id)) return [];
+    seenDense.add(id);
+    return [{ event }];
+  });
   if (!dense.length) return rankEvents(events, query);
   const scores = new Map<string, number>();
   // Reciprocal rank fusion avoids mixing incomparable raw cosine/BM25 scores.

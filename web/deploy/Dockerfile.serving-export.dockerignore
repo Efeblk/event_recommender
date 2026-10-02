@@ -1,0 +1,15 @@
+**
+!web/
+!web/package.json
+!web/package-lock.json
+!web/scripts/
+!web/scripts/run-postgres-serving-export.mjs
+!web/lib/
+!web/lib/publication-serving-artifact.node.ts
+!web/lib/gcp-clients.node.ts
+!web/lib/postgres-client.node.ts
+!web/lib/sql-literal.ts
+!collector/
+!collector/preparation/
+!collector/preparation/serving-export.mjs
+!collector/preparation/serving-export-store.mjs

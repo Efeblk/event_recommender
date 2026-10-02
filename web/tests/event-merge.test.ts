@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { displayShowIdentity, mergeEventSessions } from '../lib/event-merge.ts';
+import { bindDisplayIdentitySource, displayShowIdentity, mergeEventSessions } from '../lib/event-merge.ts';
 import { diverseEvents } from '../lib/retrieval.ts';
 import { uniqueEvents } from '../lib/search.ts';
 import type { EventRecord } from '../lib/types.ts';
@@ -29,6 +29,35 @@ function event(overrides: Partial<EventRecord> = {}): EventRecord {
   };
 }
 
+await test('display identity memo stays generation-scoped and validates every identity input', () => {
+  const source = {}, base = event({
+    title: 'İstanbul Workshops Hat Sanatı Atölyesi',
+    category: 'Workshop',
+    description: '18+ uygulamalı atölye çalışması.',
+    venue: 'İstanbul Workshops',
+    district: 'Üsküdar',
+    address: 'Aziz Mahmut Hüdayi, Gülfem Sk. No:15, 34672 Üsküdar/İstanbul',
+    city: 'İstanbul',
+  });
+  bindDisplayIdentitySource(base,source);
+  const baseline = displayShowIdentity(base);
+  assert.equal(baseline,displayShowIdentity({...base}));
+  for (const [field,value] of Object.entries({ title:'İstanbul Workshops Tezhip Atölyesi',description:'7+ uygulamalı atölye çalışması.',venue:'Başka Sahne',district:'Beşiktaş',address:'Başka Adres',city:'Ankara',category:'Konser' })) {
+    bindDisplayIdentitySource(base,source);
+    assert.equal(displayShowIdentity(base), baseline, `reprime ${field}`);
+    const changed={...base,[field]:value};
+    const uncached = displayShowIdentity({...changed});
+    assert.notEqual(uncached, baseline, field);
+    bindDisplayIdentitySource(changed,source);
+    assert.equal(displayShowIdentity(changed),uncached,field);
+  }
+  const separateGeneration=event({...base,id:base.id,title:'İstanbul Workshops Tezhip Atölyesi',description:'7+ uygulamalı atölye çalışması.'});
+  bindDisplayIdentitySource(separateGeneration,{});
+  assert.notEqual(displayShowIdentity(separateGeneration),baseline);
+  assert.equal(displayShowIdentity(separateGeneration),displayShowIdentity({...separateGeneration}));
+  const generic=event({title:'Etkinlik'}); bindDisplayIdentitySource(generic,{});
+  assert.equal(displayShowIdentity(generic),undefined); assert.equal(displayShowIdentity(generic),undefined);
+});
 await test('reviewed Kütüphanedeki Ceset titles combine offers only for the same session', () => {
   const base = event({
     title: 'Kütüphanedeki Ceset',

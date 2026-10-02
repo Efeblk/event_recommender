@@ -16,7 +16,20 @@ tracks the expanded provider inventory, conservative offer merging, source
 quarantines and current embedding/publication evidence. Earlier complete-vector
 counts do not establish coverage of the enlarged catalog.
 
-## Architecture
+## Deployed architecture and selected target
+
+The table and runtime procedures below describe the deployed snapshot/Firestore
+foundation. The September 29 [catalog enrichment architecture decision](catalog-enrichment-architecture.md)
+selects PostgreSQL + PostGIS + pgvector, separate durable preparation jobs, and
+versioned search publications as the target. That migration is not implemented
+by the decision. Keep the deployed adapters operational until an authorized,
+verified cutover; new database provisioning needs a concrete configuration/cost
+review. Do not infer PostgreSQL deployment or readiness from this historical
+foundation's evidence.
+
+The separately approved [September 30 PostgreSQL staging evidence](gcp-postgres-staging-validation-2026-09-30.md)
+records the provisioned database, frozen import, preparation/export Jobs and recovery
+tests. The existing snapshot services retain traffic until PostgreSQL cutover qualifies.
 
 | Component | Service | Stored data |
 | --- | --- | --- |

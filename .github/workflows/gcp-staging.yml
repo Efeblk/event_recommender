@@ -184,6 +184,21 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
           token_format: access_token
       - uses: google-github-actions/setup-gcloud@v3
+      - name: Refuse snapshot deployment over PostgreSQL runtime
+        run: |
+          set -euo pipefail
+          STATE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$STATE_DIR"' EXIT
+          gcloud run services describe "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > "$STATE_DIR/service.json"
+          mapfile -t LIVE_REVISIONS < <(node -e "const s=require(process.argv[1]);for(const t of s.status?.traffic??[])if(Number(t.percent??0)>0&&t.revisionName)console.log(t.revisionName)" "$STATE_DIR/service.json")
+          test "${#LIVE_REVISIONS[@]}" -gt 0
+          REVISION_FILES=()
+          for revision in "${LIVE_REVISIONS[@]}"; do
+            file="$STATE_DIR/$revision.json"
+            gcloud run revisions describe "$revision" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > "$file"
+            REVISION_FILES+=("$file")
+          done
+          node scripts/guard-gcp-snapshot-deploy.mjs "$STATE_DIR/service.json" "${REVISION_FILES[@]}"
       - name: Push reviewed image and resolve digest
         id: image
         run: |

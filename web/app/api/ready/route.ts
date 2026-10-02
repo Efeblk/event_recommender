@@ -3,11 +3,25 @@ import {
   currentPublished,
   checkpointExists,
   collectionStateConfigured,
+  preparedCatalogReadiness,
 } from '@/lib/store';
 
 export async function GET() {
   const checkedAt = new Date().toISOString();
   const headers = { 'cache-control': 'no-store' };
+  try {
+    const prepared = await preparedCatalogReadiness();
+    if (prepared)
+      return Response.json(
+        { ...prepared, checkedAt },
+        { status: prepared.ready ? 200 : 503, headers },
+      );
+  } catch {
+    return Response.json(
+      { ready: false, checkedAt, backend: 'postgres', publicationId: null, reasons: ['database_unavailable'] },
+      { status: 503, headers },
+    );
+  }
   if (!collectionStateConfigured())
     return Response.json(
       { ready: false, checkedAt, reasons: ['collection_state_unavailable'] },

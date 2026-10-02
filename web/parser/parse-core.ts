@@ -534,7 +534,7 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
         ops.push({ op: 'replace', targetId: e.id, condition: strip(e.condition), strength: decision === 'make_preferred' ? 'preferred' : 'hard' });
       } else if (decision === 'replace') {
         const candidateKinds = new Set<string>(atoms(e.condition).map((x) => x.kind === 'budget' ? 'amount' : x.kind));
-        const m = mentions.find((x) => candidateKinds.has(x.kind) && !used.has(x.id) && ['require', 'prefer'].includes(role(x))); 
+        const m = mentions.find((x) => candidateKinds.has(x.kind) && !used.has(x.id) && ['require', 'prefer'].includes(role(x)));
         // No new value: never drop an existing constraint without evidence.
         if (!m) {
           const basis = pick(`basis_edit_${e.id}`);

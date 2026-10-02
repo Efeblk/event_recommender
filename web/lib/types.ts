@@ -58,6 +58,8 @@ export interface EventRecord {
   currency: string;
   url: string;
   imageUrl: string;
+  /** Provider-advertised base price, separate from the verified hard-budget total. */
+  advertisedPrice?: { amount: number; currency: 'TRY'; kind: 'starting_at' | 'exact'; feesKnown: boolean };
   category: string;
   availability: 'available' | 'sold_out' | 'cancelled' | 'unknown';
   source?: 'biletinial' | 'bubilet' | 'biletix';
@@ -147,6 +149,8 @@ export interface SearchDiagnostics {
   planEvidence?: { supported: number; contradicted: number; unknown: number };
 }
 export interface SearchResult {
+  /** The immutable catalog generation used throughout this request, when supported. */
+  publicationId?: string;
   recommendations: Recommendation[];
   filters: Filters;
   mode: 'filters' | 'jev';

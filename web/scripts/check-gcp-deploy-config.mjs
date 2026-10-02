@@ -60,6 +60,11 @@ assert.match(deploy, /environment: gcp-staging/);
 assert.match(deploy, /id-token: write/);
 assert.match(deploy, /sha256sum --check manifest\.sha256/);
 assert.match(deploy, /gunzip --stdout image\.tar\.gz \| docker load/);
+assert.match(deploy, /Refuse snapshot deployment over PostgreSQL runtime/);
+assert.match(deploy, /guard-gcp-snapshot-deploy\.mjs/);
+assert.match(deploy, /status\?\.traffic/);
+assert.match(deploy, /gcloud run revisions describe/);
+assert.ok(deploy.indexOf('guard-gcp-snapshot-deploy.mjs') < deploy.indexOf('docker push "$REMOTE_TAG"'));
 assert.doesNotMatch(deploy, /docker build/);
 assert.match(deploy, /@sha256:\[0-9a-f\]\{64\}/);
 assert.match(deploy, /--no-allow-unauthenticated/);
@@ -124,6 +129,11 @@ assert.doesNotMatch(collectorWorkflow, /INDEX_EMBEDDINGS|embeddings:index|TYPESA
 assert.match(collectorWorkflow, /if: vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
 for (const name of ['FROM', 'UNTIL', 'MAX_CALLS']) assert.match(collectorWorkflow, new RegExp(`GCP_STAGING_INDEXING_${name}`));
 assert.match(collectorWorkflow, /node --experimental-strip-types web\/scripts\/index-collected-embeddings\.mjs --live --report/);
+assert.match(collectorWorkflow, /id: index/);
+assert.match(collectorWorkflow, /status=\$\?/);
+assert.match(collectorWorkflow, /2\)[\s\S]*outcome=bounded-stop[\s\S]*::warning title=Embedding indexing remains pending/);
+assert.match(collectorWorkflow, /\*\)[\s\S]*exit "\$status"/);
+assert.doesNotMatch(collectorWorkflow, /continue-on-error/);
 assert.match(collectorWorkflow, /if: always\(\) && steps\.publish\.outcome == 'success'/);
 assert.match(collectorWorkflow, /collection-embedding-index\.jsonl\*/);
 

@@ -30,6 +30,10 @@ import {
   unpublishedCoveragePages,
   verifyCompletePage,
 } from "./coverage.mjs";
+import {
+  attachCollectionCycle, bindCollectionListingConfig, collectionCycleEvidence, collectionCycleInventory,
+  collectionCycleInventoryComplete, recordCollectionCycleObservation,
+} from './collection-scope.mjs';
 
 const root = dirname(fileURLToPath(import.meta.url));
 const { values } = parseArgs({
@@ -46,10 +50,41 @@ const { values } = parseArgs({
     output: { type: "string", default: join(root, "output") },
     snapshot: { type: "string", default: join(root, "../web/data/events.json") },
     "save-html": { type: "boolean", default: false },
+    "cycle-id": { type: "string" },
+    "cycle-scope": { type: "string" },
+    "cycle-started-at": { type: "string" },
+    "horizon-start": { type: "string" },
+    "horizon-end": { type: "string" },
+    geography: { type: "string" },
+    "listing-config-hash": { type: "string" },
+    "begin-cycle": { type: "boolean", default: false },
   },
 });
 const selected = [...new Set(values.sources.split(","))];
 if (selected.some((name) => !sources[name])) throw new Error("Unknown source");
+const cycleFields = ["cycle-id", "cycle-scope", "cycle-started-at", "geography", "listing-config-hash"];
+const suppliedCycleFields = cycleFields.filter(field => values[field] !== undefined);
+if (suppliedCycleFields.length !== 0 && suppliedCycleFields.length !== cycleFields.length)
+  throw new Error('Explicit collection cycle requires every scope field');
+if (!suppliedCycleFields.length && (values['begin-cycle'] || values['horizon-start'] !== undefined || values['horizon-end'] !== undefined))
+  throw new Error('Collection cycle controls require an explicit cycle scope');
+const explicitCycle = suppliedCycleFields.length ? {
+  schemaVersion: 2,
+  collectionRunId: values['cycle-id'],
+  scope: values['cycle-scope'],
+  providers: [...selected].sort(),
+  horizonStart: values['cycle-scope'] === 'legacy_incremental' ? null : values['horizon-start'],
+  horizonEnd: values['cycle-scope'] === 'legacy_incremental' ? null : values['horizon-end'],
+  startedAt: values['cycle-started-at'],
+  scopeEvidence: { geography: values.geography, listingConfigHash: values['listing-config-hash'] },
+} : null;
+if (explicitCycle?.scope === 'legacy_incremental' && (values['horizon-start'] !== undefined || values['horizon-end'] !== undefined))
+  throw new Error('Legacy incremental collection cannot declare a horizon');
+if (explicitCycle && explicitCycle.scope !== 'legacy_incremental' &&
+    (values['horizon-start'] === undefined || values['horizon-end'] === undefined))
+  throw new Error('Full and incremental collection cycles require both horizon bounds');
+if (explicitCycle?.scope === 'full' && (values.url?.length || values['discover-only']))
+  throw new Error('Full collection cycles require listing discovery and complete detail traversal');
 if (values.limit !== undefined && values["max-details"] !== "2000")
   throw new Error("Use either --limit or --max-details, not both");
 const maxDetails = Number(values.limit ?? values["max-details"]);
@@ -82,6 +117,9 @@ const snapshotEvents = await readSnapshot(snapshot);
 let coverage;
 try { coverage = normalizeCoverage(JSON.parse(await readFile(coveragePath, "utf8"))); }
 catch (error) { if (error.code !== "ENOENT") throw error; coverage = normalizeCoverage(null); }
+const cycleAttachment = attachCollectionCycle(coverage, explicitCycle, { begin: values['begin-cycle'] });
+coverage = cycleAttachment.state;
+const collectionCycle = cycleAttachment.cycle;
 const previous = recoverCoverageEvents(snapshotEvents, coverage, validateEvent);
 report.pages = unpublishedCoveragePages(snapshotEvents, coverage, validateEvent);
 const snapshotVersions = new Set(snapshotEvents.map((event) => `${event.id}|${event.checkedAt}`));
@@ -104,6 +142,9 @@ function upsertReportPage(page) {
   const index = report.pages.findIndex((candidate) => candidate.url === page.url);
   if (index >= 0) report.pages[index] = page;
   else report.pages.push(page);
+}
+function recordCycleObservation(url, status, attemptedAt) {
+  if (collectionCycle) recordCollectionCycleObservation(coverage, url, { status, attemptedAt });
 }
 const headers = { "User-Agent": userAgent, "Accept-Language": "tr-TR,tr;q=0.9" };
 async function get(url, options = {}, isRobots = false) {
@@ -224,10 +265,12 @@ for (const name of selected) {
     report.failures.push({ source: name, url: setupStage === 'robots' ? url : source.origin, reason: `${setupStage}_unavailable:${error.message}` });
   }
 }
+if (collectionCycle) bindCollectionListingConfig(collectionCycle, resolvedListings, sources);
 await saveCoverage();
 if (!values["discover-only"] && targets.length) {
   const targetSet = targets.length ? new Set(targets.map((url) => new URL(url).href)) : null;
-  const ordered = fairCoverageOrder(coverage, selected).filter((entry) => !targetSet || targetSet.has(entry.url));
+  const ordered = fairCoverageOrder(coverage, selected, undefined, undefined, collectionCycle?.collectionRunId ?? null)
+    .filter((entry) => !targetSet || targetSet.has(entry.url));
   for (const entry of ordered) {
     enqueued.add(entry.url);
     seeds.push({ url: entry.url, userData: { source: entry.source, category: entry.category, kind: "event" } });
@@ -238,7 +281,8 @@ let detailsScheduled = targets.length > 0;
 async function scheduleCoverageDetails(active) {
   if (detailsScheduled || values["discover-only"] || pendingListings.size) return;
   detailsScheduled = true;
-  const candidates = fairCoverageOrder(coverage, selected).filter(({ url }) => !enqueued.has(url));
+  const candidates = fairCoverageOrder(coverage, selected, undefined, undefined, collectionCycle?.collectionRunId ?? null)
+    .filter(({ url }) => !enqueued.has(url));
   for (const { url } of candidates) enqueued.add(url);
   await active.addRequests(candidates.map((entry) => ({ url: entry.url, userData: { source: entry.source, category: entry.category, kind: "event" } })));
 }
@@ -310,6 +354,7 @@ const crawler = new BasicCrawler(
           const checkedAt = new Date().toISOString();
           const provenance = { contentHash: sha(html), parserVersion: '5' };
           recordCoverageAttempt(coverage, request.url, { success: false, quarantined: true, failure: error.message }, checkedAt);
+          recordCycleObservation(request.url, 'quarantined', checkedAt);
           checkpointCoverageEvents(coverage, request.url, [], checkedAt, provenance);
           upsertReportPage({ source, url: request.url, checkedAt, quarantinedAt: checkedAt, quarantineReason: error.message, ...provenance, events: [] });
           report.quarantined.push({ source, url: request.url, errors: [error.message], checkedAt });
@@ -331,6 +376,7 @@ const crawler = new BasicCrawler(
         const checkedAt = new Date().toISOString();
         attemptedUrls.add(request.url);
         recordCoverageAttempt(coverage, request.url, { success: false, retired: true, failure: "no_verified_sessions" }, checkedAt);
+        recordCycleObservation(request.url, 'retired', checkedAt);
         const provenance = { contentHash: sha(html), parserVersion: "4" };
         checkpointCoverageEvents(coverage, request.url, [], checkedAt, provenance);
         upsertReportPage({ source, url: request.url, checkedAt, retiredAt: checkedAt, ...provenance, events: [] });
@@ -347,6 +393,7 @@ const crawler = new BasicCrawler(
       });
       verifiedUrls.add(request.url);
       recordCoverageAttempt(coverage, request.url, { success: true }, checkedAt);
+      recordCycleObservation(request.url, 'verified', checkedAt);
       checkpointCoverageEvents(coverage, request.url, accepted, checkedAt, provenance);
       await saveCoverage();
       if (report.pages.length % 10 === 0)
@@ -360,8 +407,10 @@ const crawler = new BasicCrawler(
         attempts: request.retryCount + 1,
       });
       if (request.userData.kind === "event") {
+        const failedAt = new Date().toISOString();
         attemptedUrls.add(request.url);
-        recordCoverageAttempt(coverage, request.url, { success: false, failure: error.message });
+        recordCoverageAttempt(coverage, request.url, { success: false, failure: error.message }, failedAt);
+        recordCycleObservation(request.url, 'failed', failedAt);
         await saveCoverage();
       } else if (request.userData.kind === "listing") {
         pendingListings.delete(request.url);
@@ -404,7 +453,12 @@ if (values["discover-only"]) {
     incompleteListings: report.listings.filter((l) => l.completion !== "exhausted").length,
     failedListings: report.failures.length,
     sourceCoverage,
-    complete: selected.every((source) => sourceCoverage[source].complete),
+    complete: collectionCycle
+      ? collectionCycle.scope === 'full' && budgetStop === null && collectionCycleInventoryComplete(coverage, collectionCycle) &&
+        selected.every((source) => sourceCoverage[source].complete)
+      : selected.every((source) => sourceCoverage[source].complete),
+    ...(collectionCycle ? { collectionCycle, collectionInventory: collectionCycleInventory(coverage, collectionCycle),
+      collectionCycleEvidence: collectionCycleEvidence(coverage, collectionCycle, report.pages) } : {}),
   };
   await atomicJson(join(output, "discovery.json"), report);
   console.log(JSON.stringify(report.summary, null, 2));
@@ -436,7 +490,12 @@ if (values["discover-only"]) {
       selected.map((name) => [name, events.filter((e) => e.source === name).length]),
     ),
     sourceCoverage,
-    complete: selected.every((source) => sourceCoverage[source].complete),
+    complete: collectionCycle
+      ? collectionCycle.scope === 'full' && budgetStop === null && collectionCycleInventoryComplete(coverage, collectionCycle) &&
+        selected.every((source) => sourceCoverage[source].complete)
+      : selected.every((source) => sourceCoverage[source].complete),
+    ...(collectionCycle ? { collectionCycle, collectionInventory: collectionCycleInventory(coverage, collectionCycle),
+      collectionCycleEvidence: collectionCycleEvidence(coverage, collectionCycle, report.pages) } : {}),
     detailBudget: {
       max: maxDetails,
       attempted: attemptedUrls.size,

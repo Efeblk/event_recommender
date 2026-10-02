@@ -47,6 +47,7 @@ jobs:
       - run: npm test
       - run: npm run test:deploy-config
       - run: npm run test:deploy:gcp
+      - run: npm run test:deploy:postgres-plan
       - name: Check frozen conversational release constraints without API calls
         run: node --experimental-strip-types scripts/check-release-cases.mjs
       - name: Check structured input fixture and API contract without API calls
@@ -101,6 +102,45 @@ jobs:
         run: docker build --tag biplan-gcp-ci:${{ github.sha }} .
       - name: Smoke the actual Linux image with networking disabled
         run: node scripts/smoke-container.mjs biplan-gcp-ci:${{ github.sha }}
+      - name: Build bounded preparation Job without credentials
+        run: docker build -f web/deploy/Dockerfile.preparation --tag biplan-preparation-ci:${{ github.sha }} .
+        working-directory: .
+      - name: Verify preparation image cannot default to mutation
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none biplan-preparation-ci:${{ github.sha }}
+          result=$?
+          set -e
+          test "$result" -eq 2
+
+      - name: Build bounded source-ingestion Job without credentials
+        run: docker build -f web/deploy/Dockerfile.source-ingestion --tag biplan-source-ingestion-ci:${{ github.sha }} .
+        working-directory: .
+      - name: Verify source image cannot default to database or storage access
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none biplan-source-ingestion-ci:${{ github.sha }}
+          result=$?
+          set -e
+          test "$result" -eq 2
+          docker run --rm --network none --entrypoint node biplan-source-ingestion-ci:${{ github.sha }} \
+            --experimental-strip-types --input-type=module -e "await Promise.all([import('./lib/gcs-artifact-loader.node.mjs'), import('./lib/postgres-client.node.ts'), import('../collector/preparation/page-batch-source.mjs'), import('../collector/preparation/page-batch-source-store.mjs'), import('../collector/preparation/canonical-store.mjs')]); await import('@google-cloud/storage');"
+
+      - name: Build bounded serving-export Job without credentials
+        run: docker build -f web/deploy/Dockerfile.serving-export --tag biplan-serving-export-ci:${{ github.sha }} .
+        working-directory: .
+      - name: Verify serving-export image rejects missing configuration without networking
+        shell: bash
+        run: |
+          set +e
+          docker run --rm --network none biplan-serving-export-ci:${{ github.sha }}
+          result=$?
+          set -e
+          test "$result" -eq 2
+          docker run --rm --network none --entrypoint node biplan-serving-export-ci:${{ github.sha }} \
+            --experimental-strip-types --input-type=module -e "await Promise.all([import('./scripts/run-postgres-serving-export.mjs'), import('./lib/publication-serving-artifact.node.ts'), import('./lib/gcp-clients.node.ts'), import('./lib/postgres-client.node.ts'), import('../collector/preparation/serving-export.mjs'), import('../collector/preparation/serving-export-store.mjs')]); await import('@google-cloud/storage');"
 
   terraform:
     runs-on: ubuntu-latest
@@ -118,3 +158,54 @@ jobs:
       - run: terraform validate
       - name: Verify private staging plans without Google credentials
         run: terraform test
+
+  postgres-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Install shared collector validation dependencies without fetching providers
+        run: npm ci --prefix ../collector
+      - name: Start isolated PostgreSQL with PostGIS and pgvector
+        run: npm run catalog:start
+      - name: Verify canonical identity and mandatory evidence contracts
+        run: npm run catalog:verify:canonical
+      - name: Verify sealed batches and a single publication switch
+        run: npm run catalog:verify:batch
+      - name: Verify storage, provenance, interruption and publication guards
+        run: npm run catalog:verify:batch-guards
+      - name: Verify URL evidence, source expiry and empty-page publication guards
+        run: npm run catalog:verify:page-receipts
+      - name: Verify resumable page and multi-session source ingestion
+        run: npm run catalog:verify:page-source
+      - name: Verify immutable offer evidence, provider fallback and rollback guards
+        run: npm run catalog:verify:offer-projections
+      - name: Verify actual restricted database roles
+        run: npm run catalog:verify:roles
+      - name: Verify installation and migration replay without PostgreSQL superuser
+        run: npm run catalog:verify:managed-admin
+      - name: Verify pending-only migrations, drift rejection and frozen-import backfill
+        run: npm run catalog:verify:migration-replay
+      - name: Verify historical offer identity schema upgrade
+        run: node --experimental-strip-types ../collector/preparation/verify-offer-identity-provider-session.mjs
+      - name: Verify indexed session lookups preserve offer evidence
+        run: node --experimental-strip-types ../collector/preparation/verify-offer-identity-session-index.mjs
+      - name: Verify immutable serving artifacts and fenced export
+        run: npm run catalog:verify:serving-artifacts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: postgres-contract-evidence
+          path: |
+            web/work/catalog-foundation/*verification*.json
+            web/work/catalog-foundation/local-receipt.json
+          retention-days: 14

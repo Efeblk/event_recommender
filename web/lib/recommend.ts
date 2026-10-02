@@ -31,6 +31,7 @@ import {
 } from './input-state.ts';
 import { interpretInput } from './input-interpreter.ts';
 import { recommendationQuery, retrievalQuery } from './input-retrieval.ts';
+import type { CatalogStatus } from './storage-contract.ts';
 import {
   emptyPlanState,
   MAX_PLAN_REQUESTS,
@@ -160,9 +161,27 @@ export interface Dependencies {
     config: VoyageConfig,
   ) => Promise<Map<string, number[]>>;
   embed?: typeof embedWithVoyage;
+  dense?: {
+    coverage: (events: EventRecord[], config: VoyageConfig) => Promise<number>;
+    rank: (events: EventRecord[], config: VoyageConfig, queryVector: number[]) => Promise<string[]>;
+  };
   inputInterpreter?: 'rules' | 'jev-v1' | 'span-v2';
   spanInterpret?: typeof interpretSpanInput;
   interpret?: typeof interpretInput;
+  pinCatalog?: (now: Date) => Promise<PinnedRecommendationCatalog | null>;
+}
+
+export interface PinnedRecommendationCatalog {
+  publicationId: string;
+  /** Current request-time gate. Implementations must not cache this result. */
+  availability?: () => Promise<boolean>;
+  /** Full diagnostics for this exact pin; called only after availability fails. */
+  catalogStatus?: () => Promise<CatalogStatus>;
+  candidates: Dependencies['candidates'];
+  vectors: NonNullable<Dependencies['vectors']>;
+  dense?: Dependencies['dense'];
+  finalize: (events: EventRecord[]) => Promise<EventRecord[]>;
+  emptyResultNotice?: () => string | undefined;
 }
 
 // Initial product policy, not an empirically calibrated quality claim.
@@ -240,6 +259,31 @@ export async function recommend(
   input: RecommendInput,
   deps: Dependencies,
 ): Promise<SearchResult> {
+  const pinned = await deps.pinCatalog?.(deps.now ?? new Date());
+  const result = await recommendUnpinned(input, pinned
+    ? { ...deps, candidates: pinned.candidates, vectors: pinned.vectors, dense: pinned.dense }
+    : deps);
+  if (!pinned) return result;
+  const before = result.recommendations.map(item => item.event);
+  const admitted = await pinned.finalize(before);
+  const allowed = new Set(admitted.map(event => event.id));
+  // Use our pinned card objects. A validator may exclude an ID but cannot
+  // substitute facts from a later generation or inject a new candidate.
+  const recommendations = result.recommendations.filter(item => allowed.has(item.event.id));
+  const withheld = recommendations.length < before.length;
+  return { ...result, publicationId: pinned.publicationId, recommendations,
+    ...(!recommendations.length && result.status === 'empty' && pinned.emptyResultNotice?.()
+      ? { notice: pinned.emptyResultNotice() } : {}),
+    ...(withheld ? {
+      status: recommendations.length ? 'results' as const : 'empty' as const,
+      notice: [result.notice, 'Bazı etkinliklerin güncel durumu değişti; doğrulanamayan seçenekleri göstermiyoruz.'].filter(Boolean).join(' '),
+    } : {}),
+    ...(result.diagnostics ? { diagnostics: { ...result.diagnostics,
+      returnedAboveSupportThreshold: result.diagnostics.returnedAboveSupportThreshold === null ? null : recommendations.length } } : {}),
+  };
+}
+
+async function recommendUnpinned(input: RecommendInput, deps: Dependencies): Promise<SearchResult> {
   if (
     input.intentVersion === 2 ||
     input.planState ||
@@ -495,11 +539,11 @@ async function recommendResolved(
   let retrievalNotice: string | null = null;
   if (deps.embeddingConfig) {
     try {
-      const vectors = await deps.vectors?.(events, deps.embeddingConfig);
-      if (vectors?.size) {
-        diagnostics.vectorCoverage.available = events.filter((event) =>
-          vectors.has(event.id),
-        ).length;
+      const vectors = deps.dense ? new Map<string, number[]>() : await deps.vectors?.(events, deps.embeddingConfig);
+      const available = deps.dense ? await deps.dense.coverage(events,deps.embeddingConfig)
+        : events.filter(event=>vectors?.has(event.id)).length;
+      if (available > 0) {
+        diagnostics.vectorCoverage.available = available;
         const [queryVector] = await (deps.embed ?? embedWithVoyage)(
           deps.embeddingConfig,
           [
@@ -509,8 +553,9 @@ async function recommendResolved(
           ],
           'query',
         );
-        semantic = { queryVector, vectors };
-        if (vectors.size < events.length)
+        semantic = { queryVector, vectors: vectors ?? new Map(),
+          ...(deps.dense ? { denseOrder: await deps.dense.rank(events,deps.embeddingConfig,queryVector) } : {}) };
+        if (available < events.length)
           retrievalNotice =
             'Anlamsal dizin kısmen hazır; yeni etkinlikler kelime aramasıyla da değerlendiriliyor.';
       } else

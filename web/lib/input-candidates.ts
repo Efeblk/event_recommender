@@ -1,4 +1,8 @@
 import type { IntentState } from './input-state.ts';
+import {
+  findInputSpellingCandidates,
+  type InputSpellingCandidate,
+} from './input-spelling.ts';
 import { addDays, todayInIstanbul, validDay } from './search.ts';
 
 export interface Span<T> {
@@ -18,6 +22,7 @@ export interface TimeValue {
   startTimeToExclusive?: boolean;
 }
 export interface InputCandidatePool {
+  spellingCandidates?: InputSpellingCandidate[];
   amounts: NumberSpan[];
   parties: NumberSpan[];
   dates: Span<DateValue>[];
@@ -325,6 +330,7 @@ export function buildInputCandidates(
   if (typeof message !== 'string' || !message.trim() || message.length > 1200)
     throw new Error('Invalid candidate message.');
   const pool: InputCandidatePool = {
+    spellingCandidates: findInputSpellingCandidates(message),
     amounts: [],
     parties: [],
     dates: [],
@@ -345,6 +351,7 @@ export function buildInputCandidates(
   const source = normalizedSource(message),
     q = source.text,
     today = todayInIstanbul(now);
+
   const original = (match: RegExpMatchArray) =>
     source.slice(match.index!, match.index! + match[0].length);
   const numberWords = `(?:${Object.keys(words)
@@ -460,6 +467,21 @@ export function buildInputCandidates(
     if (previous.filters.partySize && previous.filters.partySize < 100)
       add('parties', 'p', original(match), previous.filters.partySize + 1);
     else pool.overflow = true;
+  }
+  for (const spelling of pool.spellingCandidates ?? []) {
+    if (spelling.kind !== 'companion') continue;
+    if (['sevgilimle', 'partnerimle'].includes(spelling.normalized)) {
+      add('parties', 'p', spelling.text, 2);
+      continue;
+    }
+    const prefix = message.slice(0, spelling.start);
+    const count = /(?<![\p{L}\p{N}_.,:/+-])(\d{1,3})\s*$/u.exec(prefix);
+    if (!count) continue;
+    const value = Number(count[1]);
+    if (value >= 1 && value <= 100) {
+      const start = spelling.start - count[0].length;
+      add('parties', 'p', message.slice(start, spelling.end), value);
+    } else pool.overflow = true;
   }
   for (const match of scan(
     `${boundaryStart}(${countToken})[ -]*(?:yas(?:inda|indaki)?|year[ -]old)${boundaryEnd}`,
@@ -580,6 +602,24 @@ export function buildInputCandidates(
     if (quotedRanges.some((quoted) => range.start >= quoted.start && range.end <= quoted.end))
       continue;
     addDate(match, weekdayOnOrAfter(today, weekdayAbbreviations[match[1]]));
+  }
+  for (const spelling of pool.spellingCandidates ?? []) {
+    if (spelling.kind !== 'weekday') continue;
+    const target = weekdays[spelling.normalized];
+    if (target == null) continue;
+    const preceding = dated.find((item) => {
+      const range = source.range(item.start, item.end);
+      return range.end <= spelling.start && /^\s*$/.test(message.slice(range.end, spelling.start));
+    });
+    if (preceding && /\d/.test(q.slice(preceding.start, preceding.end))) {
+      if (dayOf(preceding.from) !== target) pool.overflow = true;
+      continue;
+    }
+    const prefix = fold(message.slice(0, spelling.start));
+    const inNextWeek = /(?:haftaya|gelecek hafta|next week)\s*$/.test(prefix);
+    const base = inNextWeek ? addDays(today, (1 - dayOf(today) + 7) % 7 || 7) : today;
+    const day = weekdayOnOrAfter(base, target, !inNextWeek && /(?:gelecek|next)\s*$/.test(prefix));
+    add('dates', 'd', spelling.text, { dateFrom: day, dateTo: day });
   }
   const weekdayPattern = `${boundaryStart}(?:(bu|this|gelecek|next)\\s+)?(${weekdayNames})(?:'?(?:dan|den|tan|ten|ya|ye|na|ne)|\\s+gunu)?${boundaryEnd}`;
   for (const match of scan(weekdayPattern)) {
@@ -754,6 +794,11 @@ export function buildInputCandidates(
   const districtPattern = `${boundaryStart}(${districtNames})(?:'?(?:da|de|ta|te|dan|den|tan|ten|ya|ye|a|e|nda|nde|na|ne))?${boundaryEnd}`;
   for (const match of scan(districtPattern))
     add('districts', 'l', original(match), districts[match[1]]);
+  for (const spelling of pool.spellingCandidates ?? []) {
+    if (spelling.kind !== 'district') continue;
+    const value = districts[spelling.normalized];
+    if (value) add('districts', 'l', spelling.text, value);
+  }
 
   for (const match of message.matchAll(
     /["\u201c\u201d']([^"\u201c\u201d']{1,160})["\u201c\u201d']/gu,

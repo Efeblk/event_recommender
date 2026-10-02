@@ -640,10 +640,30 @@ const GENERIC_SHOW_TITLES = new Set([
   'open mic',
 ]);
 
+type DisplayIdentityFields = Pick<EventRecord, 'title' | 'description' | 'venue' | 'district' | 'address' | 'city' | 'category'>;
+const displayIdentitySource = new WeakMap<EventRecord, object>();
+const displayIdentityCache = new WeakMap<object, DisplayIdentityFields & { identity: string | undefined }>();
+
+export function bindDisplayIdentitySource(event: EventRecord, sourceObject: object): void {
+  displayIdentitySource.set(event, sourceObject);
+}
+
+const displayFields = (event: EventRecord): DisplayIdentityFields => ({
+  title:event.title,description:event.description,venue:event.venue,district:event.district,
+  address:event.address,city:event.city,category:event.category,
+});
+const sameDisplayFields = (event: EventRecord, cached: DisplayIdentityFields) =>
+  event.title === cached.title && event.description === cached.description && event.venue === cached.venue &&
+  event.district === cached.district && event.address === cached.address && event.city === cached.city && event.category === cached.category;
+
 /** Stable display identity for clear show titles; generic listings stay distinct. */
 export function displayShowIdentity(event: EventRecord): string | undefined {
+  const source = displayIdentitySource.get(event);
+  const cached = source && displayIdentityCache.get(source);
+  if (cached && sameDisplayFields(event,cached)) return cached.identity;
   const title = identityTitle(event);
-  if (!title || GENERIC_SHOW_TITLES.has(title)) return undefined;
-  const policy = [...strongPolicies(event)].sort().join('|');
-  return [normalize(event.city), event.category, title, policy].join('\u001f');
+  const identity = !title || GENERIC_SHOW_TITLES.has(title) ? undefined :
+    [normalize(event.city), event.category, title, [...strongPolicies(event)].sort().join('|')].join('\u001f');
+  if (source) displayIdentityCache.set(source,{...displayFields(event),identity});
+  return identity;
 }
