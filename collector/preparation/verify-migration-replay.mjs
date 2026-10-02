@@ -34,7 +34,7 @@ try {
     assert.equal(await fingerprint(),before);
   });
   await check('pending 012 and 013 apply without replaying history; local/import calls preserve bodies and ACL',async () => {
-    const migration = await readFile(resolve(import.meta.dirname,'migrations/012-bulk-seal-integrity.sql'),'utf8');
+    const migration = (await readFile(resolve(import.meta.dirname,'migrations/012-bulk-seal-integrity.sql'),'utf8')).replaceAll('\r\n','\n');
     const old = migration.split('$old_guard$')[1], bulk = migration.split('$bulk_query$')[1];
     const current = await definition(), replacement = `IF EXISTS(SELECT 1 FROM (${bulk}) bulk_global_projection_integrity_v1 WHERE NOT usable) THEN blocked:=blocked+1; END IF;`;
     const original = current.replace(replacement,()=>old); assert.notEqual(original,current);

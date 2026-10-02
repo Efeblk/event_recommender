@@ -5,6 +5,7 @@ import { bindDisplayIdentitySource, displayShowIdentity, mergeEventSessions } fr
 import { diverseEvents } from '../lib/retrieval.ts';
 import { uniqueEvents } from '../lib/search.ts';
 import type { EventRecord } from '../lib/types.ts';
+import reviewedFamilies from './fixtures/reviewed-merge-families.json' with { type: 'json' };
 
 function event(overrides: Partial<EventRecord> = {}): EventRecord {
   return {
@@ -57,6 +58,11 @@ await test('display identity memo stays generation-scoped and validates every id
   assert.equal(displayShowIdentity(separateGeneration),displayShowIdentity({...separateGeneration}));
   const generic=event({title:'Etkinlik'}); bindDisplayIdentitySource(generic,{});
   assert.equal(displayShowIdentity(generic),undefined); assert.equal(displayShowIdentity(generic),undefined);
+  const selfCached=event({title:'Son Lux',category:'Konser'});
+  const selfBaseline=displayShowIdentity(selfCached);
+  assert.equal(displayShowIdentity(selfCached),selfBaseline);
+  selfCached.title='Son Lux Tribute';
+  assert.notEqual(displayShowIdentity(selfCached),selfBaseline);
 });
 await test('reviewed Kütüphanedeki Ceset titles combine offers only for the same session', () => {
   const base = event({
@@ -84,6 +90,40 @@ await test('reviewed Kütüphanedeki Ceset titles combine offers only for the sa
     { ...alias, title: 'Kütüphanedeki Ceset - Başka Uyarlama' },
   ])
     assert.equal(mergeEventSessions([base, different]).length, 2);
+});
+
+await test('reviewed Son Lux sponsor prefix merges the exact session and retains all provider offers', () => {
+  const expectedIds = ['515bdb06cce4e95601178621', 'b396d9dcffe884969874d038', 'fabed7aa89fe90aff1e48495'];
+  const records = reviewedFamilies.sonLux.map(row => event({ ...row, source: row.provider as EventRecord['source'], category: 'Konser' }));
+  assert.deepEqual(records.map(({ id }) => id).sort(), expectedIds);
+  const [merged] = mergeEventSessions(records);
+  assert.equal(mergeEventSessions(records).length, 1);
+  assert.equal(merged.offers?.length, 3);
+  assert.deepEqual(new Set(merged.mergedIds), new Set([merged.id, ...expectedIds]));
+  assert.equal(mergeEventSessions([records[0], { ...records[1], startsAt: '2027-03-26T16:30:00.000Z' }]).length, 2);
+  assert.equal(mergeEventSessions([records[0], { ...records[1], title: 'Son Lux Tribute' }]).length, 2);
+});
+
+await test('reviewed Bahçeşehir venue names merge every observed exact performance but not other times', () => {
+  const expectedFamilies = ['alim-qasimov','celik','cengiz-kurtoglu','devlerin-savasi','ebru-yasar','gokhan-turkmen','ikilem','mavi-gri','muazzez-ersoy'];
+  const expectedIds = [
+    '0e4742eaad88f91de77ea891','11c1ed0799b0180e33e21ec7','255f3b6fdf2eec982d80676b','43ced0dd27931514bc206c0b',
+    '4630ca21076f83ff7da3fcd7','69290b319147750de215e884','837bbb3665a4672ac7ea466a',
+    '85caef0861399bf890f8c560','914fc6a5e8b69e3bdd4699ea','959227b3414abc24a61028cf',
+    'a50c37b92067ddef517121b5','abfc991f95d1403ab8ea510b','ad7b5487d82429c7d7d6a652',
+    'b3c25108860ee4d053049fc9','c0915e45df9aa646e4845b06','c7722091bab8741c6c50478c',
+    'ead8fa721c1d877b95b5d33a','f60a4851909abbc70a844621','f887c4d5396dd455dcb7aaa2',
+  ];
+  assert.deepEqual([...new Set(reviewedFamilies.bahcesehir.map(({ family }) => family))].sort(), expectedFamilies);
+  assert.deepEqual(reviewedFamilies.bahcesehir.map(({ id }) => id).sort(), expectedIds);
+  const records = reviewedFamilies.bahcesehir.map(row => event({ ...row, source: row.provider as EventRecord['source'], category: row.family === 'devlerin-savasi' ? 'Tiyatro' : 'Konser' }));
+  const merged = mergeEventSessions(records);
+  assert.equal(merged.length, expectedFamilies.length);
+  assert.equal(merged.reduce((count, { offers }) => count + (offers?.length ?? 0), 0), 19);
+  assert.deepEqual(merged.map(({ offers }) => offers?.length ?? 0).sort((a, b) => a - b), [2,2,2,2,2,2,2,2,3]);
+  assert.deepEqual(new Set(merged.flatMap(({ mergedIds }) => mergedIds ?? []).filter(id => expectedIds.includes(id))), new Set(expectedIds));
+  assert.equal(mergeEventSessions([records[0], { ...records[1], startsAt: '2026-10-10T19:30:00.000Z' }]).length, 2);
+  assert.equal(mergeEventSessions([records[0], { ...records[1], title: 'Başka Konser' }]).length, 2);
 });
 
 await test('reviewed Çiftler Çiftler alias preserves offers without merging different sessions or adaptations', () => {
