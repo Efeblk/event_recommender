@@ -164,7 +164,11 @@ export interface Dependencies {
   embed?: typeof embedWithVoyage;
   dense?: {
     coverage: (events: EventRecord[], config: VoyageConfig) => Promise<number>;
-    rank: (events: EventRecord[], config: VoyageConfig, queryVector: number[]) => Promise<string[]>;
+    rank: (
+      events: EventRecord[],
+      config: VoyageConfig,
+      queryVector: number[],
+    ) => Promise<string[]>;
   };
   inputInterpreter?: 'rules' | 'jev-v1' | 'span-v2';
   spanInterpret?: typeof interpretSpanInput;
@@ -261,30 +265,87 @@ export async function recommend(
   deps: Dependencies,
 ): Promise<SearchResult> {
   const pinned = await deps.pinCatalog?.(deps.now ?? new Date());
-  const result = await recommendUnpinned(input, pinned
-    ? { ...deps, candidates: pinned.candidates, vectors: pinned.vectors, dense: pinned.dense }
-    : deps);
+  let unavailableCatalog: CatalogStatus | undefined;
+  let availabilityFailed = false;
+  const pinnedCandidates = pinned
+    ? async (filters: Filters) => {
+        if (pinned.availability && !(await pinned.availability())) {
+          availabilityFailed = true;
+          unavailableCatalog = await pinned.catalogStatus?.();
+          return [];
+        }
+        return pinned.candidates(filters);
+      }
+    : undefined;
+  const result = await recommendUnpinned(
+    input,
+    pinned
+      ? {
+          ...deps,
+          candidates: pinnedCandidates!,
+          vectors: pinned.vectors,
+          dense: pinned.dense,
+        }
+      : deps,
+  );
   if (!pinned) return result;
-  const before = result.recommendations.map(item => item.event);
+  const before = result.recommendations.map((item) => item.event);
   const admitted = await pinned.finalize(before);
-  const allowed = new Set(admitted.map(event => event.id));
+  const allowed = new Set(admitted.map((event) => event.id));
   // Use our pinned card objects. A validator may exclude an ID but cannot
   // substitute facts from a later generation or inject a new candidate.
-  const recommendations = result.recommendations.filter(item => allowed.has(item.event.id));
+  const recommendations = result.recommendations.filter((item) =>
+    allowed.has(item.event.id),
+  );
   const withheld = recommendations.length < before.length;
-  return { ...result, publicationId: pinned.publicationId, recommendations,
-    ...(!recommendations.length && result.status === 'empty' && pinned.emptyResultNotice?.()
-      ? { notice: pinned.emptyResultNotice() } : {}),
-    ...(withheld ? {
-      status: recommendations.length ? 'results' as const : 'empty' as const,
-      notice: [result.notice, 'Bazı etkinliklerin güncel durumu değişti; doğrulanamayan seçenekleri göstermiyoruz.'].filter(Boolean).join(' '),
-    } : {}),
-    ...(result.diagnostics ? { diagnostics: { ...result.diagnostics,
-      returnedAboveSupportThreshold: result.diagnostics.returnedAboveSupportThreshold === null ? null : recommendations.length } } : {}),
+  return {
+    ...result,
+    publicationId: pinned.publicationId,
+    recommendations,
+    ...(availabilityFailed && result.status === 'empty'
+      ? {
+          notice:
+            unavailableCatalog?.status === 'empty'
+              ? 'Yayınlanmış etkinlik kataloğu şu anda boş.'
+              : 'Yayınlanmış etkinliklerin güncel kaynak durumu doğrulanamadı. Biraz sonra yeniden deneyebilirsin.',
+        }
+      : {}),
+    ...(!recommendations.length &&
+    result.status === 'empty' &&
+    pinned.emptyResultNotice?.()
+      ? { notice: pinned.emptyResultNotice() }
+      : {}),
+    ...(withheld
+      ? {
+          status: recommendations.length
+            ? ('results' as const)
+            : ('empty' as const),
+          notice: [
+            result.notice,
+            'Bazı etkinliklerin güncel durumu değişti; doğrulanamayan seçenekleri göstermiyoruz.',
+          ]
+            .filter(Boolean)
+            .join(' '),
+        }
+      : {}),
+    ...(result.diagnostics
+      ? {
+          diagnostics: {
+            ...result.diagnostics,
+            returnedAboveSupportThreshold:
+              result.diagnostics.returnedAboveSupportThreshold === null
+                ? null
+                : recommendations.length,
+          },
+        }
+      : {}),
   };
 }
 
-async function recommendUnpinned(input: RecommendInput, deps: Dependencies): Promise<SearchResult> {
+async function recommendUnpinned(
+  input: RecommendInput,
+  deps: Dependencies,
+): Promise<SearchResult> {
   if (
     input.intentVersion === 2 ||
     input.planState ||
@@ -541,9 +602,12 @@ async function recommendResolved(
   let retrievalNotice: string | null = null;
   if (deps.embeddingConfig) {
     try {
-      const vectors = deps.dense ? new Map<string, number[]>() : await deps.vectors?.(events, deps.embeddingConfig);
-      const available = deps.dense ? await deps.dense.coverage(events,deps.embeddingConfig)
-        : events.filter(event=>vectors?.has(event.id)).length;
+      const vectors = deps.dense
+        ? new Map<string, number[]>()
+        : await deps.vectors?.(events, deps.embeddingConfig);
+      const available = deps.dense
+        ? await deps.dense.coverage(events, deps.embeddingConfig)
+        : events.filter((event) => vectors?.has(event.id)).length;
       if (available > 0) {
         diagnostics.vectorCoverage.available = available;
         const [queryVector] = await (deps.embed ?? embedWithVoyage)(
@@ -555,8 +619,19 @@ async function recommendResolved(
           ],
           'query',
         );
-        semantic = { queryVector, vectors: vectors ?? new Map(),
-          ...(deps.dense ? { denseOrder: await deps.dense.rank(events,deps.embeddingConfig,queryVector) } : {}) };
+        semantic = {
+          queryVector,
+          vectors: vectors ?? new Map(),
+          ...(deps.dense
+            ? {
+                denseOrder: await deps.dense.rank(
+                  events,
+                  deps.embeddingConfig,
+                  queryVector,
+                ),
+              }
+            : {}),
+        };
         if (available < events.length)
           retrievalNotice =
             'Anlamsal dizin kısmen hazır; yeni etkinlikler kelime aramasıyla da değerlendiriliyor.';

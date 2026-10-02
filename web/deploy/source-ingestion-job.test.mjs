@@ -126,9 +126,12 @@ await test('only a coherent sealed result succeeds', () => {
 
 await test('source ingestion has a separate nonroot image with pinned runtime dependencies', async () => {
   const docker = await readFile(new URL('./Dockerfile.source-ingestion', import.meta.url), 'utf8');
-  for (const required of ['node:22-bookworm-slim@sha256:', "'@google-cloud/storage'", 'page-batch-source.mjs', 'USER node'])
+  for (const required of ['node:22-bookworm-slim@sha256:', "'@google-cloud/storage'", 'page-batch-source.mjs', 'COPY contracts/ /app/contracts/', 'USER node'])
     assert.match(docker, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   assert.doesNotMatch(docker, /run-postgres-preparation/);
   const ignore = await readFile(new URL('./Dockerfile.source-ingestion.dockerignore', import.meta.url), 'utf8');
-  assert.match(ignore, /^\*\*/); assert.doesNotMatch(ignore, /web\/work|\.env/);
+  assert.match(ignore, /^\*\*/);
+  assert.match(ignore, /^!contracts\/$/m);
+  assert.match(ignore, /^!contracts\/\*\*$/m);
+  assert.doesNotMatch(ignore, /web\/work|\.env/);
 });

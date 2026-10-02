@@ -79,7 +79,7 @@ jobs:
       - name: Build immutable Linux image
         env:
           LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}
-        run: docker build --pull --platform linux/amd64 --tag "$LOCAL_IMAGE" .
+        run: docker build --pull --platform linux/amd64 -f Dockerfile --tag "$LOCAL_IMAGE" ..
       - name: Smoke exact isolated container
         env:
           LOCAL_IMAGE: biplan-gcp-candidate:${{ inputs.expected_sha }}

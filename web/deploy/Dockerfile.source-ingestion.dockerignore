@@ -14,6 +14,8 @@
 !web/lib/event-format.ts
 !web/lib/event-timing.ts
 !web/lib/intent.ts
+!contracts/
+!contracts/**
 !collector/
 !collector/package.json
 !collector/package-lock.json

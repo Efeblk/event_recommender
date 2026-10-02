@@ -2,10 +2,83 @@ import type { EventRecord } from './types.ts';
 import { CATEGORIES } from './types.ts';
 import { parseAttendanceTiming } from './event-timing.ts';
 import type { SourcePage } from './storage-contract.ts';
+import {
+  PROVIDER_LISTING_VERSION,
+  validateProviderListing,
+  type ProviderListingV1,
+} from '../../contracts/listing.ts';
+import { categoryForEvent } from '../../contracts/category.ts';
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_IMPORT_ENVELOPE_EVENTS = 2000;
 export const MAX_EVENT_PRICE = Number.MAX_SAFE_INTEGER / 100;
 export const MAX_IMPORT_TRANSIT_GRACE_MS = 60_000;
+
+function cleanListingText(value: string | undefined): string {
+  return (value ?? '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function sameStrings(value: unknown, expected: readonly string[]): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === expected.length &&
+    value.every((item, index) => item === expected[index])
+  );
+}
+
+/** Keep retained evidence richer than EventRecord, but bind every field
+ * projected by collector/extract.listingToEvent to that compatibility record. */
+function providerListingMatchesEvent(
+  listing: ProviderListingV1,
+  event: Record<string, unknown>,
+  source: EventRecord['source'],
+  pageUrl: string,
+  attendanceTiming: EventRecord['attendanceTiming'],
+): boolean {
+  const availablePrices = listing.tiers
+    .filter(
+      (tier) =>
+        tier.availability === 'available' && typeof tier.price === 'number',
+    )
+    .map((tier) => tier.price as number);
+  const price = availablePrices.length ? Math.min(...availablePrices) : null;
+  const currency = listing.tiers.find((tier) => tier.currency)?.currency ?? 'TRY';
+  const listingAttendance = parseAttendanceTiming(listing.attendanceTiming);
+  return (
+    listing.listingId.slice(0, 24) === event.id &&
+    listing.provider === source &&
+    listing.url === pageUrl &&
+    listing.startsAt === event.startsAt &&
+    listing.observedAt === event.checkedAt &&
+    cleanListingText(listing.title).slice(0, 250) === event.title &&
+    cleanListingText(listing.description).slice(0, 5000) ===
+      event.description &&
+    cleanListingText(listing.venue.name).slice(0, 250) === event.venue &&
+    cleanListingText(listing.venue.district) === event.district &&
+    cleanListingText(listing.venue.address).slice(0, 500) === event.address &&
+    (listing.city || 'İstanbul') === event.city &&
+    price === event.price &&
+    currency === event.currency &&
+    (listing.imageUrl ?? '') === event.imageUrl &&
+    categoryForEvent(listing.category, listing.title, listing.description) ===
+      event.category &&
+    listing.availability === event.availability &&
+    sameStrings(event.sourceSessionIds, listing.providerSessionIds) &&
+    event.sourceCategory === listing.category &&
+    event.sourceVersion === PROVIDER_LISTING_VERSION &&
+    event.extraction === listing.extractorVersion &&
+    JSON.stringify(listingAttendance) === JSON.stringify(attendanceTiming)
+  );
+}
+
+/** Remove preparation-only evidence from records crossing a public API boundary. */
+export function publicEventRecord(event: EventRecord): EventRecord {
+  const {
+    preparedSearch: _preparedSearch,
+    providerListing: _providerListing,
+    ...publicEvent
+  } = event;
+  return publicEvent;
+}
 export function sourceOf(raw: unknown): EventRecord['source'] | null {
   if (typeof raw !== 'string') return null;
   try {
@@ -108,6 +181,18 @@ export function validateImport(
       const start = Date.parse(e.startsAt as string),
         checked = Date.parse(e.checkedAt as string);
       const attendanceTiming = parseAttendanceTiming(e.attendanceTiming);
+      const providerListing = e.providerListing === undefined ? undefined : validateProviderListing(e.providerListing);
+      if (
+        providerListing &&
+        !providerListingMatchesEvent(
+          providerListing,
+          e,
+          source,
+          url,
+          attendanceTiming,
+        )
+      )
+        throw new Error('Provider listing does not match imported event');
       if (e.sourceSessionIds !== undefined && (!Array.isArray(e.sourceSessionIds) || e.sourceSessionIds.length > 100 || e.sourceSessionIds.some((id) => typeof id !== 'string' || !id.length || id.length > 100)))
         throw new Error('Invalid source session IDs');
       for (const [key, max] of Object.entries({ sourceCategory: 250, sourceVersion: 40, extraction: 80 }))
@@ -173,6 +258,7 @@ export function validateImport(
         ...(e.sourceVersion !== undefined ? { sourceVersion: e.sourceVersion } : {}),
         ...(e.extraction !== undefined ? { extraction: e.extraction } : {}),
         ...(attendanceTiming ? { attendanceTiming } : {}),
+        ...(providerListing ? { providerListing } : {}),
       } as EventRecord;
     });
     return { url, events };

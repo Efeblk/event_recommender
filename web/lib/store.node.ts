@@ -15,6 +15,7 @@ import { indexAuditedBatch, type AuditedIndexInput } from './audited-index.ts';
 import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts';
 import type { Lease } from './storage-contract.ts';
 import { createPostgresCatalog } from './postgres-catalog.node.ts';
+import { createPipelineCatalog } from './pipeline-catalog.node.ts';
 export type { RateLimitResult } from './rate-limit.ts';
 
 export function runtime() {
@@ -22,12 +23,12 @@ export function runtime() {
 }
 let instance: Promise<HighLevelStore> | undefined;
 let clients: ReturnType<typeof createGcpClients> | undefined;
-let postgres: ReturnType<typeof createPostgresCatalog> | undefined;
+let postgres: ReturnType<typeof createPostgresCatalog> | ReturnType<typeof createPipelineCatalog> | undefined;
 function postgresCatalog() {
   const backend = env.CATALOG_BACKEND ?? 'snapshots';
   if (backend === 'snapshots') return null;
-  if (backend !== 'postgres') throw new Error('Unsupported catalog backend');
-  return postgres ??= createPostgresCatalog(env);
+  if (!['postgres', 'pipeline'].includes(backend)) throw new Error('Unsupported catalog backend');
+  return postgres ??= backend === 'pipeline' ? createPipelineCatalog(env) : createPostgresCatalog(env);
 }
 export async function pinRecommendationCatalog(now: Date) {
   return postgresCatalog()?.pin(now) ?? null;

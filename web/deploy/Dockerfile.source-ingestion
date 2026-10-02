@@ -18,6 +18,7 @@ WORKDIR /app/web
 COPY web/scripts/run-postgres-source-ingestion.mjs ./scripts/
 COPY web/lib/gcs-artifact-loader.node.mjs web/lib/postgres-client.node.ts web/lib/sql-literal.ts \
      web/lib/source.ts web/lib/search.ts web/lib/types.ts web/lib/event-format.ts web/lib/event-timing.ts web/lib/intent.ts ./lib/
+COPY contracts/ /app/contracts/
 COPY collector/adapters.mjs collector/biletinial.mjs collector/bubilet.mjs collector/flight.mjs /app/collector/
 COPY collector/preparation/batch-store.mjs collector/preparation/canonical-adapter.mjs \
      collector/preparation/canonical-store.mjs collector/preparation/collector-page-receipt.mjs \
