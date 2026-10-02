@@ -67,7 +67,10 @@ try {
   assert.equal(health.aiEnabled, false);
   const publicSite = await server.fetch('/api/site');
   assert.equal(publicSite.status, 200);
-  assert.deepEqual(await publicSite.json(), { donationUrl: null });
+  assert.deepEqual(await publicSite.json(), {
+    donationUrl: null,
+    intentVersion: 1,
+  });
   // Dispatch directly to workerd. The dev HTTP proxy can lose its connection
   // after an early 401 leaves a request body unread (workerd issue #1730).
   let worker = server.getWorker();
@@ -466,6 +469,7 @@ try {
   assert.equal(configuredSite.status, 200);
   assert.deepEqual(await configuredSite.json(), {
     donationUrl: 'https://example.com/support',
+    intentVersion: 1,
   });
   const sourceAfterRestart = await env.DB.prepare(
     'SELECT id FROM events WHERE source_url=? ORDER BY id',

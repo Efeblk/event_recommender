@@ -2,7 +2,8 @@ import { runtime } from '@/lib/store';
 
 export async function GET() {
   let donationUrl: string | null = null;
-  const configured = runtime().DONATION_URL;
+  const configuredRuntime = runtime();
+  const configured = configuredRuntime.DONATION_URL;
   if (configured) {
     try {
       const url = new URL(configured);
@@ -13,7 +14,10 @@ export async function GET() {
     }
   }
   return Response.json(
-    { donationUrl },
+    {
+      donationUrl,
+      intentVersion: configuredRuntime.INPUT_INTERPRETER === 'span-v2' ? 2 : 1,
+    },
     {
       headers: { 'Cache-Control': 'no-store' },
     },
