@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "source": "web/data/events.json frozen 2026-09-26 snapshot",
+  "train": [
+    {
+      "label": "suffix-only: Kütüphanedeki Ceset",
+      "expectedFamily": "suffix-only",
+      "expectedMerge": true,
+      "left": {
+        "id": "04d0e9edba89c73180d8e8bd",
+        "provider": "biletix",
+        "title": "Kütüphanedeki Ceset",
+        "startsAt": "2026-10-02T15:15:00.000Z",
+        "venue": "Taksim İstiklal Sahne",
+        "district": "BEYOĞLU",
+        "category": "Tiyatro"
+      },
+      "right": {
+        "id": "844a93075b4c20ee9b3e6653",
+        "provider": "bubilet",
+        "title": "Kütüphanedeki Ceset Tiyatro Oyunu",
+        "startsAt": "2026-10-02T15:15:00.000Z",
+        "venue": "Taksim İstiklal Sahne",
+        "district": "Beyoğlu",
+        "category": "Tiyatro"
+      }
+    },
+    {
+      "label": "spelling-only: Can Bonomo at JJ Arena",
+      "expectedFamily": "spelling-only",
+      "expectedMerge": true,
+      "left": {
+        "id": "052c1a7484ae72415fced031",
+        "provider": "bubilet",
+        "title": "Can Bonomo",
+        "startsAt": "2026-10-17T18:00:00.000Z",
+        "venue": "JJ Arena",
+        "district": "",
+        "address": "Watergarden AVM - Barbaros Mah. Kızılbegonya Sok. No: 10, 34746 Ataşehir/İstanbul",
+        "category": "Konser"
+      },
+      "right": {
+        "id": "225710cd8df154dd226d911d",
+        "provider": "biletinial",
+        "title": "Can Bonomo",
+        "startsAt": "2026-10-17T18:00:00.000Z",
+        "venue": "JJ Arena Ataşehir",
+        "district": "İstanbul Anadolu",
+        "category": "Konser"
+      }
+    },
+    {
+      "label": "different venues: Evde Tiyatro and Cafe Theatre Koşuyolu",
+      "expectedFamily": "Evde Tiyatro vs Cafe Theatre Koşuyolu",
+      "expectedMerge": false,
+      "left": {
+        "id": "de6f5a0fe756eb1eab013f1e",
+        "provider": "biletinial",
+        "title": "Lüküs Hayat Kabare",
+        "startsAt": "2026-10-21T17:30:00.000Z",
+        "venue": "Evde Tiyatro",
+        "district": "İstanbul Anadolu",
+        "address": "Caddebostan mahallesi Dr Vasıf çıkmazı 4/3 villa apartmanı kat 1 Caddebostan",
+        "category": "Tiyatro"
+      },
+      "right": {
+        "id": "04f46b19d7131376baac5275",
+        "provider": "bubilet",
+        "title": "Lüküs Hayat Kabare",
+        "startsAt": "2026-10-21T17:30:00.000Z",
+        "venue": "Cafe Theatre Koşuyolu",
+        "district": "",
+        "address": "Barbaros, Bekir Sıtkı Sezgin Sk. No:168, 34662 Üsküdar/İstanbul",
+        "category": "Tiyatro"
+      }
+    },
+    {
+      "label": "same provider has two venues",
+      "expectedFamily": "same-provider multi-venue",
+      "expectedMerge": false,
+      "left": {
+        "id": "61a4e2b16e59aad151339edc",
+        "provider": "bubilet",
+        "title": "Lüküs Hayat Kabare",
+        "startsAt": "2026-10-07T17:30:00.000Z",
+        "venue": "Evde Tiyatro (Caddebostan)",
+        "district": "",
+        "category": "Tiyatro"
+      },
+      "right": {
+        "id": "66f8e7d1c1fbfb6507f74a22",
+        "provider": "bubilet",
+        "title": "Lüküs Hayat Kabare",
+        "startsAt": "2026-10-07T17:30:00.000Z",
+        "venue": "Cafe Theatre Koşuyolu",
+        "district": "",
+        "category": "Tiyatro"
+      }
+    }
+  ],
+  "heldout": [
+    {
+      "label": "suffix-only: Merve Özbey",
+      "expectedFamily": "suffix-only",
+      "expectedMerge": true,
+      "left": {
+        "id": "00e8a56c07e526aeb37ad237",
+        "provider": "bubilet",
+        "title": "Merve Özbey",
+        "startsAt": "2026-10-23T18:00:00.000Z",
+        "venue": "Jolly Joker Vadistanbul",
+        "district": "Sarıyer",
+        "category": "Konser"
+      },
+      "right": {
+        "id": "abcddfd59b431aa5d99e25c8",
+        "provider": "biletinial",
+        "title": "Merve Özbey Konseri",
+        "startsAt": "2026-10-23T18:00:00.000Z",
+        "venue": "Jolly Joker Vadistanbul",
+        "district": "SARIYER",
+        "category": "Konser"
+      }
+    },
+    {
+      "label": "spelling-only: Milena Pub punctuation",
+      "expectedFamily": "spelling-only",
+      "expectedMerge": true,
+      "left": {
+        "id": "008ade89067cc8ac265d9c80",
+        "provider": "biletix",
+        "title": "Serkan Dilik ile Stand-up Show",
+        "startsAt": "2026-09-28T18:00:00.000Z",
+        "venue": "Milena Pub & Bistro",
+        "district": "BEYOĞLU",
+        "category": "Stand-up"
+      },
+      "right": {
+        "id": "2b6b093070e797e77dd41e27",
+        "provider": "bubilet",
+        "title": "Serkan Dilik ile Stand-up Show",
+        "startsAt": "2026-09-28T18:00:00.000Z",
+        "venue": "Milena Pub&Bistro",
+        "district": "",
+        "address": "Kuloğlu, Sadri Alışık Sk. No:24/A, 34443 Beyoğlu/İstanbul",
+        "category": "Stand-up"
+      }
+    },
+    {
+      "label": "both suffix and venue spelling: Yaşar Ne Yaşar Ne Yaşamaz",
+      "expectedFamily": "both",
+      "expectedMerge": true,
+      "left": {
+        "id": "8066acd946e322c1a78fef08",
+        "provider": "biletinial",
+        "title": "Yaşar Ne Yaşar Ne Yaşamaz",
+        "startsAt": "2026-10-16T16:00:00.000Z",
+        "venue": "Cafe Theatre",
+        "district": "İstanbul Anadolu",
+        "category": "Tiyatro"
+      },
+      "right": {
+        "id": "822176e96172bcdc24e0cdcd",
+        "provider": "bubilet",
+        "title": "Yaşar Ne Yaşar Ne Yaşamaz Oyunu",
+        "startsAt": "2026-10-16T16:00:00.000Z",
+        "venue": "Cafe Theatre Koşuyolu",
+        "district": "",
+        "address": "Barbaros, Bekir Sıtkı Sezgin Sk. No:168, 34662 Üsküdar/İstanbul",
+        "category": "Tiyatro"
+      }
+    },
+    {
+      "label": "Bakırköy Butik Sahne is not BBS Sahne Yenibosna",
+      "expectedFamily": "Bakırköy Butik vs BBS Yenibosna",
+      "expectedMerge": false,
+      "left": {
+        "id": "b15c9251922d803997458e44",
+        "provider": "bubilet",
+        "comparisonProvider": "biletix",
+        "title": "Bergen",
+        "startsAt": "2026-10-24T14:00:00.000Z",
+        "comparisonStartsAt": "2026-11-07T17:30:00.000Z",
+        "venue": "Bakırköy Butik Sahne",
+        "district": "",
+        "address": "Cevizlik, İzzet Molla Sk. No:12, 34142 Bakırköy/İstanbul",
+        "category": "Tiyatro"
+      },
+      "right": {
+        "id": "632254dbfad42bc46c5f7df6",
+        "provider": "bubilet",
+        "title": "Bergen",
+        "startsAt": "2026-11-07T17:30:00.000Z",
+        "venue": "B-B-S SAHNE YENİBOSNA",
+        "district": "",
+        "address": "Yıldırım Beyazıt caddesi göknar sokak no: 3D bahçelievler/Yenibosna",
+        "category": "Tiyatro"
+      }
+    },
+    {
+      "label": "Cem Adrian at JJ Arena is not Yahya Kemal Beyatlı",
+      "expectedFamily": "Cem Adrian JJ Arena vs Yahya Kemal Beyatlı",
+      "expectedMerge": false,
+      "left": {
+        "id": "bfaaf535d4276e32b5faed27",
+        "provider": "biletinial",
+        "title": "Cem Adrian",
+        "startsAt": "2026-12-11T18:00:00.000Z",
+        "venue": "JJ Arena Ataşehir",
+        "district": "İstanbul Anadolu",
+        "address": "Barbaros, Watergarden AVM, Begonya Sk. No: 10, 34746 Ataşehir/İstanbul",
+        "category": "Konser"
+      },
+      "right": {
+        "id": "571eb4388743a46c1171de3c",
+        "provider": "bubilet",
+        "title": "Cem Adrian Konseri",
+        "startsAt": "2026-12-11T18:00:00.000Z",
+        "venue": "Yahya Kemal Beyatlı Gösteri Merkezi",
+        "district": "",
+        "address": "Halkalı Merkez, Aytaç Mevkii, Fatih Cd., 34295 Küçükçekmece/İstanbul",
+        "category": "Konser"
+      }
+    }
+  ]
+}

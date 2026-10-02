@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { load } from "cheerio";
-import { parseEvents } from "../web/lib/source.ts";
+import { parseEvents } from "../contracts/source.ts";
 
 export const BILETINIAL_ORIGIN = "https://biletinial.com";
 const ISTANBUL_ALL_NAME = "İstanbul (Tümü)";

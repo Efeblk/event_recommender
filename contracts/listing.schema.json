@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://biplan.example/contracts/provider-listing.v1.schema.json",
+  "title": "ProviderListing v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contractVersion", "listingId", "provider", "providerSessionIds", "url", "title", "description", "category", "startsAt", "timezoneEvidence", "venue", "tiers", "availability", "observedAt", "extractorVersion", "rawObjectRef"],
+  "properties": {
+    "contractVersion": { "const": "provider-listing.v1" },
+    "listingId": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "provider": { "enum": ["biletinial", "biletix", "bubilet"] },
+    "providerEventId": { "type": "string", "minLength": 1, "maxLength": 500 },
+    "providerSessionIds": { "type": "array", "maxItems": 1000, "items": { "type": "string", "minLength": 1, "maxLength": 500 }, "uniqueItems": true },
+    "url": { "type": "string", "format": "uri", "maxLength": 2048 },
+    "title": { "type": "string", "minLength": 1, "maxLength": 100000 },
+    "description": { "type": "string", "maxLength": 4000000 },
+    "category": { "type": "string", "minLength": 1, "maxLength": 10000 },
+    "startsAt": { "type": "string", "format": "date-time" },
+    "timezoneEvidence": { "$ref": "#/$defs/timezoneEvidence" },
+    "venue": { "$ref": "#/$defs/venue" },
+    "tiers": { "type": "array", "maxItems": 10000, "items": { "$ref": "#/$defs/tier" } },
+    "availability": { "$ref": "#/$defs/availability" },
+    "attendanceTiming": { "$ref": "#/$defs/attendanceTiming" },
+    "observedAt": { "type": "string", "format": "date-time" },
+    "extractorVersion": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "rawObjectRef": { "$ref": "#/$defs/rawObjectRef" },
+    "supplementaryRawObjectRefs": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/rawObjectRef" }, "uniqueItems": true },
+    "supplementaryRawObservations": { "type": "array", "maxItems": 1000, "items": { "$ref": "#/$defs/rawObservation" }, "uniqueItems": true },
+    "imageUrl": { "type": "string", "format": "uri", "maxLength": 2048 },
+    "city": { "type": "string", "minLength": 1, "maxLength": 1000 }
+  },
+  "$defs": {
+    "availability": { "enum": ["available", "sold_out", "cancelled", "unknown"] },
+    "rawObjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "key", "bytes"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "key": { "type": "string", "pattern": "^bodies/[a-f0-9]{64}\\.bin$" },
+        "bytes": { "type": "integer", "minimum": 0, "maximum": 33554432 }
+      }
+    },
+    "rawObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "fetchedAt", "rawObjectRef"],
+      "properties": {
+        "url": { "type": "string", "format": "uri", "maxLength": 2048 },
+        "fetchedAt": { "type": "string", "format": "date-time" },
+        "rawObjectRef": { "$ref": "#/$defs/rawObjectRef" }
+      }
+    },
+    "timezoneEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sourceValue"],
+      "properties": {
+        "kind": { "enum": ["explicit_offset", "unix_epoch_ms", "istanbul_wall_time"] },
+        "sourceValue": { "type": "string", "minLength": 1, "maxLength": 200 }
+      }
+    },
+    "venue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 100000 },
+        "providerVenueId": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "address": { "type": "string", "maxLength": 500000 },
+        "district": { "type": "string", "maxLength": 100000 },
+        "geo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["lat", "lon"],
+          "properties": { "lat": { "type": "number", "minimum": -90, "maximum": 90 }, "lon": { "type": "number", "minimum": -180, "maximum": 180 } }
+        }
+      }
+    },
+    "tier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["price", "currency", "availability"],
+      "properties": {
+        "providerTierId": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "name": { "type": "string", "maxLength": 100000 },
+        "price": { "type": ["number", "null"], "minimum": 0, "maximum": 90071992547409.9 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "availability": { "$ref": "#/$defs/availability" },
+        "rawAvailability": { "type": "string", "maxLength": 1000 }
+      }
+    },
+    "attendanceTiming": {
+      "oneOf": [
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "evidence"],
+          "properties": { "kind": { "const": "timed_session" }, "evidence": { "const": "provider_sessions_and_source_text" } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "evidence"],
+          "properties": { "kind": { "const": "unknown" }, "evidence": { "const": "insufficient_source_evidence" } }
+        },
+        {
+          "type": "object", "additionalProperties": false,
+          "required": ["kind", "evidence", "validFrom", "validThrough"],
+          "properties": {
+            "kind": { "const": "admission_window" }, "evidence": { "const": "provider_flexible_window" },
+            "validFrom": { "type": "string", "format": "date-time" }, "validThrough": { "type": "string", "format": "date-time" }
+          }
+        }
+      ]
+    }
+  }
+}
