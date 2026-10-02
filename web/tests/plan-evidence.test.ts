@@ -269,3 +269,68 @@ void test('conflicting unconditional party counts are rejected without a budget'
     /conflicting unconditional party counts/,
   );
 });
+
+void test('everyday event types accept the catalog labels they cover', () => {
+  const show = plan({
+    type: 'all',
+    children: [{ type: 'atom', atom: { kind: 'category', value: 'show' } }],
+  });
+  assert.equal(
+    evaluatePlan({ ...event, category: 'Stand-up' }, show).status,
+    'supported',
+  );
+  assert.equal(
+    evaluatePlan({ ...event, category: 'Gösteri' }, show).status,
+    'supported',
+  );
+  assert.equal(
+    evaluatePlan({ ...event, category: 'Konser' }, show).status,
+    'contradicted',
+  );
+  const course = plan({
+    type: 'all',
+    children: [{ type: 'atom', atom: { kind: 'category', value: 'course' } }],
+  });
+  assert.equal(
+    evaluatePlan({ ...event, category: 'Workshop' }, course).status,
+    'supported',
+  );
+  const notShow = plan({
+    type: 'not',
+    child: { type: 'atom', atom: { kind: 'category', value: 'show' } },
+  });
+  assert.equal(
+    evaluatePlan({ ...event, category: 'Stand-up' }, notShow).status,
+    'contradicted',
+  );
+});
+
+void test('required non-genre topics need a whole-word source mention', () => {
+  const history = plan({
+    type: 'all',
+    children: [{ type: 'atom', atom: { kind: 'topic', value: 'history' } }],
+  });
+  validateSearchPlan(history);
+  const named = evaluatePlan(
+    { ...event, description: 'Osmanlı tarihi üzerine bir sergi.' },
+    history,
+  );
+  assert.equal(named.status, 'supported');
+  assert.equal(evaluatePlan(event, history).status, 'unknown');
+  const pop = plan({
+    type: 'all',
+    children: [{ type: 'atom', atom: { kind: 'topic', value: 'pop' } }],
+  });
+  assert.equal(
+    evaluatePlan({ ...event, description: 'Popüler şarkılar.' }, pop).status,
+    'unknown',
+  );
+  assert.throws(() =>
+    validateSearchPlan(
+      plan({
+        type: 'not',
+        child: { type: 'atom', atom: { kind: 'topic', value: 'history' } },
+      }),
+    ),
+  );
+});

@@ -1,5 +1,5 @@
 import type { Atom, Condition, Plan } from '../parser/contract.ts';
-import { DISTRICTS } from '../parser/lexicon.ts';
+import { DISTRICTS, TOPIC_TERMS } from '../parser/lexicon.ts';
 import {
   checkPredicateEvidence,
   type RequirementKind,
@@ -34,23 +34,26 @@ export interface PlanEvaluation {
   evidence: PlanEvidence;
 }
 
-const categoryMap: Record<string, Category> = {
-  concert: 'Konser',
-  theatre: 'Tiyatro',
-  standup: 'Stand-up',
-  workshop: 'Workshop',
-  exhibition: 'Sergi',
-  festival: 'Festival',
-  sport: 'Spor',
-  cinema: 'Sinema',
-  talk: 'S\u00f6yle\u015fi',
-  dance: 'Dans',
-  show: 'G\u00f6steri',
-  course: 'E\u011fitim',
-  tour: 'Gezi',
-  museum: 'M\u00fcze',
+/** Catalog labels that satisfy a requested event type. Everyday words are
+ * broader than provider labels: a "gösteri" can be a stand-up or dance show,
+ * and a course or workshop is sold under either label. */
+const categoryMap: Record<string, Category[]> = {
+  concert: ['Konser'],
+  theatre: ['Tiyatro'],
+  standup: ['Stand-up'],
+  workshop: ['Workshop', 'Eğitim'],
+  exhibition: ['Sergi'],
+  festival: ['Festival'],
+  sport: ['Spor'],
+  cinema: ['Sinema'],
+  talk: ['Söyleşi'],
+  dance: ['Dans'],
+  show: ['Gösteri', 'Stand-up', 'Dans'],
+  course: ['Eğitim', 'Workshop'],
+  tour: ['Gezi'],
+  museum: ['Müze'],
 };
-const canonicalCategories = new Set(Object.values(categoryMap));
+const canonicalCategories = new Set(Object.values(categoryMap).flat());
 const genreTopics = new Set([
   'jazz',
   'blues',
@@ -61,6 +64,25 @@ const genreTopics = new Set([
   'comedy',
   'drama',
 ]);
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+const topicPatterns = new Map<string, RegExp>();
+/** Source text naming the topic; absence is unknown, never a contradiction. */
+function topicPattern(value: string): RegExp {
+  let pattern = topicPatterns.get(value);
+  if (!pattern) {
+    const surfaces = [...(TOPIC_TERMS[value] ?? []), value]
+      .map((term) => normalize(term).trim())
+      .filter(Boolean);
+    pattern = new RegExp(
+      // Whole words only: "pop" must not match "popüler". The lexicon lists
+      // the inflected forms it supports ("tarih", "tarihi").
+      `(?<![\\p{L}\\p{N}])(?:${surfaces.map(escape).join('|')})(?![\\p{L}\\p{N}])`,
+      'u',
+    );
+    topicPatterns.set(value, pattern);
+  }
+  return pattern;
+}
 const canonicalDistricts = new Map(
   DISTRICTS.map((district) => [normalize(district), district]),
 );
@@ -91,7 +113,7 @@ function atomResult(
       return result(
         !canonicalCategories.has(event.category as Category)
           ? 'unknown'
-          : event.category === categoryMap[atom.value]
+          : categoryMap[atom.value].includes(event.category as Category)
             ? 'supported'
             : 'contradicted',
         [event.category],
@@ -163,7 +185,20 @@ function atomResult(
       return result('unknown', event.district ? [event.district] : []);
     }
     case 'topic': {
-      if (!genreTopics.has(atom.value)) return result('unknown');
+      if (!genreTopics.has(atom.value)) {
+        const text = normalize(
+          [event.title, event.description, event.sourceCategory]
+            .filter(Boolean)
+            .join('. '),
+        );
+        const pattern = topicPattern(atom.value);
+        const evidence = text
+          .split(/(?<=[.!?])\s+/u)
+          .filter((part) => pattern.test(part))
+          .slice(0, 3)
+          .map((part) => part.slice(0, 240));
+        return result(evidence.length ? 'supported' : 'unknown', evidence);
+      }
       const check = checkPredicateEvidence(event, 'genre', atom.value);
       return result(check.status, check.evidence);
     }
@@ -263,6 +298,7 @@ export function validateSearchPlan(plan: Plan): void {
     condition: Condition,
     hard: boolean,
     unconditional: boolean,
+    negated = false,
   ) => {
     if (condition.type === 'atom') {
       const atom = condition.atom;
@@ -294,13 +330,21 @@ export function validateSearchPlan(plan: Plan): void {
         ['outdoors', 'beginner_friendly'].includes(atom.value)
       )
         throw new Error('experience evidence is unsupported');
-      if (hard && atom.kind === 'topic' && !genreTopics.has(atom.value))
-        throw new Error('topic evidence is unsupported');
+      // Topic mentions can support a positive requirement, but missing words
+      // are never evidence that an event lacks a topic.
+      if (
+        hard &&
+        atom.kind === 'topic' &&
+        !genreTopics.has(atom.value) &&
+        negated
+      )
+        throw new Error('negated topic evidence is unsupported');
       return;
     }
-    if (condition.type === 'not') return visit(condition.child, hard, false);
+    if (condition.type === 'not')
+      return visit(condition.child, hard, false, !negated);
     condition.children.forEach((child) =>
-      visit(child, hard, unconditional && condition.type === 'all'),
+      visit(child, hard, unconditional && condition.type === 'all', negated),
     );
   };
   visit(plan.hard, true, true);

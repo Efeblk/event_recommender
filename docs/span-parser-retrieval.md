@@ -19,9 +19,22 @@ existing support threshold may be returned. Query text is not reparsed into
 another set of constraints. Existing cached document vectors and conservative
 session/offer identity remain in use.
 
+The plan state also keeps the user's own messages since the last reset (at
+most four; bare "show me others" requests are not added). They join the plan's
+concepts in the retrieval query and reach Jev as `request` and `history`, so
+performers, titles and other words the typed plan cannot express still drive
+relevance. They never admit an event; only the hard condition tree does.
+
+Required event types match every catalog label they cover: "show" admits
+`Gösteri`, `Stand-up` and `Dans`, and courses and workshops admit both
+`Eğitim` and `Workshop`. Required topics outside the source-checked genres are
+supported only by a whole-word mention in the event title, description or
+provider category; a missing mention is unknown, and negated non-genre topics
+require clarification.
+
 Unknown source evidence cannot satisfy a hard constraint or its negation.
-Conflicting positive and negative evidence remains unknown. Required generic
-topics without a supported genre mapping, neighborhoods, outdoors/beginner
+Conflicting positive and negative evidence remains unknown. Negated non-genre
+topics, neighborhoods, outdoors/beginner
 policies, approximate budgets, nearest ordering without a location, and
 conditional party-size logic currently require clarification. Optional wishes
 remain preferences. Group budgets require one unambiguous party count.
