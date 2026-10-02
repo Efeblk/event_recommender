@@ -7,6 +7,7 @@ import {
   normalizeDistrictKey,
   normalizeIdentityText,
   normalizeTitleKey,
+  stripVenueTitlePrefix,
   venueNameTokens,
 } from "../normalize/identity.ts";
 import { identityHash } from "./hash.ts";
@@ -19,8 +20,11 @@ import type {
   ResolvedVenue,
 } from "./types.ts";
 
-export const IDENTITY_RULE_VERSION = `deterministic-identity.v3+${IDENTITY_SEED_VERSION}` as const;
+export const IDENTITY_RULE_VERSION = `deterministic-identity.v4+${IDENTITY_SEED_VERSION}` as const;
 const GEO_RADIUS_METRES = 75;
+// Providers geocode large buildings and malls hundreds of metres apart
+// (Torium Sahne: ~500 m), so coordinates veto a name match only beyond this.
+const GEO_CONFLICT_METRES = 1_000;
 
 class DisjointSet {
   private readonly parent: number[];
@@ -53,6 +57,20 @@ class DisjointSet {
   members(index: number): readonly number[] {
     return this.componentMembers[this.find(index)];
   }
+}
+
+function listingTitleKey(listing: IdentityListing) {
+  return normalizeTitleKey(stripVenueTitlePrefix(listing.title, listing.venue.name), listing.category);
+}
+
+// Providers file the same "X Stand Up" under different categories, so the
+// category-scoped suffix removal can differ; identical titles still match.
+function titlesMatch(left: IdentityListing, right: IdentityListing): boolean {
+  const leftKey = listingTitleKey(left).key;
+  if (leftKey && leftKey === listingTitleKey(right).key) return true;
+  const raw = (listing: IdentityListing) =>
+    normalizeIdentityText(stripVenueTitlePrefix(listing.title, listing.venue.name));
+  return Boolean(raw(left)) && raw(left) === raw(right);
 }
 
 function cityKey(listing: IdentityListing): string {
@@ -112,6 +130,13 @@ function districtScope(value: string | undefined): string {
 function listingDistrictScope(listing: IdentityListing): string {
   return districtScope(normalizeDistrictKey(listing.venue.district, listing.venue.address));
 }
+// Generous Istanbul province bounds; anything outside is not usable venue evidence.
+function usableIstanbulGeo({ lat, lon }: { lat: number; lon: number }): boolean {
+  return (
+    Number.isFinite(lat) && Number.isFinite(lon) && lat >= 40.7 && lat <= 41.7 && lon >= 27.9 && lon <= 29.95
+  );
+}
+
 function distanceMetres(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
   const radians = Math.PI / 180;
   const lat = ((a.lat + b.lat) / 2) * radians;
@@ -209,7 +234,7 @@ function resolveVenues(listings: readonly IdentityListing[]): {
           const tokens = new Set(venueNameTokens(listing.venue.name));
           const overlap = venueNameTokens(other.venue.name).filter((token) => tokens.has(token));
           if (overlap.length)
-            addEdge(otherIndex, index, 2, `geo-name-overlap:${overlap.sort().join(",")}`);
+            addEdge(otherIndex, index, 3, `geo-name-overlap:${overlap.sort().join(",")}`);
         }
       }
     const key = `${cityKey(listing)}:${x}:${y}`;
@@ -222,8 +247,8 @@ function resolveVenues(listings: readonly IdentityListing[]): {
   for (const indexes of compactBuckets.values())
     for (let index = 1; index < indexes.length; index++) {
       const compact = compactIdentityKey(listings[indexes[0]].venue.name);
-      addEdge(indexes[0], indexes[index], 3, `compact-name:${compact}`);
-      addEdge(indexes[index - 1], indexes[index], 3, `compact-name:${compact}`);
+      addEdge(indexes[0], indexes[index], 2, `compact-name:${compact}`);
+      addEdge(indexes[index - 1], indexes[index], 2, `compact-name:${compact}`);
     }
   // Providers add or drop descriptors, districts and neighbourhoods
   // ("… Sahnesi"/"… Tiyatrosu", "Evde Tiyatro (Caddebostan)"). Equal
@@ -293,7 +318,7 @@ function resolveVenues(listings: readonly IdentityListing[]): {
         if (
           left.venue.geo &&
           right.venue.geo &&
-          distanceMetres(left.venue.geo, right.venue.geo) > GEO_RADIUS_METRES * 2
+          distanceMetres(left.venue.geo, right.venue.geo) > GEO_CONFLICT_METRES
         )
           conflict = true;
         if (
@@ -493,7 +518,7 @@ function decisionInput(
       city: cityKey(listing),
       startsAt: listing.startsAt,
       venueId: venueIds[listing.listingId],
-      title: normalizeTitleKey(listing.title, listing.category),
+      title: listingTitleKey(listing),
       attendanceTiming: knownAttendanceTiming(listing),
       policies: [...policies(listing)].sort(),
     }));
@@ -557,9 +582,9 @@ export function assessIdentityPair(
   const conflict = policyConflict(left, right);
   if (conflict)
     return { ...base, outcome: "never_merge", rule: "policy-conflict", evidence: [conflict] };
-  const leftTitle = normalizeTitleKey(left.title, left.category);
-  const rightTitle = normalizeTitleKey(right.title, right.category);
-  if (leftTitle.key && leftTitle.key === rightTitle.key)
+  const leftTitle = listingTitleKey(left);
+  const rightTitle = listingTitleKey(right);
+  if (titlesMatch(left, right))
     return {
       ...base,
       outcome: "auto_merge",
@@ -643,11 +668,9 @@ function resolveSessions(
         const rightIndex = indexes[j];
         const left = listings[leftIndex];
         const right = listings[rightIndex];
-        const leftTitle = normalizeTitleKey(left.title, left.category);
-        const rightTitle = normalizeTitleKey(right.title, right.category);
         const leftSeed = titleSeedIdentity(left, venueSeeds.get(left.listingId));
         const rightSeed = titleSeedIdentity(right, venueSeeds.get(right.listingId));
-        const exactTitle = Boolean(leftTitle.key && leftTitle.key === rightTitle.key);
+        const exactTitle = titlesMatch(left, right);
         const manualTitle = Boolean(leftSeed && leftSeed === rightSeed);
         const sameVenue = listingVenueIds[left.listingId] === listingVenueIds[right.listingId];
         if (!sameVenue && !exactTitle && !manualTitle) continue;
@@ -663,13 +686,12 @@ function resolveSessions(
             .filter((candidate) => {
               if (listingVenueIds[candidate.listingId] !== listingVenueIds[left.listingId])
                 return false;
-              const candidateTitle = normalizeTitleKey(candidate.title, candidate.category).key;
               const candidateSeed = titleSeedIdentity(
                 candidate,
                 venueSeeds.get(candidate.listingId),
               );
               return (
-                candidateTitle === leftTitle.key || Boolean(leftSeed && candidateSeed === leftSeed)
+                titlesMatch(candidate, left) || Boolean(leftSeed && candidateSeed === leftSeed)
               );
             });
           const leftTag = aggregatePolicyTag(left, family);
@@ -736,7 +758,7 @@ function resolveSessions(
       .map(
         (member) =>
           titleSeedIdentity(member, venueSeeds.get(member.listingId)) ??
-          normalizeTitleKey(member.title, member.category).key,
+          listingTitleKey(member).key,
       )
       .sort();
     const city = cityKey(members[0]);
@@ -784,7 +806,15 @@ export function resolveIdentity(listings: readonly IdentityListing[]): IdentityR
       throw new Error(`Duplicate or empty listingId: ${listing.listingId}`);
     unique.add(listing.listingId);
   }
-  const ordered = [...listings].sort((a, b) => a.listingId.localeCompare(b.listingId));
+  // Providers emit 0,0 or other placeholder points when they have no
+  // location. Such a point is unknown evidence, not a distant venue.
+  const ordered = listings
+    .map((listing) =>
+      listing.venue.geo && !usableIstanbulGeo(listing.venue.geo)
+        ? { ...listing, venue: { ...listing.venue, geo: undefined } }
+        : listing,
+    )
+    .sort((a, b) => a.listingId.localeCompare(b.listingId));
   const venueResolution = resolveVenues(ordered);
   const sessionResolution = resolveSessions(
     ordered,

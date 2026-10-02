@@ -466,6 +466,88 @@ test("identity decisions retain stable review evidence", () => {
   ]);
   assert.equal(result.decisions[0].outcome, "auto_merge");
   assert.match(result.decisions[0].inputHash, /^[a-f0-9]{64}$/);
-  assert.match(result.decisions[0].ruleVersion, /^deterministic-identity\.v3/);
+  assert.match(result.decisions[0].ruleVersion, /^deterministic-identity\.v4/);
   assert.ok(result.decisions[0].evidence.length > 0);
+});
+
+test("placeholder coordinates are unknown and mall-scale geocode drift is not a conflict", () => {
+  const sessions = (...venues) =>
+    resolveIdentity(
+      venues.map((venue, index) =>
+        listing({ listingId: `g${index}`, provider: `p${index}`, venue }),
+      ),
+    ).sessions.length;
+  // Biletinial sends 0,0 when it has no location (Corner Kadıköy, Sahne Dragos).
+  assert.equal(
+    sessions(
+      { name: "Corner Kadıköy", geo: { lat: 0, lon: 0 } },
+      { name: "Corner Kadıköy", geo: { lat: 40.98912, lon: 29.0226 } },
+    ),
+    1,
+  );
+  // Providers geocode Torium AVM about 500 m apart.
+  assert.equal(
+    sessions(
+      { name: "Torium Sahne", geo: { lat: 41.00487, lon: 28.6894 } },
+      { name: "Torium Sahne", geo: { lat: 41.00903, lon: 28.6888 } },
+    ),
+    1,
+  );
+});
+
+test("an exact name match outranks a shared-word geo match into a neighbouring venue", () => {
+  const records = [
+    listing({ listingId: "a", provider: "biletix", venue: { name: "Habitat Hilltown", providerVenueId: "H1" } }),
+    listing({
+      listingId: "b",
+      provider: "bubilet",
+      venue: { name: "HABITAT Hilltown", geo: { lat: 40.95272, lon: 29.12201 } },
+    }),
+    listing({
+      listingId: "c",
+      provider: "biletix",
+      title: "Başka Oyun",
+      venue: { name: "Hilltown Seyirlik Sahne", providerVenueId: "H2", geo: { lat: 40.95275, lon: 29.12205 } },
+    }),
+  ];
+  const { listingVenueIds } = resolveIdentity(records);
+  assert.equal(listingVenueIds.a, listingVenueIds.b);
+  assert.notEqual(listingVenueIds.a, listingVenueIds.c);
+});
+
+test("a title prefixed with its own venue name matches; other prefixes do not", () => {
+  const merged = (left, right) =>
+    resolveIdentity([
+      listing({ listingId: "l", provider: "biletix", ...left }),
+      listing({ listingId: "r", provider: "bubilet", ...right }),
+    ]).sessions.length === 1;
+  assert.equal(
+    merged(
+      { title: "HABITAT X Evgeny Grinko", category: "Konser", venue: { name: "Habitat Hilltown" } },
+      { title: "Evgeny Grinko", category: "Konser", venue: { name: "Habitat Hilltown" } },
+    ),
+    true,
+  );
+  assert.equal(
+    merged(
+      { title: "Anka Workshop: Mum Atölyesi", category: "Workshop", venue: { name: "Ankaworkshop" } },
+      { title: "Mum Atölyesi", category: "Workshop", venue: { name: "Ankaworkshop" } },
+    ),
+    true,
+  );
+  assert.equal(
+    merged(
+      { title: "Mozaik Workshop: Sosyal Sanathane", category: "Workshop", venue: { name: "Sosyal Sanathane" } },
+      { title: "Workshop: Sosyal Sanathane", category: "Workshop", venue: { name: "Sosyal Sanathane" } },
+    ),
+    false,
+  );
+});
+
+test("identical titles match even when providers disagree on category", () => {
+  const result = resolveIdentity([
+    listing({ listingId: "l", provider: "biletix", title: "Alpay Erdem Stand Up", category: "Stand-up" }),
+    listing({ listingId: "r", provider: "biletinial", title: "Alpay Erdem Stand Up", category: "Tiyatro" }),
+  ]);
+  assert.equal(result.sessions.length, 1);
 });
