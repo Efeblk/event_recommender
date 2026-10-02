@@ -155,7 +155,14 @@ const vector = (value = 1) =>
   Array.from({ length: 1024 }, (_, i) => (i === 0 ? value : 0));
 const documentHash = (item: EventRecord) => createHash('sha256').update(voyageDocumentText(item)).digest('hex');
 
-await test('gated publication keeps raw checkpoint durable and requires every future representative vector before activation', async () => {
+// Heads written before immediate activation can still hold a pending catalog.
+function legacyPendingHead(f: ReturnType<typeof fixture>) {
+  const path = 'biplan/default/state/catalog';
+  const { search, ...head } = f.control.documents.get(path)!;
+  f.control.documents.set(path, { ...head, revision: 'legacy-pending', pendingSearch: search });
+}
+
+await test('publication activates immediately; vectors are optional enrichment', async () => {
   const f = fixture({ profile: profileA, dimensions: 1024 });
   const sync = await syncLease(f.store);
   const older = event('older', {
@@ -169,27 +176,21 @@ await test('gated publication keeps raw checkpoint durable and requires every fu
   await f.store.importPages([page(older), page(fresh)], sync);
   const pointer = await f.store.publishCheckpoint(report(), sync);
   assert.equal(JSON.parse((await f.store.readCheckpoint())!).events.length, 2);
-  assert.equal((await f.store.currentPublished()).checkpoint?.key, pointer.key);
-  assert.equal((await f.store.catalogStatus()).status, 'empty');
-  assert.deepEqual(await f.store.candidates(emptyFilters), []);
+  const state = await f.store.currentPublished();
+  assert.equal(state.checkpoint?.key, pointer.key);
+  assert.equal(state.search?.pending, false);
+  assert.equal(state.search?.checkpoint?.key, pointer.key);
+  assert.equal(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch, undefined);
+  const active = await f.makeStore().candidates(emptyFilters);
+  assert.equal(active.length, 1, 'searchable before any vector exists');
+  assert.equal(active[0].offers?.length, 2);
+  assert.equal((await f.store.catalogStatus()).eligible, 1);
   const docs = await f.store.embeddingCandidates();
-  assert.equal(docs.length, 2, 'index both present and future representative text');
   assert.deepEqual(new Set(docs.map(documentHash)), new Set([documentHash(older), documentHash(fresh)]));
   const indexing = await f.store.acquireLease('voyage_index_lock');
   assert.ok(indexing);
-  await assert.rejects(f.store.activateSearchCatalog(profileB, indexing), /profile mismatch/);
   await assert.rejects(f.store.activateSearchCatalog(profileA, sync), /Wrong storage lease/);
-  await f.store.saveVoyageVectors(profileA, [{ hash: documentHash(older), vector: vector() }], indexing);
-  assert.deepEqual(await f.store.activateSearchCatalog(profileA, indexing), { activated: false, pending: 1 });
-  assert.deepEqual(await f.makeStore().candidates(emptyFilters), []);
-  await f.store.saveVoyageVectors(profileA, [{ hash: documentHash(fresh), vector: vector() }], indexing);
-  assert.deepEqual(await f.store.activateSearchCatalog(profileA, indexing), { activated: true, pending: 0 });
-  const active = await f.makeStore().candidates(emptyFilters);
-  assert.equal(active.length, 1);
-  assert.equal(active[0].offers?.length, 2);
-  assert.equal((await f.store.catalogStatus()).eligible, 1);
-  assert.equal((await f.store.currentPublished()).search?.sourceCatalog.eligible, 2, 'readiness compares raw offers with raw checkpoint counts');
-  assert.equal(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch, undefined);
+  assert.deepEqual(await f.store.activateSearchCatalog(profileA, indexing), { activated: false, pending: 0 });
   f.advance(24 * 3600000 + 1);
   const afterExpiry = await f.store.candidates(emptyFilters);
   assert.equal(afterExpiry.length, 1);
@@ -197,38 +198,25 @@ await test('gated publication keeps raw checkpoint durable and requires every fu
   assert.deepEqual(afterExpiry[0].offers?.map(({ id }) => id), [fresh.id]);
 });
 
-await test('pending refresh preserves indexed active search while raw recovery advances and activation is atomic', async () => {
+await test('a newer publication replaces the active search at once', async () => {
   const f = fixture({ profile: profileA, dimensions: 1024 });
   const sync = await syncLease(f.store);
-  const indexing = await f.store.acquireLease('voyage_index_lock');
-  assert.ok(indexing);
   const old = event();
   await f.store.importPages([page(old)], sync);
-  const initialPointer = await f.store.publishCheckpoint(report(), sync);
-  await f.store.saveVoyageVectors(profileA, [{ hash: documentHash(old), vector: vector() }], indexing);
-  await f.store.activateSearchCatalog(profileA, indexing);
+  await f.store.publishCheckpoint(report(), sync);
+  assert.deepEqual((await f.store.candidates(emptyFilters)).map(({ id }) => id), [old.id]);
   f.advance(1000);
   const newer = event('replacement', { url: old.url, checkedAt: new Date(instant + 1000).toISOString() });
   await f.store.importPages([page(newer)], sync);
   const pointer = await f.store.publishCheckpoint(report(1000), sync);
   const state = await f.store.currentPublished();
-  assert.equal(state.search?.pending, true);
-  assert.equal(state.search?.checkpoint?.key, initialPointer.key, 'readiness stays pinned to active search, not new raw collection');
-  assert.equal(state.checkpoint?.key, pointer.key);
-  assert.deepEqual((await f.store.candidates(emptyFilters)).map(({ id }) => id), [old.id]);
-  assert.deepEqual(JSON.parse((await f.store.readCheckpoint())!).events.map((item: EventRecord) => item.id), [newer.id]);
-  assert.equal((await f.store.currentPublished()).checkpoint?.key, pointer.key);
-  assert.deepEqual((await f.store.embeddingCandidates()).map(documentHash), [documentHash(newer)]);
-  await f.store.saveVoyageVectors(profileA, [{ hash: documentHash(newer), vector: vector() }], indexing);
-  f.control.failCatalogCommit = true;
-  await assert.rejects(f.store.activateSearchCatalog(profileA, indexing), /publication failure/);
-  assert.deepEqual((await f.makeStore().candidates(emptyFilters)).map(({ id }) => id), [old.id]);
-  f.control.failCatalogCommit = false;
-  assert.deepEqual(await f.store.activateSearchCatalog(profileA, indexing), { activated: true, pending: 0 });
+  assert.equal(state.search?.pending, false);
+  assert.equal(state.search?.checkpoint?.key, pointer.key);
   assert.deepEqual((await f.makeStore().candidates(emptyFilters)).map(({ id }) => id), [newer.id]);
+  assert.deepEqual((await f.store.embeddingCandidates()).map(documentHash), [documentHash(newer)]);
 });
 
-await test('gated same-report upgrade never exposes an unverified legacy projection', async () => {
+await test('gated same-report upgrade replaces an unverified legacy projection with the profiled one', async () => {
   const f = fixture();
   const sync = await syncLease(f.store);
   await f.store.importPages([page(event())], sync);
@@ -236,11 +224,30 @@ await test('gated same-report upgrade never exposes an unverified legacy project
   const gated = createGcpStore({ control: f.control, blobs: f.blobs, now: () => instant, embeddingProfile: { profile: profileA, dimensions: 1024 } });
   await assert.rejects(gated.candidates(emptyFilters), /requires publication/);
   await gated.publishCheckpoint(report(), sync);
-  assert.deepEqual(await gated.candidates(emptyFilters), []);
-  assert.equal((await gated.embeddingCandidates()).length, 1);
+  assert.equal((await gated.candidates(emptyFilters)).length, 1);
   const head = f.control.documents.get('biplan/default/state/catalog')!;
-  assert.equal(head.search, undefined);
-  assert.ok(head.pendingSearch);
+  assert.equal((head.search as { profile?: string }).profile, profileA);
+  assert.equal(head.pendingSearch, undefined);
+});
+
+await test('a legacy pending catalog activates with missing vectors and keeps its guards', async () => {
+  const f = fixture({ profile: profileA, dimensions: 1024 });
+  const sync = await syncLease(f.store);
+  const indexing = await f.store.acquireLease('voyage_index_lock');
+  assert.ok(indexing);
+  await f.store.importPages([page(event())], sync);
+  await f.store.publishCheckpoint(report(), sync);
+  legacyPendingHead(f);
+  assert.equal((await f.store.currentPublished()).search?.pending, true);
+  await assert.rejects(f.store.activateSearchCatalog(profileB, indexing), /profile mismatch/);
+  await assert.rejects(f.store.activateSearchCatalog(profileA, sync), /Wrong storage lease/);
+  f.control.failCatalogCommit = true;
+  await assert.rejects(f.store.activateSearchCatalog(profileA, indexing), /publication failure/);
+  assert.ok(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch);
+  f.control.failCatalogCommit = false;
+  assert.deepEqual(await f.store.activateSearchCatalog(profileA, indexing), { activated: true, pending: 1 });
+  assert.equal((await f.makeStore().candidates(emptyFilters)).length, 1);
+  assert.equal(f.control.documents.get('biplan/default/state/catalog')!.pendingSearch, undefined);
 });
 
 await test('activation rejects catalog or vector publication races after validating immutable vectors', async () => {
@@ -251,6 +258,7 @@ await test('activation rejects catalog or vector publication races after validat
     assert.ok(indexing);
     await f.store.importPages([page(event())], sync);
     await f.store.publishCheckpoint(report(), sync);
+    legacyPendingHead(f);
     await f.store.saveVoyageVectors(profileA, [{ hash: documentHash(event()), vector: vector() }], indexing);
     let raced = false;
     const blobs: BlobStore = {

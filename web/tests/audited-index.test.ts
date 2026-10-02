@@ -202,10 +202,10 @@ async function fixture(count = 1, description = 'Canlı müzik', prepared = fals
     },
   };
 }
-await test('prepared publication to recommendation flow indexes only misses, activates, retrieves and applies Jev support without query-time document embedding', async () => {
+await test('prepared publication to recommendation flow is searchable before indexing, indexes only misses, retrieves and applies Jev support without query-time document embedding', async () => {
   const f = await fixture(2, 'Canlı akustik müzik konseri.', true);
-  assert.equal((await f.store.catalogStatus()).status, 'empty');
-  assert.deepEqual(await f.store.candidates(emptyFilters), []);
+  assert.equal((await f.store.catalogStatus()).status, 'ready', 'published catalog is live before vectors');
+  assert.equal((await f.store.candidates(emptyFilters)).length, 2);
   const firstHash = await auditDigest(voyageDocumentText(f.events[0]));
   const lease = await f.store.acquireLease('voyage_index_lock');
   assert.ok(lease);
@@ -215,13 +215,13 @@ await test('prepared publication to recommendation flow indexes only misses, act
     const body = JSON.parse(init?.body as string);
     assert.equal(body.input_type, 'document');
     assert.deepEqual(body.input, [voyageDocumentText(f.events[1])]);
-    assert.deepEqual(await f.store.candidates(emptyFilters), [], 'provider response must not expose pending search');
+    assert.equal((await f.store.candidates(emptyFilters)).length, 2, 'search stays available while indexing');
     return Response.json({ data: [{ index: 0, embedding: vector() }], usage: { total_tokens: 10 } });
   });
   const indexed = await f.run();
   assert.equal(indexed.embedded, 1);
   assert.ok('publication' in indexed);
-  assert.deepEqual(indexed.publication, { activated: true, pending: 0 });
+  assert.deepEqual(indexed.publication, { activated: false, pending: 0 }, 'nothing pending to activate');
   assert.equal((await f.store.catalogStatus()).status, 'ready');
   const state = emptyIntentState({ ...emptyFilters, maxPrice: 1000 });
   let queryCalls = 0, rankCalls = 0;
