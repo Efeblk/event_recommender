@@ -241,8 +241,18 @@ function evaluate(
     };
   if (condition.type === 'not') {
     const child = evaluate(event, condition.child, now, partyCount);
-    const status =
-      child.status === 'unknown'
+    // What an event is about is published by its source: an excluded genre
+    // or topic that the source never mentions is absent, as in legacy search.
+    // Properties needing a guarantee (content, experience) still need evidence,
+    // and a source that both mentions and denies a topic stays unknown.
+    const absentTopic =
+      child.type === 'atom' &&
+      child.atom.kind === 'topic' &&
+      child.status === 'unknown' &&
+      child.evidence.length === 0;
+    const status = absentTopic
+      ? 'supported'
+      : child.status === 'unknown'
         ? 'unknown'
         : child.status === 'supported'
           ? 'contradicted'
@@ -298,7 +308,6 @@ export function validateSearchPlan(plan: Plan): void {
     condition: Condition,
     hard: boolean,
     unconditional: boolean,
-    negated = false,
   ) => {
     if (condition.type === 'atom') {
       const atom = condition.atom;
@@ -330,21 +339,11 @@ export function validateSearchPlan(plan: Plan): void {
         ['outdoors', 'beginner_friendly'].includes(atom.value)
       )
         throw new Error('experience evidence is unsupported');
-      // Topic mentions can support a positive requirement, but missing words
-      // are never evidence that an event lacks a topic.
-      if (
-        hard &&
-        atom.kind === 'topic' &&
-        !genreTopics.has(atom.value) &&
-        negated
-      )
-        throw new Error('negated topic evidence is unsupported');
       return;
     }
-    if (condition.type === 'not')
-      return visit(condition.child, hard, false, !negated);
+    if (condition.type === 'not') return visit(condition.child, hard, false);
     condition.children.forEach((child) =>
-      visit(child, hard, unconditional && condition.type === 'all', negated),
+      visit(child, hard, unconditional && condition.type === 'all'),
     );
   };
   visit(plan.hard, true, true);

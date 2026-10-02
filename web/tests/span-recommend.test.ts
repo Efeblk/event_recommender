@@ -268,3 +268,32 @@ void test('plan requests restart on reset and skip bare alternatives requests', 
   }));
   assert.deepEqual(reset.planState?.requests, ['caz konseri']);
 });
+
+void test('a budget whose only open question is its basis offers basis choices', async () => {
+  const withBasis = (basis: 'per_person' | 'group_total') => plan([
+    { type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } },
+    { type: 'atom', id: 'h1', atom: { kind: 'budget', comparison: 'lt', amount: 1500, currency: 'TRY', basis } },
+  ]);
+  const ambiguous = (plans: Plan[]): ParseResult => ({ status: 'ambiguous', reason: 'designated ambiguity',
+    alternatives: plans.map((resultingPlan) => ({ operations: [], resultingPlan })), debug: { mentions: [], answers: {} } });
+  const basis = await recommend(request('Hayko Cepkin konseri, 1500 TL altı'), deps([event('a')], plan([]), {
+    spanInterpret: async () => ambiguous([withBasis('per_person'), withBasis('group_total')]),
+  }));
+  assert.equal(basis.status, 'needs_input');
+  assert.equal(basis.pendingInput?.reason, 'budget_ambiguous');
+  assert.deepEqual(basis.clarification?.map((choice) => choice.label), ['Kişi başı', 'Toplam']);
+  const other = await recommend(request('konser ya da tiyatro'), deps([event('a')], plan([]), {
+    spanInterpret: async () => ambiguous([withBasis('per_person'), plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'theatre' } }])]),
+  }));
+  assert.equal(other.pendingInput?.reason, 'constraint_ambiguous');
+  assert.equal(other.clarification, undefined);
+});
+
+void test('a full 16-candidate plan ranking request fits the Jev size limit', () => {
+  const concert = plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } }]);
+  const long = 'Uzun açıklama. '.repeat(200);
+  const events = Array.from({ length: 16 }, (_, index) => event(`long-${index}`, { title: 'T'.repeat(200), description: long }));
+  const body = buildJevRequest('jev-1.13.0', { message: 'x'.repeat(1200), history: Array.from({ length: 3 }, () => ({ role: 'user' as const, content: 'y'.repeat(1200) })),
+    filters: emptyFilters, plan: concert, planEvidence: {} }, events);
+  assert.ok(new TextEncoder().encode(JSON.stringify(body)).length < 80_000);
+});

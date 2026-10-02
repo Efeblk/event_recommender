@@ -636,6 +636,28 @@ async function recommendResolved(
   };
 }
 
+const budgetBasisChoices = [
+  { label: 'Kişi başı', message: 'Bütçe kişi başı.' },
+  { label: 'Toplam', message: 'Bütçe toplam.' },
+];
+
+/** True when alternative plans differ only in a budget's basis. */
+function isBudgetBasisAmbiguity(plans: Plan[]): boolean {
+  const withoutBasis = (value: unknown): unknown =>
+    Array.isArray(value)
+      ? value.map(withoutBasis)
+      : value && typeof value === 'object'
+        ? Object.fromEntries(
+            Object.entries(value).map(([key, item]) => [
+              key,
+              key === 'basis' ? null : withoutBasis(item),
+            ]),
+          )
+        : value;
+  const keys = new Set(plans.map((plan) => JSON.stringify(withoutBasis(plan))));
+  return plans.length > 1 && keys.size === 1;
+}
+
 /** Exact v2 tree state is authoritative; legacy text/history never reconstructs it. */
 async function recommendSpan(
   input: RecommendInput,
@@ -730,16 +752,24 @@ async function recommendSpan(
     const unavailable =
       interpreted.status === 'unsupported' &&
       interpreted.reason === 'invalid or incomplete provider judgments';
+    const basisOnly =
+      interpreted.status === 'ambiguous' &&
+      isBudgetBasisAmbiguity(
+        interpreted.alternatives.map((x) => x.resultingPlan),
+      );
     const reason = unavailable
       ? ('interpreter_unavailable' as const)
-      : interpreted.status === 'ambiguous'
-        ? ('constraint_ambiguous' as const)
-        : ('unsupported_constraint' as const);
+      : basisOnly
+        ? ('budget_ambiguous' as const)
+        : interpreted.status === 'ambiguous'
+          ? ('constraint_ambiguous' as const)
+          : ('unsupported_constraint' as const);
     return {
       ...base,
       status: 'needs_input',
       pendingInput: { message, reason },
       notice: issueNotices[reason],
+      ...(basisOnly ? { clarification: budgetBasisChoices } : {}),
     };
   }
   let state: PlanState;
