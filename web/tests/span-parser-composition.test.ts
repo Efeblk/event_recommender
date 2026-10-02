@@ -370,3 +370,16 @@ void test('replacing an exact clock preserves its upper and lower bounds', () =>
   assert.equal(result.status, 'accepted');
   assert.deepEqual(result.operations, [{ op: 'replace', targetId: 'h0', condition: atom({ kind: 'time', from: '21:00', to: '21:00' }) }]);
 });
+
+void test('Istanbul sides are supported locations, not places outside Istanbul', () => {
+  const side = (name: string): Condition => atom({ kind: 'location', name, precision: 'side' });
+  const accepted = (request: ParserInput) => {
+    const { result } = parseWithAnswers(request);
+    assert.equal(result.status, 'accepted');
+    return semanticPlan(result.resultingPlan);
+  };
+  assert.deepEqual(accepted({ ...input('Anadolu yakasında konser'), language: 'tr' }), plan([side('Anadolu yakası'), category('concert')]));
+  assert.deepEqual(accepted(input('A concert on the European side')), plan([side('Avrupa yakası'), category('concert')]));
+  const outside = parseWithAnswers(input('A concert in Ankara'));
+  assert.equal(outside.result.status, 'unsupported');
+});

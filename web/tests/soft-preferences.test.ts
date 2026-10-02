@@ -114,3 +114,25 @@ void test('span-v2 recommendations apply plan location preferences to fallback r
   });
   assert.deepEqual(result.recommendations.map((item) => item.event.id), ['kadikoy', 'besiktas']);
 });
+
+void test('side preferences and requirements use resolved venue sides', async () => {
+  const side = (name: string): Condition => ({ type: 'atom', atom: { kind: 'location', name, precision: 'side' } });
+  const soft = softPreferencesFor(plan([side('Anadolu yakası')]))!;
+  assert.equal(softPreferenceSignal(event('x', { district: 'Üsküdar' }), soft), 1);
+  assert.equal(softPreferenceSignal(event('x', { district: 'İstanbul Anadolu' }), soft), 1);
+  assert.equal(softPreferenceSignal(event('x', { district: 'Şişli' }), soft), -0.5);
+  assert.equal(softPreferenceSignal(event('x'), soft), 0);
+  const { evaluatePlan, validateSearchPlan } = await import('../lib/plan-evidence.ts');
+  const { validatePlan } = await import('../parser/state.ts');
+  const required = plan([], [side('Avrupa yakası')]);
+  validateSearchPlan(required);
+  validatePlan(required);
+  assert.throws(() => validatePlan(plan([], [side('Kuzey yakası')])), /invalid Istanbul side/);
+  assert.throws(() => validateSearchPlan(plan([], [{ type: 'atom', atom: { kind: 'location', name: 'Kuzey yakası', precision: 'side' } }])));
+  const status = (overrides: Partial<EventRecord>) => evaluatePlan(event('x', overrides), required, now).status;
+  assert.equal(status({ district: 'Beşiktaş' }), 'supported');
+  assert.equal(status({ district: 'İstanbul Avrupa' }), 'supported');
+  assert.equal(status({ district: 'Kadıköy' }), 'contradicted');
+  assert.equal(status({}), 'unknown');
+  assert.equal(status({ district: 'İstanbul Avrupa', address: 'Moda Cd. No: 1, Kadıköy/İstanbul' }), 'unknown');
+});

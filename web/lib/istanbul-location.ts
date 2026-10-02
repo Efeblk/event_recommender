@@ -134,6 +134,11 @@ const SIDE_LABELS: Record<string, IstanbulSide> = {
   'anadolu yakasi': 'asia',
 };
 
+/** The side named by a normalized label such as "anadolu yakasi". */
+export function sideNamed(normalized: string): IstanbulSide | null {
+  return SIDE_LABELS[normalized] ?? null;
+}
+
 /** A normalized district or known neighborhood name. */
 export function placeOf(normalized: string): Place | null {
   const side = districtSide(normalized);

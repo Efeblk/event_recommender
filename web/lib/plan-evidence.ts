@@ -7,6 +7,7 @@ import {
 } from './requirements.ts';
 import { emptyFilters, type Category, type EventRecord } from './types.ts';
 import { isEligible, normalize } from './search.ts';
+import { resolveEventLocation, sideNamed } from './istanbul-location.ts';
 
 export type PlanEvidenceStatus = RequirementStatus;
 export type PlanEvidence =
@@ -172,6 +173,14 @@ function atomResult(
     }
     case 'location': {
       if (atom.precision === 'neighborhood') return result('unknown');
+      if (atom.precision === 'side') {
+        const wanted = sideNamed(normalize(atom.name));
+        const actual = resolveEventLocation(event);
+        if (!wanted || !actual.side) return result('unknown');
+        return result(actual.side === wanted ? 'supported' : 'contradicted', [
+          event.district || event.address || event.venue,
+        ]);
+      }
       if (isEligible(event, { ...emptyFilters, district: atom.name }, now))
         return result('supported', [
           event.district || event.address || event.venue,
@@ -334,7 +343,9 @@ export function validateSearchPlan(plan: Plan): void {
       if (
         hard &&
         atom.kind === 'location' &&
-        !canonicalDistricts.has(normalize(atom.name))
+        (atom.precision === 'side'
+          ? !sideNamed(normalize(atom.name))
+          : !canonicalDistricts.has(normalize(atom.name)))
       )
         throw new Error('noncanonical district is unsupported');
       if (

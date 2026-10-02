@@ -1,5 +1,9 @@
 import type { Atom, Condition, Plan } from '../parser/contract.ts';
-import { placeOf, resolveEventLocation } from './istanbul-location.ts';
+import {
+  placeOf,
+  resolveEventLocation,
+  sideNamed,
+} from './istanbul-location.ts';
 import { planPartyCount } from './plan-evidence.ts';
 import { normalize } from './search.ts';
 import type { EventRecord } from './types.ts';
@@ -35,11 +39,14 @@ function locationSignal(
   event: EventRecord,
   atom: Extract<Atom, { kind: 'location' }>,
 ): number | null {
-  const wanted = placeOf(normalize(atom.name).trim());
+  const name = normalize(atom.name).trim();
+  const side = atom.precision === 'side' ? sideNamed(name) : null;
+  const wanted = atom.precision === 'side' ? side && { side } : placeOf(name);
   if (!wanted) return null;
   const actual = resolveEventLocation(event);
   if (!actual.side) return 0;
   if (actual.side !== wanted.side) return -0.5;
+  if (atom.precision === 'side') return 1;
   if (wanted.district && actual.district === wanted.district)
     return atom.precision === 'neighborhood' ? 0.75 : 1;
   return 0.25;

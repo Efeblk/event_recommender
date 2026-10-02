@@ -3,10 +3,10 @@
  * value computed in code. Extraction over-proposes on purpose: Jev decides what
  * each mention means (required, preferred, excluded, an edit target, or noise).
  */
-import type { Category } from './contract.ts';
+import type { Category, LocationPrecision } from './contract.ts';
 import {
   CATEGORY_TERMS, COMPANION_TERMS, CONTENT_TERMS, CURRENCIES, DISTRICTS, EXPERIENCE_TERMS, fold, MONTHS,
-  NEIGHBORHOODS, NUMBER_WORDS, OUTSIDE_ISTANBUL, TOPIC_TERMS, WEEKDAYS,
+  NEIGHBORHOODS, NUMBER_WORDS, OUTSIDE_ISTANBUL, SIDES, TOPIC_TERMS, WEEKDAYS,
 } from './lexicon.ts';
 import type { Proposal } from './gliner.ts';
 
@@ -20,7 +20,7 @@ export type Mention = Base & (
   | { kind: 'time'; clock: string }
   | { kind: 'party'; count: number }
   | { kind: 'companion'; value: 'partner' | 'friends' | 'family' | 'children' }
-  | { kind: 'location'; name: string; precision: 'district' | 'neighborhood' }
+  | { kind: 'location'; name: string; precision: LocationPrecision }
   | { kind: 'outside_location'; name: string }
   | { kind: 'category'; value: Category }
   | { kind: 'topic'; value: string }
@@ -256,6 +256,12 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
     const d = nextWeekday(abbreviations[m[1]], false);
     dateDraft(m.index!, m.index! + m[0].length, d, d);
   }
+
+  // --- Istanbul sides ("Anadolu yakasında", "European side"). Lowercase is
+  // accepted: the side phrase is unambiguous without capitalisation.
+  for (const [name, pattern] of Object.entries(SIDES))
+    for (const m of f.matchAll(new RegExp(`${B}(?:${pattern})${E}`, 'gu')))
+      add({ kind: 'location', name, precision: 'side', ...span(m.index!, m.index! + m[0].length) });
 
   // --- Outside-Istanbul and Istanbul locations (before generic vocabulary).
   const places: Array<[string, Draft['kind'], 'district' | 'neighborhood' | null]> = [

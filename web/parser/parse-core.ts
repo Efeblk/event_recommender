@@ -81,7 +81,7 @@ function mentionMeaning(m: Mention): string {
   }
 }
 
-const SUPPORTED = 'The search can check only: Istanbul districts and neighbourhoods; calendar dates (today or later); start-time bounds; ticket price limits in Turkish lira (per person, per ticket, or group total); number of attendees; companions (partner, friends, family, children); event types (concert, theatre, stand-up, workshop, exhibition, festival, sport, cinema, talk, dance, show, course, tour, museum); topics or genres; quiet, seated, outdoors, wheelchair access, family-friendly, uncrowded, romantic, beginner-friendly; absence of profanity or sexual content; and sorting by soonest, cheapest or nearest.';
+const SUPPORTED = 'The search can check only: Istanbul districts and neighbourhoods; the European (Avrupa) or Asian (Anadolu) side of Istanbul; calendar dates (today or later); start-time bounds; ticket price limits in Turkish lira (per person, per ticket, or group total); number of attendees; companions (partner, friends, family, children); event types (concert, theatre, stand-up, workshop, exhibition, festival, sport, cinema, talk, dance, show, course, tour, museum); topics or genres; quiet, seated, outdoors, wheelchair access, family-friendly, uncrowded, romantic, beginner-friendly; absence of profanity or sexual content; and sorting by soonest, cheapest or nearest.';
 
 const choice = (instructions: unknown, criteria: Record<string, string>): Question => ({ type: 'choice', instructions, criteria });
 

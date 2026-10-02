@@ -54,6 +54,7 @@ function atomText(atom: Atom): string {
     case 'time':
       return `saat ${atom.from ? `${atom.fromExclusive ? '>' : '\u2265'}${atom.from}` : ''}${atom.from && atom.to ? ', ' : ''}${atom.to ? `${atom.toExclusive ? '<' : '\u2264'}${atom.to}` : ''}`;
     case 'location':
+      if (atom.precision === 'side') return atom.name;
       return `${atom.precision === 'district' ? 'il\u00e7e' : 'mahalle'}: ${atom.name}`;
     case 'category':
       return categories[atom.value];

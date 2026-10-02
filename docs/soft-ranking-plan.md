@@ -1,6 +1,6 @@
 # Soft ranking signals: location and price (plan)
 
-Status: Phase 1 implemented locally (2026-10-02, uncommitted; offline checks only). Phases 2–4 are not started.
+Status (2026-10-02): Phase 1 in PR #28. Phase 2 is implemented offline in a stacked PR and awaits a bounded live Jev evaluation. Phases 3–4 are not started.
 
 ## Goal
 
@@ -113,6 +113,28 @@ Other preference kinds (topic, experience, …) are neutral in Phase 1.
 - Checks in `web/`: `npm test` (724/724), `npm run typecheck`, `npm run lint`,
   `scripts/check-release-cases.mjs` (20 cases, 0 live requests). There were no
   live Jev/Voyage calls, so live relevance impact is not yet measured.
+
+## Phase 2 result (2026-10-02, offline)
+
+- `location` atoms gain `precision: 'side'` with canonical names
+  `Avrupa yakası` / `Anadolu yakası`. The parser extracts Turkish (including
+  inflected and lowercase forms) and English ("European/Asian/Anatolian side")
+  surfaces. These are no longer in `OUTSIDE_ISTANBUL`, and Jev's
+  supported-capabilities text lists them.
+- A required side is supported or contradicted by the resolved venue side;
+  unresolved or conflicting locations stay unknown and therefore do not pass.
+  A preferred side scores +1 for the same side and −0.5 for the other side.
+- The legacy (non-span) interpreter is unchanged and still reports sides as
+  unsupported.
+- Offline checks: parser composition tests with synthetic Jev answers, plus
+  plan-evidence, validation and soft-scoring tests. `npm test`, typecheck,
+  lint and release cases pass. The parser bench cannot run offline here (no
+  Jev response cache), and the instruction text changed.
+- Still needed before merge: a bounded live parser-bench run comparing the
+  baseline with this change, including `gliner-cases-v2` cases that now
+  expect "Anadolu yakası tercihimiz" as an applied preference rather than
+  not applied. That case file's expectations must be updated with the
+  evaluation, not before it.
 
 ## Non-goals
 

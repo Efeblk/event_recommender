@@ -4,13 +4,15 @@ export type Comparison = 'lt' | 'lte' | 'gt' | 'gte' | 'approx';
 export type Category = 'concert' | 'theatre' | 'standup' | 'workshop' | 'exhibition'
   | 'festival' | 'sport' | 'cinema' | 'talk' | 'dance' | 'show' | 'course' | 'tour' | 'museum';
 export type Order = 'none' | 'soonest' | 'cheapest' | 'nearest';
+/** 'side' is the European (Avrupa) or Asian (Anadolu) side of Istanbul. */
+export type LocationPrecision = 'district' | 'neighborhood' | 'side';
 export type Atom =
   | { kind: 'budget'; comparison: Comparison; amount: number; currency: 'TRY'; basis: BudgetBasis }
   | { kind: 'party'; count: number }
   | { kind: 'companion'; value: 'partner' | 'friends' | 'family' | 'children' }
   | { kind: 'date'; from: string; to: string }
   | { kind: 'time'; from?: string; to?: string; fromExclusive?: boolean; toExclusive?: boolean }
-  | { kind: 'location'; name: string; precision: 'district' | 'neighborhood' }
+  | { kind: 'location'; name: string; precision: LocationPrecision }
   | { kind: 'category'; value: Category }
   | { kind: 'topic'; value: string }
   | { kind: 'experience'; value: 'quiet' | 'seated' | 'outdoors' | 'wheelchair_accessible'
