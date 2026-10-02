@@ -1,6 +1,6 @@
 import { hybridRank } from './hybrid.ts';
 import { isEligible, rankEvents, uniqueEvents, validateFilters } from './search.ts';
-import type { EventRecord, Filters } from './types.ts';
+import { LOCATION_PROFILE, type EventRecord, type Filters, type PreparedLocation } from './types.ts';
 import { bindDisplayIdentitySource } from './event-merge.ts';
 
 export type PreparedSearchMode = 'lexical' | 'hybrid';
@@ -118,6 +118,17 @@ const text = (value: unknown) =>
   typeof value === 'string' && value.trim() ? value : null;
 const stringArray = (value: unknown) =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+/** A stored location is used only when its shape and resolver profile match. */
+function preparedLocation(value: unknown): PreparedLocation | undefined {
+  const location = object(value);
+  if (!location || location.profile !== LOCATION_PROFILE) return undefined;
+  const { district, side, precision } = location;
+  const valid =
+    (precision === 'district' && typeof district === 'string' && (side === 'europe' || side === 'asia')) ||
+    (precision === 'side' && district === null && (side === 'europe' || side === 'asia')) ||
+    (precision === 'unknown' && district === null && side === null);
+  return valid ? { profile: LOCATION_PROFILE, district, side, precision } as PreparedLocation : undefined;
+}
 
 function safeUrl(value: unknown): string | null {
   const candidate = text(value);
@@ -272,8 +283,10 @@ function project(session: PreparedPublicationSession, now: Date, maxAgeMs: numbe
   const url = safeUrl(chosen.sourceUrl);
   if (!startsAt || !title || !checkedAt || !url || !Number.isFinite(Date.parse(startsAt))) return null;
   const lexicalTokens = stringArray(object(snapshot.preparedSearch)?.lexicalTokens);
+  const location = preparedLocation(object(snapshot.preparedSearch)?.location);
   const prepared = session.document && text(session.document.text) && /^[a-f0-9]{64}$/i.test(session.document.hash) && lexicalTokens.length
-    ? { version: 1 as const, documentText: session.document.text, documentHash: session.document.hash.toLowerCase(), lexicalTokens }
+    ? { version: 1 as const, documentText: session.document.text, documentHash: session.document.hash.toLowerCase(), lexicalTokens,
+      ...(location ? { location } : {}) }
     : undefined;
   const advertisedMinor = advertisedMinorUnits(chosen);
   const advertisedPrice: EventRecord['advertisedPrice'] = chosen.currency === 'TRY' && advertisedMinor !== null &&

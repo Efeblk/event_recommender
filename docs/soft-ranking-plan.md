@@ -1,6 +1,6 @@
 # Soft ranking signals: location and price (plan)
 
-Status: Phase 1 implemented locally (2026-10-02, uncommitted; offline checks only). Phases 2–4 are not started.
+Status (2026-10-02): Phase 1 in PR #28 (offline checks only). Phases 2–4 are not started on this branch.
 
 ## Goal
 
@@ -110,9 +110,22 @@ Other preference kinds (topic, experience, …) are neutral in Phase 1.
 - Soft location/budget nudges apply on the span-v2 plan path
   (`ResolvedRetrievalContext.softPreferences`) to both the Jev shortlist and
   the fallback ranking. The legacy intent path is unchanged.
-- Checks in `web/`: `npm test` (724/724), `npm run typecheck`, `npm run lint`,
-  `scripts/check-release-cases.mjs` (20 cases, 0 live requests). There were no
-  live Jev/Voyage calls, so live relevance impact is not yet measured.
+- Venue location is resolved at publication time (`buildSearchCatalog` stores
+  `preparedSearch.location` with profile `istanbul-location-v1`). Requests read
+  it and resolve only records without a matching profile, caching the result
+  per record object. Local timing on the 4,076-session snapshot (diagnostic
+  only): one-off publication prep about 72 ms; request rerank 2.6 ms p50 /
+  3.2 ms p95, compared with about 57 ms when resolving per request.
+- Outstanding: the PostgreSQL preparation path (`collector/preparation`,
+  migrations 005/006) does not yet store `location`. The web reader accepts a
+  valid stored value, but until a new migration adds it, PostgreSQL-served
+  requests resolve location per request (about 45 ms locally per 4k fresh
+  records).
+- Checks in `web/`: `npm test` (725/725), `npm run typecheck`, `npm run lint`,
+  `scripts/check-release-cases.mjs` (20 cases, 0 live requests),
+  `npm run build:node`, `npm run test:smoke:node`, `npm run test:deploy:gcp`.
+  There were no live Jev/Voyage calls, so live relevance impact is not yet
+  measured.
 
 ## Non-goals
 

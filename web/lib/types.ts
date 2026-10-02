@@ -20,6 +20,15 @@ export interface EventOffer {
   venue: string;
   availability: EventRecord['availability'];
 }
+/** Resolver version; a prepared location from another profile is recomputed. */
+export const LOCATION_PROFILE = 'istanbul-location-v1';
+export interface PreparedLocation {
+  profile: typeof LOCATION_PROFILE;
+  /** Normalized district name when precision is 'district'. */
+  district: string | null;
+  side: 'europe' | 'asia' | null;
+  precision: 'district' | 'side' | 'unknown';
+}
 export interface PreparedSearchV1 {
   version: 1;
   /** Exact Voyage document input produced for this immutable event record. */
@@ -28,6 +37,8 @@ export interface PreparedSearchV1 {
   documentHash: string;
   /** Normalized, stop-word-filtered document tokens used by lexical ranking. */
   lexicalTokens: string[];
+  /** Venue location resolved at publication time. */
+  location?: PreparedLocation;
 }
 export type AttendanceTiming =
   | {
