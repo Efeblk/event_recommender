@@ -218,10 +218,14 @@ export async function indexAuditedBatch(
     const text = event.preparedSearch?.documentText ?? voyageDocumentText(event);
     documents.set(event.preparedSearch?.documentHash ?? await auditDigest(text), text);
   }
-  const cached = await store.voyageVectorsByHash(
-    profile,
-    [...documents.keys()],
-    config.dimensions,
+  const cached = new Set(
+    (
+      await store.voyageVectorsByHash(
+        profile,
+        [...documents.keys()],
+        config.dimensions,
+      )
+    ).keys(),
   );
   const pending = [...documents]
     .filter(([hash]) => !cached.has(hash))
