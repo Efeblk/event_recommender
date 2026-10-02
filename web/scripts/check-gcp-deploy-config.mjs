@@ -13,7 +13,7 @@ const collectorWorkflow = (await readFile(
 )).replaceAll('\r\n', '\n');
 
 assert.match(workflow, /^\s{2}workflow_dispatch:/m);
-assert.match(workflow, /input_interpreter:[\s\S]*?default: rules[\s\S]*?- rules\n\s*- jev-v1/);
+assert.match(workflow, /input_interpreter:[\s\S]*?default: rules[\s\S]*?- rules\n\s*- jev-v1\n\s*- span-v2/);
 assert.doesNotMatch(workflow, /^\s{2}(push|pull_request|schedule):/m);
 assert.match(workflow, /^permissions:\n\s{2}contents: read$/m);
 assert.match(workflow, /^\s{2}prepare:\n/m);
@@ -78,7 +78,7 @@ assert.match(deploy, /BIPLAN_PREVIEW_TESTING=false/);
 assert.match(deploy, /AI_DAILY_LIMIT=100/);
 assert.match(deploy, /VOYAGE_DIMENSIONS=1024/);
 assert.match(deploy, /INPUT_INTERPRETER=\$INPUT_INTERPRETER/);
-assert.match(deploy, /\[\[ "\$INPUT_INTERPRETER" == 'rules' \|\| "\$INPUT_INTERPRETER" == 'jev-v1' \]\]/);
+assert.match(deploy, /\[\[ "\$INPUT_INTERPRETER" == 'rules' \|\| "\$INPUT_INTERPRETER" == 'jev-v1' \|\| "\$INPUT_INTERPRETER" == 'span-v2' \]\]/);
 for (const name of [
   'GCP_SYNC_TOKEN_SECRET_VERSION',
   'GCP_TYPESAFE_API_KEY_SECRET_VERSION',

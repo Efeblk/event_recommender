@@ -14,6 +14,7 @@ on:
         options:
           - rules
           - jev-v1
+          - span-v2
 permissions:
   contents: read
 concurrency:
@@ -151,7 +152,7 @@ jobs:
           set -euo pipefail
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$GCP_PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
-          [[ "$INPUT_INTERPRETER" == 'rules' || "$INPUT_INTERPRETER" == 'jev-v1' ]]
+          [[ "$INPUT_INTERPRETER" == 'rules' || "$INPUT_INTERPRETER" == 'jev-v1' || "$INPUT_INTERPRETER" == 'span-v2' ]]
           [[ "$GCP_REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
           [[ "$GCP_CLOUD_RUN_SERVICE" =~ ^[a-z][a-z0-9-]{1,61}[a-z0-9]$ && "$GCP_CLOUD_RUN_SERVICE" == *staging* ]]
           [[ "$GCP_ARTIFACT_REGISTRY_REPOSITORY" =~ ^[a-z][a-z0-9._-]{1,61}[a-z0-9]$ ]]

@@ -16,6 +16,12 @@ import { displayShowIdentity } from './event-merge.ts';
 import type { IntentState } from './input-state.ts';
 import { retrievalQuery } from './input-retrieval.ts';
 
+/** This query is already resolved; never reinterpret it or historical user text. */
+export interface ResolvedRetrievalContext {
+  query: string;
+  order: 'none' | 'soonest' | 'cheapest';
+}
+
 export interface SearchContext {
   query: string;
   history: Message[];
@@ -395,30 +401,40 @@ function rankedCandidates(
   history: Message[],
   semantic?: SemanticRanking,
   intent?: IntentState,
+  resolved?: ResolvedRetrievalContext,
 ) {
-  const context: SearchContext = intent
+  const context: SearchContext = resolved
     ? {
-        query: retrievalQuery(intent),
+        query: resolved.query,
         history: [],
         rejectedTerms: [],
         reset: false,
         category: null,
       }
-    : searchContext(message, history);
+    : intent
+      ? {
+          query: retrievalQuery(intent),
+          history: [],
+          rejectedTerms: [],
+          reset: false,
+          category: null,
+        }
+      : searchContext(message, history);
   // Rank sessions before selecting a representative for each production.
   // The structured path has already applied validated filters and source
   // requirements. Do not infer constraints again from its query or old turns.
-  const allowed = intent
-    ? events
-    : events.filter((event) => eligibleForContext(event, context));
+  const allowed =
+    intent || resolved
+      ? events
+      : events.filter((event) => eligibleForContext(event, context));
   return {
     context,
     allowed,
     ranked: uniqueEvents(
       demoteChildDirectedPartnerResults(
         semantic
-        ? hybridRank(allowed, context.query, semantic)
-        : rankEvents(allowed, context.query),
+          ? hybridRank(allowed, context.query, semantic)
+          : rankEvents(allowed, context.query),
         intent,
       ),
       allowed.length,
@@ -462,7 +478,8 @@ function interleaveSoonestCoverage(
     seenShows.add(show);
     selected.push(event);
   };
-  let earliestIndex = 0, relevanceIndex = 0;
+  let earliestIndex = 0,
+    relevanceIndex = 0;
   while (
     selected.length < limit &&
     (earliestIndex < chronological.length || relevanceIndex < relevant.length)
@@ -503,6 +520,7 @@ export function shortlistEvents(
   limit = 16,
   semantic?: SemanticRanking,
   intent?: IntentState,
+  resolved?: ResolvedRetrievalContext,
 ): EventRecord[] {
   if (limit <= 0) return [];
   const { context, allowed, ranked } = rankedCandidates(
@@ -511,29 +529,49 @@ export function shortlistEvents(
     history,
     semantic,
     intent,
+    resolved,
   );
   const diverseRanked = diverseEvents(ranked, ranked.length);
-  const relevanceCovered = semantic
-    ? (
-      calmMoodShortlistCoverage(
-        diverseRanked,
-        message,
-        context.history,
-        limit,
-        intent,
-      ) ?? diverseRanked.slice(0, limit)
-    )
-    : diverseRanked;
-  if (intent?.preferences.order === 'soonest')
-    {
-      const chronological = soonestProductionRepresentatives(allowed, intent);
-      return interleaveSoonestCoverage(
-        chronological,
-        mapRelevanceToEarliest(relevanceCovered, chronological),
-        limit,
-      );
-    }
-  if (semantic) return relevanceCovered;
+  const relevanceCovered =
+    semantic && !resolved
+      ? (calmMoodShortlistCoverage(
+          diverseRanked,
+          message,
+          context.history,
+          limit,
+          intent,
+        ) ?? diverseRanked.slice(0, limit))
+      : diverseRanked;
+  if (resolved?.order === 'cheapest') {
+    const cheapest = diverseEvents(
+      uniqueEvents(
+        [...allowed].sort(
+          (a, b) =>
+            (a.price ?? Infinity) - (b.price ?? Infinity) ||
+            a.startsAt.localeCompare(b.startsAt),
+        ),
+        allowed.length,
+      ),
+      allowed.length,
+    );
+    return interleaveSoonestCoverage(
+      cheapest,
+      mapRelevanceToEarliest(relevanceCovered, cheapest),
+      limit,
+    );
+  }
+  if (
+    intent?.preferences.order === 'soonest' ||
+    resolved?.order === 'soonest'
+  ) {
+    const chronological = soonestProductionRepresentatives(allowed, intent);
+    return interleaveSoonestCoverage(
+      chronological,
+      mapRelevanceToEarliest(relevanceCovered, chronological),
+      limit,
+    );
+  }
+  if (semantic) return relevanceCovered.slice(0, limit);
   const selected: EventRecord[] = [];
   const seenProductions = new Set<string>();
   const seenCategories = new Set<string>();
@@ -561,10 +599,34 @@ export function fallbackEvents(
   limit = 5,
   semantic?: SemanticRanking,
   intent?: IntentState,
+  resolved?: ResolvedRetrievalContext,
 ): EventRecord[] {
   if (limit <= 0) return [];
-  const candidates = rankedCandidates(events, message, history, semantic, intent);
-  return intent?.preferences.order === 'soonest'
-    ? soonestProductionRepresentatives(candidates.allowed, intent).slice(0, limit)
+  const candidates = rankedCandidates(
+    events,
+    message,
+    history,
+    semantic,
+    intent,
+    resolved,
+  );
+  if (resolved?.order === 'cheapest')
+    return diverseEvents(
+      uniqueEvents(
+        [...candidates.allowed].sort(
+          (a, b) =>
+            (a.price ?? Infinity) - (b.price ?? Infinity) ||
+            a.startsAt.localeCompare(b.startsAt),
+        ),
+        candidates.allowed.length,
+      ),
+      limit,
+    );
+  return intent?.preferences.order === 'soonest' ||
+    resolved?.order === 'soonest'
+    ? soonestProductionRepresentatives(candidates.allowed, intent).slice(
+        0,
+        limit,
+      )
     : diverseEvents(candidates.ranked, limit);
 }

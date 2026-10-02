@@ -26,6 +26,7 @@ const names = [
   'VOYAGE_MODEL',
   'VOYAGE_DIMENSIONS',
   'AI_DAILY_LIMIT',
+  'INPUT_INTERPRETER',
   'WORKERS_PLAN',
 ];
 let saved;
@@ -163,11 +164,13 @@ await test('uses safe provider defaults without requiring optional keys', () => 
   delete process.env.VOYAGE_MODEL;
   delete process.env.VOYAGE_DIMENSIONS;
   delete process.env.AI_DAILY_LIMIT;
+  delete process.env.INPUT_INTERPRETER;
   const variables = publicDeploymentVariables('staging');
   assert.equal(variables.TYPESAFE_MODEL, 'jev-1.13.0');
   assert.equal(variables.VOYAGE_MODEL, 'voyage-4-large');
   assert.equal(variables.VOYAGE_DIMENSIONS, '1024');
   assert.equal(variables.AI_DAILY_LIMIT, '100');
+  assert.equal(variables.INPUT_INTERPRETER, 'rules');
   assert.deepEqual(deploymentSecrets(), { SYNC_TOKEN: 'sync-token' });
 });
 
@@ -178,6 +181,7 @@ await test('keeps provider secrets out of public deployment variables', () => {
   process.env.VOYAGE_MODEL = 'voyage-4';
   process.env.VOYAGE_DIMENSIONS = '512';
   process.env.AI_DAILY_LIMIT = '250';
+  process.env.INPUT_INTERPRETER = 'span-v2';
   const variables = publicDeploymentVariables('staging');
   assert.equal(JSON.stringify(variables).includes('private-jev-key'), false);
   assert.equal(JSON.stringify(variables).includes('private-voyage-key'), false);
@@ -185,6 +189,7 @@ await test('keeps provider secrets out of public deployment variables', () => {
   assert.equal(variables.VOYAGE_MODEL, 'voyage-4');
   assert.equal(variables.VOYAGE_DIMENSIONS, '512');
   assert.equal(variables.AI_DAILY_LIMIT, '250');
+  assert.equal(variables.INPUT_INTERPRETER, 'span-v2');
   assert.deepEqual(deploymentSecrets(), {
     SYNC_TOKEN: 'sync-token',
     TYPESAFE_API_KEY: 'private-jev-key',
@@ -215,6 +220,12 @@ await test('rejects invalid public provider settings', () => {
   assert.throws(
     () => validateDeploymentConfig({ environment: 'staging' }),
     /VOYAGE_DIMENSIONS/,
+  );
+  process.env.VOYAGE_DIMENSIONS = '1024';
+  process.env.INPUT_INTERPRETER = 'span-v3';
+  assert.throws(
+    () => validateDeploymentConfig({ environment: 'staging' }),
+    /INPUT_INTERPRETER/,
   );
 });
 
