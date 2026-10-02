@@ -1,13 +1,12 @@
 import { addressDistrict, isIstanbulDistrict, normalize } from './search.ts';
-import type { EventRecord } from './types.ts';
+import {
+  LOCATION_PROFILE,
+  type EventRecord,
+  type PreparedLocation,
+} from './types.ts';
 
 export type IstanbulSide = 'europe' | 'asia';
-export interface EventLocation {
-  /** Normalized district name when precision is 'district'. */
-  district: string | null;
-  side: IstanbulSide | null;
-  precision: 'district' | 'side' | 'unknown';
-}
+export type EventLocation = Omit<PreparedLocation, 'profile'>;
 interface Place {
   district?: string;
   side: IstanbulSide;
@@ -202,4 +201,25 @@ export function resolveEventLocation(event: EventRecord): EventLocation {
   return districts.size === 1
     ? atDistrict([...districts][0])
     : atSide([...sides][0]!);
+}
+
+/** Publication-time location for a prepared search record. */
+export function prepareEventLocation(event: EventRecord): PreparedLocation {
+  return { profile: LOCATION_PROFILE, ...resolveEventLocation(event) };
+}
+
+const fallbackLocations = new WeakMap<EventRecord, EventLocation>();
+/**
+ * Request-time read of the prepared location. Records prepared without it, or
+ * by another resolver profile, are resolved once per record object.
+ */
+export function eventLocation(event: EventRecord): EventLocation {
+  const prepared = event.preparedSearch?.location;
+  if (prepared?.profile === LOCATION_PROFILE) return prepared;
+  let location = fallbackLocations.get(event);
+  if (!location) {
+    location = resolveEventLocation(event);
+    fallbackLocations.set(event, location);
+  }
+  return location;
 }

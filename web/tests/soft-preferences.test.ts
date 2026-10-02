@@ -136,3 +136,16 @@ void test('side preferences and requirements use resolved venue sides', async ()
   assert.equal(status({}), 'unknown');
   assert.equal(status({ district: 'İstanbul Avrupa', address: 'Moda Cd. No: 1, Kadıköy/İstanbul' }), 'unknown');
 });
+
+void test('requests read the publication-time location and recompute only other profiles', async () => {
+  const { eventLocation } = await import('../lib/istanbul-location.ts');
+  const { buildSearchCatalog } = await import('../lib/materialized-catalog.ts');
+  const catalog = buildSearchCatalog([event('k', { district: '', address: 'Moda Cd. No: 1, Kadıköy/İstanbul' })], now);
+  const [published] = catalog.groups[0].versions[0].events;
+  assert.deepEqual(published.preparedSearch?.location, { profile: 'istanbul-location-v1', district: 'kadikoy', side: 'asia', precision: 'district' });
+  // The stored value is authoritative for its profile; raw fields are not re-parsed.
+  const stored = { ...published, district: 'Beşiktaş', address: '' };
+  assert.equal(eventLocation(stored).district, 'kadikoy');
+  const otherProfile = { ...stored, preparedSearch: { ...stored.preparedSearch!, location: { ...stored.preparedSearch!.location!, profile: 'old' as 'istanbul-location-v1' } } };
+  assert.equal(eventLocation(otherProfile).district, 'besiktas');
+});

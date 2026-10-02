@@ -1,9 +1,5 @@
 import type { Atom, Condition, Plan } from '../parser/contract.ts';
-import {
-  placeOf,
-  resolveEventLocation,
-  sideNamed,
-} from './istanbul-location.ts';
+import { eventLocation, placeOf, sideNamed } from './istanbul-location.ts';
 import { planPartyCount } from './plan-evidence.ts';
 import { normalize } from './search.ts';
 import type { EventRecord } from './types.ts';
@@ -35,15 +31,27 @@ export function softPreferencesFor(plan: Plan): SoftPreferences | undefined {
     : undefined;
 }
 
+// Preference names are few; normalize each once rather than once per event.
+type WantedPlace = { district?: string; side: 'europe' | 'asia' } | null;
+const wantedPlaces = new Map<string, WantedPlace>();
+function wantedPlace(atom: Extract<Atom, { kind: 'location' }>): WantedPlace {
+  const key = `${atom.precision}:${atom.name}`;
+  if (!wantedPlaces.has(key)) {
+    if (wantedPlaces.size > 256) wantedPlaces.clear();
+    const name = normalize(atom.name).trim();
+    const side = atom.precision === 'side' ? sideNamed(name) : null;
+    wantedPlaces.set(key, atom.precision === 'side' ? side && { side } : placeOf(name));
+  }
+  return wantedPlaces.get(key)!;
+}
+
 function locationSignal(
   event: EventRecord,
   atom: Extract<Atom, { kind: 'location' }>,
 ): number | null {
-  const name = normalize(atom.name).trim();
-  const side = atom.precision === 'side' ? sideNamed(name) : null;
-  const wanted = atom.precision === 'side' ? side && { side } : placeOf(name);
+  const wanted = wantedPlace(atom);
   if (!wanted) return null;
-  const actual = resolveEventLocation(event);
+  const actual = eventLocation(event);
   if (!actual.side) return 0;
   if (actual.side !== wanted.side) return -0.5;
   if (atom.precision === 'side') return 1;

@@ -7,7 +7,7 @@ import {
 } from './requirements.ts';
 import { emptyFilters, type Category, type EventRecord } from './types.ts';
 import { isEligible, normalize } from './search.ts';
-import { resolveEventLocation, sideNamed } from './istanbul-location.ts';
+import { eventLocation, sideNamed } from './istanbul-location.ts';
 
 export type PlanEvidenceStatus = RequirementStatus;
 export type PlanEvidence =
@@ -175,7 +175,7 @@ function atomResult(
       if (atom.precision === 'neighborhood') return result('unknown');
       if (atom.precision === 'side') {
         const wanted = sideNamed(normalize(atom.name));
-        const actual = resolveEventLocation(event);
+        const actual = eventLocation(event);
         if (!wanted || !actual.side) return result('unknown');
         return result(actual.side === wanted ? 'supported' : 'contradicted', [
           event.district || event.address || event.venue,
