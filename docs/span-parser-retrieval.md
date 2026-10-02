@@ -70,8 +70,9 @@ or public-launch readiness.
 
 ## Benchmark on October 2
 
-Live runs used the existing TypeSafe and Voyage keys within a USD 1 task cap
-(actual spend well under USD 0.10). Raw logs and results are preserved locally
+Live runs used the existing TypeSafe and Voyage keys within a USD 1 task cap.
+The parser ledger records USD 0.017; ranking usage was not recorded, and the
+estimate from request sizes is about USD 0.10–0.15 in total. Raw logs and results are preserved locally
 in `web/work/span-bench-20261002/`.
 
 - Parser, frozen 200 cases: 190/200 at first, 194/200 after fixing dotted
