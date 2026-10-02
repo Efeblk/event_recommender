@@ -52,7 +52,7 @@ try {
   const source = (await readFile(join(root, 'lib/voyage.ts'), 'utf8')).replace(
     "import { withDeadline } from './deadline.ts';",
     '',
-  );
+  ).replace("export { voyageDocumentText } from '../../contracts/search.ts';", '');
   const deadline = ts.transpileModule(
     await readFile(join(root, 'lib/deadline.ts'), 'utf8'),
     {

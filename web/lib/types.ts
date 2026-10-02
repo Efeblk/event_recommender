@@ -1,4 +1,5 @@
 import type { PlanState } from './plan-state.ts';
+import type { ProviderListingV1 } from '../../contracts/listing.ts';
 import type { IntentState } from './input-state.ts';
 import type {
   RequirementKind,
@@ -81,6 +82,8 @@ export interface EventRecord {
   /** The provider's original format label; unknown labels remain searchable. */
   sourceCategory?: string;
   sourceSessionIds?: string[];
+  /** Full retained source listing on the transitional collector/import path. */
+  providerListing?: ProviderListingV1;
   productionKey?: string;
   offers?: EventOffer[];
   mergedIds?: string[];

@@ -16,6 +16,7 @@ import { interpretInput } from '@/lib/input-interpreter';
 import { voyageVectorsFor } from '@/lib/voyage-index';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
 import { visitorRateLimitEnabled } from '@/lib/rate-limit';
+import { publicEventRecord } from '@/lib/catalog';
 function limited(result: RateLimitResult) {
   const daily = result.scope === 'daily';
   const wait = daily
@@ -157,11 +158,10 @@ export async function POST(request: Request) {
     return Response.json(
       {
         ...result,
-        recommendations: result.recommendations.map((recommendation) => {
-          const event = { ...recommendation.event };
-          delete event.preparedSearch;
-          return { ...recommendation, event };
-        }),
+        recommendations: result.recommendations.map((recommendation) => ({
+          ...recommendation,
+          event: publicEventRecord(recommendation.event),
+        })),
       },
       {
         headers: {

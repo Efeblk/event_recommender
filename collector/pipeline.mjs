@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { detailUrl } from "./adapters.mjs";
-import { CATEGORIES } from "../web/lib/types.ts";
+import { CATEGORIES } from "../contracts/category.ts";
 
 export const MAX_EVENT_PRICE = Number.MAX_SAFE_INTEGER / 100;
 

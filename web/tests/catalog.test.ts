@@ -1,9 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAX_EVENT_PRICE, MAX_IMPORT_TRANSIT_GRACE_MS, sourceOf, validateImport } from '../lib/catalog.ts';
+import {
+  MAX_EVENT_PRICE,
+  MAX_IMPORT_TRANSIT_GRACE_MS,
+  publicEventRecord,
+  sourceOf,
+  validateImport,
+} from '../lib/catalog.ts';
 import { parseEvents } from '../lib/source.ts';
 import { uniqueEvents, isEligible } from '../lib/search.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
+import { expectedProviderListingId } from '../../contracts/listing.ts';
 const now = new Date('2026-09-09T09:00:00Z');
 const event: EventRecord = {
   id: 'one',
@@ -34,6 +41,82 @@ await test('import accepts verified source fields but strips arbitrary metadata'
   );
   assert.equal(result[0].events[0].title, 'Bir konser');
   assert.equal('surprise' in result[0].events[0], false);
+});
+await test('import preserves validated retained venue evidence and rejects listing/event disagreement', () => {
+  const rawDescription = `<p>${'A'.repeat(5100)}</p>`;
+  const attendanceTiming = {
+    kind: 'timed_session' as const,
+    evidence: 'provider_sessions_and_source_text' as const,
+  };
+  const listing: NonNullable<EventRecord['providerListing']> = {
+    contractVersion: 'provider-listing.v1', listingId: 'a'.repeat(64), provider: 'bubilet', providerSessionIds: ['123'],
+    url: event.url, title: ' Bir <b>konser</b> ', description: rawDescription, category: 'MÃ¼zik', startsAt: event.startsAt,
+    timezoneEvidence: { kind: 'explicit_offset', sourceValue: event.startsAt },
+    venue: { name: '<b>Sahne</b>', providerVenueId: 'venue-1', district: '<i>KadÄ±kÃ¶y</i>', address: ' Moda   Cd. 1 ', geo: { lat: 41, lon: 29 } },
+    tiers: [{ price: 500, currency: 'TRY', availability: 'available' }], availability: 'available', observedAt: event.checkedAt,
+    extractorVersion: 'bubilet-provider-listing.v1', rawObjectRef: { sha256: 'b'.repeat(64), key: `bodies/${'b'.repeat(64)}.bin`, bytes: 100 },
+    attendanceTiming,
+  };
+  listing.listingId = expectedProviderListingId(listing);
+  const record: EventRecord = {
+    ...event,
+    id: listing.listingId.slice(0, 24),
+    description: 'A'.repeat(5000),
+    district: 'KadÄ±kÃ¶y',
+    address: 'Moda Cd. 1',
+    sourceSessionIds: ['123'],
+    sourceCategory: 'MÃ¼zik',
+    sourceVersion: 'provider-listing.v1',
+    extraction: listing.extractorVersion,
+    attendanceTiming,
+    providerListing: listing,
+  };
+  assert.deepEqual(validateImport(envelope(record), now)[0].events[0].providerListing?.venue.geo, { lat: 41, lon: 29 });
+  assert.throws(() => validateImport(envelope({ ...record, providerListing: { ...listing, startsAt: '2026-09-13T18:00:00.000Z' } }), now), /does not match/);
+  assert.throws(() => validateImport(envelope({ ...record, providerListing: { ...listing, rawObjectRef: { ...listing.rawObjectRef, key: '../foreign' } } }), now), /raw object/);
+
+  for (const change of [
+    { description: 'different' },
+    { category: 'Tiyatro' },
+    { district: 'BeÅŸiktaÅŸ' },
+    { address: 'different' },
+    { city: 'Ankara' },
+    { sourceSessionIds: ['456'] },
+    { attendanceTiming: { kind: 'unknown', evidence: 'insufficient_source_evidence' } },
+  ] as Partial<EventRecord>[])
+    assert.throws(
+      () => validateImport(envelope({ ...record, ...change }), now),
+      /does not match/,
+    );
+
+  const richerVenueEvidence = {
+    ...listing,
+    venue: {
+      ...listing.venue,
+      providerVenueId: 'venue-2',
+      geo: { lat: 41.0001, lon: 29.0001 },
+    },
+  };
+  assert.equal(
+    validateImport(
+      envelope({ ...record, providerListing: richerVenueEvidence }),
+      now,
+    )[0].events[0].providerListing?.venue.providerVenueId,
+    'venue-2',
+  );
+
+  const publicRecord = publicEventRecord({
+    ...record,
+    preparedSearch: {
+      version: 1,
+      documentText: 'private prepared document',
+      documentHash: 'c'.repeat(64),
+      lexicalTokens: ['private'],
+    },
+  });
+  assert.equal(publicRecord.providerListing, undefined);
+  assert.equal(publicRecord.preparedSearch, undefined);
+  assert.equal(JSON.stringify(publicRecord).includes(listing.rawObjectRef.key), false);
 });
 await test('import rejects foreign sources, duplicate IDs, empty pages and stale dates', () => {
   assert.equal(

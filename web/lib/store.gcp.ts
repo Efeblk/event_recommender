@@ -148,7 +148,6 @@ export function createGcpStore(options: {
         key: string;
         hash: string;
         body: string;
-        checkpoint: CollectionCheckpoint;
       }
     | undefined;
   const searchCache = new Map<string, SearchCatalog>();
@@ -220,7 +219,6 @@ export function createGcpStore(options: {
       key: head.pointer.key,
       hash: head.hash,
       body: object.body,
-      checkpoint,
     };
     return catalogCache;
   }
@@ -292,6 +290,10 @@ export function createGcpStore(options: {
       vectorCache.profile === profile
     )
       return vectorCache.entries;
+    // Readers already holding the immutable Map keep their own reference. Drop
+    // the obsolete cache before fetching its replacement so both snapshots do
+    // not remain rooted through the blob read and JSON parse.
+    vectorCache = undefined;
     const object = await blobs.get(head.key);
     // An unreadable transport still fails the operation. Damaged cache contents
     // are misses, allowing ordinary indexing to repair them without provider retries.

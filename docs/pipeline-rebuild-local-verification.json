@@ -1,0 +1,231 @@
+{
+  "recordedAt": "2026-10-02T18:40:36.765Z",
+  "node": "v22.23.3",
+  "baseRevision": "4b2cdcea8a5e48cf09b986ca961af821eab38ca4",
+  "provenance": "Uncommitted local working tree; no PR, exact-revision CI, managed deployment or cloud activation performed.",
+  "sourceTreeSha256": "908aa4ba14dcb5011fcb2a75fc03a1777eb3dd54fbc464dc02548bb5ae280073",
+  "sourceFileCount": 663,
+  "servingSourceSha256": "4009cf6c51980e7e7ad9393fb84532dd54d15d6174694008680b60ad09f9ba7a",
+  "sourceHashes": [
+    {
+      "path": "collector/db/index.mjs",
+      "sha256": "d7cb439b0ce8a49ee405d5e105e7f63b42c0d1d4a68c3c2348baf8b7f1b4c170"
+    },
+    {
+      "path": "collector/db/migrations/001-pipeline.sql",
+      "sha256": "dec5aeb2e9362356200158ab19c59e4a4bd24b655c4020ee49670d242099bb43"
+    },
+    {
+      "path": "collector/identity/audit.ts",
+      "sha256": "4c527e923a6b88ef7ad4f9898a36aae6efb0d4e9f47bb86b20283d90f1950eb1"
+    },
+    {
+      "path": "collector/identity/event-record.ts",
+      "sha256": "93f7b363e580baf6f651504c559e93e4a744984ca486257e92f3acc2fd3bdc46"
+    },
+    {
+      "path": "collector/identity/hash.ts",
+      "sha256": "ff9f77761d4068f67e016de1c5f2abad530321a6d97a8db5b2f957a4b0920c3d"
+    },
+    {
+      "path": "collector/identity/index.ts",
+      "sha256": "c03ed21391546290d48a7858d9aee0048c67329f8f4335446c77d148c41002ee"
+    },
+    {
+      "path": "collector/identity/jev.ts",
+      "sha256": "51184f0f7046c95b2d7da16b4810f9e829aa56a4e0d165a7b262c9b31666790e"
+    },
+    {
+      "path": "collector/identity/resolve.ts",
+      "sha256": "092e91859a8089eeeb7f7b1ba413eaf0d733dfba64ce2ade484e49b7f5c0b11c"
+    },
+    {
+      "path": "collector/identity/seed-overrides.ts",
+      "sha256": "d04471eee02643789a91055f7641fba3dc0d5a056bea72c8e2f609394e017e19"
+    },
+    {
+      "path": "collector/identity/types.ts",
+      "sha256": "1af3c4ec9218d6afebc9eda52e60ba7ecbf632f9a322a9c2cf3776e1becd0e8e"
+    },
+    {
+      "path": "collector/jobs/extract.mjs",
+      "sha256": "e9134e0cc8cdf63a6d8bb8bdb7122ef1df1860d52799e27b39a4b8190d71a8c3"
+    },
+    {
+      "path": "collector/jobs/fetch-receipts.mjs",
+      "sha256": "a1ca642ff9335a4ffbf34ab93fe6f1debdee5b2ff06831ad5964c7ef763df794"
+    },
+    {
+      "path": "collector/jobs/identity-judgments.mjs",
+      "sha256": "b5d96733c0964d3d71282e83f56743cc7c003dc792d8b3480ceaf0f841d1156c"
+    },
+    {
+      "path": "collector/jobs/ingest.mjs",
+      "sha256": "f033c7c8ac1c723da4cd46a7a0c04cd419a2bcfc2c26df2da4be5d718829e765"
+    },
+    {
+      "path": "collector/jobs/pipeline.mjs",
+      "sha256": "703cf71d4cd55bf632cc8bd9ea9f3edc1f4037bb8e766fd20951278bee10c642"
+    },
+    {
+      "path": "collector/jobs/publication.mjs",
+      "sha256": "6cca52efebac08b69c1b098b69279911b80c01d234e8720a8bb0d59dba889fd6"
+    },
+    {
+      "path": "collector/jobs/run.mjs",
+      "sha256": "52df7a093924f64c5874ce8014cd4d563e69335822c71baca3514510b29a0d90"
+    },
+    {
+      "path": "collector/jobs/search-record.mjs",
+      "sha256": "50c65e9a6b75b21d200ac9d65fe7f4374ad512027320462679bcac087960b8fc"
+    },
+    {
+      "path": "collector/jobs/store.mjs",
+      "sha256": "4b496924d8dd8ed1b53451a0868947a128b6b2b300433bf8ebd107e3d00cded3"
+    },
+    {
+      "path": "contracts/category.ts",
+      "sha256": "c43a682f456181b98fcaefda3729949041e7a092c59596bdaaafb5b036fc408d"
+    },
+    {
+      "path": "contracts/district.ts",
+      "sha256": "2f5a5a504e745e4f1134114304a5d4e85d24cdca92ac9d67a678adde6b306a0a"
+    },
+    {
+      "path": "contracts/hash.ts",
+      "sha256": "b9a5117a29dacff6c3f66af0c5d151725fc754ae7083dfbf60c9ad1284b011f8"
+    },
+    {
+      "path": "contracts/listing.schema.json",
+      "sha256": "f4d86e95435bf9a0f9cfc5b7fc3dc700391a5eef4fddf985b3ebbf38e4748787"
+    },
+    {
+      "path": "contracts/listing.ts",
+      "sha256": "d50047b27974bfea9e88590d35fadd4ffc44d55c46330078ff534590fe0d1b62"
+    },
+    {
+      "path": "contracts/location.ts",
+      "sha256": "01ea03c4eec8e4ff5e69e2e332b31fdc804c6145800d97b0fdfd0194e6440e5f"
+    },
+    {
+      "path": "contracts/publication.schema.json",
+      "sha256": "ebfa438641f60718f635fe7a6733e9ec33917e350db14b29962f9b5ef6eb06e3"
+    },
+    {
+      "path": "contracts/publication.ts",
+      "sha256": "96fba83c1b3b0dc3e6d17560c30a22095ec563642de3cc723b79cde34854abc5"
+    },
+    {
+      "path": "contracts/search.ts",
+      "sha256": "09001ed56e54d0782e57547cd47d12c7f5d31286330bc5eb647c89dcdca58251"
+    },
+    {
+      "path": "contracts/source.ts",
+      "sha256": "690af0e3abf0d290b8a1dc6fb6add77035bbf806db38f8aca076ea4993c87735"
+    },
+    {
+      "path": "contracts/timing.ts",
+      "sha256": "2a5d3fd04abe2455c0649429a73064826e84dc0eefd541b4944bc0855a148dfe"
+    }
+  ],
+  "checks": {
+    "collector": {
+      "passed": 266,
+      "skipped": 1,
+      "log": "collector/final-test.log"
+    },
+    "postgres": {
+      "passed": 2,
+      "skipped": 0,
+      "log": "collector/final-pg-test.log",
+      "database": "biplan_pipeline_rebuild",
+      "ownershipChecked": true
+    },
+    "web": {
+      "passed": 739,
+      "log": "web/final-test.log"
+    },
+    "typecheck": "passed",
+    "lint": "passed",
+    "deployConfig": {
+      "passed": 73,
+      "log": "web/final-deploy.log"
+    },
+    "gcpDeployConfig": "passed",
+    "nodeBuild": {
+      "status": "passed",
+      "log": "web/final-build-node.log"
+    },
+    "nodeSmoke": {
+      "status": "passed",
+      "log": "web/final-smoke-node.log"
+    },
+    "workerBuild": {
+      "status": "passed",
+      "log": "web/final-build.log"
+    },
+    "workerSmoke": {
+      "status": "passed",
+      "log": "web/final-smoke.log"
+    },
+    "linuxImage": {
+      "status": "passed",
+      "platform": "linux/amd64",
+      "id": "sha256:07d2765bdab86fa19aefcacedd3264fffbed92c7ae83f24f7b02739c02cfccf0",
+      "log": "web/final-docker.log",
+      "smokeLog": "web/final-docker-smoke.log"
+    },
+    "diffCheck": "passed"
+  },
+  "identityAudit": {
+    "pairs": 5,
+    "candidates": 5,
+    "autoMerges": 3,
+    "manualMerges": 0,
+    "neverMerges": 2,
+    "wrongMerges": 0,
+    "missedMerges": 0,
+    "deterministicRecall": 1,
+    "scope": "Five frozen held-out labelled pairs; not a live benchmark or Jev calibration."
+  },
+  "postgresEvidence": {
+    "evidence": "pipeline-postgres-integration",
+    "database": "biplan_pipeline_rebuild",
+    "firstPublication": "publication-3e04239cdaff5c53c795b621e255f97380d11f4d768868ef690280abce2ad61e",
+    "secondPublication": "publication-ef1661c5dd08fc2404a03084fd0a71a948e614fdef3f04fedb5fd5915ffba43d",
+    "cliPublication": "publication-c41cb06b5b946587d074339174b7d0994606531f8849149879d9bdf466c027b0",
+    "rawCliPublication": "publication-b229eb54060992482e4e0f3e20d9ff46f4d7f711c05d813184bf7bdf2eaf05be",
+    "optionalFailurePublication": "publication-e9ee0513825765ce3dcf63ee881260ec3790380a1b6137e758dc17fb150861df",
+    "restoredAfterZeroPublication": "publication-49cbe0c39c43d0b7562eb94ebf0d353c42384f5449179f7763a065bf4e383dc1",
+    "unchangedExtractionCalls": 0,
+    "changedCounts": {
+      "normalize": 1,
+      "offers": 1,
+      "identity": 1,
+      "search": 1
+    },
+    "interruptedResume": true,
+    "offlineJudgments": 3,
+    "durableJudgmentCacheRows": 3,
+    "retainedFetchLedgerRows": 4,
+    "negativeZeroPageWithholding": true,
+    "realRuntimeSourceInvalidation": true,
+    "externalCalls": 0
+  },
+  "rawArtifacts": "web/work/pipeline-rebuild-verification/ (ignored local receipts and retained raw fixtures); collector source fixtures remain in collector/tests/fixtures/",
+  "externalUsage": {
+    "providerCalls": 0,
+    "cloudCalls": 0,
+    "managedJobs": 0,
+    "liveJevCalls": 0,
+    "liveVoyageCalls": 0,
+    "newPaidResources": 0
+  },
+  "limitations": [
+    "CI raw destination/IAM and durable retention remain unconfirmed; GCS mirror disabled.",
+    "Scheduled PostgreSQL preparation is opt-in and has not been activated.",
+    "Live venue-ID evidence and human-reviewed Jev calibration remain pending; CLI makes zero Jev calls.",
+    "Fresh managed allowance, side-by-side review and staging activation remain pending; legacy paths retained.",
+    "No public-readiness claim; unattended collection and managed recovery/capacity gates remain open."
+  ]
+}
