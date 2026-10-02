@@ -1,6 +1,7 @@
 # Handoff: ship identity v3 to GCP staging and verify
 
-Status (2026-10-02): local review and checks complete; deployment pending.
+Status (2026-10-02): local review and checks complete;
+[PR #31](https://github.com/Efeblk/event_recommender/pull/31) opened; deployment pending.
 Worktree `C:\Users\efeba\.t3\worktrees\event_recommender\t3code-ffc8b24d`,
 branch `t3code/rebuild-data-pipeline` (base `4b2cdce`). Background:
 [data-flow-audit-2026-10-02.md](data-flow-audit-2026-10-02.md),
@@ -30,6 +31,10 @@ Node and Worker build/smoke passed. Frozen v3 audit passed: 4,076 listings,
 sessions. Raw logs, receipts, original staging checkpoint and its failed audit
 are retained under ignored `web/work/staging-identity-v3/`. The older
 `pipeline-rebuild-local-verification.json` remains unchanged historical evidence.
+The Linux/amd64 main image and network-disabled container smoke also passed
+(`sha256:d3c4f6a589360257b03e66ab48c38f8d1502f0ac559563494cabccd7d96d117d`).
+Initial CI found that the skipped database test imported web-only dependencies
+before its skip; the runtime import now occurs inside the opt-in callback.
 
 The existing staging and collector environments permit `master` only. Use the
 normal PR merge and exact merged-revision CI before dispatching; keep the

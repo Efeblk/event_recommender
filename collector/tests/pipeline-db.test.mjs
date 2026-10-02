@@ -14,7 +14,6 @@ import { pipelineConfig, runPipeline } from '../jobs/run.mjs';
 import { createPostgresIdentityJudgmentCache } from '../jobs/identity-judgments.mjs';
 import { createAmbiguousIdentityJudge } from '../identity/jev.ts';
 import { createFilesystemRawStore } from '../raw/store.mjs';
-import { createPipelineCatalog } from '../../web/lib/pipeline-catalog.node.ts';
 import { emptyFilters } from '../../web/lib/types.ts';
 
 test('pipeline CLI fails closed without an operation, explicit connection or previous pointer',()=>{
@@ -25,6 +24,7 @@ test('pipeline CLI fails closed without an operation, explicit connection or pre
 
 const enabled=process.env.BIPLAN_PIPELINE_DB_TEST==='1';
 test('real PostgreSQL pipeline: immutable replay, scoped changes, fencing, pinning, rollback and source invalidation',{skip:!enabled,timeout:120000},async t=>{
+  const { createPipelineCatalog } = await import('../../web/lib/pipeline-catalog.node.ts');
   const container='biplan-catalog-local',database='biplan_pipeline_rebuild';
   const docker=(args,input)=>execFileSync('docker',args,{input,encoding:'utf8',windowsHide:true}).trim();
   assert.equal(docker(['inspect','--format','{{index .Config.Labels "biplan.preparation"}}',container]),'catalog-enrichment-v1');
