@@ -33,6 +33,7 @@ import { interpretInput } from './input-interpreter.ts';
 import { recommendationQuery, retrievalQuery } from './input-retrieval.ts';
 import {
   emptyPlanState,
+  MAX_PLAN_REQUESTS,
   validatePlanState,
   type PlanState,
 } from './plan-state.ts';
@@ -359,6 +360,7 @@ async function recommendResolved(
   deps: Dependencies,
   intent?: IntentState,
   plan?: Plan,
+  planRequests: string[] = [],
 ): Promise<SearchResult> {
   const now = deps.now ?? new Date();
   const { filters, issue } = plan
@@ -547,8 +549,14 @@ async function recommendResolved(
           ...(intent ? { message: recommendationQuery(intent) } : {}),
           ...(plan
             ? {
+                // The user's own words carry names and nuance the plan cannot
+                // type; the plan alone decides admission.
                 message:
+                  planRequests.at(-1) ??
                   'Etkinlikleri doğrulanmış plan ve tercihlere göre değerlendir.',
+                history: planRequests
+                  .slice(0, -1)
+                  .map((content) => ({ role: 'user' as const, content })),
                 plan,
                 planEvidence: Object.fromEntries(
                   shortlist.map((event) => [
@@ -559,7 +567,7 @@ async function recommendResolved(
               }
             : {}),
           filters,
-          history: context.history,
+          ...(plan ? {} : { history: context.history }),
           requirements,
           ...(intent ? { preferences: intent.preferences } : {}),
         },
@@ -736,10 +744,19 @@ async function recommendSpan(
   }
   let state: PlanState;
   try {
+    const reset = interpreted.operations.some(
+      (operation) => operation.op === 'reset',
+    );
+    const requests = reset
+      ? [message]
+      : isAlternativesRequest(input.message)
+        ? previous.requests
+        : [...previous.requests, message];
     state = validatePlanState({
       version: 2,
       revision: previous.revision + 1,
       plan: interpreted.resultingPlan,
+      requests: requests.slice(-MAX_PLAN_REQUESTS),
     });
     validateSearchPlan(state.plan);
   } catch {
@@ -757,7 +774,12 @@ async function recommendSpan(
           ...new Set([...input.excludeIds, ...(input.alternativeIds ?? [])]),
         ].slice(-100)
       : [];
-  const query = planRetrievalQuery(state.plan) || 'İstanbul etkinlikleri';
+  // Newest words first so truncation drops the oldest context.
+  const query =
+    [planRetrievalQuery(state.plan), ...[...state.requests].reverse()]
+      .filter(Boolean)
+      .join('\n')
+      .slice(0, 1200) || 'İstanbul etkinlikleri';
   const result = await recommendResolved(
     {
       ...input,
@@ -769,6 +791,7 @@ async function recommendSpan(
     deps,
     undefined,
     state.plan,
+    state.requests,
   );
   return { ...result, planState: state, excludedIds: excludeIds };
 }

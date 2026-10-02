@@ -107,7 +107,7 @@ void test('real span correction updates group attendance while preserving the pr
     { type: 'atom', id: 'h0', atom: { kind: 'party', count: 2 } },
     { type: 'atom', id: 'h1', atom: { kind: 'budget', comparison: 'lte', amount: 900, currency: 'TRY', basis: 'group_total' } },
   ]);
-  const state = { version: 2 as const, revision: 4, plan: previousPlan };
+  const state = { version: 2 as const, revision: 4, plan: previousPlan, requests: ["konser"] };
   const result = await recommend(request('Art\u0131k 3 ki\u015fiyiz', state), deps([event('cheap', { price: 250 }), event('costly', { price: 350 })], previousPlan, {
     spanInterpret: actualInterpret((built) => Object.fromEntries(Object.keys(built.questions).filter((id) => id.startsWith('edit_h0')).map((id) => [id, 'replace']))),
   }));
@@ -176,7 +176,7 @@ void test('ranking returns every supported card rather than a fixed five', async
 void test('fallback applies the committed tree without reparsing rendered query or history', async () => {
   let interpretations = 0;
   const committed = plan([{ type: 'atom', atom: { kind: 'category', value: 'theatre' } }]);
-  const state = { version: 2 as const, revision: 2, plan: committed };
+  const state = { version: 2 as const, revision: 2, plan: committed, requests: ["konser"] };
   const input = validateInput({ message: 'keep it', history: [{ role: 'user', content: 'concerts only' }], filters: emptyFilters, intentVersion: 2, planState: state });
   const result = await recommend(input, { ...deps([event('play', { category: 'Tiyatro' }), event('concert')], committed),
     spanInterpret: async () => { interpretations++; return accepted(committed); },
@@ -187,7 +187,7 @@ void test('fallback applies the committed tree without reparsing rendered query 
 });
 
 void test('version rollback/mixing rejects, and ambiguous or unavailable turns preserve prior state without retrieval', async () => {
-  const prior = { version: 2 as const, revision: 7, plan: plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } }]) };
+  const prior = { version: 2 as const, revision: 7, plan: plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } }]), requests: ["konser"] };
   assert.throws(() => validateInput({ message: 'x', intentVersion: 1, planState: prior }));
   let retrievals = 0;
   const base: Dependencies = { now, config: null, inputInterpreter: 'span-v2', candidates: async () => { retrievals++; return [event('x')]; } };
@@ -204,7 +204,7 @@ void test('version rollback/mixing rejects, and ambiguous or unavailable turns p
 
 void test('standalone reset skips providers and retrieval, while returned records retain merged-offer metadata', async () => {
   let calls = 0;
-  const prior = { version: 2 as const, revision: 3, plan: plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } }]) };
+  const prior = { version: 2 as const, revision: 3, plan: plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } }]), requests: ["konser"] };
   const reset = await recommend(request('s\u0131f\u0131rla', prior), { now, config, inputInterpreter: 'span-v2',
     candidates: async () => { calls++; return []; }, spanInterpret: async () => { calls++; return accepted(plan([])); }, rank: async () => { calls++; return supported([]); } });
   assert.equal(calls, 0);
@@ -222,4 +222,49 @@ void test('strict start-time bounds reject equal sessions and non-session attend
     event('window', { startsAt: '2026-10-03T17:01:00Z', attendanceTiming: { kind: 'admission_window', evidence: 'provider_flexible_window', validFrom: '2026-10-03T07:00:00Z', validThrough: '2026-10-03T20:00:00Z' } }),
   ], timed));
   assert.deepEqual(result.recommendations.map((item) => item.event.id), ['after']);
+});
+
+void test('named performers stay in retrieval text and reach Jev as the user request', async () => {
+  const concert = plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } }]);
+  const others = Array.from({ length: 20 }, (_, index) => event(`other-${index}`, { title: `Akustik gece ${index}` }));
+  const duman = event('duman', { title: 'Duman Konseri', description: 'Duman sahnede.' });
+  const seen: { message: string; history: unknown[] }[] = [];
+  let shortlisted: string[] = [];
+  const first = await recommend(request('Duman konseri istiyorum'), deps([...others, duman], concert, {
+    config,
+    rank: async (_config, input, candidates) => {
+      seen.push({ message: input.message, history: input.history });
+      shortlisted = candidates.map((item) => item.id);
+      return supported(candidates);
+    },
+  }));
+  assert.ok(shortlisted.includes('duman'));
+  assert.equal(seen[0].message, 'Duman konseri istiyorum');
+  assert.deepEqual(seen[0].history, []);
+  assert.deepEqual(first.planState?.requests, ['Duman konseri istiyorum']);
+
+  const followUp = await recommend(request('hafta sonu olsun', first.planState), deps([...others, duman], concert, {
+    config,
+    rank: async (_config, input, candidates) => {
+      seen.push({ message: input.message, history: input.history });
+      return supported(candidates);
+    },
+  }));
+  assert.equal(seen[1].message, 'hafta sonu olsun');
+  assert.deepEqual(seen[1].history, [{ role: 'user', content: 'Duman konseri istiyorum' }]);
+  assert.deepEqual(followUp.planState?.requests, ['Duman konseri istiyorum', 'hafta sonu olsun']);
+
+  const fallback = await recommend(request('Duman konseri istiyorum'), deps([...others, duman], concert));
+  assert.equal(fallback.recommendations[0]?.event.id, 'duman');
+});
+
+void test('plan requests restart on reset and skip bare alternatives requests', async () => {
+  const concert = plan([{ type: 'atom', id: 'h0', atom: { kind: 'category', value: 'concert' } }]);
+  const prior = { version: 2 as const, revision: 1, plan: concert, requests: ['Duman konseri'] };
+  const more = await recommend(request('başka', prior), deps([event('a')], concert));
+  assert.deepEqual(more.planState?.requests, ['Duman konseri']);
+  const reset = await recommend(request('caz konseri', prior), deps([event('a')], concert, {
+    spanInterpret: async () => ({ ...accepted(concert), operations: [{ op: 'reset' }] }),
+  }));
+  assert.deepEqual(reset.planState?.requests, ['caz konseri']);
 });

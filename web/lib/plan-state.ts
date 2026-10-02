@@ -5,7 +5,14 @@ export interface PlanState {
   version: 2;
   revision: number;
   plan: Plan;
+  /** The user's own words since the last reset, oldest first. They carry
+   * performers, titles and nuance the typed plan cannot express; they are
+   * relevance context only and never admit an event. */
+  requests: string[];
 }
+
+export const MAX_PLAN_REQUESTS = 4;
+export const MAX_PLAN_REQUEST_LENGTH = 1200;
 
 const keys = (value: object) => Object.keys(value).sort().join(',');
 const exact = (value: object, allowed: string[]) => {
@@ -67,7 +74,7 @@ export function validatePlanState(value: unknown): PlanState {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('invalid plan state');
   const state = value as Record<string, unknown>;
-  exact(state, ['version', 'revision', 'plan']);
+  exact(state, ['version', 'revision', 'plan', 'requests']);
   if (
     state.version !== 2 ||
     !Number.isSafeInteger(state.revision) ||
@@ -80,6 +87,17 @@ export function validatePlanState(value: unknown): PlanState {
     Array.isArray(state.plan)
   )
     throw new Error('invalid plan');
+  if (
+    !Array.isArray(state.requests) ||
+    state.requests.length > MAX_PLAN_REQUESTS ||
+    state.requests.some(
+      (request) =>
+        typeof request !== 'string' ||
+        !request.trim() ||
+        request.length > MAX_PLAN_REQUEST_LENGTH,
+    )
+  )
+    throw new Error('invalid plan requests');
   exact(state.plan as object, ['hard', 'preferences', 'order']);
   const plan = state.plan as unknown as Plan;
   validatePlan(plan);
@@ -92,4 +110,5 @@ export const emptyPlanState = (): PlanState => ({
   version: 2,
   revision: 0,
   plan: emptyPlan(),
+  requests: [],
 });
