@@ -3,7 +3,9 @@
 Scope: the live GCP staging flow at `master` `d900772` plus PR #34
 (identity v4), after collector run 37061051538 crashed in indexing. Evidence:
 code, the exact saved staging objects under
-`t3code-ffc8b24d/web/work/staging-identity-v3/` (ignored), and offline
+the local archive
+`C:\Users\efeba\event_recommender-archive\2026-10-03\t3code-ffc8b24d\web\work\staging-identity-v3\`
+(not in git), and offline
 measurements. No network, cloud or provider calls. Earlier audit:
 [data-flow-audit-2026-10-02.md](data-flow-audit-2026-10-02.md).
 
