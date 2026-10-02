@@ -58,6 +58,50 @@ await test('display diversity suppresses the same recognized show across venues 
   assert.equal(events[1].venue, 'Sahne İki');
 });
 
+await test('current reviewed show identity supersedes stale persisted show keys', () => {
+  const events = [
+    make('concert-short', {
+      title: 'Duman',
+      canonicalShowKey: 'stale-show-short',
+    }),
+    make('concert-long', {
+      title: 'Duman Konseri',
+      canonicalShowKey: 'stale-show-long',
+    }),
+  ];
+  assert.deepEqual(
+    diverseEvents(events, events.length).map(({ id }) => id),
+    ['concert-short'],
+  );
+});
+
+await test('current display identity keeps generic listings and conflicting adaptations separate', () => {
+  const events = [
+    make('generic-one', {
+      title: 'Etkinlik',
+      canonicalShowKey: 'persisted-generic-one',
+    }),
+    make('generic-two', {
+      title: 'Etkinlik',
+      canonicalShowKey: 'persisted-generic-two',
+    }),
+    make('adaptation-one', {
+      title: 'Edepsiz',
+      description: 'Uyarlama: Birinci yorum.',
+      canonicalShowKey: 'stale-adaptation',
+    }),
+    make('adaptation-two', {
+      title: 'Edepsiz',
+      description: 'Uyarlama: Ikinci yorum.',
+      canonicalShowKey: 'stale-adaptation',
+    }),
+  ];
+  assert.deepEqual(
+    diverseEvents(events, events.length).map(({ id }) => id),
+    ['generic-one', 'generic-two', 'adaptation-one', 'adaptation-two'],
+  );
+});
+
 await test('lexical shortlist fills from distinct shows beyond repeated top-ranked titles', () => {
   const repeated = Array.from({ length: 20 }, (_, index) =>
     make(`repeat-${index}`, {

@@ -47,9 +47,11 @@ export function diverseEvents(events: EventRecord[], limit = 5): EventRecord[] {
   const seen = new Set<string>();
   return events
     .filter((event) => {
+      // A deployment can reuse a snapshot prepared with older alias rules.
+      // Its unversioned saved key must not override today's display identity.
       const key =
-        event.canonicalShowKey ??
         displayShowIdentity(event) ??
+        event.canonicalShowKey ??
         productionIdentity(event);
       if (seen.has(key)) return false;
       seen.add(key);

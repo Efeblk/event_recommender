@@ -28,6 +28,9 @@ const VENUE_ALIASES = [
   ['Dorock XL Kadıköy', 'Dorock XL'],
   ['AKM Türk Telekom Opera Salonu', 'Türk Telekom Opera Salonu'],
   ['Mall Of İstanbul Biletinial Moi Sahne', 'Mall of İstanbul MOİ Sahne'],
+  // Active local publication: nine exact cross-provider schedules share the
+  // address that explicitly names Bahçeşehir Kültür Sanat Merkezi.
+  ['Bahçeşehir Kültür Sanat Merkezi', 'Bahçeşehir Kültür Merkezi'],
 ] as const;
 
 // Reviewed against matching source schedules and descriptions (September 2026).
@@ -108,6 +111,8 @@ const TITLE_ALIASES = [
   ['Jakuzi', 'Jakuzi Konseri'],
   ['Malleus', 'Malleus Oyunu'],
   ['Ahududu', 'Ahududu Oyunu'],
+  // Active local publication: three providers, exact venue and 2027-03-25 session.
+  ['Son Lux', '%100 Müzik Sunar: Son Lux'],
   // Both frozen providers list the same Sep 25 Sahne Beşiktaş recording.
   ['Alpay Erdem - Geçenlerde', 'Alpay Erdem - Geçenlerde Stand Up'],
   [
@@ -658,12 +663,12 @@ const sameDisplayFields = (event: EventRecord, cached: DisplayIdentityFields) =>
 
 /** Stable display identity for clear show titles; generic listings stay distinct. */
 export function displayShowIdentity(event: EventRecord): string | undefined {
-  const source = displayIdentitySource.get(event);
-  const cached = source && displayIdentityCache.get(source);
+  const source = displayIdentitySource.get(event) ?? event;
+  const cached = displayIdentityCache.get(source);
   if (cached && sameDisplayFields(event,cached)) return cached.identity;
   const title = identityTitle(event);
   const identity = !title || GENERIC_SHOW_TITLES.has(title) ? undefined :
     [normalize(event.city), event.category, title, [...strongPolicies(event)].sort().join('|')].join('\u001f');
-  if (source) displayIdentityCache.set(source,{...displayFields(event),identity});
+  displayIdentityCache.set(source,{...displayFields(event),identity});
   return identity;
 }
