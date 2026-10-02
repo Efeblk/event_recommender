@@ -325,12 +325,29 @@ void test('required non-genre topics need a whole-word source mention', () => {
     evaluatePlan({ ...event, description: 'Popüler şarkılar.' }, pop).status,
     'unknown',
   );
-  assert.throws(() =>
-    validateSearchPlan(
-      plan({
-        type: 'not',
-        child: { type: 'atom', atom: { kind: 'topic', value: 'history' } },
-      }),
-    ),
+});
+
+void test('an excluded topic is absent unless the source mentions it', () => {
+  for (const value of ['rock', 'history']) {
+    const excluded = plan({
+      type: 'not',
+      child: { type: 'atom', atom: { kind: 'topic', value } },
+    });
+    validateSearchPlan(excluded);
+    assert.equal(evaluatePlan(event, excluded).status, 'supported', value);
+  }
+  const notRock = plan({
+    type: 'not',
+    child: { type: 'atom', atom: { kind: 'topic', value: 'rock' } },
+  });
+  assert.equal(
+    evaluatePlan({ ...event, title: 'Rock night' }, notRock).status,
+    'contradicted',
   );
+  // A negated guarantee still needs evidence.
+  const notOutdoors = plan({
+    type: 'not',
+    child: { type: 'atom', atom: { kind: 'experience', value: 'outdoors' } },
+  });
+  assert.equal(evaluatePlan(event, notOutdoors).status, 'unknown');
 });
