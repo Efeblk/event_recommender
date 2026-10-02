@@ -65,6 +65,10 @@ void test('catalog is pinned before structured interpretation and publication ID
       assert.equal(at, now);
       return {
         publicationId: 'publication-42',
+        availability: async () => {
+          calls.push('availability');
+          return true;
+        },
         candidates: async () => {
           calls.push('candidates');
           return [pinned];
@@ -79,14 +83,122 @@ void test('catalog is pinned before structured interpretation and publication ID
     candidates: async () => assert.fail('unpinned catalog must not be read'),
     interpret: async () => {
       calls.push('interpret');
-      return { state, action: 'search', issue: null, query: intentQuery(state), origin: 'jev' };
+      return {
+        state,
+        action: 'search',
+        issue: null,
+        query: intentQuery(state),
+        origin: 'jev',
+      };
     },
     rank: rankAll(),
   });
 
-  assert.deepEqual(calls, ['pin', 'interpret', 'candidates', 'finalize']);
+  assert.deepEqual(calls, [
+    'pin',
+    'interpret',
+    'availability',
+    'candidates',
+    'finalize',
+  ]);
   assert.equal(result.publicationId, 'publication-42');
-  assert.deepEqual(result.recommendations.map(({ event }) => event.id), ['pinned']);
+  assert.deepEqual(
+    result.recommendations.map(({ event }) => event.id),
+    ['pinned'],
+  );
+});
+
+void test('unavailable pinned catalog is checked after interpretation and before candidates or ranking', async () => {
+  const calls: string[] = [];
+  const state = emptyIntentState();
+  state.filters.category = 'Konser';
+  const result = await recommend(input, {
+    now,
+    config,
+    inputInterpreter: 'jev-v1',
+    pinCatalog: async () => ({
+      publicationId: 'publication-unavailable',
+      availability: async () => {
+        calls.push('availability');
+        return false;
+      },
+      catalogStatus: async () => {
+        calls.push('status');
+        return {
+          status: 'stale',
+          stored: 1,
+          eligible: 0,
+          lastCheckedAt: now.toISOString(),
+          oldestCheckedAt: now.toISOString(),
+          expiresAt: now.toISOString(),
+        };
+      },
+      candidates: async () => assert.fail('stale catalog must not be read'),
+      vectors: async () => assert.fail('vectors must not be read'),
+      finalize: async (events) => {
+        calls.push('finalize');
+        assert.deepEqual(events, []);
+        return [];
+      },
+    }),
+    candidates: async () => assert.fail('unpinned catalog must not be read'),
+    interpret: async () => {
+      calls.push('interpret');
+      return {
+        state,
+        action: 'search',
+        issue: null,
+        query: intentQuery(state),
+        origin: 'jev',
+      };
+    },
+    rank: async () => assert.fail('ranking must not run'),
+  });
+
+  assert.deepEqual(calls, ['interpret', 'availability', 'status', 'finalize']);
+  assert.equal(result.status, 'empty');
+  assert.equal(result.publicationId, 'publication-unavailable');
+  assert.equal(result.intentState?.filters.category, 'Konser');
+  assert.match(result.notice ?? '', /güncel kaynak durumu/);
+});
+
+void test('clarification preserves state without consulting catalog freshness', async () => {
+  const calls: string[] = [];
+  const state = emptyIntentState();
+  const result = await recommend(input, {
+    now,
+    config,
+    inputInterpreter: 'jev-v1',
+    pinCatalog: async () => ({
+      publicationId: 'publication-needs-input',
+      availability: async () =>
+        assert.fail('clarification must not check the catalog'),
+      candidates: async () =>
+        assert.fail('clarification must not read candidates'),
+      vectors: async () => new Map(),
+      finalize: async (events) => {
+        calls.push('finalize');
+        return events;
+      },
+    }),
+    candidates: async () => [],
+    interpret: async () => {
+      calls.push('interpret');
+      return {
+        state,
+        action: 'search',
+        issue: 'budget_ambiguous',
+        query: intentQuery(state),
+        origin: 'jev',
+      };
+    },
+  });
+
+  assert.deepEqual(calls, ['interpret', 'finalize']);
+  assert.equal(result.status, 'needs_input');
+  assert.equal(result.publicationId, 'publication-needs-input');
+  assert.deepEqual(result.intentState, state);
+  assert.ok(result.clarification?.length);
 });
 
 for (const mode of ['ai', 'fallback'] as const) {
@@ -115,7 +227,10 @@ for (const mode of ['ai', 'fallback'] as const) {
 
     assert.deepEqual(new Set(finalized), new Set(['kept', 'stale']));
     assert.equal(result.publicationId, `publication-${mode}`);
-    assert.deepEqual(result.recommendations.map(({ event }) => event.id), ['kept']);
+    assert.deepEqual(
+      result.recommendations.map(({ event }) => event.id),
+      ['kept'],
+    );
     assert.equal(result.recommendations[0].event.title, 'Pinned title');
     assert.equal(result.recommendations[0].event.price, 500);
     assert.equal(result.status, 'results');
@@ -152,8 +267,7 @@ void test('span-v2 uses the pinned catalog and withholds stale finalized cards',
       now,
       config: null,
       inputInterpreter: 'span-v2',
-      candidates: async () =>
-        assert.fail('unpinned catalog must not be read'),
+      candidates: async () => assert.fail('unpinned catalog must not be read'),
       spanInterpret: async () => {
         calls.push('interpret');
         return {
@@ -184,9 +298,10 @@ void test('span-v2 uses the pinned catalog and withholds stale finalized cards',
     'finalize:span-kept,span-stale',
   ]);
   assert.equal(result.publicationId, 'publication-span');
-  assert.deepEqual(result.recommendations.map(({ event }) => event.id), [
-    'span-kept',
-  ]);
+  assert.deepEqual(
+    result.recommendations.map(({ event }) => event.id),
+    ['span-kept'],
+  );
   assert.match(result.notice ?? '', /durumu/);
 });
 
@@ -198,5 +313,8 @@ void test('legacy dependencies retain behavior without a publication pin', async
     candidates: async () => [legacy],
   });
   assert.equal(result.publicationId, undefined);
-  assert.deepEqual(result.recommendations.map(({ event }) => event.id), ['legacy']);
+  assert.deepEqual(
+    result.recommendations.map(({ event }) => event.id),
+    ['legacy'],
+  );
 });

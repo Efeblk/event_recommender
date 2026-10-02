@@ -484,7 +484,7 @@ function interleaveSoonestCoverage(
   const add = (event: EventRecord | undefined) => {
     if (!event) return;
     const production = productionIdentity(event);
-    const show = displayShowIdentity(event) ?? production;
+    const show = event.canonicalShowKey ?? displayShowIdentity(event) ?? production;
     if (seenProductions.has(production) || seenShows.has(show)) return;
     seenProductions.add(production);
     seenShows.add(show);
@@ -511,12 +511,12 @@ function mapRelevanceToEarliest(
   );
   const byShow = new Map(
     chronological.flatMap((event) => {
-      const show = displayShowIdentity(event);
+      const show = event.canonicalShowKey ?? displayShowIdentity(event);
       return show ? [[show, event] as const] : [];
     }),
   );
   return relevant.map((event) => {
-    const show = displayShowIdentity(event);
+    const show = event.canonicalShowKey ?? displayShowIdentity(event);
     return (
       byProduction.get(productionIdentity(event)) ??
       (show ? byShow.get(show) : undefined) ??

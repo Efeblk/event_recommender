@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { jsonLd, parseEvents } from "../web/lib/source.ts";
-import { categoryFromSource, categoryForEvent } from "../web/lib/event-format.ts";
-import { biletixAttendanceTiming } from "../web/lib/event-timing.ts";
+import { jsonLd, parseEvents } from "../contracts/source.ts";
+import { categoryFromSource, categoryForEvent } from "../contracts/category.ts";
+import { biletixAttendanceTiming } from "../contracts/timing.ts";
 import { discoverBiletinialCategories, extractBiletinial } from './biletinial.mjs';
 import { verifiedBubiletDetailInventory } from './bubilet.mjs';
 

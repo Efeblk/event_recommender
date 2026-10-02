@@ -3,6 +3,7 @@ import { voyageConfigFrom } from '@/lib/voyage';
 import { candidates, catalogStatus, runtime, pinRecommendationCatalog } from '@/lib/store';
 import { emptyFilters } from '@/lib/types';
 import { uniqueEvents } from '@/lib/search';
+import { publicEventRecord } from '@/lib/catalog';
 export async function GET() {
   try {
     const pinned = await pinRecommendationCatalog(new Date());
@@ -13,7 +14,7 @@ export async function GET() {
     const cards = pinned ? await pinned.finalize(uniqueEvents(events, 12)) : uniqueEvents(events, 12);
     return Response.json(
       {
-        events: cards.map(card => { const event = { ...card }; delete event.preparedSearch; return event; }),
+        events: cards.map(publicEventRecord),
         ...(pinned ? { publicationId: pinned.publicationId } : {}),
         total: events.length,
         aiEnabled: Boolean(

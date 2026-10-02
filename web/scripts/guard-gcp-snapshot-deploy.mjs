@@ -6,14 +6,14 @@ const envValue = (revision, name) => revision?.spec?.containers?.[0]?.env?.find(
 
 export function assertSnapshotDeployCompatible(service, revisions) {
   const templateBackend = envValue(service?.spec?.template, 'CATALOG_BACKEND');
-  if (templateBackend === 'postgres') throw new Error('Snapshot deployment refuses to replace a PostgreSQL service template');
+  if (['postgres', 'pipeline'].includes(templateBackend)) throw new Error('Snapshot deployment refuses to replace a PostgreSQL service template');
   const traffic = (service?.status?.traffic ?? []).filter(item => Number(item.percent ?? 0) > 0);
   const byName = new Map(revisions.map(revision => [revision?.metadata?.name, revision]));
   for (const target of traffic) {
     if (!target.revisionName) throw new Error('Snapshot deployment cannot resolve a live traffic revision');
     const revision = byName.get(target.revisionName);
     if (!revision) throw new Error(`Missing live traffic revision readback: ${target.revisionName}`);
-    if (envValue(revision, 'CATALOG_BACKEND') === 'postgres')
+    if (['postgres', 'pipeline'].includes(envValue(revision, 'CATALOG_BACKEND')))
       throw new Error(`Snapshot deployment refuses to replace PostgreSQL live revision: ${target.revisionName}`);
   }
   return { templateBackend: templateBackend ?? 'snapshots', checkedTrafficRevisions: traffic.map(item => item.revisionName) };

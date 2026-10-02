@@ -1,5 +1,5 @@
-import type { EventRecord } from './types.ts';
 import { withDeadline } from './deadline.ts';
+export { voyageDocumentText } from '../../contracts/search.ts';
 
 export interface VoyageEnv {
   VOYAGE_API_KEY?: string;
@@ -56,17 +56,6 @@ export function voyageCacheKey(config: VoyageConfig): string {
     'input_type=document',
     'text_profile=event-title-category-venue-description-v1',
   ].join('|');
-}
-
-export function voyageDocumentText(event: EventRecord): string {
-  return [
-    `Title: ${event.title.trim()}`,
-    `Category: ${event.category.trim()}`,
-    `Venue: ${event.venue.trim()}`,
-    `Description: ${event.description.trim()}`,
-  ]
-    .join('\n')
-    .slice(0, 10000);
 }
 
 function parseEmbeddings(

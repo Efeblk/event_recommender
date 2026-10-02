@@ -18,3 +18,7 @@ await test('rejects PostgreSQL live traffic even when the latest template differ
 await test('fails closed when a live traffic revision was not read back', () => {
   assert.throws(()=>assertSnapshotDeployCompatible(service(undefined),[]),/Missing live traffic revision/);
 });
+await test('protects the rebuilt pipeline template and live revision from snapshot replacement', () => {
+  assert.throws(()=>assertSnapshotDeployCompatible(service('pipeline'),[revision('live',undefined)]),/PostgreSQL service template/);
+  assert.throws(()=>assertSnapshotDeployCompatible(service(undefined),[revision('live','pipeline')]),/PostgreSQL live revision/);
+});

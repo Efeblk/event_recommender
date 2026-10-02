@@ -5,6 +5,8 @@
   "scripts": {
     "collect": "node --experimental-strip-types run.mjs",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "identity:audit": "node --experimental-strip-types identity/audit.ts --split=heldout",
+    "pipeline": "node --experimental-strip-types jobs/run.mjs",
     "publish": "node publish.mjs",
     "publish:local": "node publish.mjs --allow-loopback-http",
     "checkpoint:restore": "node checkpoint.mjs",
@@ -15,6 +17,7 @@
   "dependencies": {
     "@crawlee/basic": "3.18.1",
     "cheerio": "1.2.0",
+    "pg": "8.23.0",
     "robots-parser": "3.0.1"
   },
   "engines": {
