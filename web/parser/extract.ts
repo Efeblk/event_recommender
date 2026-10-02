@@ -188,12 +188,13 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
     dateDraft(m.index!, m.index! + m[0].length, d, d);
   }
   for (const m of f.matchAll(new RegExp(`${B}(\\d{4})-(\\d{2})-(\\d{2})${E}|${B}(\\d{1,2})[./](\\d{1,2})(?:[./](\\d{4}))?${E}`, 'gu'))) {
+    // "20.00" etc. are clocks, already claimed above; never reject them as dates.
+    if (!free(m.index!, m.index! + m[0].length)) continue;
     const [y, mo, d] = m[1] ? [Number(m[1]), Number(m[2]), Number(m[3])] : [Number(m[6] ?? today.getUTCFullYear()), Number(m[5]), Number(m[4])];
     if (!validCalendarDate(y, mo, d)) {
       rejectInvalidDate(m.index!, m.index! + m[0].length);
       continue;
     }
-    // "20.00" etc. are clocks, already claimed above.
     const date = new Date(Date.UTC(y, mo - 1, d, 12));
     dateDraft(m.index!, m.index! + m[0].length, date, date);
   }
@@ -366,6 +367,9 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
   for (let i = drafts.length - 1; i > 0; i--) {
     const d = drafts[i], prev = drafts[i - 1];
     if (d.kind === 'category' && d.value === 'show' && ['category', 'topic'].includes(prev.kind) && /^\s{0,2}$/u.test(text.slice(prev.end, d.start))) drafts.splice(i, 1);
+    // "müze gezisi", "sergi turu", "museum tour": the visit is the museum or exhibition itself.
+    else if (d.kind === 'category' && d.value === 'tour' && prev.kind === 'category' && ['museum', 'exhibition'].includes(prev.value)
+      && /^\s{0,2}$/u.test(text.slice(prev.end, d.start))) drafts.splice(i, 1);
   }
   return { folded: f, mentions: drafts.map((d, i) => ({ ...d, id: `m${i}` }) as Mention), invalidSpans };
 }

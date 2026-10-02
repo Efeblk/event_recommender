@@ -1,3 +1,4 @@
+import { stable } from './semantics.ts';
 import { emptyPlan, type Atom, type Condition, type Operation, type Plan, type PreviousState } from './contract.ts';
 
 const categories = new Set(['concert', 'theatre', 'standup', 'workshop', 'exhibition', 'festival',
@@ -114,6 +115,10 @@ export function applyOperations(previous: PreviousState | null, operations: Oper
     } else if (operation.op === 'add') {
       assert(['hard', 'preferred'].includes(operation.strength), 'invalid condition strength');
       const condition = cloneWithoutIds(operation.condition);
+      // Restating a condition the plan already holds ("3 kişiyiz" as both the
+      // correction and a new mention) must not duplicate it.
+      const same = stable(condition);
+      if ((operation.strength === 'hard' ? hard : preferred).some((c) => stable(cloneWithoutIds(c)) === same)) continue;
       if (operation.strength === 'hard') hard.push({ ...condition, id: `h${hardIndex++}` });
       else preferred.push({ ...condition, id: `p${preferredIndex++}` });
     } else if (operation.op === 'remove' || operation.op === 'keep') {

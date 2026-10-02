@@ -49,6 +49,9 @@ try {
     EMBEDDING_API_KEY: '',
     EMBEDDING_ENABLED: 'false',
     SYNC_TOKEN: 'local-smoke-only',
+    // Fake TypeSafe keys below exercise limits and transport counts; the span
+    // parser would spend that call on interpretation, so pin the rules path.
+    INPUT_INTERPRETER: 'rules',
   };
   // Load the built config outside the checkout to avoid .dev.vars and local D1.
   await writeFile(join(temp, 'wrangler.json'), JSON.stringify(config));

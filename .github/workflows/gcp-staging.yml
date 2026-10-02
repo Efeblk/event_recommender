@@ -7,10 +7,10 @@ on:
         required: true
         type: string
       input_interpreter:
-        description: Structured input requires reviewed live evaluation evidence
+        description: Request interpreter (span-v2 needs the TypeSafe key; rules needs no provider)
         required: true
         type: choice
-        default: rules
+        default: span-v2
         options:
           - rules
           - jev-v1
@@ -131,7 +131,7 @@ jobs:
     env:
       EXPECTED_SHA: ${{ inputs.expected_sha }}
       GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-      INPUT_INTERPRETER: ${{ inputs.input_interpreter || 'rules' }}
+      INPUT_INTERPRETER: ${{ inputs.input_interpreter || 'span-v2' }}
       GCP_REGION: ${{ vars.GCP_REGION }}
       GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
       GCP_ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.GCP_ARTIFACT_REGISTRY_REPOSITORY }}

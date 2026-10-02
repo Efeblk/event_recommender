@@ -1,4 +1,6 @@
 import { runtime } from '@/lib/store';
+import { jevConfigFrom } from '@/lib/jev';
+import { inputInterpreterFrom } from '@/lib/interpreter-config';
 
 export async function GET() {
   let donationUrl: string | null = null;
@@ -16,7 +18,13 @@ export async function GET() {
   return Response.json(
     {
       donationUrl,
-      intentVersion: configuredRuntime.INPUT_INTERPRETER === 'span-v2' ? 2 : 1,
+      intentVersion:
+        inputInterpreterFrom(
+          configuredRuntime,
+          Boolean(jevConfigFrom(configuredRuntime)),
+        ) === 'span-v2'
+          ? 2
+          : 1,
     },
     {
       headers: { 'Cache-Control': 'no-store' },

@@ -12,6 +12,18 @@ void test('preserves explicit 24-hour clocks in Turkish and English contexts', (
   }
 });
 
+void test('dotted Turkish clocks are clocks, not invalid dates', () => {
+  for (const [text, clocks] of [
+    ["Saat 20.00'den sonra başlayan konserler.", ['20:00']],
+    ["En geç 21.00'de başlayan tiyatro", ['21:00']],
+    ['18.00 ile 22.00 arasındaki festivaller', ['18:00', '22:00']],
+  ] as const) {
+    const result = extract(text, referenceDate);
+    assert.deepEqual(result.invalidSpans, [], text);
+    assert.deepEqual(result.mentions.flatMap((mention) => mention.kind === 'time' ? [mention.clock] : []), clocks, text);
+  }
+});
+
 void test('reports impossible explicit calendar dates instead of normalizing them', () => {
   for (const text of ['2027-02-30', '30.02.2027', '30 Şubat 2027', 'February 30, 2027']) {
     const result = extract(text, referenceDate);
@@ -55,4 +67,11 @@ void test('extracts canonical experiences from Turkish and English inverse terms
   for (const [text, value] of cases) {
     assert.ok(mentions(text).some((mention) => mention.kind === 'experience' && mention.value === value), `${text} -> ${value}`);
   }
+});
+
+void test('a museum or exhibition visit is that event, not an extra tour type', () => {
+  const categories = (text: string) => mentions(text).flatMap((mention) => mention.kind === 'category' ? [mention.value] : []);
+  assert.deepEqual(categories('Tarih temalı bir müze gezisi'), ['museum']);
+  assert.deepEqual(categories('sergi turu'), ['exhibition']);
+  assert.deepEqual(categories('Boğaz turu'), ['tour']);
 });

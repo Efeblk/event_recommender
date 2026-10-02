@@ -13,7 +13,7 @@ const collectorWorkflow = (await readFile(
 )).replaceAll('\r\n', '\n');
 
 assert.match(workflow, /^\s{2}workflow_dispatch:/m);
-assert.match(workflow, /input_interpreter:[\s\S]*?default: rules[\s\S]*?- rules\n\s*- jev-v1\n\s*- span-v2/);
+assert.match(workflow, /input_interpreter:[\s\S]*?default: span-v2[\s\S]*?- rules\n\s*- jev-v1\n\s*- span-v2/);
 assert.doesNotMatch(workflow, /^\s{2}(push|pull_request|schedule):/m);
 assert.match(workflow, /^permissions:\n\s{2}contents: read$/m);
 assert.match(workflow, /^\s{2}prepare:\n/m);
