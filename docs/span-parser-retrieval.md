@@ -1,7 +1,9 @@
 # Span parser retrieval integration
 
-The application supports `INPUT_INTERPRETER=span-v2` behind its existing runtime
-configuration. The default interpreter is unchanged. `/api/site` advertises the
+`span-v2` is the default interpreter whenever `TYPESAFE_API_KEY` is configured;
+without it the application falls back to `rules`, which needs no provider.
+`INPUT_INTERPRETER` can still select `rules`, `jev-v1` or `span-v2` explicitly,
+and deployment configuration defaults to `span-v2`. `/api/site` advertises the
 request version; the UI sends a versioned plan through follow-ups, alternatives,
 and retries, shows grouped required and preferred conditions, and clears it on
 a new search. Changing interpreter versions requires a new search.
@@ -86,6 +88,14 @@ in `web/work/span-bench-20261002/`.
   164 cards with no hard-constraint violations against source fields; named
   performers and titles (Duman, Teoman, Hamlet), corrections, resets, group
   budgets and exclusions behave as expected.
+
+The same 18 conversations through the previous `rules` default (browser
+request behavior reproduced) returned 18 cards violating requested facts and
+mishandled several turns: the performer was dropped after a budget
+clarification, an English request ignored its week, district and cheapest
+order, "tarih temalı" was read as a date, parking was silently ignored, and the
+reset to ceramics and free Beyoğlu events came back empty. This comparison is
+why `span-v2` became the default.
 
 Fixed during the benchmark: museum/exhibition visits split into a second tour
 type, duplicate restated conditions, budget-basis ambiguity without choices,

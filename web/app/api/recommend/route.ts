@@ -11,6 +11,7 @@ import {
 import { jevConfigFrom, rankWithJev } from '@/lib/jev';
 import { voyageConfigFrom, embedWithVoyage } from '@/lib/voyage';
 import { interpretSpanInput } from '@/lib/span-interpreter';
+import { inputInterpreterFrom } from '@/lib/interpreter-config';
 import { interpretInput } from '@/lib/input-interpreter';
 import { voyageVectorsFor } from '@/lib/voyage-index';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
@@ -70,13 +71,7 @@ export async function POST(request: Request) {
   }
   try {
     const config = jevConfigFrom(runtime());
-    const inputInterpreter = runtime().INPUT_INTERPRETER || 'rules';
-    if (
-      inputInterpreter !== 'rules' &&
-      inputInterpreter !== 'jev-v1' &&
-      inputInterpreter !== 'span-v2'
-    )
-      throw new Error('Invalid input interpreter configuration.');
+    const inputInterpreter = inputInterpreterFrom(runtime(), Boolean(config));
     const embeddingConfig = voyageConfigFrom(runtime());
     const paid = Boolean(config || embeddingConfig);
     if (visitorRateLimitEnabled(runtime())) {

@@ -70,7 +70,7 @@ export function validateDeploymentConfig({
   const workersPlan = process.env.WORKERS_PLAN || 'free';
   if (!['free', 'paid'].includes(workersPlan))
     throw new Error('WORKERS_PLAN must be free or paid.');
-  const inputInterpreter = process.env.INPUT_INTERPRETER || 'rules';
+  const inputInterpreter = process.env.INPUT_INTERPRETER || 'span-v2';
   if (!['rules', 'jev-v1', 'span-v2'].includes(inputInterpreter))
     throw new Error('INPUT_INTERPRETER must be rules, jev-v1, or span-v2.');
   const model = process.env.TYPESAFE_MODEL || 'jev-1.13.0';
@@ -146,7 +146,7 @@ export function publicDeploymentVariables(environment) {
     VOYAGE_MODEL: process.env.VOYAGE_MODEL || 'voyage-4-large',
     VOYAGE_DIMENSIONS: process.env.VOYAGE_DIMENSIONS || '1024',
     AI_DAILY_LIMIT: process.env.AI_DAILY_LIMIT || '100',
-    INPUT_INTERPRETER: process.env.INPUT_INTERPRETER || 'rules',
+    INPUT_INTERPRETER: process.env.INPUT_INTERPRETER || 'span-v2',
   };
 }
 

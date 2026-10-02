@@ -170,7 +170,7 @@ await test('uses safe provider defaults without requiring optional keys', () => 
   assert.equal(variables.VOYAGE_MODEL, 'voyage-4-large');
   assert.equal(variables.VOYAGE_DIMENSIONS, '1024');
   assert.equal(variables.AI_DAILY_LIMIT, '100');
-  assert.equal(variables.INPUT_INTERPRETER, 'rules');
+  assert.equal(variables.INPUT_INTERPRETER, 'span-v2');
   assert.deepEqual(deploymentSecrets(), { SYNC_TOKEN: 'sync-token' });
 });
 
