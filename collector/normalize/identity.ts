@@ -301,6 +301,22 @@ export function distinctiveVenueTokens(name: string): string[] {
   return named.some((token) => !WEAK_VENUE_TOKENS.has(token)) ? named : tokens;
 }
 
+/**
+ * Drop a leading copy of the listing's own venue name used as an organizer
+ * label ("HABITAT X Evgeny Grinko" at Habitat Hilltown, "Anka Workshop: Mum
+ * Atölyesi" at Ankaworkshop). Other prefixes ("Mozaik Workshop: …") stay.
+ */
+export function stripVenueTitlePrefix(title: string, venueName: string): string {
+  const venue = distinctiveVenueTokens(venueName);
+  const match = /^(.+?)(?:\s+(?:x|sunar|presents)\s+|\s*:\s+)(.+)$/i.exec(title.trim());
+  if (!venue.length || !match || !normalizeIdentityText(match[2])) return title;
+  const prefix = normalizeIdentityText(match[1]).split(" ");
+  const identifying = prefix.some((token) => token.length >= 3 && !WEAK_VENUE_TOKENS.has(token));
+  const sameName =
+    prefix.join("") === venue.join("") || prefix.every((token) => venue.includes(token));
+  return identifying && sameName ? match[2] : title;
+}
+
 export function isWeakVenueToken(token: string): boolean {
   return WEAK_VENUE_TOKENS.has(token);
 }
