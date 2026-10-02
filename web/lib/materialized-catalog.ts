@@ -4,6 +4,7 @@ import { emptyFilters, type EventRecord, type Filters } from './types.ts';
 import { createHash } from 'node:crypto';
 import { voyageDocumentText } from './voyage.ts';
 import { prepareLexicalDocumentTokens } from './hybrid.ts';
+import { prepareEventLocation } from './istanbul-location.ts';
 
 export interface SearchCatalog {
   schemaVersion: 1;
@@ -47,6 +48,7 @@ export function buildSearchCatalog(events: EventRecord[], at: Date): SearchCatal
           documentText,
           documentHash: createHash('sha256').update(documentText).digest('hex'),
           lexicalTokens: prepareLexicalDocumentTokens(event),
+          location: prepareEventLocation(event),
         } };
       });
       const serialized = JSON.stringify(merged);

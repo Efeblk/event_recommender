@@ -277,11 +277,8 @@ function evaluate(
   return { type: condition.type, children, id: condition.id, status };
 }
 
-export function evaluatePlan(
-  event: EventRecord,
-  plan: Plan,
-  now = new Date(),
-): PlanEvaluation {
+/** The single unconditional party count in the hard plan, or null. */
+export function planPartyCount(plan: Plan): number | null {
   const partyCounts: number[] = [];
   const gatherParties = (condition: Condition, conjunctive: boolean) => {
     if (condition.type === 'atom') {
@@ -293,8 +290,15 @@ export function evaluatePlan(
       condition.children.forEach((child) => gatherParties(child, conjunctive));
   };
   gatherParties(plan.hard, true);
-  const partyCount = partyCounts.length === 1 ? partyCounts[0] : null;
-  const evidence = evaluate(event, plan.hard, now, partyCount);
+  return partyCounts.length === 1 ? partyCounts[0] : null;
+}
+
+export function evaluatePlan(
+  event: EventRecord,
+  plan: Plan,
+  now = new Date(),
+): PlanEvaluation {
+  const evidence = evaluate(event, plan.hard, now, planPartyCount(plan));
   return { status: evidence.status, evidence };
 }
 

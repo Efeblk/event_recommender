@@ -40,6 +40,7 @@ import {
 } from './plan-state.ts';
 import { evaluatePlan, validateSearchPlan } from './plan-evidence.ts';
 import { planRetrievalQuery } from './plan-query.ts';
+import { softPreferencesFor } from './soft-preferences.ts';
 import { interpretSpanInput } from './span-interpreter.ts';
 import { isStandaloneInputReset } from './input-reset.ts';
 import { isAlternativesRequest } from './intent.ts';
@@ -513,6 +514,7 @@ async function recommendResolved(
     ? {
         query: input.message,
         order: plan.order === 'nearest' ? ('none' as const) : plan.order,
+        softPreferences: softPreferencesFor(plan),
       }
     : undefined;
   let shortlist = shortlistEvents(
