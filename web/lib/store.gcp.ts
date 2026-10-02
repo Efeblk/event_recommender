@@ -364,8 +364,9 @@ export function createGcpStore(options: {
       const search = await readSearch(pending);
       const documents = await documentsFor(search!, new Date(now()));
       const vectors = await readVectors(captured.vectors, profile);
+      // Heads published before immediate activation may still hold a pending
+      // catalog; activate it even with missing vectors and report how many.
       const missing = [...documents.keys()].filter((hash) => !validVector(vectors.get(hash), embeddingProfile.dimensions)).length;
-      if (missing) return { activated: false, pending: missing };
       await control.transaction(async (tx) => {
         await liveLease(tx, lease, lockPath);
         const head = await tx.get<CatalogHead>(catalogPath);
@@ -375,7 +376,7 @@ export function createGcpStore(options: {
         const { pendingSearch: _pending, ...retained } = head!;
         tx.set(catalogPath, { ...retained, revision: crypto.randomUUID(), search: pending });
       });
-      return { activated: true, pending: 0 };
+      return { activated: true, pending: missing };
     },
     async catalogStatus(at = new Date(now())) {
       return activeStatus(await catalogHead(), at);
@@ -613,13 +614,14 @@ export function createGcpStore(options: {
         checkpoint: pointer,
         ...(embeddingProfile ? { profile: embeddingProfile.profile, dimensions: embeddingProfile.dimensions } : {}),
       };
+      // A validated catalog goes live at once. Embeddings are optional
+      // enrichment: documents without a vector keep lexical retrieval, and
+      // cancellations or time changes never wait behind paid indexing.
       const next: CatalogHead = {
         revision: crypto.randomUUID(),
         hash: await digest(body),
         pointer,
-        ...(embeddingProfile
-          ? { pendingSearch: prepared, ...(matchesProfile(previous?.search) ? { search: previous!.search } : {}) }
-          : { search: prepared }),
+        search: prepared,
       };
       await control.transaction(async (tx) => {
         await liveLease(tx, lease, lockPath);
