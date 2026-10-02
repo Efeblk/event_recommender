@@ -1,5 +1,7 @@
-import { cosine, normalize, rankEvents } from './search.ts';
+import { cosine, rankEvents } from './search.ts';
 import type { EventRecord, Message } from './types.ts';
+import { prepareLexicalDocumentTokens, searchTokens } from '../../contracts/search.ts';
+export { prepareLexicalDocumentTokens } from '../../contracts/search.ts';
 
 export interface SemanticRanking {
   queryVector: number[];
@@ -7,21 +9,7 @@ export interface SemanticRanking {
   /** Pre-ranked dense IDs, for stores that compute cosine similarity themselves. */
   denseOrder?: string[];
 }
-const stop = new Set(
-  'bir biraz icin olsun bana gore olan var neler ne bu ve ile etkinlik istiyorum plan daha tl lira hafta sonu'.split(
-    ' ',
-  ),
-);
-const tokens = (text: string) =>
-  normalize(text)
-    .split(/[^a-z0-9]+/)
-    .filter((word) => word.length > 2 && !stop.has(word));
-
-export function prepareLexicalDocumentTokens(event: EventRecord): string[] {
-  return tokens(
-    [event.title, event.category, event.venue, event.description].join(' '),
-  );
-}
+const tokens = searchTokens;
 
 function preparedLexicalTokens(event: EventRecord): string[] {
   const prepared = event.preparedSearch;

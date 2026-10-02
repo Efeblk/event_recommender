@@ -1,0 +1,13 @@
+{
+ "$schema":"https://json-schema.org/draft/2020-12/schema",
+ "$id":"https://biplan.local/contracts/publication.v1.json",
+ "title":"Published catalog v1",
+ "type":"object",
+ "required":["publicationId","contentHash","manifest","sessions"],
+ "properties":{
+  "publicationId":{"type":"string","pattern":"^publication-[a-f0-9]{64}$"},
+  "contentHash":{"type":"string","pattern":"^[a-f0-9]{64}$"},
+  "manifest":{"type":"object","required":["contractVersion","scope","horizon","inventoryHash","pageCount","sessionCount","offerCount","lexicalOnlyCount","pages","sessionPins"],"properties":{"contractVersion":{"const":"published-catalog.v1"},"scope":{"enum":["complete","partial","unknown"]},"horizon":{"type":["object","null"]},"inventoryHash":{"type":"string"},"pageCount":{"type":"integer","minimum":0},"sessionCount":{"type":"integer","minimum":0},"offerCount":{"type":"integer","minimum":0},"lexicalOnlyCount":{"type":"integer","minimum":0},"pages":{"type":"array"},"sessionPins":{"type":"array"}}},
+  "sessions":{"type":"array","items":{"type":"object","required":["id","revisionId","productionId","venueId","title","description","category","startsAt","city","venue","offers","document"],"properties":{"id":{"type":"string"},"revisionId":{"type":"string"},"productionId":{"type":"string"},"venueId":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"category":{"type":"string"},"startsAt":{"type":"string","format":"date-time"},"city":{"type":"string"},"venue":{"type":"object","required":["name"]},"offers":{"type":"array","minItems":1},"document":{"type":"object","required":["id","hash","text","embeddingProfile","vector"]}}}}
+ }
+}

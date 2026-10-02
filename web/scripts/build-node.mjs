@@ -32,8 +32,18 @@ function safeSource(source) {
   );
 }
 
-const temporary = await mkdtemp(join(tmpdir(), 'biplan-node-build-'));
+const temporaryWorkspace = await mkdtemp(join(tmpdir(), 'biplan-node-build-'));
+const temporary = join(temporaryWorkspace, 'web');
 try {
+  await mkdir(temporary);
+  // Publication preparation imports the authoritative shared identity module.
+  // Preserve the repository topology in the isolated build; copy no raw data,
+  // operator scripts, credentials, fixtures or old preparation implementation.
+  for (const directory of ['contracts', 'collector/identity', 'collector/normalize']) {
+    await cp(resolve(root, '..', directory), join(temporaryWorkspace, directory), {
+      recursive: true, filter: safeSource,
+    });
+  }
   for (const entry of await readdir(root, { withFileTypes: true })) {
     const source = join(root, entry.name);
     if (
@@ -76,10 +86,10 @@ try {
   process.stderr.write(child.stderr);
   const standalone = join(temporary, 'dist', 'standalone');
   await readFile(join(standalone, 'server.js'));
-  await rm(destination, { recursive: true, force: true });
+  await rm(destination, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   await mkdir(destination, { recursive: true });
   await cp(standalone, destination, { recursive: true });
   console.log(`Node standalone output: ${relative(root, destination)}`);
 } finally {
-  await rm(temporary, { recursive: true, force: true });
+  await rm(temporaryWorkspace, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

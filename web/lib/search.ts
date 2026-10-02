@@ -7,12 +7,8 @@ import {
 } from './types.ts';
 import { hasSupportedEventFormat } from './event-format.ts';
 import { categoryIntent, isFullPreferenceReset } from './intent.ts';
-export const normalize = (s: string) =>
-  s
-    .toLocaleLowerCase('tr-TR')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ı/g, 'i');
+import { addressDistrict, isIstanbulDistrict, ISTANBUL_DISTRICTS, normalize } from '../../contracts/district.ts';
+export { addressDistrict, isIstanbulDistrict, normalize } from '../../contracts/district.ts';
 
 const istanbulDayFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Europe/Istanbul',
@@ -367,69 +363,6 @@ function parseMoneyAmount(raw: string): number {
     ? numeric.replaceAll(',', '')
     : numeric.replaceAll('.', '').replace(',', '.');
   return Number(normalized);
-}
-
-const ISTANBUL_DISTRICTS = [
-  'adalar',
-  'arnavutkoy',
-  'atasehir',
-  'avcilar',
-  'bagcilar',
-  'bahcelievler',
-  'bakirkoy',
-  'basaksehir',
-  'bayrampasa',
-  'besiktas',
-  'beykoz',
-  'beylikduzu',
-  'beyoglu',
-  'buyukcekmece',
-  'catalca',
-  'cekmekoy',
-  'esenler',
-  'esenyurt',
-  'eyupsultan',
-  'fatih',
-  'gaziosmanpasa',
-  'gungoren',
-  'kadikoy',
-  'kagithane',
-  'kartal',
-  'kucukcekmece',
-  'maltepe',
-  'pendik',
-  'sancaktepe',
-  'sariyer',
-  'silivri',
-  'sultanbeyli',
-  'sultangazi',
-  'sile',
-  'sisli',
-  'tuzla',
-  'umraniye',
-  'uskudar',
-  'zeytinburnu',
-] as const;
-const ISTANBUL_DISTRICT_SET = new Set<string>(ISTANBUL_DISTRICTS);
-const ADDRESS_DISTRICT_PATTERNS = ISTANBUL_DISTRICTS.map(
-  (district) =>
-    [
-      district,
-      new RegExp(`\\b${district}\\b\\s*(?:(?:/|,)\\s*istanbul\\b|$)`),
-    ] as const,
-);
-
-/** Normalized district names; neighborhoods are not districts. */
-export const isIstanbulDistrict = (normalized: string) =>
-  ISTANBUL_DISTRICT_SET.has(normalized);
-/** The single district written before "/İstanbul" (or at the end) of an
- * address, or null when none or several are present. */
-export function addressDistrict(address: string): string | null {
-  const normalizedAddress = normalize(address);
-  const matches = ADDRESS_DISTRICT_PATTERNS.filter(([, pattern]) =>
-    pattern.test(normalizedAddress),
-  ).map(([district]) => district);
-  return matches.length === 1 ? matches[0] : null;
 }
 
 const displayDistrict = (district: string) =>
@@ -1079,7 +1012,7 @@ export function isEligible(
   if (!f.district) return true;
   const eventDistrict = normalize(e.district);
   const requestedDistrict = normalize(f.district);
-  const hasSpecificDistrict = ISTANBUL_DISTRICT_SET.has(eventDistrict);
+  const hasSpecificDistrict = isIstanbulDistrict(eventDistrict);
   const fromAddress = addressDistrict(e.address);
   const hasDistrictConflict =
     hasSpecificDistrict &&

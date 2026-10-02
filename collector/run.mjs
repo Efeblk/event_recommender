@@ -6,7 +6,12 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
-import { sources, extract, detailUrl, resolveListings } from "./adapters.mjs";
+import { sources, detailUrl, resolveListings } from "./adapters.mjs";
+import { extractListings, listingToEvent } from './extract/index.mjs';
+import { createFilesystemRawStore, DEFAULT_RAW_MAX_BYTES } from './raw/store.mjs';
+import { retainProviderResponse } from './raw/fetch.mjs';
+import { buildRawCollectionManifest } from './raw/collection.mjs';
+import { createGcsRawMirror, STAGING_RAW_BUCKET, STAGING_RAW_PREFIX } from './raw/gcs.mjs';
 import {
   sha,
   validateEvent,
@@ -50,6 +55,8 @@ const { values } = parseArgs({
     output: { type: "string", default: join(root, "output") },
     snapshot: { type: "string", default: join(root, "../web/data/events.json") },
     "save-html": { type: "boolean", default: false },
+    "raw-directory": { type: "string" },
+    "raw-max-bytes": { type: "string", default: String(DEFAULT_RAW_MAX_BYTES) },
     "cycle-id": { type: "string" },
     "cycle-scope": { type: "string" },
     "cycle-started-at": { type: "string" },
@@ -101,6 +108,30 @@ const output = resolve(values.output),
 const coveragePath = resolve(values.coverage ?? join(dirname(snapshot), "coverage.json"));
 await mkdir(output, { recursive: true });
 await mkdir(dirname(snapshot), { recursive: true });
+const rawMirror = process.env.BIPLAN_RAW_GCS_ENABLED === 'true'
+  ? createGcsRawMirror({ bucket: process.env.BIPLAN_RAW_GCS_BUCKET ?? STAGING_RAW_BUCKET,
+    prefix: process.env.BIPLAN_RAW_GCS_PREFIX ?? STAGING_RAW_PREFIX,
+    accessToken: async () => process.env.BIPLAN_RAW_GCS_ACCESS_TOKEN }) : undefined;
+const rawStore = await createFilesystemRawStore(resolve(values['raw-directory'] ?? join(dirname(snapshot), 'raw')),
+  { maxBytes: Number(values['raw-max-bytes']), mirror: rawMirror });
+const rawResponses = new Map();
+let rawResponseMemory = 0;
+function rememberRawResponse(url, retained) {
+  rawResponseMemory -= (rawResponses.get(url)?.body.length ?? 0) * 2;
+  rawResponses.delete(url);
+  rawResponses.set(url, retained);
+  rawResponseMemory += retained.body.length * 2;
+  // Raw bytes are durable on disk. Only a small working set belongs in memory.
+  while (rawResponseMemory > 32 * 1024 * 1024 && rawResponses.size > 1) {
+    const oldest = rawResponses.keys().next().value;
+    rawResponseMemory -= rawResponses.get(oldest).body.length * 2;
+    rawResponses.delete(oldest);
+  }
+}
+const retainedResponses = new WeakMap();
+const rawFetches = [];
+const providerListings = new Map();
+const rawPages = new Map();
 if (values["save-html"]) await mkdir(join(output, "html"), { recursive: true });
 const startedAt = new Date().toISOString();
 const report = {
@@ -172,6 +203,16 @@ async function get(url, options = {}, isRobots = false) {
       redirect: "manual",
       signal: AbortSignal.timeout(20000),
     });
+    const { receipt, body, bodyError } = await retainProviderResponse(response,
+      { url: currentUrl, method: fetchOptions.method ?? 'GET', fetchedAt: new Date().toISOString(),
+        collectorRevision: process.env.BIPLAN_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted' },
+      rawStore, isRobots ? 256000 : 4000000);
+    rawFetches.push(receipt);
+    const retained = { body, rawObjectRef: receipt.rawObjectRef,
+      fetchedAt: receipt.metadata.fetchedAt, url: currentUrl };
+    retainedResponses.set(response, retained);
+    rememberRawResponse(currentUrl, retained);
+    if (bodyError) throw bodyError.message === 'response_too_large' ? new NonRetryableError(bodyError.message) : bodyError;
     return response;
   };
   let response;
@@ -202,22 +243,9 @@ async function get(url, options = {}, isRobots = false) {
     }
     throw new NonRetryableError(`http_${status}`);
   }
-  const reader = response.body.getReader();
-  const parts = [];
-  let size = 0;
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > (isRobots ? 256000 : 4000000)) throw new NonRetryableError("response_too_large");
-      parts.push(value);
-    }
-  } finally {
-    await reader.cancel();
-    reader.releaseLock();
-  }
-  return Buffer.concat(parts).toString("utf8");
+  const retained = retainedResponses.get(response);
+  rememberRawResponse(url, retained);
+  return retained.body;
 }
 const allowedOrigins = new Set([
   ...Object.values(sources).map((s) => s.origin),
@@ -344,15 +372,30 @@ const crawler = new BasicCrawler(
         return;
       }
       attemptedUrls.add(request.url);
-      let events;
+      const raw = rawResponses.get(request.url);
+      rawPages.set(request.url, { status: 'failed', observedAt: raw.fetchedAt, rawObjectRef: raw.rawObjectRef, responseUrl: raw.url });
+      const extractionResponses = new Map([[request.url, raw]]);
+      const extractionGet = async (url, options) => {
+        const body = await get(url, options);
+        extractionResponses.set(url, rawResponses.get(url));
+        return body;
+      };
+      let events, listings;
       try {
-        events = await extract($, source, request.url, category, new Date(), { get });
+        listings = await extractListings($, source, request.url, category, new Date(raw.fetchedAt), {
+          get: extractionGet, rawObjectRef: raw.rawObjectRef, supplementaryResponses: extractionResponses,
+        });
+        events = listings.map(listingToEvent);
+        rawPages.get(request.url).supplementaryRawObservations = [...extractionResponses.entries()]
+          .filter(([url]) => url !== request.url).map(([url, retained]) => ({ url,
+            fetchedAt: retained.fetchedAt, rawObjectRef: retained.rawObjectRef }));
       } catch (error) {
         if (error.message === 'session_time_conflict') {
           // Source evidence disproves the cached session time. Keep this distinct
           // from a verified retirement and from ordinary fetch/parser failures.
-          const checkedAt = new Date().toISOString();
-          const provenance = { contentHash: sha(html), parserVersion: '5' };
+          const checkedAt = raw.fetchedAt;
+          const provenance = { contentHash: raw.rawObjectRef.sha256, rawObjectRef: raw.rawObjectRef, parserVersion: '5' };
+          rawPages.get(request.url).status = 'quarantined';
           recordCoverageAttempt(coverage, request.url, { success: false, quarantined: true, failure: error.message }, checkedAt);
           recordCycleObservation(request.url, 'quarantined', checkedAt);
           checkpointCoverageEvents(coverage, request.url, [], checkedAt, provenance);
@@ -367,23 +410,28 @@ const crawler = new BasicCrawler(
       const { accepted, quarantined: pageQuarantine, complete: pageComplete } =
         verifyCompletePage(events, validateEvent, source, request.url);
       if (pageQuarantine.length) {
+        rawPages.get(request.url).status = 'quarantined';
         report.quarantined.push(...pageQuarantine);
         throw new NonRetryableError("page_contains_quarantined_sessions");
       }
       if (!pageComplete) throw new NonRetryableError("page_incomplete");
+      // Successful zero-record extraction is evidence of the page, not a
+      // fabricated session cancellation or complete provider inventory.
+      rawPages.get(request.url).status = 'verified';
       if (!accepted.length) {
         if (events.length) throw new NonRetryableError("all_sessions_quarantined");
-        const checkedAt = new Date().toISOString();
+        const checkedAt = raw.fetchedAt;
         attemptedUrls.add(request.url);
         recordCoverageAttempt(coverage, request.url, { success: false, retired: true, failure: "no_verified_sessions" }, checkedAt);
         recordCycleObservation(request.url, 'retired', checkedAt);
-        const provenance = { contentHash: sha(html), parserVersion: "4" };
+        const provenance = { contentHash: raw.rawObjectRef.sha256, rawObjectRef: raw.rawObjectRef, parserVersion: "4" };
         checkpointCoverageEvents(coverage, request.url, [], checkedAt, provenance);
         upsertReportPage({ source, url: request.url, checkedAt, retiredAt: checkedAt, ...provenance, events: [] });
         await saveCoverage();
         return;
       }
-      const checkedAt = new Date().toISOString(), provenance = { contentHash: sha(html), parserVersion: "4" };
+      for (const listing of listings) providerListings.set(listing.listingId, listing);
+      const checkedAt = raw.fetchedAt, provenance = { contentHash: raw.rawObjectRef.sha256, rawObjectRef: raw.rawObjectRef, parserVersion: "4" };
       upsertReportPage({
         source,
         url: request.url,
@@ -409,6 +457,9 @@ const crawler = new BasicCrawler(
       if (request.userData.kind === "event") {
         const failedAt = new Date().toISOString();
         attemptedUrls.add(request.url);
+        const page = rawPages.get(request.url);
+        rawPages.set(request.url, { ...page, status: page?.status === 'quarantined' ? 'quarantined' : 'failed',
+          observedAt: page?.observedAt ?? failedAt });
         recordCoverageAttempt(coverage, request.url, { success: false, failure: error.message }, failedAt);
         recordCycleObservation(request.url, 'failed', failedAt);
         await saveCoverage();
@@ -439,6 +490,19 @@ const listingCoverageComplete = (source) =>
     const listing = coverage.listings[sources[source].origin + path];
     return listing?.completion === "exhausted" && Date.parse(listing.checkedAt) >= Date.parse(startedAt);
   });
+await atomicJson(join(output, 'raw-fetches.json'), { schemaVersion: 1, fetches: rawFetches, storage: rawStore.metrics });
+await atomicJson(join(output, 'provider-listings.json'), { schemaVersion: 1, listings: [...providerListings.values()].sort((a, b) => a.listingId.localeCompare(b.listingId)) });
+const handoffUrls = new Set([...enqueued, ...attemptedUrls, ...targets]);
+const rawInventory = coverage.entries.filter(entry => handoffUrls.has(entry.url))
+  .map(entry => ({ url: entry.url, provider: entry.source, category: entry.category }));
+for (const url of targets) if (!rawInventory.some(entry => entry.url === url)) {
+  const provider = selected.find(source => detailUrl(url, source));
+  if (provider) rawInventory.push({ url, provider });
+}
+await atomicJson(join(output, 'pipeline-raw-collection.json'), buildRawCollectionManifest({ startedAt,
+  collectorRevision: process.env.BIPLAN_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted',
+  inventory: rawInventory, receipts: rawPages, fetches: rawFetches,
+  horizon: collectionCycle?.horizonStart ? { start: collectionCycle.horizonStart, end: collectionCycle.horizonEnd } : null }));
 if (values["discover-only"]) {
   const listingComplete = Object.fromEntries(selected.map((source) => [source,
     listingCoverageComplete(source)
