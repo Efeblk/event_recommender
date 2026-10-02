@@ -58,12 +58,17 @@ assert.match(prepare, /Download candidate for round-trip verification/);
 assert.match(deploy, /needs: prepare/);
 assert.match(deploy, /environment: gcp-staging/);
 assert.match(deploy, /id-token: write/);
+assert.match(
+  deploy,
+  /uses: actions\/checkout@v4\n\s+with:\n\s+ref: \$\{\{ inputs\.expected_sha \}\}\n\s+persist-credentials: false/,
+);
 assert.match(deploy, /sha256sum --check manifest\.sha256/);
 assert.match(deploy, /gunzip --stdout image\.tar\.gz \| docker load/);
 assert.match(deploy, /Refuse snapshot deployment over PostgreSQL runtime/);
-assert.match(deploy, /guard-gcp-snapshot-deploy\.mjs/);
+assert.match(deploy, /node web\/scripts\/guard-gcp-snapshot-deploy\.mjs/);
 assert.match(deploy, /status\?\.traffic/);
 assert.match(deploy, /gcloud run revisions describe/);
+assert.ok(deploy.indexOf('actions/checkout@v4') < deploy.indexOf('guard-gcp-snapshot-deploy.mjs'));
 assert.ok(deploy.indexOf('guard-gcp-snapshot-deploy.mjs') < deploy.indexOf('docker push "$REMOTE_TAG"'));
 assert.doesNotMatch(deploy, /docker build/);
 assert.match(deploy, /@sha256:\[0-9a-f\]\{64\}/);

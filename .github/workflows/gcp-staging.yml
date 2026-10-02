@@ -147,6 +147,11 @@ jobs:
       GCP_VOYAGE_API_KEY_SECRET: ${{ vars.GCP_VOYAGE_API_KEY_SECRET }}
       GCP_VOYAGE_API_KEY_SECRET_VERSION: ${{ vars.GCP_VOYAGE_API_KEY_SECRET_VERSION }}
     steps:
+      - name: Checkout reviewed revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
       - name: Validate protected staging configuration
         run: |
           set -euo pipefail
@@ -198,7 +203,7 @@ jobs:
             gcloud run revisions describe "$revision" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > "$file"
             REVISION_FILES+=("$file")
           done
-          node scripts/guard-gcp-snapshot-deploy.mjs "$STATE_DIR/service.json" "${REVISION_FILES[@]}"
+          node web/scripts/guard-gcp-snapshot-deploy.mjs "$STATE_DIR/service.json" "${REVISION_FILES[@]}"
       - name: Push reviewed image and resolve digest
         id: image
         run: |
