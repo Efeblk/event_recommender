@@ -223,7 +223,64 @@ jobs:
           set -euo pipefail
           gcloud run deploy "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --image "$IMAGE_REF" --service-account "$GCP_RUNTIME_SERVICE_ACCOUNT" --no-allow-unauthenticated --min-instances 0 --max-instances 1 --concurrency 32 --cpu 1 --cpu-throttling --no-cpu-boost --memory 1Gi --timeout 300 \
             --set-env-vars "BIPLAN_RUNTIME=node,BIPLAN_GCP_PROJECT=$GCP_PROJECT_ID,GCP_STORAGE_BUCKET=$GCP_COLLECTION_BUCKET,FIRESTORE_DATABASE=$GCP_FIRESTORE_DATABASE,DEPLOYMENT_ENV=staging,DEPLOYMENT_SHA=$EXPECTED_SHA,BIPLAN_CLIENT_IP_MODE=shared,BIPLAN_PREVIEW_TESTING=false,AI_DAILY_LIMIT=100,VOYAGE_DIMENSIONS=1024,INPUT_INTERPRETER=$INPUT_INTERPRETER" \
-            --set-secrets "SYNC_TOKEN=$GCP_SYNC_TOKEN_SECRET:$GCP_SYNC_TOKEN_SECRET_VERSION,TYPESAFE_API_KEY=$GCP_TYPESAFE_API_KEY_SECRET:$GCP_TYPESAFE_API_KEY_SECRET_VERSION,VOYAGE_API_KEY=$GCP_VOYAGE_API_KEY_SECRET:$GCP_VOYAGE_API_KEY_SECRET_VERSION" --quiet
+            --set-secrets "SYNC_TOKEN=$GCP_SYNC_TOKEN_SECRET:$GCP_SYNC_TOKEN_SECRET_VERSION,TYPESAFE_API_KEY=$GCP_TYPESAFE_API_KEY_SECRET:$GCP_TYPESAFE_API_KEY_SECRET_VERSION,VOYAGE_API_KEY=$GCP_VOYAGE_API_KEY_SECRET:$GCP_VOYAGE_API_KEY_SECRET_VERSION" --no-traffic --quiet
+      - id: revision
+        name: Resolve and verify deployed revision
+        env:
+          IMAGE_REF: ${{ steps.image.outputs.ref }}
+        run: |
+          set -euo pipefail
+          STATE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$STATE_DIR"' EXIT
+          gcloud run services describe "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > "$STATE_DIR/service.json"
+          CANDIDATE_REVISION="$(node -e "const s=require(process.argv[1]);const n=s.status?.latestCreatedRevisionName;if(typeof n!=='string'||!n.startsWith(process.env.GCP_CLOUD_RUN_SERVICE+'-')||!/^[a-z][a-z0-9-]{0,62}$/.test(n))process.exit(1);process.stdout.write(n)" "$STATE_DIR/service.json")"
+          export CANDIDATE_REVISION
+          gcloud run revisions describe "$CANDIDATE_REVISION" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > "$STATE_DIR/revision.json"
+          node - "$STATE_DIR/revision.json" <<'NODE'
+          const fs = require('node:fs');
+          const revision = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const container = revision.spec?.containers?.[0];
+          if (revision.metadata?.name !== process.env.CANDIDATE_REVISION || revision.status?.conditions?.find(condition => condition.type === 'Ready')?.status !== 'True') throw new Error('Deployed revision is not ready.');
+          if (!container || container.image !== process.env.IMAGE_REF) throw new Error('Deployed revision image does not match the reviewed digest.');
+          const values = Object.fromEntries((container.env ?? []).filter(item => typeof item?.name === 'string' && typeof item?.value === 'string').map(item => [item.name, item.value]));
+          for (const [name, expected] of [['BIPLAN_RUNTIME','node'],['DEPLOYMENT_ENV','staging'],['DEPLOYMENT_SHA',process.env.EXPECTED_SHA],['INPUT_INTERPRETER',process.env.INPUT_INTERPRETER]]) {
+            if (values[name] !== expected) throw new Error(`Deployed revision has invalid ${name}.`);
+          }
+          if ((values.CATALOG_BACKEND ?? 'snapshots') !== 'snapshots') throw new Error('Deployed revision is not snapshot-backed.');
+          NODE
+          node - "$STATE_DIR/service.json" > candidate-traffic-tags.json <<'NODE'
+          const fs = require('node:fs');
+          const service = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const tags = (service.spec?.traffic ?? []).filter(target => target.tag != null).map(target => ({ tag: target.tag, target: target.latestRevision === true ? 'LATEST' : target.revisionName })).sort((a,b) => a.tag.localeCompare(b.tag));
+          for (const target of tags) {
+            if (!/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(target.tag) || (target.target !== 'LATEST' && !/^[a-z][a-z0-9-]{0,62}$/.test(target.target ?? ''))) throw new Error('Invalid existing Cloud Run traffic tag.');
+          }
+          process.stdout.write(JSON.stringify(tags));
+          NODE
+          echo "name=$CANDIDATE_REVISION" >> "$GITHUB_OUTPUT"
+      - name: Promote verified revision and preserve tags
+        env:
+          CANDIDATE_REVISION: ${{ steps.revision.outputs.name }}
+        run: |
+          set -euo pipefail
+          mapfile -t TAG_ASSIGNMENTS < <(node -e "const tags=require('./candidate-traffic-tags.json');for(const target of tags)console.log(target.tag+'='+target.target)")
+          TRAFFIC_ARGS=(run services update-traffic "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --to-revisions "$CANDIDATE_REVISION=100")
+          if test "${#TAG_ASSIGNMENTS[@]}" -gt 0; then
+            TAG_CSV="$(IFS=,; echo "${TAG_ASSIGNMENTS[*]}")"
+            TRAFFIC_ARGS+=(--update-tags "$TAG_CSV")
+          fi
+          gcloud "${TRAFFIC_ARGS[@]}" --quiet
+          gcloud run services describe "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > service-after-traffic.json
+          node - service-after-traffic.json candidate-traffic-tags.json <<'NODE'
+          const fs = require('node:fs');
+          const service = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const beforeTags = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          const traffic = service.status?.traffic ?? [];
+          const live = traffic.filter(target => Number(target.percent ?? 0) > 0);
+          if (live.reduce((sum,target) => sum + Number(target.percent), 0) !== 100 || live.some(target => target.revisionName !== process.env.CANDIDATE_REVISION)) throw new Error('Verified revision does not have 100 percent traffic.');
+          const afterTags = (service.spec?.traffic ?? []).filter(target => target.tag != null).map(target => ({ tag: target.tag, target: target.latestRevision === true ? 'LATEST' : target.revisionName })).sort((a,b) => a.tag.localeCompare(b.tag));
+          if (JSON.stringify(afterTags) !== JSON.stringify(beforeTags)) throw new Error('Cloud Run traffic tags changed during promotion.');
+          NODE
       - id: service
         name: Resolve private service URL
         run: |
@@ -252,9 +309,10 @@ jobs:
       - name: Record deployment provenance
         env:
           IMAGE_REF: ${{ steps.image.outputs.ref }}
+          CLOUD_RUN_REVISION: ${{ steps.revision.outputs.name }}
         run: |
           mkdir -p deploy-provenance
-          node -e "const fs=require('node:fs');fs.writeFileSync('deploy-provenance/gcp-staging.json',JSON.stringify({schemaVersion:1,environment:'staging',revision:process.env.EXPECTED_SHA,image:process.env.IMAGE_REF,service:process.env.GCP_CLOUD_RUN_SERVICE,region:process.env.GCP_REGION,inputInterpreter:process.env.INPUT_INTERPRETER,runId:process.env.GITHUB_RUN_ID,runAttempt:process.env.GITHUB_RUN_ATTEMPT},null,2)+'\n')"
+          node -e "const fs=require('node:fs');fs.writeFileSync('deploy-provenance/gcp-staging.json',JSON.stringify({schemaVersion:1,environment:'staging',revision:process.env.EXPECTED_SHA,image:process.env.IMAGE_REF,cloudRunRevision:process.env.CLOUD_RUN_REVISION,service:process.env.GCP_CLOUD_RUN_SERVICE,region:process.env.GCP_REGION,inputInterpreter:process.env.INPUT_INTERPRETER,runId:process.env.GITHUB_RUN_ID,runAttempt:process.env.GITHUB_RUN_ATTEMPT},null,2)+'\n')"
       - uses: actions/upload-artifact@v4
         with:
           name: gcp-staging-deployment-${{ inputs.expected_sha }}

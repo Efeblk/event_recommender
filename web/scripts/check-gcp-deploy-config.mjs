@@ -73,6 +73,24 @@ assert.ok(deploy.indexOf('guard-gcp-snapshot-deploy.mjs') < deploy.indexOf('dock
 assert.doesNotMatch(deploy, /docker build/);
 assert.match(deploy, /@sha256:\[0-9a-f\]\{64\}/);
 assert.match(deploy, /--no-allow-unauthenticated/);
+assert.match(deploy, /--no-traffic --quiet/);
+const revisionVerification = deploy.indexOf('name: Resolve and verify deployed revision');
+const revisionPromotion = deploy.indexOf('name: Promote verified revision and preserve tags');
+const authenticatedHealth = deploy.indexOf('name: Verify authenticated staging health');
+assert.ok(revisionVerification > deploy.indexOf('name: Deploy private staging revision'));
+assert.ok(revisionPromotion > revisionVerification && authenticatedHealth > revisionPromotion);
+const verificationBlock = deploy.slice(revisionVerification, revisionPromotion);
+assert.match(verificationBlock, /latestCreatedRevisionName/);
+assert.match(verificationBlock, /condition\.type === 'Ready'\)\?\.status !== 'True'/);
+assert.match(verificationBlock, /container\.image !== process\.env\.IMAGE_REF/);
+assert.match(verificationBlock, /\['DEPLOYMENT_SHA',process\.env\.EXPECTED_SHA\]/);
+assert.match(verificationBlock, /\['INPUT_INTERPRETER',process\.env\.INPUT_INTERPRETER\]/);
+assert.match(verificationBlock, /\(values\.CATALOG_BACKEND \?\? 'snapshots'\) !== 'snapshots'/);
+const promotionBlock = deploy.slice(revisionPromotion, authenticatedHealth);
+assert.match(promotionBlock, /--to-revisions "\$CANDIDATE_REVISION=100"/);
+assert.match(promotionBlock, /--update-tags "\$TAG_CSV"/);
+assert.match(promotionBlock, /JSON\.stringify\(afterTags\) !== JSON\.stringify\(beforeTags\)/);
+assert.doesNotMatch(promotionBlock, /--to-latest/);
 for (const flag of [
   '--min-instances 0',
   '--max-instances 1',

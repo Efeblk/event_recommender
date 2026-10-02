@@ -1,0 +1,111 @@
+import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+
+const workflow = (await readFile(new URL('../../.github/workflows/gcp-staging.yml', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
+
+function inlineNode(command) {
+  const lines = workflow.split('\n');
+  const start = lines.findIndex(line => line.includes(command) && line.trimEnd().endsWith("<<'NODE'"));
+  assert.notEqual(start, -1, `Missing inline validator: ${command}`);
+  const indent = lines[start].match(/^\s*/)[0];
+  const end = lines.findIndex((line,index) => index > start && line === `${indent}NODE`);
+  assert.notEqual(end, -1, `Unterminated inline validator: ${command}`);
+  return `${lines.slice(start + 1, end).map(line => line.startsWith(indent) ? line.slice(indent.length) : line).join('\n')}\n`;
+}
+
+const revisionValidator = inlineNode('node - "$STATE_DIR/revision.json"');
+const configuredTags = inlineNode('node - "$STATE_DIR/service.json" > candidate-traffic-tags.json');
+const trafficValidator = inlineNode('node - service-after-traffic.json candidate-traffic-tags.json');
+
+function childNode(code, files, env = {}) {
+  return spawnSync(process.execPath, ['-', ...files], {
+    encoding: 'utf8',
+    env: { ...process.env, ...env },
+    input: code,
+  });
+}
+
+function accepted(result) {
+  assert.equal(result.status, 0, `${result.stdout}${result.stderr}`);
+}
+
+function rejected(result, message) {
+  assert.notEqual(result.status, 0, 'Validator unexpectedly accepted an unsafe fixture');
+  assert.match(`${result.stdout}${result.stderr}`, message);
+}
+
+await test('deployed revision validator enforces readiness, digest, SHA and snapshot runtime', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-gcp-revision-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const file = join(directory, 'revision.json');
+  const candidate = 'biplan-staging-00033-abc';
+  const image = 'europe-west1-docker.pkg.dev/example/staging/biplan@sha256:' + 'a'.repeat(64);
+  const sha = 'b'.repeat(40);
+  const env = { CANDIDATE_REVISION: candidate, IMAGE_REF: image, EXPECTED_SHA: sha, INPUT_INTERPRETER: 'span-v2' };
+  const valid = {
+    metadata: { name: candidate },
+    spec: { containers: [{ image, env: [
+      { name: 'BIPLAN_RUNTIME', value: 'node' },
+      { name: 'DEPLOYMENT_ENV', value: 'staging' },
+      { name: 'DEPLOYMENT_SHA', value: sha },
+      { name: 'INPUT_INTERPRETER', value: 'span-v2' },
+    ] }] },
+    status: { conditions: [{ type: 'Ready', status: 'True' }] },
+  };
+  const run = async value => {
+    await writeFile(file, JSON.stringify(value));
+    return childNode(revisionValidator, [file], env);
+  };
+  accepted(await run(valid));
+  rejected(await run({ ...valid, spec: { containers: [{ ...valid.spec.containers[0], image: image.replace(/a+$/, 'c'.repeat(64)) }] } }), /reviewed digest/);
+  rejected(await run({ ...valid, spec: { containers: [{ ...valid.spec.containers[0], env: valid.spec.containers[0].env.map(item => item.name === 'DEPLOYMENT_SHA' ? { ...item, value: 'd'.repeat(40) } : item) }] } }), /DEPLOYMENT_SHA/);
+  rejected(await run({ ...valid, status: { conditions: [{ type: 'Ready', status: 'False' }] } }), /not ready/);
+  rejected(await run({ ...valid, spec: { containers: [{ ...valid.spec.containers[0], env: [...valid.spec.containers[0].env, { name: 'CATALOG_BACKEND', value: 'pipeline' }] }] } }), /not snapshot-backed/);
+});
+
+await test('traffic validator requires the named candidate at 100 percent and preserves configured tag semantics', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-gcp-traffic-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const serviceFile = join(directory, 'service.json');
+  const tagsFile = join(directory, 'tags.json');
+  const candidate = 'biplan-staging-00033-abc';
+  const old = 'biplan-staging-00032-def';
+  const configured = [
+    { tag: 'preview', latestRevision: true, percent: 0 },
+    { tag: 'stable', revisionName: old, percent: 0 },
+    { revisionName: candidate, percent: 100 },
+  ];
+  const service = {
+    spec: { traffic: configured },
+    status: { traffic: [
+      { tag: 'preview', revisionName: candidate, percent: 0 },
+      { tag: 'stable', revisionName: old, percent: 0 },
+      { revisionName: candidate, percent: 100 },
+    ] },
+  };
+  await writeFile(serviceFile, JSON.stringify(service));
+  const captured = childNode(configuredTags, [serviceFile]);
+  accepted(captured);
+  assert.deepEqual(JSON.parse(captured.stdout), [
+    { tag: 'preview', target: 'LATEST' },
+    { tag: 'stable', target: old },
+  ]);
+  await writeFile(tagsFile, captured.stdout);
+  accepted(childNode(trafficValidator, [serviceFile, tagsFile], { CANDIDATE_REVISION: candidate }));
+
+  const pinnedOld = { ...service, status: { traffic: [{ revisionName: old, percent: 100 }] } };
+  await writeFile(serviceFile, JSON.stringify(pinnedOld));
+  rejected(childNode(trafficValidator, [serviceFile, tagsFile], { CANDIDATE_REVISION: candidate }), /does not have 100 percent traffic/);
+
+  const changedTags = { ...service, spec: { traffic: configured.map(target => target.tag === 'stable' ? { ...target, revisionName: candidate } : target) } };
+  await writeFile(serviceFile, JSON.stringify(changedTags));
+  rejected(childNode(trafficValidator, [serviceFile, tagsFile], { CANDIDATE_REVISION: candidate }), /tags changed/);
+
+  const pinnedLatestTag = { ...service, spec: { traffic: configured.map(target => target.tag === 'preview' ? { tag: target.tag, revisionName: candidate, percent: target.percent } : target) } };
+  await writeFile(serviceFile, JSON.stringify(pinnedLatestTag));
+  rejected(childNode(trafficValidator, [serviceFile, tagsFile], { CANDIDATE_REVISION: candidate }), /tags changed/);
+});

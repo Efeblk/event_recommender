@@ -1,13 +1,30 @@
 # Handoff: ship identity v3 to GCP staging and verify
 
-Status (2026-10-02): local review and checks complete;
-[PR #31](https://github.com/Efeblk/event_recommender/pull/31) opened; deployment pending.
+Status (2026-10-02): [PR #31](https://github.com/Efeblk/event_recommender/pull/31)
+merged; identity v3 runtime is serving private staging. The single bounded
+collection run and post-collection acceptance checks are in progress.
 Worktree `C:\Users\efeba\.t3\worktrees\event_recommender\t3code-ffc8b24d`,
 branch `t3code/rebuild-data-pipeline` (base `4b2cdce`). Background:
 [data-flow-audit-2026-10-02.md](data-flow-audit-2026-10-02.md),
 [data-pipeline-rebuild-plan.md](data-pipeline-rebuild-plan.md).
 
 ## Execution checkpoint
+
+Application revision `ee0832d755997036b7c22fe31cbe3f84729eebe3` passed all eight
+exact-revision CI checks. Its file tree equals tested PR head `095660a`.
+Deployment run [37060117148](https://github.com/Efeblk/event_recommender/actions/runs/37060117148)
+prepared, isolated-smoked and round-trip verified the image. Downloaded archive,
+manifest, source tree and both lockfile hashes were independently verified.
+The deploy step created the correct revision but left existing traffic pinned to
+the previous revision, causing its final health SHA assertion to fail. After
+verifying the candidate image, SHA, interpreter and disabled pipeline flags, the
+operator promoted the existing immutable revision without rebuilding it.
+Staging revision `biplan-staging-00029-6sj` serves 100% of traffic with image
+`sha256:17d1405b3217a8719924324ba0133de9f9fbad0b2722aa2f6aeecf534d423b55`;
+authenticated health and readiness returned 200 at 20:29 UTC. The workflow
+promotion defect is being corrected separately; the original failed run remains
+preserved. [Collection run 37061051538](https://github.com/Efeblk/event_recommender/actions/runs/37061051538)
+uses the same application revision and the four-call cumulative Voyage limit.
 
 The user confirmed exclusive worktree ownership. The current staging checkpoint
 contains 14,702 listings; the pre-deploy identity audit found 26 unreviewed
