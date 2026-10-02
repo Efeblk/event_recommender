@@ -1,6 +1,6 @@
 # Soft ranking signals: location and price (plan)
 
-Status (2026-10-02): Phase 1 in PR #28 (offline checks only). Phase 2 is implemented offline in a stacked PR and awaits a bounded live Jev evaluation. Phases 3–4 are not started.
+Status (2026-10-02): Phase 1 in PR #28 (offline checks only). Phase 2 in PR #29, live parser evaluation recorded below. Phases 3–4 are not started.
 
 ## Goal
 
@@ -143,11 +143,22 @@ Other preference kinds (topic, experience, …) are neutral in Phase 1.
   plan-evidence, validation and soft-scoring tests. `npm test`, typecheck,
   lint and release cases pass. The parser bench cannot run offline here (no
   Jev response cache), and the instruction text changed.
-- Still needed before merge: a bounded live parser-bench run comparing the
-  baseline with this change, including `gliner-cases-v2` cases that now
-  expect "Anadolu yakası tercihimiz" as an applied preference rather than
-  not applied. That case file's expectations must be updated with the
-  evaluation, not before it.
+- Live evaluation (2026-10-02, branch revision `53e7558`, clean tree, no
+  GLiNER proposals on either side; USD 0.10 cap, spent USD 0.0186 in 212 Jev
+  parser calls: 200 benchmark cases plus 6 side turns each on the branch and master):
+  - Frozen 200-case parser benchmark: master `4b2cdce` replayed from the PR #26
+    response cache (no live calls) at 194/200; the branch scored 193/200 live.
+    The differences are not side-related: `en-clear-54` (fixed) and
+    `en-clear-60` (new) both failed with incomplete provider judgments, and
+    `en-ambiguous-12` returned one of two acceptable district-removal readings.
+    The benchmark contains no side phrases.
+  - The two `gliner-cases-v2` conversations that mention sides (6 turns): master
+    rejects "Anadolu yakası" as unsupported in both conversations, and that
+    failure leaves a stale Kadıköy requirement in a later turn. The branch
+    records the side as an optional preference and applies the later
+    corrections. These turns still expect the old capability ("not applied");
+    the frozen file is unchanged, and this note records the policy difference.
+  - Raw benchmark output: `web/parser/.runtime/results/` (local, ignored).
 
 ## Non-goals
 
