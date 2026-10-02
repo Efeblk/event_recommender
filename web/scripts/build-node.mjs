@@ -20,6 +20,8 @@ const includedFiles = new Set([
   'tsconfig.json',
   'vite.config.ts',
 ]);
+// Serving parser modules only; never copy benchmark clients, caches or fixtures.
+const parserFiles = ['contract.ts', 'extract.ts', 'lexicon.ts', 'parse-core.ts', 'state.ts'];
 function safeSource(source) {
   const name = basename(source);
   return (
@@ -44,6 +46,10 @@ try {
       recursive: true,
       filter: safeSource,
     });
+  }
+  await mkdir(join(temporary, 'parser'));
+  for (const name of parserFiles) {
+    await cp(join(root, 'parser', name), join(temporary, 'parser', name));
   }
   await symlink(
     join(root, 'node_modules'),

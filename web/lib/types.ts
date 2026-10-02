@@ -1,3 +1,4 @@
+import type { PlanState } from './plan-state.ts';
 import type { IntentState } from './input-state.ts';
 import type {
   RequirementKind,
@@ -144,6 +145,8 @@ export interface SearchDiagnostics {
   };
   /** Null when no Jev support probability was evaluated. */
   returnedAboveSupportThreshold: number | null;
+  /** Recursive plan evidence, before shortlisting. Unknown never passes. */
+  planEvidence?: { supported: number; contradicted: number; unknown: number };
 }
 export interface SearchResult {
   /** The immutable catalog generation used throughout this request, when supported. */
@@ -155,6 +158,7 @@ export interface SearchResult {
   notice: string | null;
   totalCandidates: number;
   intentState?: IntentState;
+  planState?: PlanState;
   pendingInput?: PendingInput;
   excludedIds?: string[];
   clarification?: { label: string; message: string }[];

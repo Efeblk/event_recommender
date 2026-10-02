@@ -24,7 +24,7 @@ const probe = String.raw`
   const home = await fetch(origin);
   assert.equal(home.status, 200);
   assert.match(await home.text(), /Bi.{0,10}Plan/);
-  assert.deepEqual(await (await fetch(origin + '/api/site')).json(), { donationUrl: null });
+  assert.deepEqual(await (await fetch(origin + '/api/site')).json(), { donationUrl: null, intentVersion: 1 });
   assert.equal((await fetch(origin + '/api/health')).status, 503);
   const ready = await fetch(origin + '/api/ready');
   assert.equal(ready.status, 503);

@@ -26,8 +26,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { IntentSummary } from '@/components/intent-summary';
+import { PlanSummary } from '@/components/plan-summary';
 import { isAlternativesRequest } from '@/lib/intent';
 import type { IntentState } from '@/lib/input-state';
+import type { PlanState } from '@/lib/plan-state';
 import { groupFilterCount, groupFilterLabels } from '@/lib/ui-filters';
 import { eventDateLabel } from '@/lib/event-date';
 import {
@@ -60,14 +62,16 @@ type SearchAttempt = {
   history: Message[];
   excludeIds: string[];
   alternativeIds: string[];
+  intentVersion: 1 | 2;
   intentState?: IntentState;
+  planState?: PlanState;
   pendingInput?: PendingInput;
 };
 type RetryAction =
   | { kind: 'events' }
   | { kind: 'search'; attempt: SearchAttempt }
   | null;
-type SiteConfig = { donationUrl: string | null };
+type SiteConfig = { donationUrl: string | null; intentVersion?: 1 | 2 };
 const formatShortDate = (date: string) =>
   new Intl.DateTimeFormat('tr-TR', {
     timeZone: 'Europe/Istanbul',
@@ -236,6 +240,7 @@ export default function Home() {
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
   const [history, setHistory] = useState<Message[]>([]);
   const [intentState, setIntentState] = useState<IntentState | undefined>();
+  const [planState, setPlanState] = useState<PlanState | undefined>();
   const [pendingInput, setPendingInput] = useState<PendingInput | undefined>();
   const [lastRequest, setLastRequest] = useState('');
   const [result, setResult] = useState<SearchResult | null>(null);
@@ -255,6 +260,7 @@ export default function Home() {
   const [retryAction, setRetryAction] = useState<RetryAction>(null);
   const [excluded, setExcluded] = useState<string[]>([]);
   const [donationUrl, setDonationUrl] = useState<string | null>(null);
+  const [intentVersion, setIntentVersion] = useState<1 | 2>(1);
   const controller = useRef<AbortController | null>(null);
   const searchGeneration = useRef(0);
   const searchBusy = useRef(false);
@@ -333,6 +339,7 @@ export default function Home() {
         if (!response.ok) return;
         const data = (await response.json()) as SiteConfig;
         setDonationUrl(data.donationUrl);
+        setIntentVersion(data.intentVersion === 2 ? 2 : 1);
       })
       .catch(() => undefined);
     return () => abort.abort();
@@ -351,11 +358,14 @@ export default function Home() {
     const requestIntentState = retryAttempt
       ? retryAttempt.intentState
       : intentState;
+    const requestPlanState = retryAttempt ? retryAttempt.planState : planState;
+    const requestIntentVersion = retryAttempt?.intentVersion ?? intentVersion;
     const requestPendingInput = retryAttempt
       ? retryAttempt.pendingInput
       : pendingInput;
     const requestHistory =
-      retryAttempt?.history ?? (requestIntentState ? [] : history.slice(-10));
+      retryAttempt?.history ??
+      (requestIntentState || requestPlanState ? [] : history.slice(-10));
     if (
       requestFilters.dateFrom &&
       requestFilters.dateTo &&
@@ -388,7 +398,9 @@ export default function Home() {
       history: [...requestHistory],
       excludeIds: [...excludeIds],
       alternativeIds: [...alternativeIds],
+      intentVersion: requestIntentVersion,
       intentState: requestIntentState,
+      planState: requestPlanState,
       pendingInput: requestPendingInput,
     };
     controller.current?.abort();
@@ -418,8 +430,10 @@ export default function Home() {
           filters: requestFilters,
           excludeIds,
           alternativeIds,
-          intentVersion: 1,
-          intentState: requestIntentState,
+          intentVersion: requestIntentVersion,
+          ...(requestIntentVersion === 2
+            ? { planState: requestPlanState }
+            : { intentState: requestIntentState }),
           pendingInput: requestPendingInput,
         }),
       });
@@ -446,6 +460,7 @@ export default function Home() {
       setResult(data);
       setFilters(data.filters);
       setIntentState(data.intentState);
+      setPlanState(data.planState);
       const needsRevision =
         data.status === 'needs_input' || data.status === 'unsupported_location';
       setPendingInput(needsRevision ? data.pendingInput : undefined);
@@ -510,6 +525,7 @@ export default function Home() {
     setFilters({ ...emptyFilters });
     setHistory([]);
     setIntentState(undefined);
+    setPlanState(undefined);
     setPendingInput(undefined);
     setLastRequest('');
     setResult(null);
@@ -629,7 +645,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-            {result && hasFilters && !intentState && (
+            {result && hasFilters && !intentState && !planState && (
               <div className="active-filters" aria-label="Etkin filtreler">
                 {filters.dateFrom && <span>{filters.dateFrom}</span>}
                 {filters.dateTo && <span>{filters.dateTo}</span>}
@@ -746,7 +762,19 @@ export default function Home() {
               </span>
             </div>
           </div>
-          {result && intentState && (
+          {result && planState && (
+            <PlanSummary
+              state={planState}
+              pending={!!pendingInput}
+              disabled={busy}
+              onEdit={() => {
+                textarea.current?.focus();
+                textarea.current?.scrollIntoView({ block: 'center' });
+              }}
+              onReset={reset}
+            />
+          )}
+          {result && intentState && !planState && (
             <IntentSummary
               state={intentState}
               pending={!!pendingInput}

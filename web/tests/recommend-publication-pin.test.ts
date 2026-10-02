@@ -7,6 +7,7 @@ import {
   type Dependencies,
 } from '../lib/recommend.ts';
 import type { EventRecord } from '../lib/types.ts';
+import { emptyPlan } from '../parser/contract.ts';
 
 const now = new Date('2026-09-30T09:00:00Z');
 const config = { apiKey: 'test-only', model: 'jev-test' };
@@ -139,6 +140,54 @@ void test('all stale cards are withheld and diagnostics reflect rendered results
   assert.deepEqual(result.recommendations, []);
   assert.equal(result.diagnostics?.returnedAboveSupportThreshold, 0);
   assert.equal(result.publicationId, 'publication-stale');
+});
+
+void test('span-v2 uses the pinned catalog and withholds stale finalized cards', async () => {
+  const calls: string[] = [];
+  const kept = event('span-kept');
+  const stale = event('span-stale');
+  const result = await recommend(
+    validateInput({ message: 'konser', intentVersion: 2 }),
+    {
+      now,
+      config: null,
+      inputInterpreter: 'span-v2',
+      candidates: async () =>
+        assert.fail('unpinned catalog must not be read'),
+      spanInterpret: async () => {
+        calls.push('interpret');
+        return {
+          status: 'accepted',
+          operations: [],
+          resultingPlan: emptyPlan(),
+          debug: { mentions: [], answers: {} },
+        };
+      },
+      pinCatalog: async () => ({
+        publicationId: 'publication-span',
+        candidates: async () => {
+          calls.push('candidates');
+          return [kept, stale];
+        },
+        vectors: async () => new Map(),
+        finalize: async (events) => {
+          calls.push(`finalize:${events.map(({ id }) => id).join(',')}`);
+          return [kept];
+        },
+      }),
+    },
+  );
+
+  assert.deepEqual(calls, [
+    'interpret',
+    'candidates',
+    'finalize:span-kept,span-stale',
+  ]);
+  assert.equal(result.publicationId, 'publication-span');
+  assert.deepEqual(result.recommendations.map(({ event }) => event.id), [
+    'span-kept',
+  ]);
+  assert.match(result.notice ?? '', /durumu/);
 });
 
 void test('legacy dependencies retain behavior without a publication pin', async () => {

@@ -791,3 +791,21 @@ export function meetsRequirements(
     (check) => check.status === 'supported',
   );
 }
+
+/** Literal predicate presence for a v2 tree, preserving conflicts under NOT.
+ * Unlike legacy content requirements, this reports presence, not absence.
+ */
+export function checkPredicateEvidence(event: EventRecord, kind: RequirementKind, value: string): { status: RequirementStatus; evidence: string[] } {
+  const term = terms[value];
+  if (!term) return { status: 'unknown', evidence: [] };
+  const text = evidenceText(event, kind);
+  const negative = term.negative ? evidenceFor(text, term.negative) : [];
+  // Remove the actual negative phrase before searching for an independent affirmation.
+  // A sentence can contain both claims; neither polarity wins a source conflict.
+  const positive = text.split(/(?<=[.!?])\s+/u).filter((line) => {
+    const withoutNegative = term.negative ? line.replace(new RegExp(term.negative.source, 'gu'), ' ') : line;
+    return term.positive.test(withoutNegative);
+  }).slice(0, 3).map((line) => line.slice(0, 240));
+  const evidence = [...new Set([...positive, ...negative])];
+  return { status: positive.length && negative.length ? 'unknown' : positive.length ? 'supported' : negative.length ? 'contradicted' : 'unknown', evidence };
+}
