@@ -198,6 +198,27 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
     const date = new Date(Date.UTC(y, mo - 1, d, 12));
     dateDraft(m.index!, m.index! + m[0].length, date, date);
   }
+  // Parts of a named month ("ekim sonunda", "early November") and whole months
+  // ("ekimde", "kasım ayında", "in October"). Full names only: short forms
+  // such as "mar" or "may" are too often ordinary words.
+  const fullMonths = Object.keys(MONTHS).filter((name) => name.length >= 4 || name === 'ekim').sort((a, b) => b.length - a.length).join('|');
+  const monthRange = (start: number, end: number, month: number, part: 'start' | 'middle' | 'end' | 'whole') => {
+    const year = resolveYear(month, 28).getUTCFullYear();
+    const last = new Date(Date.UTC(year, month, 0, 12)).getUTCDate();
+    const [first, final] = { start: [1, 10], middle: [11, 20], end: [21, last], whole: [1, last] }[part];
+    let from = new Date(Date.UTC(year, month - 1, first, 12));
+    const to = new Date(Date.UTC(year, month - 1, final, 12));
+    if (iso(to) < ref) return;
+    if (iso(from) < ref) from = today;
+    if (free(start, end)) dateDraft(start, end, from, to);
+  };
+  const turkishPart = (word: string) => word.startsWith('bas') ? 'start' : word.startsWith('orta') ? 'middle' : 'end';
+  for (const m of f.matchAll(new RegExp(`${B}(${fullMonths})(?:'?[a-z]{0,3})?\\s+(basi|basinda|baslari|baslarinda|ortasi|ortasinda|ortalari|ortalarinda|sonu|sonunda|sonlari|sonlarinda)${E}`, 'gu')))
+    monthRange(m.index!, m.index! + m[0].length, MONTHS[m[1]], turkishPart(m[2]));
+  for (const m of f.matchAll(new RegExp(`${B}(early|mid|late|end of|beginning of|start of|the end of|the beginning of)[\\s-]+(${fullMonths})${E}`, 'gu')))
+    monthRange(m.index!, m.index! + m[0].length, MONTHS[m[2]], /early|beginning|start/.test(m[1]) ? 'start' : m[1] === 'mid' ? 'middle' : 'end');
+  for (const m of f.matchAll(new RegExp(`${B}(?:(${fullMonths})(?:'?(?:da|de|ta|te)|\\s+ayi(?:nda)?)|in\\s+(${fullMonths}))${E}`, 'gu')))
+    monthRange(m.index!, m.index! + m[0].length, MONTHS[m[1] ?? m[2]], 'whole');
   // Relative words.
   const rel: Array<[RegExp, () => [Date, Date] | null]> = [
     [/(?:obur gun|ertesi gun|day after tomorrow)/u, () => [addDays(today, 2), addDays(today, 2)]],

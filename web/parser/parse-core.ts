@@ -10,7 +10,8 @@ import type { Atom, Condition, Interpretation, Operation, Order, ParserInput, Pl
 import { emptyPlan } from './contract.ts';
 import { applyOperations } from './state.ts';
 import { extract, segments, type Mention } from './extract.ts';
-import { fold } from './lexicon.ts';
+import { DISTRICTS, fold } from './lexicon.ts';
+import { placeOf } from '../../contracts/location.ts';
 export interface Proposal { label: 'topic' | 'condition'; text: string; start: number; end: number; score: number }
 export type ChoiceQuestion = { type: 'choice'; instructions: unknown; criteria: Record<string, unknown> };
 export type NoulQuestion = { type: 'noul'; instructions: unknown; criteria?: { true?: unknown; false?: unknown } };
@@ -30,6 +31,17 @@ const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', '
 const KIND_ORDER = ['date', 'time', 'location', 'party', 'companion', 'topic', 'experience', 'content', 'category', 'budget'];
 
 /** Terms that name the opposite of the canonical experience (excluding them asserts the experience). */
+const SUBJECTIVE_EXPERIENCES = new Set(['romantic']);
+
+/** The verifiable area (district, else side) containing a neighbourhood atom. */
+function neighbourhoodArea(atom: Atom): Atom | null {
+  if (atom.kind !== 'location' || atom.precision !== 'neighborhood') return null;
+  const place = placeOf(fold(atom.name).trim());
+  const district = place?.district ? DISTRICTS.find((name) => fold(name) === place.district) : undefined;
+  if (district) return { kind: 'location', name: district, precision: 'district' };
+  if (place?.side) return { kind: 'location', name: place.side === 'asia' ? 'Anadolu yakası' : 'Avrupa yakası', precision: 'side' };
+  return null;
+}
 const INVERSE_EXPERIENCE: Record<string, RegExp> = {
   uncrowded: /^(?:kalabalik|crowd)/u,
   quiet: /^(?:gurultu(?!suz)|noise|noisy|loud)/u,
@@ -453,6 +465,11 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
     kind: 'budget', comparison: comparisonOf(m) as 'lte', amount: m.amount, currency: 'TRY',
     basis: (basis === 'unstated' && inheritFrom?.kind === 'budget' ? inheritFrom.basis : basis) as 'per_person',
   });
+  const previousPlan = JSON.stringify(input.previousState?.plan ?? null);
+  const describesGroup = mentions.some((x) => x.kind === 'party' || x.kind === 'companion')
+    || previousPlan.includes('"kind":"party"') || previousPlan.includes('"kind":"companion"');
+  // Edits of an existing budget keep the existing basis rules.
+  const inheritsBudget = (_m: Mention) => previousPlan.includes('"kind":"budget"');
   const budgetSlots = new Map<string, number>();
   const undecidedSlots = new Map<string, number>();
   const dateSlots = new Map<string, number>();
@@ -461,6 +478,9 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
       // Free admission has no per-person/total distinction.
       const basis = m.amount === 0 ? 'per_person' : pick(`basis_${m.id}`) ?? 'unstated';
       if (basis !== 'unstated') return amountAtom(m, basis);
+      // With no group size or companions anywhere in the search, a bare price
+      // ("500 tl altı tiyatro") is a ticket price; asking would only add a turn.
+      if (!describesGroup && !inheritsBudget(m)) return amountAtom(m, 'per_ticket');
       if (!budgetSlots.has(m.id)) budgetSlots.set(m.id, slots.push({ options: ['per_person', 'per_ticket', 'group_total'] }) - 1);
       return amountAtom(m, pickSlot(budgetSlots.get(m.id)!) as string);
     }
@@ -583,7 +603,10 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
     while (i < fresh.length) {
       const m = fresh[i];
       const r = role(m);
-      const strength = r === 'require' || r === 'exclude' ? 'hard' : 'preferred';
+      // Subjective experiences ("romantik") are never stated by providers, so a
+      // mandatory one could only ever empty the results; rank by them instead.
+      const subjective = m.kind === 'experience' && SUBJECTIVE_EXPERIENCES.has(m.value) && r === 'require';
+      const strength = (r === 'require' || r === 'exclude') && !subjective ? 'hard' : 'preferred';
       if (scopedIds.has(m.id)) { i++; continue; }
       const atom = atomFor(m, choose);
       i++;
@@ -656,6 +679,15 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
             ? { type: 'all', children: [child, { type: 'atom', atom: xAtom }] } : child) };
         } else if (strength === 'preferred') condition = { type: 'all', children: [{ type: 'atom', atom: xAtom }, condition] };
         else adds.push({ kind: xAtom.kind, strength, condition: { type: 'atom', atom: xAtom }, start: xm.start });
+      }
+      // Events record districts, not neighbourhoods: a mandatory neighbourhood
+      // ("harbiyede") becomes its district as the requirement and the
+      // neighbourhood itself as a preference for ranking.
+      const area = strength === 'hard' && condition.type === 'atom' ? neighbourhoodArea(condition.atom) : null;
+      if (area) {
+        adds.push({ kind: 'location', strength: 'hard', condition: { type: 'atom', atom: area }, start: m.start });
+        adds.push({ kind: 'location', strength: 'preferred', condition, start: m.start });
+        continue;
       }
       adds.push({ kind: atom.kind, strength, condition, start: m.start });
     }
