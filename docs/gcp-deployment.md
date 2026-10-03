@@ -140,7 +140,9 @@ the old Cloudflare monitor do not establish the required 48-hour GCP uptime reco
 ## Cost and abuse controls
 
 The deployed private staging profile uses request-based CPU, zero minimum instances,
-one maximum instance per revision, one CPU, 1 GiB memory and concurrency 32. This
+one maximum instance per revision, one CPU, 2 GiB memory and concurrency 32
+(raised from 1 GiB on 2026-10-03 after a cold search load of the
+14,928-listing catalog used 1,104 MiB). This
 revision setting is not a service-wide hard spending cap. The default AI
 cap is 100 recommendation requests per day, shared across instances, with the
 existing burst and rolling user limits enforced transactionally in Firestore.

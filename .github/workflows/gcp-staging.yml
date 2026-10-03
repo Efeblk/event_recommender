@@ -221,7 +221,7 @@ jobs:
           IMAGE_REF: ${{ steps.image.outputs.ref }}
         run: |
           set -euo pipefail
-          gcloud run deploy "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --image "$IMAGE_REF" --service-account "$GCP_RUNTIME_SERVICE_ACCOUNT" --no-allow-unauthenticated --min-instances 0 --max-instances 1 --concurrency 32 --cpu 1 --cpu-throttling --no-cpu-boost --memory 1Gi --timeout 300 \
+          gcloud run deploy "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --image "$IMAGE_REF" --service-account "$GCP_RUNTIME_SERVICE_ACCOUNT" --no-allow-unauthenticated --min-instances 0 --max-instances 1 --concurrency 32 --cpu 1 --cpu-throttling --no-cpu-boost --memory 2Gi --timeout 300 \
             --set-env-vars "BIPLAN_RUNTIME=node,BIPLAN_GCP_PROJECT=$GCP_PROJECT_ID,GCP_STORAGE_BUCKET=$GCP_COLLECTION_BUCKET,FIRESTORE_DATABASE=$GCP_FIRESTORE_DATABASE,DEPLOYMENT_ENV=staging,DEPLOYMENT_SHA=$EXPECTED_SHA,BIPLAN_CLIENT_IP_MODE=shared,BIPLAN_PREVIEW_TESTING=false,AI_DAILY_LIMIT=100,VOYAGE_DIMENSIONS=1024,INPUT_INTERPRETER=$INPUT_INTERPRETER" \
             --set-secrets "SYNC_TOKEN=$GCP_SYNC_TOKEN_SECRET:$GCP_SYNC_TOKEN_SECRET_VERSION,TYPESAFE_API_KEY=$GCP_TYPESAFE_API_KEY_SECRET:$GCP_TYPESAFE_API_KEY_SECRET_VERSION,VOYAGE_API_KEY=$GCP_VOYAGE_API_KEY_SECRET:$GCP_VOYAGE_API_KEY_SECRET_VERSION" --no-traffic --quiet
       - id: revision

@@ -98,7 +98,7 @@ for (const flag of [
   '--cpu 1',
   '--cpu-throttling',
   '--no-cpu-boost',
-  '--memory 1Gi',
+  '--memory 2Gi',
   '--timeout 300',
 ]) assert.match(deploy, new RegExp(flag));
 assert.match(deploy, /BIPLAN_CLIENT_IP_MODE=shared/);
