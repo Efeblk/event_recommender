@@ -787,3 +787,24 @@ await test('namespace separates control records and rejects invalid paths', asyn
     /namespace/,
   );
 });
+
+await test('the durable checkpoint omits provider listings that identity still used', async () => {
+  const f = fixture({ profile: profileA, dimensions: 1024 });
+  const sync = await syncLease(f.store);
+  const base = event();
+  const listed = {
+    ...base,
+    providerListing: {
+      listingId: 'f'.repeat(64), provider: base.source, providerSessionIds: [], url: base.url,
+      title: base.title, description: 'x'.repeat(5000), category: base.category, startsAt: base.startsAt,
+      venue: { name: base.venue, address: base.address, district: base.district }, city: base.city,
+    },
+  } as unknown as EventRecord;
+  await f.store.importPages([page(listed)], sync);
+  await f.store.publishCheckpoint(report(), sync);
+  const saved = JSON.parse((await f.store.readCheckpoint())!) as { events: EventRecord[] };
+  assert.equal(saved.events.length, 1);
+  assert.equal(saved.events[0].providerListing, undefined);
+  assert.equal(saved.events[0].id, listed.id);
+  assert.equal((await f.store.candidates(emptyFilters)).length, 1);
+});
