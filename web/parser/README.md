@@ -2,7 +2,7 @@
 
 Turns a Turkish/English event request, plus the previous plan, into plan
 operations (`contract.ts`). The application integration is opt-in through
-`INPUT_INTERPRETER=span-v2`; see [retrieval integration](../../docs/span-parser-retrieval.md).
+`INPUT_INTERPRETER=span-v2`; see [retrieval integration](../../docs/archive/span-parser-retrieval.md).
 
 1. `extract.ts` proposes literal mentions with recall-oriented vocabulary and
    computes every value in code (dates, clocks, amounts, counts, places).

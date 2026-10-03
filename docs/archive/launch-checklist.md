@@ -27,7 +27,7 @@ HTTP latency and cutover acceptance remain open; snapshot staging retains traffi
    deployment validation, Node standalone startup and Linux container checks on
    the candidate revision. Keep the Cloudflare build/smoke green for recovery.
 2. **Dedicated account resources:** after Google sign-in, verify billing and
-   review the Terraform plan in [infra/gcp](../infra/gcp/README.md). Separate
+   review the Terraform plan in [infra/gcp](../../infra/gcp/README.md). Separate
    staging and production projects, private buckets, service identities and
    secrets. Configure protected deployment environments and restricted GitHub WIF.
 3. **Private staging:** approve the concrete candidate image and resource plan,
@@ -68,7 +68,7 @@ Follow the free-first preference. The deployed private staging profile is
 configured for zero minimum instances and maximum one instance per revision; this is a cost
 control, not a guarantee of zero spend. Review region,
 billing, storage retention and provider budgets after sign-in. Budget alerts are
-not spending caps. See [GCP deployment](gcp-deployment.md) for the current plan.
+not spending caps. See [GCP deployment](../gcp-deployment.md) for the current plan.
 
 ## Evidence
 

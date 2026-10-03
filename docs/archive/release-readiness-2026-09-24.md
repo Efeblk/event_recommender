@@ -45,13 +45,13 @@ an explicit `WORKERS_PLAN=paid`. Neither setting changes the account subscriptio
 
 ## Live release regression
 
-The [20-request report](../web/evals/reports/2026-09-24-release-live.json)
+The [20-request report](../../web/evals/reports/2026-09-24-release-live.json)
 records compiled runtime `fa7d62b`, with no runtime edits during the run. Its dirty
 flag reflects pending diagnostic/CI files; subsequent commits before completion
 only added diagnostic tooling and evidence. Requests were spaced by 25 seconds,
 with no automatic retries. All returned HTTP 200 in 34–2,138 ms.
 
-The [mechanical grade](../web/evals/reports/2026-09-24-release-grade.json)
+The [mechanical grade](../../web/evals/reports/2026-09-24-release-grade.json)
 found zero hard-constraint failures across all eight returned cards. It deliberately
 reports `needs_review`: empty results and subjective relevance require catalog review.
 

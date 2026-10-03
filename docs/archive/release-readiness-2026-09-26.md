@@ -26,7 +26,7 @@ by the release workflow before any candidate is deployed.
 | Frozen conversational fixture and historical saved-score replay | 20/20 and 12/12 offline |
 | Standalone deployment dry-run | Passed; compressed upload 1,218.60 KiB |
 
-The [hard-test record](../web/evals/reports/2026-09-26-windows-hard-final.md)
+The [hard-test record](../../web/evals/reports/2026-09-26-windows-hard-final.md)
 preserves 36 local application requests, review of all 34 returned card instances,
 two direct traces, the original failures, and the remaining conservative empty
 answer for an ambiguous quiet-evening request. Those runs used the earlier
@@ -72,10 +72,10 @@ A final homepage review found workshops and a jazz discussion labelled as
 concerts by broad provider music categories. Shared detail-evidence checks now
 exclude explicit unsupported formats in both collection and runtime eligibility,
 including previously cached records. The raw catalog remains unchanged. The
-[offline format audit](../web/evals/reports/2026-09-26-event-format-audit.md)
+[offline format audit](../../web/evals/reports/2026-09-26-event-format-audit.md)
 reviewed all 160 excluded sessions across 36 productions: 35 workshops and one
 talk/panel, with no false exclusion found in that fixed-time catalog review.
-The [final guard comparison](../web/evals/reports/2026-09-26-event-format-final-guard-comparison.json)
+The [final guard comparison](../../web/evals/reports/2026-09-26-event-format-final-guard-comparison.json)
 preserves the original audit and records one additional explicit art talk caught
 by Turkish inflection handling, bringing the final exclusion set to 161 sessions
 across 37 productions. Its title and description explicitly identify a moderated
@@ -117,7 +117,7 @@ the steps that need them, outside dependency installation and artifact upload.
 
 Independent download verification of preparation run `36268756246` found only
 92 of 95 manifest-listed files: GitHub's default artifact upload omitted three
-hidden build files. The [failed verification](../web/evals/reports/2026-09-26-deployment-artifact-roundtrip-failure.json)
+hidden build files. The [failed verification](../../web/evals/reports/2026-09-26-deployment-artifact-roundtrip-failure.json)
 is preserved, and that run was cancelled before its protected deployment job.
 The corrected release path includes hidden compiled files and verifies the
 uploaded/downloaded artifact before offering it for deployment approval. Manifest

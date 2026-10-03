@@ -109,7 +109,7 @@ Tasks:
    25 Turkish and 15 English. Include typos, dates ("bu akşam", "hafta sonu",
    "ekim sonunda"), districts and sides, budgets, groups, categories, moods,
    negations and two follow-up corrections. Use the earlier human-test requests
-   (`span-parser-human-cases.test.ts`, `docs/product-benchmark-2026-10-03.md`)
+   (`span-parser-human-cases.test.ts`, `docs/archive/product-benchmark-2026-10-03.md`)
    as a start. For each request, record the expected hard constraints. The
    user reviews the 40 requests before the first scored run.
 2. **Frozen catalog.** Save one collection artifact (`state/events.json`) as
@@ -220,7 +220,7 @@ checks still pass, and the per-request cost does not increase without approval.
 ## Later (not in v1)
 
 - PostgreSQL cutover and the target architecture in
-  `docs/catalog-enrichment-architecture.md`.
+  `docs/archive/catalog-enrichment-architecture.md`.
 - More providers. Promotions and discounts.
 - Performance at more than 4 concurrent users. The local benchmark measured a
   p95 of 3.7 s at 4 concurrent requests.
@@ -231,3 +231,11 @@ checks still pass, and the per-request cost does not increase without approval.
 
 - 2026-10-03: Plan written. `master` = `bad42d0`. Staging deployed
   (37148883212). Scheduled collection is on. Collection 37149121969 succeeded.
+- 2026-10-04: Phase 0 started from `bad42d0`. Tasks 1–2 are prepared for review.
+  `AGENTS.md` has 62 lines. Archived 41 files and added the current v1 architecture.
+  User acceptance and merge are pending. Runtime and workflow tasks 3–5 follow.
+  Local checks passed: 131 repository links, archive preservation and diff checks.
+  Source changes only update documentation paths in comments. No paid calls.
+- 2026-10-04: Resolved the instruction conflict in favor of this plan.
+  PostgreSQL migration and the older launch gates do not define v1 scope.
+  PostgreSQL code stays in its current folders. Workflow removal is pending.

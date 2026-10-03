@@ -1,8 +1,13 @@
 # Bi’ Plan
 
+Current scope and work order: [v1 product plan](docs/product-plan-v1.md).
+Current system: [v1 architecture](docs/architecture.md).
+The instructions below still include the Cloudflare local runtime.
+Phase 0 will remove that runtime. Use the product plan for release checks.
+
 Yerel önizleme: **http://127.0.0.1:3001**. Aşağıdaki `local:start` komutuyla açılır; bu çalışma yayın yapmaz.
 
-İstanbul’da doğal dille arayıp etkinlik kartları bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/legacy-readme.md) anlatıyor.
+İstanbul’da doğal dille arayıp etkinlik kartları bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/archive/legacy-readme.md) anlatıyor.
 
 Aynı seansın farklı bilet sitelerindeki kayıtları eşleştirilerek tek kartta fiyatları ve bilet bağlantılarıyla gösterilir. Ham kaynak kayıtları korunur; farklı saat ve mekanlar ayrı kalır. [Eşleştirme kuralları](web/docs/event-merging.md).
 
@@ -35,7 +40,7 @@ Bu işlem liste sayfalarını ve bilinen etkinlik detaylarını yeniden kontrol 
 
 `local:refresh`, sunucunun hazır olmasını bekleyip doğrulanmış raporu korumalı import endpoint'ine gönderir. Başarılı import anında aramaya yansır; veri için yeniden başlatma gerekmez. Kod veya sağlayıcı ayarı değiştiğinde `local:start` komutunu yeniden çalıştır. HMR geliştirme modu ayrıca `npm run local:start -- --dev` ile açılır. Kayıtlar `.wrangler/` altındaki yerel SQLite/D1 içinde yeniden başlatmalar arasında korunur.
 
-Windows'ta PowerShell ile bağımlılıkları kurmak, yerel ayar dosyasını güvenle oluşturmak ve uygulamayı çalıştırmak için [Windows hızlı başlangıç rehberini](docs/windows.md) kullan.
+Windows'ta PowerShell ile bağımlılıkları kurmak, yerel ayar dosyasını güvenle oluşturmak ve uygulamayı çalıştırmak için [Windows hızlı başlangıç rehberini](docs/archive/windows.md) kullan.
 
 ## Şu an ne çalışıyor?
 
@@ -116,7 +121,7 @@ Sayfada iki ayrı reklam alanı ayrılmıştır. Henüz reklam ağı, takip beti
 
 ## Public beta hazırlığı
 
-[GCP dağıtımı ve kalan yayın kapıları](docs/gcp-deployment.md) ana hedeftir; [Cloudflare kurulumu](docs/deployment.md) geri dönüş seçeneği olarak korunur. Deployment iş akışları yalnızca elle başlatılır; PR veya push siteyi yayınlamaz. [Yayın sırası ve kalan doğrulamalar](docs/launch-checklist.md) tamamlanmadan public beta hazır sayılmaz.
+[GCP dağıtımı ve kalan yayın kapıları](docs/gcp-deployment.md) ana hedeftir; [Cloudflare kurulumu](docs/archive/deployment.md) geri dönüş seçeneği olarak korunur. Deployment iş akışları yalnızca elle başlatılır; PR veya push siteyi yayınlamaz. [Yayın sırası ve kalan doğrulamalar](docs/archive/launch-checklist.md) tamamlanmadan public beta hazır sayılmaz.
 
 `/api/health` uygulamanın çalıştığını, `/api/ready` ise kataloğun ve kalıcı toplama checkpoint'inin sağlığını gösterir. İkincisi eksik, 24 saatten eski veya ciddi şekilde küçülmüş katalog/checkpoint için 503 döner. Yerel sunucu D1 yanında yerel R2 deposunu da kalıcı tutar; normal arama checkpoint olmadan çalışır. `collector/publish.mjs --checkpoint` bütün import partileri tamamlandıktan sonra sunucudaki gerçek kayıtların R2 snapshot'ını alır ve geri okuyarak doğrular.
 
