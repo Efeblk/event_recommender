@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
-  stagingPromotionReady,
   successfulCoreChecks,
-  validStagingSource,
 } from '../scripts/deploy-gates.mjs';
 
 const names = [
@@ -57,34 +55,4 @@ await test('rejects an older green check when the latest attempt is not green', 
     successfulCoreChecks({ check_runs: [...base, newerFailure, newestPending] }),
     false,
   );
-});
-
-await test('requires a successful staging deployment run for production', () => {
-  const revision = 'a'.repeat(40);
-  const run = {
-    id: 123,
-    event: 'workflow_dispatch',
-    conclusion: 'success',
-    // workflow_dispatch head_sha identifies the dispatch ref and can differ
-    // from the exact commit_sha explicitly checked out by the workflow.
-    head_sha: 'b'.repeat(40),
-    repository: { full_name: 'owner/repo' },
-    path: '.github/workflows/deploy.yml@refs/heads/master',
-  };
-  const marker = { environment: 'staging', revision, runId: 123 };
-  const expected = { repository: 'owner/repo', revision, runId: '123' };
-  assert.equal(validStagingSource(run, marker, expected), true);
-  assert.equal(validStagingSource({ ...run, conclusion: 'failure' }, marker, expected), false);
-  assert.equal(validStagingSource(run, { ...marker, environment: 'production' }, expected), false);
-  assert.equal(validStagingSource(run, { ...marker, revision: 'c'.repeat(40) }, expected), false);
-  assert.equal(validStagingSource(run, marker, { ...expected, runId: '' }), false);
-});
-
-await test('requires ready staging on the exact candidate revision', () => {
-  const revision = 'a'.repeat(40);
-  const health = { status: 'ok', deployment: { environment: 'staging', revision } };
-  assert.equal(stagingPromotionReady(health, { ready: true }, revision), true);
-  assert.equal(stagingPromotionReady(health, { ready: false }, revision), false);
-  assert.equal(stagingPromotionReady(health, { ready: true }, 'b'.repeat(40)), false);
-  assert.equal(stagingPromotionReady({ ...health, deployment: { ...health.deployment, environment: 'production' } }, { ready: true }, revision), false);
 });

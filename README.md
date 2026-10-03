@@ -1,128 +1,118 @@
-# Bi’ Plan
+# Bi' Plan
 
-Current scope and work order: [v1 product plan](docs/product-plan-v1.md).
-Current system: [v1 architecture](docs/architecture.md).
-The instructions below still include the Cloudflare local runtime.
-Phase 0 will remove that runtime. Use the product plan for release checks.
+Bi' Plan finds Istanbul events from Turkish and English requests.
+Use [the v1 product plan](docs/product-plan-v1.md) for scope and acceptance checks.
+Use [the v1 architecture](docs/architecture.md) for the current data flow.
 
-Yerel önizleme: **http://127.0.0.1:3001**. Aşağıdaki `local:start` komutuyla açılır; bu çalışma yayın yapmaz.
+The application runs on Node in GCP Cloud Run.
+Firestore holds catalog pointers, leases and request limits.
+Private Cloud Storage holds catalog checkpoints and cached vectors.
+The collector supports Biletinial, Bubilet and Biletix.
+PostgreSQL code remains frozen in its current folders. It is outside v1.
 
-İstanbul’da doğal dille arayıp etkinlik kartları bulma uygulaması. Yeni sürüm `web/` altında; eski Python/FalkorDB uygulaması ve React dashboard’u geçiş sırasında referans olarak korunuyor. Eski kurulumu [arşivlenen README](docs/archive/legacy-readme.md) anlatıyor.
+## Install
 
-Aynı seansın farklı bilet sitelerindeki kayıtları eşleştirilerek tek kartta fiyatları ve bilet bağlantılarıyla gösterilir. Ham kaynak kayıtları korunur; farklı saat ve mekanlar ayrı kalır. [Eşleştirme kuralları](web/docs/event-merging.md).
-
-## Yerel çalıştırma
-
-Node **22.13+** gerekir. Proje kökünde bağımlılıkları kur:
+Use Node from `web/.nvmrc`. Both packages require Node >=22.13.
 
 ```sh
 npm ci --prefix web
 npm ci --prefix collector
 ```
 
-İlk terminalde önizlemeyi başlat:
+## Local preview
 
 ```sh
 cd web
 npm run local:start
 ```
 
-**http://127.0.0.1:3001** adresini aç. Bu komut uygulamayı derler ve kalıcı yerel D1 ile çalıştırır; hiçbir şeyi yayına göndermez. API anahtarı olmadan tarih, bütçe, kategori ve kelime eşleşmesi çalışır. İkinci terminalde güncel veri toplayıp çalışan uygulamaya aktar:
+Open **http://127.0.0.1:3001**. The command builds and starts the Node server.
+Use `npm run local:start -- --dev` for the development server.
+Local settings load from ignored `web/.env` and `web/.dev.vars`.
+The command creates a local sync token when needed. It does not print the token.
+
+Without GCP storage settings, the page loads but catalog requests remain unavailable.
+`/api/ready` returns 503 in that state. There is no automatic seed catalog.
+Use the offline unit tests and mocked browser suite to test catalog behavior.
+A local server connected to GCP needs explicit settings and application credentials.
+It uses the configured GCP snapshot store. It does not create a local database.
+Use a separate development or staging environment. Keep production resources separate.
+
+For a configured local server, import a validated collector report with:
 
 ```sh
-cd web
-npm run local:refresh -- --collect
+npm run local:refresh -- --report /path/to/report.json
 ```
 
-Bu işlem liste sayfalarını ve bilinen etkinlik detaylarını yeniden kontrol ettiği için birkaç dakika sürebilir. Daha önce üretilmiş başarılı raporu yeniden aktarmak için `npm run local:refresh`; farklı bir rapor için `npm run local:refresh -- --report /tam/yol/report.json` kullan.
+Use `--collect` to collect fresh data first.
+Paid Voyage indexing needs an approved budget before use.
+Never put secrets in chat, Git, a build artifact or a public environment variable.
 
-`local:start` yalnızca `127.0.0.1:3001` adresini dinler. Yoksa rastgele bir `SYNC_TOKEN` üretip Git tarafından yok sayılan `web/.dev.vars` dosyasında saklar; mevcut ayarları korur ve sırrı terminale basmaz. İsteğe bağlı sağlayıcı ayarlarını `.env.example` rehberiyle `.env` veya `.dev.vars` içinde tutabilirsin. Sırlar yalnızca yok sayılan yerel çalışma klasörüne yüklenir; derleme çıktısına eklenmez.
+## Search
 
-`local:refresh`, sunucunun hazır olmasını bekleyip doğrulanmış raporu korumalı import endpoint'ine gönderir. Başarılı import anında aramaya yansır; veri için yeniden başlatma gerekmez. Kod veya sağlayıcı ayarı değiştiğinde `local:start` komutunu yeniden çalıştır. HMR geliştirme modu ayrıca `npm run local:start -- --dev` ile açılır. Kayıtlar `.wrangler/` altındaki yerel SQLite/D1 içinde yeniden başlatmalar arasında korunur.
+Code resolves dates in Europe/Istanbul and checks hard constraints.
+Retrieval combines BM25 word matching with cached Voyage vectors across the eligible catalog.
+TypeSafe Jev checks a shortlist of up to 16 distinct candidates.
+Cards use recorded titles, dates, venues, prices and provider links.
+Each distinct candidate that passes the support threshold can appear.
+Failed providers or missing vectors retain an explicit word-matching fallback.
+Unknown prices and policies do not satisfy hard constraints.
+Provider starting prices do not prove checkout totals or remaining stock.
 
-Windows'ta PowerShell ile bağımlılıkları kurmak, yerel ayar dosyasını güvenle oluşturmak ve uygulamayı çalıştırmak için [Windows hızlı başlangıç rehberini](docs/archive/windows.md) kullan.
+The request state stays in the open browser tab.
+The interface has event cards, a support placeholder and reserved advertising areas.
+There are no user accounts, payments or permanent user profiles.
 
-## Şu an ne çalışıyor?
+Use [merge rules](web/docs/event-merging.md), [Jev checks](web/docs/jev-evaluation.md)
+and [Voyage retrieval](web/docs/voyage-retrieval.md) for implementation details.
 
-- Biletinial, Bubilet ve Biletix’ten doğrulanmış İstanbul konser, tiyatro ve stand-up seansları; afiş, mekân, başlangıç fiyatı, açıklama ve kaynak bağlantısı.
-- Türkçe tarih, kişi başı bütçe ve kategori filtreleri; aramaya devam ederken önceki filtreleri koruma.
-- Aynı prodüksiyonun farklı seanslarını tek öneride toplama; başka seçenekleri isteme.
-- Geçmiş, iptal edilmiş, tükenmiş ve **72 saatten eski kontrol tarihli** kayıtları eleme. Bütçe varken fiyatı bilinmeyen kayıtları eleme. Kaynak fiyatları bilet garantisi değildir.
-- TypeSafe Jev ile adayların isteğe uygunluğunu puanlama; sonuçlarda yalnızca doğrulanmış etkinlik kartları gösterilir. Üretilmiş sohbet yanıtı veya gerekçe yoktur.
-- Konser gibi kategorileri hariç tutma, toplam grup bütçesini kişi başına çevirme, belirsiz koşullarda statik netleştirme durumu.
-- Voyage 4 Large ile anlamsal arama ve kelime sıralaması birleştirilir; Jev kısa aday listesini değerlendirir. Etkinlik vektörleri içerik adresli olarak önbelleğe alınır (yerel/Cloudflare yolunda D1, GCP yolunda özel Cloud Storage anlık görüntüsü); GPU veya graph veritabanı gerekmez.
-- AI kapalıysa veya sağlayıcı başarısızsa açıkça belirtilen kelime/filtre araması. Anahtarsız mod ruh hâlini yorumladığını iddia etmez.
-- Mobil uyumlu arayüz, yüklenme/hata/boş sonuç durumları, klavye ile gönderme (Enter; yeni satır Shift+Enter).
-
-## Veriyi yenileme
+## Collection
 
 ```sh
 cd collector
-npm ci
-npm run collect -- --limit 100
-# Yalnızca tüm liste sayfalarını keşfet; seans/veritabanı güncelleme:
-npm run collect -- --discover-only
+npm run collect -- --max-details 2000 --max-http 6000 --max-minutes 40
 ```
 
-Yeni Crawlee toplayıcısı eski Python scraper'lardan bağımsızdır. Üç kaynağın kaydırmayla yüklenen açık liste isteklerini takip eder, ardından seçilen etkinliklerin seanslarını doğrular, kaynaklar arası kesin eşleşmeleri işaretler ve `web/data/events.json` dosyasını atomik yeniler. Başarısız sayfaların eski kayıtları kendi kontrol zamanı korunarak 72 saate kadar tutulur. Fiyatı/satış durumu belirsiz kayıtlar doğrulanmış bilet gibi gösterilmez.
+The collector retains unfinished coverage for later runs.
+It distinguishes verified, retired, failed, quarantined and unvisited pages.
+Failed pages keep their original check times.
+Collection does not call TypeSafe. Optional Voyage indexing has a separate budget.
 
-[Araç karşılaştırması, kapsam, kalite kuralları ve zamanlama](collector/README.md). Koleksiyon raporu `collector/output/report.json` altında. Günde iki toplama için GitHub iş akışı eklendi; master'a alındığında çalışır. Canlı aktarım hedefi ve sunucu sırrı tanımlanmadığında yalnızca artifact üretir. Canlıya aktarım için korumalı `/api/admin/import` ve `collector/publish.mjs` kullanılır; AI anahtarı gerekmez.
+Use [the collector guide](collector/README.md) and
+[the GCP collector runbook](docs/gcp-collector.md).
+The GCP workflow imports verified records, publishes a complete checkpoint
+and reads it back. Raw provider pages are excluded from workflow artifacts.
+Small JSON reports remain available.
 
-## Jev’i açma
-
-Anahtarsız önizleme çalışmaya devam eder. Jev sıralamasını kullanmak için `web/.dev.vars` içine `TYPESAFE_API_KEY` ekle ve yerel sunucuyu yeniden başlat. Anahtarı sohbete veya Git’e yazma. `TYPESAFE_MODEL` varsayılanı `jev-1.13.0`; eski `AI_API_KEY` / `OPENAI_API_KEY` ayarları öneri akışını açmaz. Kurulum ve değerlendirme: [Jev rehberi](web/docs/jev-evaluation.md).
-
-Akış: **kesin filtreleri yorumla → tüm güncel adayları bul → Voyage anlamsal arama + kelime araması → en fazla 16 farklı prodüksiyon → tek Jev isteği → en fazla 5 etkinlik kartı**. Jev’e özgün istek, kısa kullanıcı arama geçmişi ve adayların kaynak metinleri gönderilir; embedding vektörü gönderilmez. Başlık, fiyat, tarih ve bağlantı her zaman veritabanındaki kayıttan gelir. Genel sohbet modeli çalışmaz.
-
-Jev, dört seviyeli uygunluk ölçeğinde puan verir. Başlangıç politikası en az 2 puan alanları göstermektir; bu eşik Türkçe verilerle henüz kalibre edilmemiştir. Geçerli bir “uygun aday yok” yanıtı boş sonuç olarak kalır. Ağ/sağlayıcı hatasında açıkça belirtilen temel arama gösterilir. Belirsiz bütçe veya tarihte önceki filtreler değiştirilmez; kullanıcı aramasını düzenleyebilir. Doğal dil yorumlama her ifade biçimini desteklemez.
-
-“Ciddi bir oyun” gibi bağlamı açık tiyatro istekleri artık konser adaylarına genişlemez. Çocuk gösterisi istemeyen aramalarda açıklamadaki çocuklara yönelik yaş ve izleyici bilgileri de denetlenir. Aynı kurallar anahtarsız aramada ve sağlayıcı kesintisinde geçerlidir; az sonuç varsa ilgisiz kartlarla tamamlanmaz.
-
-AI etkin öneri istekleri IP başına saatte 20, uygulama genelinde varsayılan günde 100 istekle sınırlıdır (`AI_DAILY_LIMIT`). Bir arama en fazla bir Voyage sorgu embedding çağrısı ve bir Jev çağrısı yapar; 15 saniye zaman aşımı ve sınırlı girdi/çıktı boyutu vardır. Otomatik ücretli tekrar yoktur. Bu sayaç dolar harcama limiti değildir. Arama geçmişi yalnızca açık sekmenin belleğinde tutulur.
-
-[Eski sağlayıcı rehberi](web/docs/providers.md) korunur, fakat aktif öneri yolunu anlatmaz. Eski embedding adaptörleri etkin öneri yolunda kullanılmaz; Voyage için ayrı, içerik adresli bir D1 indeksi bulunur. İlk canlı Jev denemesinde 10 etiketli isteğin ilk sonucu doğru, iki desteksiz tercih isteğinin sonucu boştu. Ciddi yetişkin oyunu isteğinde bazı zayıf ek sonuçlar da eşikten geçti; tüm sonuç listesinin kalitesi henüz doğrulanmış sayılmaz. [Ölçüm raporu](web/evals/reports/2026-09-22-jev-1.13.0.json) 12 çağrı, tokenlar ve gecikmeyi kaydeder. Daha geniş gerçek katalog denemeleri gerekir.
-
-Değerlendirme artık yalnızca ilk sırayı değil, dönen bütün kartların uygunluğunu ölçer. Kayıtlı puanları ağ çağrısı yapmadan tekrar uygulayan denetim, filtre değişikliklerinin bilinen yanlış ek sonuçları engellediğini sınar. Bu denetim yeni bir canlı Jev ölçümü değildir; eşik ve modelin Türkçe kalitesi için daha geniş örnekler gerekir.
-
-## Voyage anlamsal arama
-
-`web/.dev.vars` dosyasına `VOYAGE_API_KEY` ekleyip sunucuyu yeniden başlat. Varsayılan model `voyage-4-large`, boyut 1024. Sonra önce `npm run embeddings:index --prefix web -- --origin http://127.0.0.1:3001 --allow-loopback-http` ile kapsamı kontrol et; `--live` eklemek eksik etkinlik vektörlerini oluşturur ve Voyage kotasını kullanır. Tam kurulum ve sınırlar: [Voyage rehberi](web/docs/voyage-retrieval.md).
-
-Sorgu embedding’i bütün uygun katalog üzerinde karşılaştırılır; 1.000 seans kesintisi kaldırılmıştır. İndeks eksikse veya Voyage erişilemiyorsa kelime araması devreye girer ve bu durum kullanıcıya belirtilir. “Biraz gülelim” gibi tercihler yalnızca stand-up filtresine dönüştürülmez. Yeni veya değişen içerik indekslenir; yalnızca tarih/fiyat/güncellik değişmesi yeniden embedding gerektirmez. `local:refresh -- --collect --index` ve `INDEX_EMBEDDINGS=true` ile koleksiyon sonrası indeksleme isteğe bağlı açılır.
-
-## Kontroller
+## Verification
 
 ```sh
 cd web
 npm test
 npm run typecheck
 npm run lint
-npm run build
-npm run test:smoke
+npm run test:deploy-config
+npm run test:deploy:gcp
+npm run build:node
+npm run test:smoke:node
 ```
 
-Testler tarih/saat dilimi sınırlarını, fiyatı bilinmeyen ve eski kayıtları, kaynak ayrıştırmayı, yinelenen seansları, alternatif önerileri, AI kesintisini ve uydurma ID’lerin elenmesini kapsar. Otomatik testler kontrollü sağlayıcı yanıtları kullanır ve ücretli API çağrısı yapmaz. Ayrıca kullanıcı onayıyla 12 örnek üzerinde bir canlı Jev değerlendirmesi kaydedilmiştir.
+After the build, use `BIPLAN_BROWSER_START=1 npm run test:browser`.
+In PowerShell, set `$env:BIPLAN_BROWSER_START = '1'` first.
+The browser suite uses mocked API responses and has no cloud or AI credentials.
+Run `npm test` in `collector/` for collector changes.
+CI also checks the Linux Docker image.
 
-GitHub Actions, `master` için her PR'da ve `master` push'larında bu kontrolleri çalıştırır. Smoke kontrolü derlenen Worker'ı geçici bir D1 veritabanıyla açar; sayfa, anahtarsız API, geçersiz istek ve yönetici erişim korumasını doğrular. Yerel sırları ve mevcut veritabanını kullanmaz. Eski Python testleri ayrı CI iş akışında korunur.
+`npm run build`, `npm run start` and `npm run test:smoke`
+are aliases for the Node commands. They do not run Cloudflare.
 
-## Yayın
+## Staging
 
-Seçilen GCP hedefinde yeni uygulama Node.js kapsayıcısı olarak Cloud Run’da çalışır; Firestore koordinasyon, özel Cloud Storage katalog/checkpoint/vektör anlık görüntüleri için kullanılır. Mevcut Cloudflare Worker + D1 + R2 dağıtımı karşılaştırma ve geri dönüş seçeneği olarak korunur. GPU, FalkorDB veya Python servisi gerekmez. `.openai/hosting.json` Sites yayın bağlantısını tutar. Sunucu sırları bu dosyaya veya Git’e yazılmaz. `SITE_URL` güvenilir yayın kökü olmalı (sosyal önizleme bağlantıları için).
+Use [the GCP deployment runbook](docs/gcp-deployment.md).
+Staging is private. The product plan permits staging deploys and gate approval.
+Public access and new paid resources need user approval.
+`/api/health` checks the application. `/api/ready` checks catalog readiness.
 
-`db/schema.ts` şema kaynağıdır; değişiklik sonrası `npm run db:generate` ile SQL üret. Migration’lar `drizzle/` altında sürümlenir. Çalışma sırasında ilk açılışta doğrulanmış başlangıç seçkisi veritabanına aktarılır.
-
-Henüz kapsam dışı: kullanıcı hesapları, kalıcı kişisel zevk profili, favoriler, ödeme/bilet satışı, tüm Türkiye ve eksiksiz şehir kapsamı. Eski `src/`, `frontend/` ve `tests/` yeni uygulamanın çalışma bağımlılığı değildir.
-
-## Destek ve reklam alanları
-
-Ana sayfa doğal dil arama çubuğu, önerilen etkinlikler ve projeye destek bölümü içerir. Bağış sayfasının HTTPS adresini `web/.env` veya `web/.dev.vars` içine `DONATION_URL` olarak ekleyip yerel sunucuyu yeniden başlat. Bağlantı tanımlanana kadar destek bölümü “yakında” durumunda kalır; ödeme alınmaz. `/api/site` yalnızca bu herkese açık bağlantıyı döndürür.
-
-Sayfada iki ayrı reklam alanı ayrılmıştır. Henüz reklam ağı, takip betiği veya reklam isteği yoktur. Bu alanlar ileride reklam içeriğiyle doldurulabilir.
-
-## Public beta hazırlığı
-
-[GCP dağıtımı ve kalan yayın kapıları](docs/gcp-deployment.md) ana hedeftir; [Cloudflare kurulumu](docs/archive/deployment.md) geri dönüş seçeneği olarak korunur. Deployment iş akışları yalnızca elle başlatılır; PR veya push siteyi yayınlamaz. [Yayın sırası ve kalan doğrulamalar](docs/archive/launch-checklist.md) tamamlanmadan public beta hazır sayılmaz.
-
-`/api/health` uygulamanın çalıştığını, `/api/ready` ise kataloğun ve kalıcı toplama checkpoint'inin sağlığını gösterir. İkincisi eksik, 24 saatten eski veya ciddi şekilde küçülmüş katalog/checkpoint için 503 döner. Yerel sunucu D1 yanında yerel R2 deposunu da kalıcı tutar; normal arama checkpoint olmadan çalışır. `collector/publish.mjs --checkpoint` bütün import partileri tamamlandıktan sonra sunucudaki gerçek kayıtların R2 snapshot'ını alır ve geri okuyarak doğrular.
-
-[Jev değerlendirmesi](web/docs/jev-evaluation.md), 12 Türkçe örnekle aday kapsamını, sıralamayı, boş sonuç davranışını, gecikmeyi ve token tüketimini ölçer. Varsayılan test API çağrısı yapmaz. Jev öneri akışına bağlanmıştır; anahtar olmadan temel arama çalışır. Gerçek sağlayıcı kalitesi ayrıca ölçülmelidir.
+[Archived documents](docs/archive/) preserve earlier plans and evidence.
+The [legacy README](docs/archive/legacy-readme.md) describes the old Python application.
+The old Python and dashboard code do not run the v1 application.

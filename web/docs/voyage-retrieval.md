@@ -42,9 +42,18 @@ by default to fit lower-rate provider tiers. Set `--index-interval-ms` to an
 integer from 0 through 60000; use `0` only when the configured account permits
 unpaced batches.
 
-The script reads the local sync token only for a loopback destination. Remote use requires `BIPLAN_URL` and `SYNC_TOKEN`; the Voyage key stays on the server. GET `/api/admin/embeddings` reports eligible sessions, unique documents, indexed documents and pending documents. POST indexes at most 32 pending documents under a lease. Both require the sync token. The driver stops on failure without automatic retries and has a bounded batch count. `--interval-ms` accepts 0–60000 milliseconds and waits only between successful batches; use pacing that fits the [Voyage API rate limits](https://www.mongodb.com/docs/voyageai/api-reference/overview/) for the account tier. Scheduled collection can opt in through the `INDEX_EMBEDDINGS=true` GitHub environment variable; indexing occurs after the canonical collection checkpoint is saved.
+The script reads the local sync token only for a loopback destination.
+Remote use requires `BIPLAN_URL` and `SYNC_TOKEN`. The Voyage key stays on the server.
+GET `/api/admin/embeddings` reports eligible sessions and vector coverage.
+POST indexes at most 32 pending documents under a lease. Both require the sync token.
+The driver stops on failure without automatic retries. It has a bounded batch count.
+`--interval-ms` accepts 0–60000 milliseconds between successful batches.
+Use pacing that fits the [Voyage API rate limits](https://www.mongodb.com/docs/voyageai/api-reference/overview/).
+Scheduled GCP indexing requires `GCP_STAGING_INDEXING_ENABLED=true` and a separate
+approved window and call budget. See [the GCP collector runbook](../../docs/gcp-collector.md).
+Indexing runs after the catalog checkpoint is published.
 
-Document vectors live in a separate D1 table, keyed by the provider/model/dimension/text-profile identity and a SHA-256 content hash. Identical event text shares vectors across sessions. Title, category, venue and description are embedded; price, date, availability and checked-at timestamps stay structured. Freshness-only updates do not trigger re-embedding. Changed text or model settings create cache misses; incompatible vectors are never silently reused. Obsolete cached content is not retrieved but currently remains stored; cache pruning is future maintenance.
+Document vectors live in a private Cloud Storage snapshot, keyed by the provider/model/dimension/text-profile identity and a SHA-256 content hash. Identical event text shares vectors across sessions. Title, category, venue and description are embedded; price, date, availability and checked-at timestamps stay structured. Freshness-only updates do not trigger re-embedding. Changed text or model settings create cache misses; incompatible vectors are never silently reused. Obsolete cached content is not retrieved but currently remains stored; cache pruning is future maintenance.
 
 ## Failures and limits
 
@@ -52,7 +61,7 @@ No Voyage key means keyword retrieval. An empty index avoids a wasted query call
 
 `AI_DAILY_LIMIT` limits AI-enabled recommendation requests when either provider is configured, including attempts that ultimately need no provider call. It is not an exact billable-call or dollar limit. Authenticated document indexing is separate from that counter and bounded by the indexing driver's batch limit.
 
-Tests cover mocked embedding transport, semantic candidates beyond the old shortlist, missing-index/outage behavior, exact-name keyword coverage, duplicate productions, all-catalog pagination and cache validity. The previous 12-case saved-score Jev replay remains a keyword-path regression test; it does not validate Voyage quality. Evaluate real Turkish mood requests, negation and follow-ups on held-out catalog labels, compare shortlist recall at 16/32, and measure Worker latency before public release. No embedding model or dimension setting is declared quality-optimal from mock tests.
+Tests cover mocked embedding transport, semantic candidates beyond the old shortlist, missing-index/outage behavior, exact-name keyword coverage, duplicate productions, all-catalog pagination and cache validity. The previous 12-case saved-score Jev replay remains a keyword-path regression test; it does not validate Voyage quality. Evaluate real Turkish mood requests, negation and follow-ups on held-out catalog labels, compare shortlist recall at 16/32, and measure staging latency before public release. No embedding model or dimension setting is declared quality-optimal from mock tests.
 
 ## Mandatory evidence and language limits
 

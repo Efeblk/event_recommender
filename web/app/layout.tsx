@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { env } from 'cloudflare:workers';
+import { env } from '../lib/runtime-env.node.ts';
 
 export const metadata: Metadata = {
   metadataBase: new URL(

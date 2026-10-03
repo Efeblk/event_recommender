@@ -159,5 +159,15 @@ assert.match(collectorWorkflow, /\*\)[\s\S]*exit "\$status"/);
 assert.doesNotMatch(collectorWorkflow, /continue-on-error/);
 assert.match(collectorWorkflow, /if: always\(\) && steps\.publish\.outcome == 'success'/);
 assert.match(collectorWorkflow, /collection-embedding-index\.jsonl\*/);
+assert.doesNotMatch(collectorWorkflow, /Prepare replacement PostgreSQL|GCP_STAGING_PIPELINE_ENABLED|BIPLAN_PIPELINE_PG/);
+const artifactPaths = collectorWorkflow.slice(collectorWorkflow.indexOf('name: Save normalized data'));
+assert.doesNotMatch(artifactPaths, /collector\/state\/raw(?:\/|\s)|collector\/output\/(?:html|raw)(?:\/|\s)/);
+const publicPaths = artifactPaths.split('path: |')[1]?.split('if-no-files-found:')[0]
+  .split('\n').map(line => line.trim()).filter(Boolean);
+assert.ok(publicPaths?.length, 'Collection artifact paths must be explicit.');
+for (const path of publicPaths) {
+  assert.ok(/^collector\/(?:output|state)\/[a-z-]+\.json$/.test(path) ||
+    path === 'web/work/collection-embedding-index.jsonl*', 'Only explicit JSON reports can be public artifacts.');
+}
 
 console.log('GCP staging deployment configuration is structurally valid.');

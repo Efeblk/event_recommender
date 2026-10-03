@@ -1,1 +1,0 @@
-CREATE INDEX `idx_request_limits_expires_at` ON `request_limits` (`expires_at`);
