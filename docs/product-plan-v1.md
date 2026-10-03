@@ -253,3 +253,28 @@ checks still pass, and the per-request cost does not increase without approval.
   browser test were skipped. All 130 documentation links resolve. No paid calls.
   The accepted AGENTS.md policies remain. The file now has 61 lines.
   CI, staging deploy, collection and readiness checks are pending.
+- 2026-10-04: PR 46 merged as `a0aaf5d`. All seven checks passed on `3df6ba1`.
+  The merge has the same Git tree. The local and remote PR branch are deleted.
+  [CI](https://github.com/Efeblk/event_recommender/actions/runs/37157806177) and
+  [Bi Plan](https://github.com/Efeblk/event_recommender/actions/runs/37157806178)
+  passed on `master` at `a0aaf5d`.
+- 2026-10-04: [Staging deploy 37158069593](https://github.com/Efeblk/event_recommender/actions/runs/37158069593)
+  succeeded on `a0aaf5d`. The verified image runs as `biplan-staging-00036-jpq`.
+  The deployment artifact preserves the image digest and source revision.
+  `/api/ready` returned 200 at `2026-10-03T22:25:25.021Z`, with 8,724 eligible
+  events and no pending search publication. Staging remains private.
+  The T3 Code browser loaded the live catalog. All six home cards matched their
+  nine stored provider observations. The cards were distinct. No paid calls.
+- 2026-10-04: [Collection 37157847678](https://github.com/Efeblk/event_recommender/actions/runs/37157847678)
+  succeeded on `a0aaf5d`. Canonical readback passed. The durable checkpoint has
+  14,559 source records. The report lists 4,315 refreshed pages, 150 failed pages
+  and 5 quarantines. Provider coverage remains partial.
+  Artifact `11287985394` contains 10 JSON/JSONL files and no raw page files.
+  The publication receipt and source report remain in the run artifact.
+  Indexing was disabled: zero requests and zero attempts.
+- 2026-10-04: Final `/api/ready` returned 200 at `2026-10-03T23:15:33.943Z`.
+  It reported 8,847 eligible events and no pending search publication.
+  Its checkpoint time matches collection `37157847678` at
+  `2026-10-03T22:56:52.970Z`. All Phase 0 acceptance checks passed.
+  This status update changes documentation only. Keep the verified staging image
+  from `a0aaf5d`; its runtime contents are unchanged. No paid AI calls.
