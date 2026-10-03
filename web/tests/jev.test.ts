@@ -81,6 +81,7 @@ await test('Jev criteria require program and audience fit for partner outings', 
     [childDirected],
   );
   const criteria = body.questions.candidate_0.criteria;
+  assert.ok(Array.isArray(criteria));
   assert.match(criteria[1], /program and intended audience are a weak fit/);
   assert.match(
     criteria[1],

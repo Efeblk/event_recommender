@@ -9,6 +9,12 @@ Optimize token usage by matching the model and scope to the task.
 
 These are model-selection defaults for sessions. This file does not change the model of an already running agent; apply them through the available model-selection controls.
 
+## Communication
+
+- Use ASD-STE100 Simplified Technical English for all explanations from now on. This includes progress updates, final responses, and explanations in project documents.
+- Use short sentences and active voice. Give one instruction in each sentence. Use the same term for the same thing.
+- Keep technical names, commands, code, paths, and quoted source text exact. Explain a necessary technical term when you first use it.
+
 ## Development priorities
 
 - This project is still in development. Everything can be rewritten or replaced, including application code, architecture, database schemas and contents, preparation pipelines, and deployments, when doing so produces a better working system and workflow.

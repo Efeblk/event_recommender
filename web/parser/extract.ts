@@ -6,19 +6,21 @@
 import type { Category, LocationPrecision } from './contract.ts';
 import {
   CATEGORY_TERMS, COMPANION_TERMS, CONTENT_TERMS, CURRENCIES, DISTRICTS, EXPERIENCE_TERMS, fold, MONTHS,
-  NEIGHBORHOODS, NUMBER_WORDS, OUTSIDE_ISTANBUL, SIDES, TOPIC_TERMS, WEEKDAYS,
+  MOOD_TERMS, NEIGHBORHOODS, NUMBER_WORDS, OUTSIDE_ISTANBUL, SIDES, TOPIC_TERMS, WEEKDAYS,
 } from './lexicon.ts';
 import type { Proposal } from './gliner.ts';
 
-export type MentionKind = 'amount' | 'date' | 'time' | 'party' | 'companion' | 'location' | 'outside_location'
+export type MentionKind = 'amount' | 'date' | 'time' | 'party' | 'age' | 'mood' | 'companion' | 'location' | 'outside_location'
   | 'category' | 'topic' | 'experience' | 'content' | 'open_condition';
 
 interface Base { id: string; start: number; end: number; text: string }
 export type Mention = Base & (
   | { kind: 'amount'; amount: number; currency: 'TRY' | 'OTHER' }
   | { kind: 'date'; from: string; to: string; past: boolean; alternatives?: Array<{ from: string; to: string }> }
-  | { kind: 'time'; clock: string }
+  | { kind: 'time'; clock: string; until?: string }
   | { kind: 'party'; count: number }
+  | { kind: 'age'; years: number }
+  | { kind: 'mood'; value: 'calm' | 'intimate' }
   | { kind: 'companion'; value: 'partner' | 'friends' | 'family' | 'children' }
   | { kind: 'location'; name: string; precision: LocationPrecision }
   | { kind: 'outside_location'; name: string }
@@ -301,6 +303,33 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
     }
   }
 
+  // Named periods use explicit local-clock bounds. A relative date can own
+  // the same phrase ("bu akşam", "tonight"); retain both date and clock.
+  const periods: Array<[string, string, string]> = [
+    ['aksam|evening|tonight', '18:00', '23:59'],
+    ['sabah|morning', '06:00', '11:59'],
+    ['ogleden sonra|afternoon', '12:00', '17:59'],
+  ];
+  for (const [terms, clock, until] of periods) {
+    for (const m of f.matchAll(new RegExp(`${B}(?:${terms})(?:'?(?:leyin|lari|larinda|ki|da|de))?${E}`, 'gu'))) {
+      const start = m.index!, end = start + m[0].length;
+      const overlaps = drafts.filter(d => d.start < end && start < d.end);
+      // An explicit clock ("akşam 7") already resolves the period. Do not
+      // intersect it with an implied upper bound or reinterpret source names.
+      if (overlaps.some(d => d.kind !== 'date')) continue;
+      const draft: Draft = { kind: 'time', clock, until, ...span(start, end) };
+      if (overlaps.length) drafts.push(draft); else add(draft);
+    }
+  }
+
+  // Attendee ages are exact values, not a generic "children" companion.
+  const ageRe = new RegExp(`${B}(${NUM})[\\s-]*(?:yas(?:indaki|inda|indayim|indayiz)?|years?[\\s-]*old|y[\\s/]o)${E}`, 'gu');
+  for (const m of f.matchAll(ageRe)) {
+    const years = parseNumber(m[1]);
+    if (years !== null && Number.isInteger(years) && years >= 0 && years <= 120)
+      add({ kind: 'age', years, ...span(m.index!, m.index! + m[0].length) });
+  }
+
   // --- Party size: "dört kişiyiz", "4 kişi", "three people", "four of us", "üçümüz".
   const partyRes = [
     new RegExp(`${B}(${NUM})\\s*(?:yetiskin|adults?)\\s*(?:,|ve|and|\\+|&)?\\s*(${NUM})\\s*(?:cocuk|child|children|kids?)${E}`, 'gu'),
@@ -324,12 +353,22 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
     for (const [key, terms] of Object.entries(table) as Array<[K, string[]]>) for (const term of terms) vocab.push([term, (s, e) => make(key, s, e)]);
   };
   push(EXPERIENCE_TERMS, (value, s, e) => ({ kind: 'experience', value, ...span(s, e) }));
+  push(MOOD_TERMS, (value, s, e) => ({ kind: 'mood', value, ...span(s, e) }));
   push(CONTENT_TERMS, (value, s, e) => ({ kind: 'content', value: value as 'profanity', ...span(s, e) }));
   push(COMPANION_TERMS, (value, s, e) => ({ kind: 'companion', value: value as 'partner', ...span(s, e) }));
   push(CATEGORY_TERMS, (value, s, e) => ({ kind: 'category', value, ...span(s, e) }));
   push(TOPIC_TERMS, (value, s, e) => ({ kind: 'topic', value, ...span(s, e) }));
   vocab.sort((a, b) => b[0].length - a[0].length);
-  for (const [term, make] of vocab) for (const m of f.matchAll(termRegex(term))) add(make(m.index!, m.index! + m[0].length));
+  for (const [term, make] of vocab) for (const m of f.matchAll(termRegex(term))) {
+    const draft = make(m.index!, m.index! + m[0].length);
+    if (draft.kind === 'category' && draft.value === 'tour' && term === 'tur') {
+      // Preserve the original spelling: Turkish tür means type, not tour.
+      // ASCII "tur fark etmez" is also a generic type-indifference phrase;
+      // an actual "tur istiyorum" or "gezi turu" still proposes a tour.
+      if (/^tür/iu.test(draft.text) || /^\s+fark\s+etmez\b/u.test(f.slice(draft.end))) continue;
+    }
+    add(draft);
+  }
 
   // --- Bare amounts with spending context but no currency ("bütçe 800", "800'ün altında").
   for (const m of f.matchAll(new RegExp(`${B}(\\d{2,6}(?:[.,]\\d{3})?)(?:'?[a-z]{0,6})?${E}`, 'gu'))) {

@@ -1063,6 +1063,16 @@ const stop = new Set([
   'hafta',
   'sonu',
 ]);
+type RankingTextFields = Pick<EventRecord, 'title' | 'description' | 'venue' | 'category'>;
+const rankingTextCache = new WeakMap<EventRecord, RankingTextFields & { text: string }>();
+function rankingText(event: EventRecord): string {
+  const cached = rankingTextCache.get(event);
+  if (cached && cached.title === event.title && cached.description === event.description && cached.venue === event.venue && cached.category === event.category)
+    return cached.text;
+  const text = normalize(`${event.title} ${event.description} ${event.venue} ${event.category}`);
+  rankingTextCache.set(event, { title: event.title, description: event.description, venue: event.venue, category: event.category, text });
+  return text;
+}
 export function rankEvents(
   events: EventRecord[],
   query: string,
@@ -1074,9 +1084,7 @@ export function rankEvents(
     .filter((t) => t.length > 2 && !stop.has(t));
   return events
     .map((e) => {
-      const text = normalize(
-        e.title + ' ' + e.description + ' ' + e.venue + ' ' + e.category,
-      );
+      const text = rankingText(e);
       const lexical =
         tokens.reduce((sum, t) => sum + (text.includes(t) ? 1 : 0), 0) /
         Math.max(tokens.length, 1);

@@ -322,7 +322,7 @@ function strongPolicies(event: EventRecord): Set<StrongPolicy> {
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/ı/g, 'i');
-  const text = normalize(`${event.title} ${event.description}`);
+  const text = raw.replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
   const title = normalize(event.title);
   const result = new Set<StrongPolicy>();
   const childRange = [...text.matchAll(/\b(\d{1,2})\s+(?:ile\s+)?(\d{1,2})\s*yas\b/g)]
@@ -353,11 +353,12 @@ function strongPolicies(event: EventRecord): Set<StrongPolicy> {
   return result;
 }
 
-function conflictingPolicyDimension(members: EventRecord[]):
+function conflictingPolicyDimension(members: EventRecord[], policiesFor = strongPolicies):
   | ['audience', StrongPolicy, StrongPolicy]
   | ['format', StrongPolicy, StrongPolicy]
   | null {
-  const policies = members.map(strongPolicies);
+  if (members.length < 2) return null;
+  const policies = members.map(policiesFor);
   if (policies.some((set) => set.has('child-only')) && policies.some((set) => set.has('adult-only')))
     return ['audience', 'child-only', 'adult-only'];
   if (policies.some((set) => set.has('workshop')) && policies.some((set) => set.has('performance')))
@@ -544,6 +545,14 @@ export function eventSessionIdentityKey(event: EventRecord): string {
 
 /** Conservatively combines listings that describe the exact same performance. */
 export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
+  // Request-local reuse only: changes to descriptions/policies in a later
+  // catalog read are always evaluated again.
+  const policyCache = new Map<EventRecord, Set<StrongPolicy>>();
+  const policiesFor = (event: EventRecord) => {
+    let policies = policyCache.get(event);
+    if (!policies) { policies = strongPolicies(event); policyCache.set(event, policies); }
+    return policies;
+  };
   const candidateGroups = new Map<string, EventRecord[]>();
   for (const event of events) {
     const key = eventSessionIdentityKey(event);
@@ -554,13 +563,13 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
 
   const groups = new Map<string, EventRecord[]>();
   for (const [key, members] of candidateGroups) {
-    const conflict = conflictingPolicyDimension(members);
+    const conflict = conflictingPolicyDimension(members, policiesFor);
     for (const member of members) {
-      const policies = strongPolicies(member);
+      const policies = conflict ? policiesFor(member) : undefined;
       const policy = conflict
-        ? policies.has(conflict[1])
+        ? policies!.has(conflict[1])
           ? conflict[1]
-          : policies.has(conflict[2])
+          : policies!.has(conflict[2])
             ? conflict[2]
             : `unspecified-${member.id}`
         : 'compatible';
@@ -606,11 +615,11 @@ export function mergeEventSessions(events: EventRecord[]): EventRecord[] {
                 value.title,
                 value.city,
                 value.venue,
-                [...strongPolicies(representative)].sort().join('|'),
+                [...policiesFor(representative)].sort().join('|'),
               ].join('\u001f'),
             )
           : undefined;
-      const showIdentity = displayShowIdentity(representative);
+      const showIdentity = cachedDisplayShowIdentity(representative, policiesFor(representative));
       const canonicalShowKey = showIdentity
         ? hash('show', showIdentity)
         : undefined;
@@ -663,12 +672,15 @@ const sameDisplayFields = (event: EventRecord, cached: DisplayIdentityFields) =>
 
 /** Stable display identity for clear show titles; generic listings stay distinct. */
 export function displayShowIdentity(event: EventRecord): string | undefined {
+  return cachedDisplayShowIdentity(event);
+}
+function cachedDisplayShowIdentity(event: EventRecord, policies?: ReadonlySet<StrongPolicy>): string | undefined {
   const source = displayIdentitySource.get(event) ?? event;
   const cached = displayIdentityCache.get(source);
   if (cached && sameDisplayFields(event,cached)) return cached.identity;
   const title = identityTitle(event);
   const identity = !title || GENERIC_SHOW_TITLES.has(title) ? undefined :
-    [normalize(event.city), event.category, title, [...strongPolicies(event)].sort().join('|')].join('\u001f');
+    [normalize(event.city), event.category, title, [...(policies ?? strongPolicies(event))].sort().join('|')].join('\u001f');
   displayIdentityCache.set(source,{...displayFields(event),identity});
   return identity;
 }

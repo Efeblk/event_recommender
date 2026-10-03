@@ -28,7 +28,7 @@ export type ParseResult =
 export interface Debug { mentions: Mention[]; answers: Record<string, string>; usage?: JevResponse['usage'] }
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const KIND_ORDER = ['date', 'time', 'location', 'party', 'companion', 'topic', 'experience', 'content', 'category', 'budget'];
+const KIND_ORDER = ['date', 'time', 'location', 'party', 'age', 'companion', 'topic', 'mood', 'experience', 'content', 'category', 'budget'];
 
 /** Terms that name the opposite of the canonical experience (excluding them asserts the experience). */
 const SUBJECTIVE_EXPERIENCES = new Set(['romantic']);
@@ -55,6 +55,8 @@ function describeAtom(atom: Atom): string {
     case 'time': return `start time${atom.from ? ` ${atom.fromExclusive ? 'after' : 'from'} ${atom.from}` : ''}${atom.to ? ` ${atom.toExclusive ? 'before' : 'until'} ${atom.to}` : ''}`;
     case 'location': return `location ${atom.name}`;
     case 'party': return `${atom.count} people attending`;
+    case 'age': return `suitable for an attendee aged ${atom.years}`;
+    case 'mood': return `outing preference: ${atom.value}`;
     case 'companion': return `attending with ${atom.value}`;
     case 'category': return `event type ${atom.value}`;
     case 'topic': return `topic ${atom.value}`;
@@ -77,8 +79,10 @@ function mentionMeaning(m: Mention): string {
   switch (m.kind) {
     case 'amount': return `money amount ${m.amount} ${m.currency === 'TRY' ? 'TL' : '(non-TL currency)'}`;
     case 'date': return m.alternatives ? `date: ${m.alternatives.map((a) => a.from).join(' or ')}` : m.from === m.to ? `date ${m.from} (${WEEKDAY_NAMES[new Date(`${m.from}T12:00:00Z`).getUTCDay()]})` : `dates ${m.from} to ${m.to}`;
-    case 'time': return `clock time ${m.clock}`;
+    case 'time': return m.until ? `local start time ${m.clock} to ${m.until}` : `clock time ${m.clock}`;
     case 'party': return `${m.count} people`;
+    case 'age': return `attendee age: ${m.years} years`;
+    case 'mood': return `outing mood preference: ${m.value}, not a venue guarantee`;
     case 'companion': return `companion: ${m.value}`;
     case 'location': return `Istanbul ${m.precision} ${m.name}`;
     case 'outside_location': return `place outside Istanbul: ${m.name}`;
@@ -93,7 +97,7 @@ function mentionMeaning(m: Mention): string {
   }
 }
 
-const SUPPORTED = 'The search can check only: Istanbul districts and neighbourhoods; the European (Avrupa) or Asian (Anadolu) side of Istanbul; calendar dates (today or later); start-time bounds; ticket price limits in Turkish lira (per person, per ticket, or group total); number of attendees; companions (partner, friends, family, children); event types (concert, theatre, stand-up, workshop, exhibition, festival, sport, cinema, talk, dance, show, course, tour, museum); topics or genres; quiet, seated, outdoors, wheelchair access, family-friendly, uncrowded, romantic, beginner-friendly; absence of profanity or sexual content; and sorting by soonest, cheapest or nearest.';
+const SUPPORTED = 'The search can check only: Istanbul districts and neighbourhoods; the European (Avrupa) or Asian (Anadolu) side of Istanbul; calendar dates (today or later); start-time bounds including morning, afternoon and evening; ticket price limits in Turkish lira (per person, per ticket, or group total); number and exact ages of attendees; companions (partner, friends, family, children); event types (concert, theatre, stand-up, workshop, exhibition, festival, sport, cinema, talk, dance, show, course, tour, museum); topics or genres; quiet, seated, outdoors, wheelchair access, family-friendly, uncrowded, romantic, beginner-friendly; calm and intimate outing preferences (not venue guarantees); absence of profanity or sexual content; and sorting by soonest, cheapest or nearest. Asking for other options preserves the existing conditions.';
 
 const choice = (instructions: unknown, criteria: Record<string, string>): Question => ({ type: 'choice', instructions, criteria });
 
@@ -203,7 +207,14 @@ export function buildRequest(input: ParserInput, proposals: Proposal[] = []) {
         },
       );
     }
-    if (m.kind === 'time') {
+    if (m.kind === 'mood') {
+      questions[`mandatory_mood_${m.id}`] = {
+        type: 'noul',
+        instructions: { question: `Does \`message\` make \`${path}.text\` a concrete mandatory venue/environment guarantee, rather than a mood or format preference for the outing?`,
+          examples: ['"sakin, samimi bir akşam" and "a calm evening" are outing preferences.', '"kesinlikle sakin/sessiz bir ortam şart" and "the venue must be quiet" require a quiet environment.'] },
+      };
+    }
+    if (m.kind === 'time' && !m.until) {
       questions[`clock_${m.id}`] = choice(
         { question: `How does the user bound event start times with \`${path}.text\`?` },
         {
@@ -224,7 +235,7 @@ export function buildRequest(input: ParserInput, proposals: Proposal[] = []) {
     const neighbours = new Set([i + 1, mentions.findIndex((m, k) => k > i && m.kind === a.kind)]);
     for (const j of neighbours) {
       if (j < 0) continue;
-      if (!['category', 'location', 'topic', 'companion', 'date', 'experience', 'time'].includes(a.kind) || !['category', 'location', 'topic', 'companion', 'date', 'experience', 'time'].includes(mentions[j].kind)) continue;
+      if (!['category', 'location', 'topic', 'companion', 'date', 'experience', 'mood', 'time'].includes(a.kind) || !['category', 'location', 'topic', 'companion', 'date', 'experience', 'mood', 'time'].includes(mentions[j].kind)) continue;
       // Different kinds only coordinate across an explicit alternative connector, not adjective attachment.
       const gap = fold(input.utterance.slice(a.end, mentions[j].start));
       if (a.kind !== mentions[j].kind && !/\b(?:or|veya|ya da)\b/u.test(gap)) continue;
@@ -362,6 +373,7 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
   const unsupported = mentions.filter((m) => (m.kind === 'amount' && m.currency === 'OTHER' && wanted(m))
     || (m.kind === 'outside_location' && ['require', 'prefer'].includes(role(m)))
     || (m.kind === 'date' && m.past && ['require', 'prefer'].includes(role(m)))
+    || (m.kind === 'mood' && m.value === 'intimate' && ['require', 'exclude'].includes(role(m)) && noul(`mandatory_mood_${m.id}`) >= 0.5)
     // Open-vocabulary conditions matter only when mandatory and outside the supported vocabulary.
     || (m.kind === 'open_condition' && ['require', 'exclude'].includes(role(m)) && noul(`supported_${m.id}`) < 0.5));
   // No supported condition is expressed as a percentage (occupancy, ratings, discounts).
@@ -490,12 +502,15 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
       return { kind: 'date', from: alt.from, to: alt.to };
     }
     if (m.kind === 'time') {
+      if (m.until) return { kind: 'time', from: m.clock, to: m.until };
       const c = pick(`clock_${m.id}`)!;
       return { kind: 'time',
         ...(['after', 'from', 'range_start', 'at'].includes(c) ? { from: m.clock, ...(c === 'after' ? { fromExclusive: true } : {}) } : {}),
         ...(['before', 'until', 'range_end', 'at'].includes(c) ? { to: m.clock, ...(c === 'before' ? { toExclusive: true } : {}) } : {}),
       };
     }
+    if (m.kind === 'mood' && m.value === 'calm' && noul(`mandatory_mood_${m.id}`) >= 0.5)
+      return { kind: 'experience', value: 'quiet' };
     return mentionAtom(m);
   };
 
@@ -581,7 +596,7 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
           if (atom?.kind === 'budget' && old.kind === 'budget' && (pick(`cmp_${m.id}`) === 'unchanged' || ((cmp.lte ?? 0) < 0.5 && Math.max(...Object.values(cmp)) < 0.5))) atom.comparison = old.comparison;
         } else atom = atomFor(m, choose);
         // A bare new clock keeps the bound the old time condition had ("change it to 9 PM").
-        if (atom?.kind === 'time' && old.kind === 'time' && m.kind === 'time' && (pick(`clock_${m.id}`) ?? 'at') === 'at') {
+        if (atom?.kind === 'time' && old.kind === 'time' && m.kind === 'time' && !m.until && (pick(`clock_${m.id}`) ?? 'at') === 'at') {
           atom = { kind: 'time', ...(old.from ? { from: m.clock, ...(old.fromExclusive ? { fromExclusive: true } : {}) } : {}), ...(old.to && (!old.from || old.from === old.to) ? { to: m.clock, ...(old.toExclusive ? { toExclusive: true } : {}) } : {}) };
         }
         if (!atom) continue;
@@ -605,7 +620,8 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
       const r = role(m);
       // Subjective experiences ("romantik") are never stated by providers, so a
       // mandatory one could only ever empty the results; rank by them instead.
-      const subjective = m.kind === 'experience' && SUBJECTIVE_EXPERIENCES.has(m.value) && r === 'require';
+      const subjective = (m.kind === 'experience' && SUBJECTIVE_EXPERIENCES.has(m.value) && r === 'require')
+        || (m.kind === 'mood' && noul(`mandatory_mood_${m.id}`) < 0.5);
       const strength = (r === 'require' || r === 'exclude') && !subjective ? 'hard' : 'preferred';
       if (scopedIds.has(m.id)) { i++; continue; }
       const atom = atomFor(m, choose);
@@ -766,8 +782,10 @@ function mentionAtom(m: Mention): Atom | null {
   switch (m.kind) {
     case 'amount': return { kind: 'budget', comparison: 'lte', amount: m.amount, currency: 'TRY', basis: 'per_person' };
     case 'date': return { kind: 'date', from: m.from, to: m.to };
-    case 'time': return { kind: 'time', from: m.clock };
+    case 'time': return { kind: 'time', from: m.clock, ...(m.until ? { to: m.until } : {}) };
     case 'party': return { kind: 'party', count: m.count };
+    case 'age': return { kind: 'age', years: m.years };
+    case 'mood': return { kind: 'mood', value: m.value };
     case 'companion': return { kind: 'companion', value: m.value };
     case 'location': return { kind: 'location', name: m.name, precision: m.precision };
     case 'category': return { kind: 'category', value: m.value };
@@ -785,6 +803,7 @@ function sameValue(x: Atom, y: Atom): boolean {
     case 'date': return x.from === (y as typeof x).from;
     case 'time': return x.from === (y as typeof x).from || x.to === (y as typeof x).from;
     case 'party': return x.count === (y as typeof x).count;
+    case 'age': return x.years === (y as typeof x).years;
     case 'location': return x.name === (y as typeof x).name;
     default: return (x as { value: string }).value === (y as { value: string }).value;
   }

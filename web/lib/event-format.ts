@@ -62,11 +62,18 @@ export function categoryForEvent(sourceLabel: string, title: string, description
     ?? (CATEGORIES.includes(sourceLabel as Category) ? sourceLabel as Category : 'Diğer');
 }
 
+type FormatInput = Pick<EventRecord, 'title' | 'description'> & Partial<Pick<EventRecord, 'category'>>;
+const formatCache = new WeakMap<FormatInput, FormatInput & { supported: boolean }>();
 export function hasSupportedEventFormat(
   event: Pick<EventRecord, 'title' | 'description'> & Partial<Pick<EventRecord, 'category'>>,
 ) {
   // Old, incorrectly labelled carryover must be refreshed before it can satisfy
   // category filters. Correctly classified workshops/talks are fully supported.
+  const cached = formatCache.get(event);
+  if (cached && cached.title === event.title && cached.description === event.description && cached.category === event.category)
+    return cached.supported;
   const format = explicitProgramFormat(event);
-  return !format || !event.category || event.category === format;
+  const supported = !format || !event.category || event.category === format;
+  formatCache.set(event, { title: event.title, description: event.description, category: event.category, supported });
+  return supported;
 }

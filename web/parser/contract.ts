@@ -9,6 +9,8 @@ export type LocationPrecision = 'district' | 'neighborhood' | 'side';
 export type Atom =
   | { kind: 'budget'; comparison: Comparison; amount: number; currency: 'TRY'; basis: BudgetBasis }
   | { kind: 'party'; count: number }
+  | { kind: 'age'; years: number }
+  | { kind: 'mood'; value: 'calm' | 'intimate' }
   | { kind: 'companion'; value: 'partner' | 'friends' | 'family' | 'children' }
   | { kind: 'date'; from: string; to: string }
   | { kind: 'time'; from?: string; to?: string; fromExclusive?: boolean; toExclusive?: boolean }
