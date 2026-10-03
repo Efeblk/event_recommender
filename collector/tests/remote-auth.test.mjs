@@ -104,4 +104,7 @@ void test("the scheduled GCP collector deadline fails closed", () => {
     run: true,
     reason: "scheduled_window",
   });
+  assert.deepEqual(gate({ until: "open" }), { run: true, reason: "open_schedule" });
+  assert.deepEqual(gate({ enabled: "false", until: "open" }), { run: false, reason: "disabled" });
+  assert.deepEqual(gate({ until: "Open" }), { run: false, reason: "invalid_deadline" });
 });

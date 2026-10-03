@@ -6,6 +6,8 @@ export function collectionGate({ eventName, enabled, until, now = Date.now() }) 
   if (eventName === 'workflow_dispatch') return { run: true, reason: 'manual' };
   if (eventName !== 'schedule') return { run: false, reason: 'unsupported_event' };
   if (enabled !== 'true') return { run: false, reason: 'disabled' };
+  // Collection makes no paid calls; `open` keeps the catalog fresh without renewal.
+  if (until === 'open') return { run: true, reason: 'open_schedule' };
   if (!CANONICAL_UTC.test(until ?? '')) return { run: false, reason: 'invalid_deadline' };
 
   const deadline = Date.parse(until);

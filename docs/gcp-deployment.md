@@ -127,8 +127,9 @@ application sync token uses `Authorization`.
 The six-hour collector schedule remains disabled unless the repository variable
 `GCP_STAGING_COLLECTION_ENABLED` is exactly `true` and
 `GCP_STAGING_COLLECTION_UNTIL` is a valid future canonical UTC timestamp no more
-than 60 hours away. Missing, malformed, expired, and overly distant deadlines
-fail closed; manual dispatch remains available without these variables. After a
+than 60 hours away, or the literal `open` (scheduled collection without an
+expiry; collection makes no paid calls, and indexing keeps its own window).
+Missing, malformed, expired, and overly distant deadlines fail closed; manual dispatch remains available without these variables. After a
 successful manual run, IAM verification, and cost review, set the deadline first
 and enable the schedule deliberately. See [private GCP collection](gcp-collector.md)
 for the exact activation and early-stop procedure. Collect 48 hours of actual

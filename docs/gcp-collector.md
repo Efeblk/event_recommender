@@ -25,6 +25,13 @@ gh variable set GCP_STAGING_COLLECTION_UNTIL --body $collectionUntil
 gh variable set GCP_STAGING_COLLECTION_ENABLED --body true
 ```
 
+To keep scheduled collection on without renewal, set `GCP_STAGING_COLLECTION_UNTIL` to the literal `open`. Collection makes no paid calls; Voyage indexing keeps its own bounded window. A skipped scheduled run shows a "Scheduled collection skipped" warning.
+
+```powershell
+gh variable set GCP_STAGING_COLLECTION_UNTIL --body open
+gh variable set GCP_STAGING_COLLECTION_ENABLED --body true
+```
+
 Leave `GCP_STAGING_COLLECTION_ENABLED` absent or set to any other value to keep scheduled collection disabled. To stop early, unset it or set it to `false`; after the deadline, scheduled runs fail closed even if the enable variable remains `true`. Extending the window requires a separate deliberate update to the deadline after reviewing usage. These repository-variable changes are operational actions outside deployment.
 
 ```powershell
