@@ -5,7 +5,6 @@ import {
 } from '../scripts/deploy-gates.mjs';
 
 const names = [
-  'test',
   'collector (ubuntu-latest)',
   'collector (windows-latest)',
   'verify (ubuntu-latest)',
@@ -36,7 +35,7 @@ await test('rejects an older green check when the latest attempt is not green', 
     started_at: '2026-09-26T10:00:00Z',
     app: { slug: 'github-actions' },
   }));
-  const olderGreen = base.find((check) => check.name === 'test');
+  const olderGreen = base.find((check) => check.name === 'collector (ubuntu-latest)');
   const newerFailure = {
     ...olderGreen,
     id: 100,
