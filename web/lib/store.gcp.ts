@@ -65,6 +65,12 @@ const MAX_SOURCE_BYTES = 4_000_000;
 const SOURCE_READ_CONCURRENCY = 8;
 const encoder = new TextEncoder();
 const bytes = (body: string) => encoder.encode(body).byteLength;
+/** Checkpoint copy of an event: the full provider listing stays in the staged
+ * source pages and collector artifacts, not in the restorable checkpoint. */
+function checkpointEvent(event: EventRecord): EventRecord {
+  const { providerListing: _providerListing, ...retained } = event;
+  return retained;
+}
 const hashPattern = /^[a-f0-9]{64}$/;
 async function digest(body: string) {
   const hash = await crypto.subtle.digest('SHA-256', encoder.encode(body));
@@ -569,7 +575,7 @@ export function createGcpStore(options: {
             if (event.url !== source.url || ids.has(event.id))
               throw new Error('Conflicting source event identity');
             ids.add(event.id);
-            approximateBytes += bytes(JSON.stringify(event)) + 1;
+            approximateBytes += bytes(JSON.stringify(checkpointEvent(event))) + 1;
             if (
               events.length >= MAX_CHECKPOINT_EVENTS ||
               approximateBytes > MAX_CHECKPOINT_BYTES
@@ -588,10 +594,12 @@ export function createGcpStore(options: {
       if (searchBytes > 128 * 1024 * 1024) throw new Error('Search catalog exceeds limit');
       const searchKey = `search-catalog/${savedAt.replace(/[:.]/g, '-')}-${crypto.randomUUID()}.json`;
       await blobs.putImmutable(searchKey, searchBody);
+      // Identity used the full provider listings above; the durable checkpoint
+      // omits those duplicated copies so it stays within transfer limits.
       const checkpoint: CollectionCheckpoint = {
         schemaVersion: 1,
         savedAt,
-        events,
+        events: events.map(checkpointEvent),
         report,
       };
       const body = JSON.stringify(checkpoint);
