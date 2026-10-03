@@ -186,6 +186,8 @@ async function get(url, options = {}, isRobots = false) {
       void activeCrawler?.autoscaledPool?.abort();
       throw new NonRetryableError("http_budget_exhausted");
     }
+    // A full raw store rejects every later body; fetching again only wastes requests.
+    if (budgetStop === "raw_storage_budget") throw new NonRetryableError("raw_storage_admission_exceeded");
     httpRequests += 1;
     const origin = new URL(currentUrl).origin;
     if (!allowedOrigins.has(origin)) throw new NonRetryableError("origin_not_allowed");
@@ -203,10 +205,18 @@ async function get(url, options = {}, isRobots = false) {
       redirect: "manual",
       signal: AbortSignal.timeout(20000),
     });
-    const { receipt, body, bodyError } = await retainProviderResponse(response,
-      { url: currentUrl, method: fetchOptions.method ?? 'GET', fetchedAt: new Date().toISOString(),
-        collectorRevision: process.env.BIPLAN_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted' },
-      rawStore, isRobots ? 256000 : 4000000);
+    let receipt, body, bodyError;
+    try {
+      ({ receipt, body, bodyError } = await retainProviderResponse(response,
+        { url: currentUrl, method: fetchOptions.method ?? 'GET', fetchedAt: new Date().toISOString(),
+          collectorRevision: process.env.BIPLAN_COLLECTOR_REVISION ?? process.env.GITHUB_SHA ?? 'local-uncommitted' },
+        rawStore, isRobots ? 256000 : 4000000));
+    } catch (error) {
+      if (error?.message !== "raw_storage_admission_exceeded") throw error;
+      budgetStop ??= "raw_storage_budget";
+      void activeCrawler?.autoscaledPool?.abort();
+      throw new NonRetryableError(error.message);
+    }
     rawFetches.push(receipt);
     const retained = { body, rawObjectRef: receipt.rawObjectRef,
       fetchedAt: receipt.metadata.fetchedAt, url: currentUrl };
