@@ -31,7 +31,10 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           COLLECTION_ENABLED: ${{ vars.GCP_STAGING_COLLECTION_ENABLED }}
           COLLECTION_UNTIL: ${{ vars.GCP_STAGING_COLLECTION_UNTIL }}
-        run: node collector/schedule-gate.mjs >> "$GITHUB_OUTPUT"
+        run: |
+          node collector/schedule-gate.mjs >> "$GITHUB_OUTPUT"
+          # A skipped schedule leaves the run green; annotate it so a stale catalog is not a surprise.
+          grep -qx 'run=true' "$GITHUB_OUTPUT" || echo "::warning title=Scheduled collection skipped::The collection window is closed or invalid (see GCP_STAGING_COLLECTION_UNTIL). This run did not refresh the staging catalog."
 
   collect:
     needs: schedule_gate
@@ -100,7 +103,7 @@ jobs:
 
       - name: Collect public listings including later pages
         # Reserve time in the 60-minute job for durable publication and indexing.
-        run: npm run collect --prefix collector -- --max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20 --snapshot state/events.json
+        run: npm run collect --prefix collector -- --max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20 --raw-max-bytes 3221225472 --snapshot state/events.json
 
       - name: Prepare replacement PostgreSQL catalog (opt in)
         # Activation needs reviewed raw retention, staging connectivity and a
