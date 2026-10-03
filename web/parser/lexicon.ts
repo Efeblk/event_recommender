@@ -20,8 +20,8 @@ export function fold(text: string): string {
 
 export const CATEGORY_TERMS: Record<Category, string[]> = {
   concert: ['konser', 'concert', 'gig', 'canli muzik', 'live music', 'dinleti', 'resital', 'recital'],
-  theatre: ['tiyatro', 'theatre', 'theater', 'theatrical', 'oyun', 'play', 'plays', 'piyes', 'muzikal', 'musical'],
-  standup: ['stand-up', 'standup', 'stand up', 'stand-upci', 'komedyen', 'comedian'],
+  theatre: ['tiyatro', 'theatre', 'theater', 'theatrical', 'oyun', 'play', 'plays', 'piyes'],
+  standup: ['stand-up', 'standup', 'stand up', 'stand-upci', 'standap', 'stendap', 'stand ap', 'komedyen', 'comedian'],
   workshop: ['atolye', 'workshop', 'workshops', 'uygulamali'],
   exhibition: ['sergi', 'exhibition', 'exhibit', 'exhibitions', 'galeri', 'gallery'],
   festival: ['festival', 'fest', 'senlik'],
@@ -61,6 +61,7 @@ export const TOPIC_TERMS: Record<string, string[]> = {
   coffee: ['kahve', 'coffee'],
   design: ['tasarim', 'design'],
   opera: ['opera'],
+  musical: ['muzikal', 'muzikali', 'musical', 'musicals'],
   improv: ['dogaclama', 'improv', 'improvisation'],
   magic: ['sihirbazlik', 'illuzyon', 'magic'],
   philosophy: ['felsefe', 'philosophy'],

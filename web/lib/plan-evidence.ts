@@ -98,6 +98,7 @@ const experiencePredicates: Record<
   family_friendly: { kind: 'audience', value: 'family_friendly' },
   wheelchair_accessible: { kind: 'accessibility', value: 'step_free' },
 };
+const OPEN_AIR = /\b(?:acik ?hava(?:da)?|open[- ]air|amfi ?tiyatro|amfi|amphitheat(?:re|er))\b/u;
 const result = (status: PlanEvidenceStatus, evidence: string[] = []) => ({
   status,
   evidence,
@@ -212,6 +213,16 @@ function atomResult(
       return result(check.status, check.evidence);
     }
     case 'experience': {
+      if (atom.value === 'outdoors') {
+        // Open-air venues name themselves ("… Açıkhava Tiyatrosu", "Amfi").
+        const evidence = [event.venue, event.title, event.description]
+          .filter(Boolean)
+          .flatMap((text) => String(text).split(/(?<=[.!?])\s+/u))
+          .filter((part) => OPEN_AIR.test(normalize(part)))
+          .slice(0, 3)
+          .map((part) => part.slice(0, 240));
+        return result(evidence.length ? 'supported' : 'unknown', evidence);
+      }
       const predicate = experiencePredicates[atom.value];
       if (!predicate) return result('unknown');
       const check = checkPredicateEvidence(
@@ -351,7 +362,7 @@ export function validateSearchPlan(plan: Plan): void {
       if (
         hard &&
         atom.kind === 'experience' &&
-        ['outdoors', 'beginner_friendly'].includes(atom.value)
+        atom.value === 'beginner_friendly'
       )
         throw new Error('experience evidence is unsupported');
       return;
