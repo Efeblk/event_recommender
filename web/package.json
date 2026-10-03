@@ -26,7 +26,7 @@
     "deploy:config": "node scripts/deploy-config.mjs",
     "deploy:prepare": "node scripts/deploy.mjs prepare",
     "deploy:dry-run": "node scripts/deploy.mjs dry-run",
-    "test:deploy-config": "node --test deploy/*.test.mjs",
+    "test:deploy-config": "node --experimental-strip-types --test deploy/*.test.mjs",
     "deploy:run": "node scripts/deploy.mjs deploy",
     "test:browser": "playwright test",
     "test:smoke:node": "node scripts/smoke-node.mjs",

@@ -11,8 +11,8 @@ const execFileAsync = promisify(execFile);
 void test('input-intent evaluator enforces strict hard fields and safety assertions', async () => {
   const { stdout, stderr } = await execFileAsync(
     process.execPath,
-    ['scripts/check-input-intent.mjs', '--self-test'],
-    { cwd: process.cwd(), encoding: 'utf8' },
+    ['--experimental-strip-types', 'scripts/check-input-intent.mjs', '--self-test'],
+    { cwd: process.cwd(), encoding: 'utf8', env: { ...process.env, NODE_NO_WARNINGS: '1' } },
   );
   assert.equal(stderr, '');
   assert.deepEqual(JSON.parse(stdout), {
@@ -60,6 +60,7 @@ globalThis.fetch = async (_url, init) => {
     const log = join(temporary, `calls-${label}.txt`);
     await mkdir(evidenceDir);
     const invocation = [
+      '--experimental-strip-types',
       '--import', pathToFileURL(preload).href,
       'scripts/check-input-intent.mjs', '--live',
       ...(options.caseIds ?? ['tr-basic-concert']).flatMap((id) => ['--case-id', id]),
@@ -120,7 +121,7 @@ globalThis.fetch = async (_url, init) => {
     try {
       await execFileAsync(
         process.execPath,
-        ['scripts/check-input-intent.mjs', '--replay', tamperedPath],
+        ['--experimental-strip-types', 'scripts/check-input-intent.mjs', '--replay', tamperedPath],
         { cwd: process.cwd(), encoding: 'utf8' },
       );
       assert.fail('tampered replay must fail');

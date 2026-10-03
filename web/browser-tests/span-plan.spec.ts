@@ -91,6 +91,37 @@ async function submit(page: Page, message: string) {
 }
 
 test.describe('span plan protocol', () => {
+  test('displays exact ages and evening bounds separately from moods and carries them into alternatives', async ({ page }) => {
+    await mockShell(page);
+    const state = { ...planState, plan: {
+      hard: { type: 'all', children: [
+        { type: 'atom', atom: { kind: 'age', years: 6 } },
+        { type: 'atom', atom: { kind: 'time', from: '18:00', to: '23:59' } },
+      ] },
+      preferences: [
+        { type: 'atom', atom: { kind: 'mood', value: 'calm' } },
+        { type: 'atom', atom: { kind: 'mood', value: 'intimate' } },
+      ], order: 'none',
+    }, requests: ['6 yaşındaki çocuğumla sakin, samimi bir akşam'] };
+    const payloads: Record<string, unknown>[] = [];
+    await page.route('**/api/recommend', async route => {
+      payloads.push(route.request().postDataJSON());
+      await route.fulfill({ json: response({ planState: state }) });
+    });
+    const siteResponse = page.waitForResponse('**/api/site');
+    await page.goto('/'); await siteResponse;
+    await submit(page, state.requests[0]);
+    const summary = page.getByLabel('Anlaşılan plan');
+    const hard = summary.getByRole('group', { name: 'Olmazsa olmazlar' });
+    await expect(hard).toContainText('6 yaş');
+    await expect(hard).toContainText('18:00');
+    await expect(hard).toContainText('23:59');
+    const moods = summary.getByRole('group', { name: 'Tercihler', exact: true });
+    await expect(moods).toContainText('sakin'); await expect(moods).toContainText('samimi');
+    await submit(page, 'Bunları beğenmedim, başka seçenekler var mı?');
+    await expect.poll(() => payloads.length).toBe(2);
+    expect(payloads[1].planState).toEqual(state);
+  });
   test('carries the grouped plan through follow-ups and clears it for a new search', async ({
     page,
   }) => {

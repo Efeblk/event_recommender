@@ -56,10 +56,32 @@ try {
   // Load the built config outside the checkout to avoid .dev.vars and local D1.
   await writeFile(join(temp, 'wrangler.json'), JSON.stringify(config));
   await writeFile(join(temp, '.env'), '');
+  // An early 413 can cancel Miniflare's host upload and reset Undici's socket
+  // before the rejection body arrives. Forward the bounded test fixture from
+  // inside workerd so the real handler's declared/streamed limits can both be
+  // checked independently of that host transport race. No production proxy.
+  await writeFile(join(temp, 'buffered-upload.mjs'), `
+export default { async fetch(request, env) {
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  const headers = new Headers(request.headers);
+  headers.delete('content-length');
+  const declared = new URL(request.url).searchParams.has('declared');
+  if (declared) headers.set('content-length', String(bytes.byteLength));
+  const body = declared ? bytes : new ReadableStream({ start(controller) {
+    for (let offset = 0; offset < bytes.length; offset += 8192)
+      controller.enqueue(bytes.subarray(offset, offset + 8192));
+    controller.close();
+  } });
+  return env.PRODUCT.fetch(new Request(request.url, { method: 'POST', headers, body }));
+} };
+`);
   server = createTestHarness({
     root: temp,
     workers: [
       { configPath: join(temp, 'wrangler.json'), secrets: config.vars },
+      { config: { name: 'biplan-smoke-buffered-upload', main: join(temp, 'buffered-upload.mjs'),
+        compatibility_date: config.compatibility_date,
+        services: [{ binding: 'PRODUCT', service: config.name }] } },
     ],
   });
   await server.listen();
@@ -644,12 +666,15 @@ try {
   });
   assert.equal(blockedCheckpoint.status, 400);
   await blockedCheckpoint.arrayBuffer();
-  const oversizedCheckpoint = await checkpointRequest({
-    ...reportEnvelope,
-    oversized: 'x'.repeat(128 * 1024),
-  });
-  assert.equal(oversizedCheckpoint.status, 413);
-  await oversizedCheckpoint.arrayBuffer();
+  for (const query of ['', '?declared']) {
+    const oversizedCheckpoint = await server.getWorker('biplan-smoke-buffered-upload').fetch(`/api/admin/collection${query}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer local-smoke-only' },
+      body: JSON.stringify({ ...reportEnvelope, oversized: 'x'.repeat(128 * 1024) }),
+      signal: AbortSignal.timeout(10000),
+    });
+    assert.equal(oversizedCheckpoint.status, 413);
+    assert.deepEqual(await oversizedCheckpoint.json(), { error: 'Report too large' });
+  }
   await env.DB.prepare(
     "INSERT INTO metadata(key,value) VALUES('sync_lock',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
   )

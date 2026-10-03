@@ -84,6 +84,12 @@ export const CONTENT_TERMS: Record<string, string[]> = {
   sexual_content: ['cinsel icerik', 'cinsellik', 'mustehcen', 'sexual content', 'sexual', 'nudity', 'ciplaklik'],
 };
 
+/** Outing preferences, distinct from guarantees about noise or venue policy. */
+export const MOOD_TERMS: Record<'calm' | 'intimate', string[]> = {
+  calm: ['sakin', 'calm', 'relaxing', 'relaxed', 'dinlendirici', 'huzurlu', 'dingin'],
+  intimate: ['samimi', 'intimate'],
+};
+
 export const COMPANION_TERMS: Record<string, string[]> = {
   partner: ['sevgili', 'sevgilim', 'kiz arkadas', 'kiz arkadasimla', 'erkek arkadas', 'erkek arkadasimla', 'esim', 'es ile', 'esimle', 'partner', 'partnerim', 'girlfriend', 'boyfriend', 'wife', 'husband', 'spouse', 'date'],
   friends: ['arkadas', 'arkadaslar', 'arkadaslarla', 'arkadaslarimla', 'friends', 'friend', 'buddies'],

@@ -45,6 +45,8 @@ function strictAtom(value: unknown): void {
   const shapes: Record<string, string[]> = {
     budget: ['kind', 'comparison', 'amount', 'currency', 'basis'],
     party: ['kind', 'count'],
+    age: ['kind', 'years'],
+    mood: ['kind', 'value'],
     companion: ['kind', 'value'],
     date: ['kind', 'from', 'to'],
     location: ['kind', 'name', 'precision'],

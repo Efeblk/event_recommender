@@ -1,0 +1,276 @@
+{
+  "schemaVersion": 1,
+  "provenance": {
+    "deploymentRevision": "9f82f31b0abd6a3e991a5f3c9c60f4615093e0da",
+    "responseSha256": "20b876509a81ce4b6fc92cb00b01ecd65bd93ae3a4f6560d4cc6834bbbdc7df3",
+    "caseId": "09_confirmation_correction",
+    "kind": "Preserved live cards with independent human review; model judgments are not replayed as a new live result."
+  },
+  "now": "2026-10-03T16:10:00.000Z",
+  "message": "4–11 Ekim 2026 arasında partnerimle sakin, samimi bir akşam için bir etkinlik istiyorum; tür fark etmez.",
+  "cards": [
+    {
+      "label": "plausible-film",
+      "event": {
+        "id": "f08f53854f736981036894f7",
+        "title": "Notthing Hill",
+        "description": "Londra'nın sakin Notting Hill semtinde küçük bir kitapçı işleten William Thacker'ın hayatı, dünyaca ünlü Hollywood yıldızı Anna Scott'ın dükkânına girmesiyle tamamen değişir. Tesadüflerle başlayan bu beklenmedik karşılaşma, iki farklı dünyanın tüm zorluklarına rağmen filizlenen unutulmaz bir aşk hikâyesine dönüşür. Hugh Grant ve Julia Roberts'ın unutulmaz performanslarıyla hayat bulan Notting Hill, romantizmi zarif mizahla buluşturan, samimi anlatımı ve akıllarda yer eden diyaloglarıyla yıllardır romantik komedi türünün en sevilen yapımlarından biri olmaya devam ediyor. Aşkın, şöhretin ve hayatın beklenmedik sürprizlerinin iç içe geçtiği bu zamansız klasik, sıcak atmosferi ve duygusal anlatımıyla izleyicilere unutulmaz bir sinema deneyimi sunuyor. - Bilet fiyatları kişi başıdır. - +13 yaş sınırı vardır. - Etkinlik, Swissotel The Bosphorus Istanbul Sultanpark’ta gerçekleşecektir. - Etkinlik girişinde bilet kontrolü yapılacaktır, biletinizi telefondan göstermeniz gerekmektedir. - Etkinlik detayları organizatör firma tarafından değiştirilebilir. - Bilet fiyatına bir adet meşrubat ve popcorn dahildir.",
+        "startsAt": "2026-10-07T17:00:00.000Z",
+        "checkedAt": "2026-10-02T20:45:51.284Z",
+        "venue": "Swissotel The Bosphorus",
+        "district": "BEŞİKTAŞ",
+        "address": "",
+        "city": "İstanbul",
+        "currency": "TRY",
+        "price": 1181.5,
+        "url": "https://www.biletix.com/etkinlik/5PA43/ISTANBUL/tr",
+        "imageUrl": "https://www.biletix.com/static/images/live/event/eventimages/5PA43-nothngbu26.png",
+        "category": "Sinema",
+        "availability": "available",
+        "source": "biletix",
+        "sourceSessionIds": [
+          "001"
+        ],
+        "sourceCategory": "Sinema",
+        "sourceVersion": "provider-listing.v1",
+        "extraction": "biletix-provider-listing.v1",
+        "offers": [
+          {
+            "id": "f08f53854f736981036894f7",
+            "source": "biletix",
+            "url": "https://www.biletix.com/etkinlik/5PA43/ISTANBUL/tr",
+            "price": 1181.5,
+            "currency": "TRY",
+            "sourceSessionIds": [
+              "001"
+            ],
+            "checkedAt": "2026-10-02T20:45:51.284Z",
+            "category": "Sinema",
+            "venue": "Swissotel The Bosphorus",
+            "availability": "available"
+          }
+        ],
+        "mergedIds": [
+          "b6b66b130d53252a54f27f647cd04bc549c7d1ac678bcf3554fa93f747664434",
+          "f08f53854f736981036894f7"
+        ],
+        "canonicalProductionKey": "production-cb4c90793c8903e62d7099bc22e503ec",
+        "canonicalShowKey": "show-a12a1937858c0be51ace93561fd40e55"
+      }
+    },
+    {
+      "label": "plausible-dining",
+      "event": {
+        "id": "session-7ff4c741d9278e13c9cce38b6a65336a",
+        "title": "Brotherhood",
+        "description": "Brotherhood Etkinliği Üç şef. Aynı tutku. Mutfağın yalnızca tabaklardan değil; paylaşmaktan, üretmekten ve aynı masada buluşmaktan doğduğuna inanıyoruz. Şef Muhittin Fidan ev sahipliğinde; Şef Kadir Aytekin ve Şef Muratcan Sural’ın katılımıyla gerçekleşecek BROTHERHOOD, üç farklı mutfak anlayışını tek bir sofrada buluşturuyor. Ateşin, tekniğin ve mevsimin izinde; her şefin kendi karakterini taşıyan tabaklarla şekillenen özel bir gastronomi deneyimi… BROTHERHOOD, sadece bir akşam y",
+        "startsAt": "2026-10-10T17:00:00.000Z",
+        "checkedAt": "2026-10-03T09:31:45.287Z",
+        "venue": "Yağhane",
+        "district": "İstanbul Anadolu",
+        "address": "Yalıköy, Süreyya İlmen Cd. No:1, 34820 Beykoz/İstanbul",
+        "city": "İstanbul",
+        "currency": "TRY",
+        "price": 2750,
+        "url": "https://www.biletix.com/etkinlik/5BKUI/ISTANBUL/tr",
+        "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/brotherhood-202691595628bdbdbe320ca740acb8e7777462041c47.jpg",
+        "category": "Diğer",
+        "availability": "available",
+        "source": "biletix",
+        "sourceSessionIds": [],
+        "sourceCategory": "etkinlik",
+        "sourceVersion": "provider-listing.v1",
+        "extraction": "biletinial-provider-listing.v1",
+        "offers": [
+          {
+            "id": "968024cab18edfad91342fc4",
+            "source": "biletix",
+            "url": "https://www.biletix.com/etkinlik/5BKUI/ISTANBUL/tr",
+            "price": 2750,
+            "currency": "TRY",
+            "sourceSessionIds": [
+              "001"
+            ],
+            "checkedAt": "2026-10-03T09:31:45.287Z",
+            "category": "Workshop",
+            "venue": "Kundura Yağhane",
+            "availability": "available"
+          },
+          {
+            "id": "1b6da61c4fb1bc740fc432ef",
+            "source": "biletinial",
+            "url": "https://biletinial.com/tr-tr/etkinlik/brotherhood",
+            "price": 2770,
+            "currency": "TRY",
+            "sourceSessionIds": [],
+            "checkedAt": "2026-10-03T09:18:49.889Z",
+            "category": "Diğer",
+            "venue": "Yağhane",
+            "availability": "available"
+          }
+        ],
+        "mergedIds": [
+          "1b6da61c4fb1bc740fc432ef",
+          "7ff4c741d9278e13c9cce38b6a65336a0081b9e7f338b0edfb4d368328539674",
+          "968024cab18edfad91342fc4"
+        ],
+        "canonicalProductionKey": "production-809b5ba2bda4ca550784a05ed769d2c4",
+        "canonicalShowKey": "show-4d19e80e52331b7698d019d9ff883c88"
+      }
+    },
+    {
+      "label": "weak-party",
+      "event": {
+        "id": "session-56323a041e257cbadbf822819f5dfe09",
+        "title": "Hikayeden Adamlar - Kırık Kalpler Partisi",
+        "description": "Hikayeden Adamlar - Kırık Kalpler Partisi Etkinliği “İyi hissetme” temalı bir geceyle geliyoruz. Hikayeden Adamlar; mizahı, hafif melankoliyi ve bol müziği aynı sahnede buluşturuyor: bazen gülüyorsun, bazen “bu şarkı tam ben” diyorsun, bazen de hikâyenin içinden kendini buluyorsun. Rutinleri bir akşamlığına kapatıyoruz: birlikte söyle, birlikte gül, birlikte rahatla.",
+        "startsAt": "2026-10-11T18:00:00.000Z",
+        "checkedAt": "2026-10-03T14:26:55.775Z",
+        "venue": "Paribu Vadi Açık Hava",
+        "district": "İstanbul Avrupa",
+        "address": "Vadistanbul, Ayazağa Mahallesi. Cendere Caddesi 1. Apt No:109 İç Kapı No:254 AYAZAĞA/İstanbul",
+        "city": "İstanbul",
+        "currency": "TRY",
+        "price": 950,
+        "url": "https://biletinial.com/tr-tr/tiyatro/hikayeden-adamlar-kirik-kalpler-partisi-etkinligi",
+        "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/hikayeden-adamlar-kirik-kalpler-partisi-etkinligi-2026610162041104be71dbf4748d19a83de8806665fef.jpg",
+        "category": "Tiyatro",
+        "availability": "available",
+        "source": "biletinial",
+        "sourceSessionIds": [],
+        "sourceCategory": "tiyatro",
+        "sourceVersion": "provider-listing.v1",
+        "extraction": "biletinial-provider-listing.v1",
+        "offers": [
+          {
+            "id": "a329ebc6567d22b49c12907b",
+            "source": "biletinial",
+            "url": "https://biletinial.com/tr-tr/tiyatro/hikayeden-adamlar-kirik-kalpler-partisi-etkinligi",
+            "price": 950,
+            "currency": "TRY",
+            "sourceSessionIds": [],
+            "checkedAt": "2026-10-03T14:26:55.775Z",
+            "category": "Tiyatro",
+            "venue": "Paribu Vadi Açık Hava",
+            "availability": "available"
+          },
+          {
+            "id": "b57d4693cddf83b533fa3aff",
+            "source": "bubilet",
+            "url": "https://www.bubilet.com.tr/istanbul/etkinlik/hikayeden-adamlar",
+            "price": 1150,
+            "currency": "TRY",
+            "sourceSessionIds": [
+              "258163"
+            ],
+            "checkedAt": "2026-10-03T14:19:28.331Z",
+            "category": "Stand-up",
+            "venue": "Paribu Vadi Açıkhava",
+            "availability": "available"
+          }
+        ],
+        "mergedIds": [
+          "56323a041e257cbadbf822819f5dfe0958e7341907ce8331f0994fac300d6c38",
+          "a329ebc6567d22b49c12907b",
+          "b57d4693cddf83b533fa3aff"
+        ],
+        "canonicalProductionKey": "production-8ba487327c3b5e5f73ac71b631ade6da",
+        "canonicalShowKey": "show-174a5ace672ce229f01463569c7b809b"
+      }
+    },
+    {
+      "label": "afternoon-quiz",
+      "event": {
+        "id": "c81b6a5c58d590083cdb5cd0",
+        "title": "Couple Quiz: Partnerini Ne Kadar İyi Tanıyorsun?",
+        "description": "Couple Quiz: Partnerini Ne Kadar İyi Tanıyorsun?",
+        "startsAt": "2026-10-11T13:30:00.000Z",
+        "checkedAt": "2026-10-02T10:03:01.138Z",
+        "venue": "Community Hub",
+        "district": "",
+        "address": "Asmalı Mescit, Şehbender Sk. No:18/2, 34430 Beyoğlu/İstanbul",
+        "city": "İstanbul",
+        "currency": "TRY",
+        "price": 335,
+        "url": "https://www.bubilet.com.tr/istanbul/etkinlik/couple-quiz-partnerini-ne-kadar-iyi-taniyorsun",
+        "imageUrl": "https://cdn.bubilet.com.tr/cdn-cgi/image/width=1200,quality=100/files/Etkinlik/couple-quiz-partnerini-ne-kadar-iyi-taniyorsun-41718.png",
+        "category": "Diğer",
+        "availability": "available",
+        "source": "bubilet",
+        "sourceSessionIds": [
+          "289728"
+        ],
+        "sourceCategory": "Diğer",
+        "sourceVersion": "4",
+        "extraction": "embedded-session-state",
+        "offers": [
+          {
+            "id": "c81b6a5c58d590083cdb5cd0",
+            "source": "bubilet",
+            "url": "https://www.bubilet.com.tr/istanbul/etkinlik/couple-quiz-partnerini-ne-kadar-iyi-taniyorsun",
+            "price": 335,
+            "currency": "TRY",
+            "sourceSessionIds": [
+              "289728"
+            ],
+            "checkedAt": "2026-10-02T10:03:01.138Z",
+            "category": "Diğer",
+            "venue": "Community Hub",
+            "availability": "available"
+          }
+        ],
+        "mergedIds": [
+          "9f8cffea4062265bb2d205368cf6d5fca37706c9530afa333387ebbbbba64128",
+          "c81b6a5c58d590083cdb5cd0"
+        ],
+        "canonicalProductionKey": "production-628199611d50b468451c2630aac06c23",
+        "canonicalShowKey": "show-f67588a4fda8df248fa35ccde3ab4448"
+      }
+    },
+    {
+      "label": "afternoon-quiz",
+      "event": {
+        "id": "949d529db9b7e466c22b7d7e",
+        "title": "Mehmet Sindel'le Sinema Geceleri - Türkiye Sineması",
+        "description": "Mehmet Sindel'le Sinema Geceleri - Türkiye Sineması DUYDUK DUYMADIK DEMEYİNİZ! 🎬 Minoa Pera’da Mehmet Sindel’le Sinema Quiz Geceleri başlıyor! Her ayın ilk pazarı sinemanın içinde keyifli bir yolculuğa çıkıyor; birlikte düşünüyor, hatırlıyor, şaşırıyor, yarışıyor ve bol bol eğleniyoruz. Üstelik gecelerimiz ikramlı ve ödüllü! İlk buluşmamız 4 Ekim Pazar, saat 16.00’de. İlk konumuz: Türkiye Sineması. Yeşilçam’ın unutulmazlarından sinemamızın büyük başyapıtla",
+        "startsAt": "2026-10-04T13:00:00.000Z",
+        "checkedAt": "2026-10-03T09:20:46.282Z",
+        "venue": "Minoa Pera",
+        "district": "İstanbul Avrupa",
+        "address": "Evliya Çelebi, Meşrutiyet Cd. No:99, 34430 Beyoğlu/İstanbul",
+        "city": "İstanbul",
+        "currency": "TRY",
+        "price": 1535,
+        "url": "https://biletinial.com/tr-tr/etkinlik/mehmet-sindelle-sinema-geceleri-turkiye-sinemasi",
+        "imageUrl": "https://b6s54eznn8xq.merlincdn.net/Uploads/Films/mehmet-sindelle-sinema-geceleri-turkiye-sinemasi-2026921944243433cbeb63b0496d97b5931870c7b116.jpg",
+        "category": "Diğer",
+        "availability": "available",
+        "source": "biletinial",
+        "sourceSessionIds": [],
+        "sourceCategory": "etkinlik",
+        "sourceVersion": "provider-listing.v1",
+        "extraction": "biletinial-provider-listing.v1",
+        "offers": [
+          {
+            "id": "949d529db9b7e466c22b7d7e",
+            "source": "biletinial",
+            "url": "https://biletinial.com/tr-tr/etkinlik/mehmet-sindelle-sinema-geceleri-turkiye-sinemasi",
+            "price": 1535,
+            "currency": "TRY",
+            "sourceSessionIds": [],
+            "checkedAt": "2026-10-03T09:20:46.282Z",
+            "category": "Diğer",
+            "venue": "Minoa Pera",
+            "availability": "available"
+          }
+        ],
+        "mergedIds": [
+          "949d529db9b7e466c22b7d7e",
+          "bfaea566dad109bf3586a245ef27f427d4bff17faa801bc09a442c9b58808f45"
+        ],
+        "canonicalProductionKey": "production-aeb2352c8e2721cb69781cd79ae490d0",
+        "canonicalShowKey": "show-54db1c70ea3066985e97b0d64433f123"
+      }
+    }
+  ]
+}

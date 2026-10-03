@@ -14,7 +14,7 @@ import { sourcePageTimes } from './source-page.ts';
 export { POST as legacySync } from './legacy-sync.cloudflare.ts';
 import seed from '../data/events.json';
 import { emptyFilters, type EventRecord, type Filters } from './types.ts';
-import { mergeEventSessions } from './event-merge.ts';
+import { SessionMergeCache } from './session-merge-cache.ts';
 import { isEligible } from './search.ts';
 import { embeddingText } from './ai.ts';
 import {
@@ -76,6 +76,9 @@ async function initialize(db: D1Database) {
     ),
     db.prepare(
       'CREATE INDEX IF NOT EXISTS idx_events_starts_at ON events(starts_at)',
+    ),
+    db.prepare(
+      'CREATE INDEX IF NOT EXISTS idx_events_starts_at_id ON events(starts_at,id)',
     ),
     db.prepare(
       'CREATE INDEX IF NOT EXISTS idx_events_source_url ON events(source_url)',
@@ -173,6 +176,7 @@ function upsertStatements(db: D1Database, items: EventRecord[]) {
   }
   return statements;
 }
+const sessionMergeCache = new SessionMergeCache();
 export async function candidates(f: Filters, now = new Date()) {
   const db = await database();
   const sql = ['starts_at>=?', 'checked_at>=?'];
@@ -202,7 +206,7 @@ export async function candidates(f: Filters, now = new Date()) {
       .prepare(
         `SELECT id,starts_at,payload FROM events WHERE ${sql.join(' AND ')}
          AND (starts_at>? OR (starts_at=? AND id>?))
-         ORDER BY starts_at,id LIMIT 200`,
+         ORDER BY starts_at,id LIMIT 500`,
       )
       .bind(...args, afterStart, afterStart, afterId)
       .all<{ id: string; starts_at: string; payload: string }>();
@@ -214,7 +218,7 @@ export async function candidates(f: Filters, now = new Date()) {
       afterId = row.id;
     }
   }
-  return mergeEventSessions(events).filter((event) =>
+  return sessionMergeCache.read(events).filter((event) =>
     isEligible(event, f, now),
   );
 }

@@ -14,7 +14,7 @@ import {
   uniqueEvents,
   validateFilters,
 } from './search.ts';
-import { rankWithJev, type JevConfig, type JevRanking } from './jev.ts';
+import { hasMoodPreferences, rankWithJev, type JevConfig, type JevRanking } from './jev.ts';
 import {
   diverseEvents,
   fallbackEvents,
@@ -43,7 +43,7 @@ import { planRetrievalQuery } from './plan-query.ts';
 import { softPreferencesFor } from './soft-preferences.ts';
 import { interpretSpanInput } from './span-interpreter.ts';
 import { isStandaloneInputReset } from './input-reset.ts';
-import { isAlternativesRequest } from './intent.ts';
+import { isAlternativesRequest, isStandaloneAlternativesRequest } from './intent.ts';
 import type { Plan } from '../parser/contract.ts';
 
 export interface RecommendInput {
@@ -199,10 +199,11 @@ export function selectJevEvents(
   candidates: EventRecord[],
   ranking: JevRanking,
   order?: IntentState['preferences']['order'],
+  requireProgramFit = false,
 ): EventRecord[] {
   const byId = new Map(candidates.map((event) => [event.id, event]));
   const supported = ranking.ranked
-    .filter(({ event, score, probabilities, supportProbability }) => {
+    .filter(({ event, score, probabilities, supportProbability, programFitProbability }) => {
       if (
         !byId.has(event.id) ||
         !Number.isFinite(score) ||
@@ -226,7 +227,9 @@ export function selectJevEvents(
         Number.isFinite(supportProbability) &&
         supportProbability >= MIN_JEV_SUPPORT_PROBABILITY &&
         supportProbability <= 1 &&
-        Math.abs(supportProbability - derivedSupport) <= 1e-9
+        Math.abs(supportProbability - derivedSupport) <= 1e-9 &&
+        ((!requireProgramFit && programFitProbability === undefined) ||
+          (typeof programFitProbability === 'number' && Number.isFinite(programFitProbability) && programFitProbability >= MIN_JEV_SUPPORT_PROBABILITY && programFitProbability <= 1))
       );
     })
     .sort((a, b) => b.score - a.score)
@@ -653,7 +656,8 @@ async function recommendResolved(
     resolved,
   );
   diagnostics.distinctShortlist = shortlist.length;
-  const fallback = fallbackEvents(
+  const needsProgramJudgment = hasMoodPreferences(plan);
+  const fallback = (needsProgramJudgment ? [] : fallbackEvents(
     shortlist,
     input.message,
     input.history,
@@ -661,7 +665,7 @@ async function recommendResolved(
     semantic,
     intent,
     resolved,
-  ).map((event) => ({ event }));
+  )).map((event) => ({ event }));
   if (deps.config) {
     try {
       const result = await (deps.rank ?? rankWithJev)(
@@ -699,6 +703,7 @@ async function recommendResolved(
         shortlist,
         result,
         intent?.preferences.order,
+        needsProgramJudgment,
       );
       if (plan?.order === 'soonest')
         selected.sort(
@@ -734,7 +739,9 @@ async function recommendResolved(
         status: fallback.length ? 'results' : 'empty',
         notice: [
           retrievalNotice,
-          'Akıllı sıralamaya şu anda ulaşılamıyor. Temel arama sonuçları gösteriliyor.',
+          needsProgramJudgment
+            ? 'Deneyim tercihlerini şu anda değerlendiremiyoruz. Uygunluğunu doğrulayamadığımız seçenekleri göstermiyoruz; yeniden deneyebilirsin.'
+            : 'Akıllı sıralamaya şu anda ulaşılamıyor. Temel arama sonuçları gösteriliyor.',
         ]
           .filter(Boolean)
           .join(' '),
@@ -749,7 +756,9 @@ async function recommendResolved(
     mode: 'filters',
     status: fallback.length ? 'results' : 'empty',
     notice:
-      retrievalNotice ??
+      needsProgramJudgment
+        ? 'Deneyim tercihlerini değerlendirmek için akıllı sıralama gerekli; şu anda uygunluğunu doğrulayamadığımız seçenekleri göstermiyoruz.'
+        : retrievalNotice ??
       (semantic
         ? 'Sonuçlar anlamsal benzerlik ve kelime eşleşmesine göre listeleniyor.'
         : basicNotice),
@@ -845,7 +854,9 @@ async function recommendSpan(
   }
   let interpreted;
   try {
-    interpreted = await (deps.spanInterpret ?? interpretSpanInput)(
+    interpreted = !input.pendingInput && previous.requests.length > 0 && isStandaloneAlternativesRequest(input.message)
+      ? { status: 'accepted' as const, operations: [], resultingPlan: previous.plan }
+      : await (deps.spanInterpret ?? interpretSpanInput)(
       {
         utterance: message,
         language: 'tr',

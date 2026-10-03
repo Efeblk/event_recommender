@@ -8,6 +8,14 @@ import {
 import { emptyFilters, type Category, type EventRecord } from './types.ts';
 import { isEligible, normalize } from './search.ts';
 import { eventLocation, sideNamed } from './istanbul-location.ts';
+import { checkAgeEvidence } from './age-evidence.ts';
+
+const istanbulDay = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
+});
+const istanbulClock = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Istanbul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+});
 
 export type PlanEvidenceStatus = RequirementStatus;
 export type PlanEvidence =
@@ -122,12 +130,7 @@ function atomResult(
         [event.category],
       );
     case 'date': {
-      const day = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Europe/Istanbul',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(new Date(event.startsAt));
+      const day = istanbulDay.format(new Date(event.startsAt));
       return result(
         day >= atom.from && day <= atom.to ? 'supported' : 'contradicted',
         [day],
@@ -139,12 +142,7 @@ function atomResult(
         event.attendanceTiming.kind !== 'timed_session'
       )
         return result('unknown');
-      const time = new Intl.DateTimeFormat('en-GB', {
-        timeZone: 'Europe/Istanbul',
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-      }).format(new Date(event.startsAt));
+      const time = istanbulClock.format(new Date(event.startsAt));
       const ok =
         (!atom.from ||
           (atom.fromExclusive ? time > atom.from : time >= atom.from)) &&
@@ -246,6 +244,10 @@ function atomResult(
     case 'party':
     case 'companion':
       return result('supported');
+    case 'age':
+      return checkAgeEvidence(event, atom.years);
+    case 'mood':
+      return result('unknown');
   }
 }
 
@@ -338,6 +340,8 @@ export function validateSearchPlan(plan: Plan): void {
   ) => {
     if (condition.type === 'atom') {
       const atom = condition.atom;
+      if (hard && atom.kind === 'mood')
+        throw new Error('moods are ranking preferences, not verified venue properties');
       if (
         hard &&
         (atom.kind === 'party' || atom.kind === 'companion') &&

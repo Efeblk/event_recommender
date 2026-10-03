@@ -47,6 +47,10 @@ function atomText(atom: Atom): string {
     }
     case 'party':
       return `${atom.count} ki\u015fi`;
+    case 'age':
+      return `${atom.years} ya\u015f i\u00e7in uygun`;
+    case 'mood':
+      return atom.value === 'calm' ? 'sakin bir deneyim' : 'samimi bir deneyim';
     case 'companion':
       return `e\u015flik: ${{ partner: 'partner', friends: 'arkada\u015flar', family: 'aile', children: '\u00e7ocuklar' }[atom.value]}`;
     case 'date':
@@ -89,7 +93,7 @@ function positiveConcepts(condition: Condition, positive = true): string[] {
     atom.kind === 'category' ||
     atom.kind === 'topic' ||
     atom.kind === 'experience' ||
-    atom.kind === 'companion'
+    atom.kind === 'companion' || atom.kind === 'mood' || atom.kind === 'age'
   )
     return [atomText(atom)];
   return [];

@@ -30,6 +30,14 @@ export function isAlternativesRequest(message: string): boolean {
   );
 }
 
+/** Exact discourse-only commands may reuse a validated plan without AI. */
+export function isStandaloneAlternativesRequest(message: string): boolean {
+  const text = message.toLocaleLowerCase('tr-TR').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i')
+    .replace(/[^a-z0-9]+/g, ' ').trim();
+  return /^(?:(?:bunlari begenmedim|bunlar olmadi)\s+)?(?:baska|baska (?:var mi|goster|oneri|onerir misin)|baska (?:secenekler|etkinlikler|oneriler)(?: var mi)?|baska bir sey oner|anything else|something else|(?:show|suggest)(?: me)? alternatives|(?:other|different|more) (?:options|events|suggestions|recommendations)(?: please)?)$/u.test(text);
+}
+
 // "Oyun" is too broad on its own (games, music and idioms). Treat it as
 // theatre only when the surrounding request supplies stage/adult-drama context.
 const theatrePlay =

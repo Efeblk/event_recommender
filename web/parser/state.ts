@@ -34,6 +34,8 @@ function validateAtom(atom: Atom) {
       assert(Number.isFinite(atom.amount) && atom.amount >= 0 && atom.amount <= 1e9, 'invalid budget amount');
       return;
     case 'party': assert(Number.isInteger(atom.count) && atom.count > 0 && atom.count <= 1000, 'invalid party count'); return;
+    case 'age': assert(Number.isInteger(atom.years) && atom.years >= 0 && atom.years <= 120, 'invalid attendee age'); return;
+    case 'mood': assert(['calm', 'intimate'].includes(atom.value), 'invalid mood'); return;
     case 'companion': assert(['partner', 'friends', 'family', 'children'].includes(atom.value), 'invalid companion'); return;
     case 'date': date(atom.from); date(atom.to); assert(atom.from <= atom.to, 'reversed date bounds'); return;
     case 'time':
