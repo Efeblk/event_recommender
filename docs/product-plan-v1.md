@@ -231,7 +231,8 @@ checks still pass, and the per-request cost does not increase without approval.
 
 - 2026-10-03: Plan written. `master` = `bad42d0`. Staging deployed
   (37148883212). Scheduled collection is on. Collection 37149121969 succeeded.
-- 2026-10-04: Phase 0 started from `bad42d0`. Tasks 1–2 are prepared for review.
+- 2026-10-04: [PR 45](https://github.com/Efeblk/event_recommender/pull/45) starts
+  Phase 0 tasks 1–2 from `bad42d0`. The PR is a draft for user review.
   `AGENTS.md` has 62 lines. Archived 41 files and added the current v1 architecture.
   User acceptance and merge are pending. Runtime and workflow tasks 3–5 follow.
   Local checks passed: 131 repository links, archive preservation and diff checks.
