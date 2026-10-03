@@ -70,5 +70,6 @@ readiness. A successful health check does not prove catalog readiness.
 
 Use [GCP deployment](gcp-deployment.md) and [GCP collection](gcp-collector.md).
 The [archive](archive/) preserves earlier plans and evidence. Archived documents
-do not define current scope. Phase 0 still has to remove the Cloudflare runtime
-and freeze the unused PostgreSQL workflow steps.
+do not define current scope. Cloudflare runtime files and workflows are removed.
+PostgreSQL code stays in its current folders. Its preparation step and dedicated
+CI job are removed. The Node snapshot path remains the v1 runtime.

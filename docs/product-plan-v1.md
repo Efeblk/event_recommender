@@ -240,3 +240,15 @@ checks still pass, and the per-request cost does not increase without approval.
 - 2026-10-04: Resolved the instruction conflict in favor of this plan.
   PostgreSQL migration and the older launch gates do not define v1 scope.
   PostgreSQL code stays in its current folders. Workflow removal is pending.
+- 2026-10-04: PR 45 merged as `7a7e676`. All eight CI checks passed on `dd33560`.
+  The merge has the same Git tree. The local and remote PR branch are deleted.
+  Phase 0 tasks 1–2 are delivered. Tasks 3–5 are now in progress.
+- 2026-10-04: Phase 0 tasks 3–5 passed local checks on Node 22.23.3.
+  Removed the Cloudflare runtime. Node is the default build and preview.
+  PostgreSQL code stays in its current folders. Its workflow steps are removed.
+  Public collection artifacts contain explicit JSON report paths and no raw pages.
+  Checks passed: 771 web tests, 274 collector tests, typecheck, lint, deployment
+  checks, Node build/smoke, and 45 browser tests. One collector test and one
+  browser test were skipped. All 130 documentation links resolve. No paid calls.
+  The accepted AGENTS.md policies remain. The file now has 61 lines.
+  CI, staging deploy, collection and readiness checks are pending.

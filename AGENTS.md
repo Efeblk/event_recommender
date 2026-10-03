@@ -41,9 +41,8 @@ Use [the v1 architecture](docs/architecture.md) for the current system.
 - For deployment changes, run `npm run test:deploy-config` in `web/`.
 - For GCP changes, also run `npm run test:deploy:gcp`, `npm run build:node`
   and `npm run test:smoke:node` in `web/`. Verify the Linux Docker image in CI.
-- Until Phase 0 removes Cloudflare, build before its smoke or browser checks.
-  Run `npm run build`, then `npm run test:smoke` in `web/`.
-  Use `BIPLAN_BROWSER_START=1 npm run test:browser` when a browser check applies.
+- Build Node before browser checks. Use `npm run build:node` in `web/`.
+- Use `BIPLAN_BROWSER_START=1 npm run test:browser` when a browser check applies.
 - Prefer the T3 Code browser. Report an unavailable host before using Playwright.
 - For documentation changes only, check links and the diff. Do not build or call APIs.
 - Check CI on the exact latest PR revision. Fix failures before merge.

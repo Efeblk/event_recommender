@@ -2,7 +2,7 @@
 
 The [product plan](product-plan-v1.md) defines current scope and release checks.
 Use [the v1 architecture](architecture.md) for the current data flow.
-PostgreSQL cutover is outside v1. Phase 0 will remove the Cloudflare runtime.
+PostgreSQL cutover is outside v1. Cloudflare runtime files and workflows are removed.
 
 GCP staging was first deployed on September 27, 2026. After Google sign-in and
 explicit approval of the private staging proposal, the dedicated staging
@@ -77,9 +77,8 @@ docker build -f Dockerfile -t biplan-gcp-local ..
 ```
 
 `build:node` copies source into an isolated temporary directory and writes only
-`web/dist-node`. It excludes local credentials. It does not compete with the
-Cloudflare build output. Until Phase 0 removes Cloudflare, `npm run build` and
-the D1/R2 smoke test check that runtime. Node smoke verifies compiled startup, UI, authorization
+`web/dist-node`. It excludes local credentials. `npm run build` is an alias for
+that Node build. Node smoke verifies compiled startup, UI, authorization
 and missing-storage behavior; it does not claim a real GCP integration test.
 
 Review [the infrastructure definition](../infra/gcp/README.md), its plan, the
@@ -118,8 +117,7 @@ correctly remain unready when its source data is stale.
 
 The legacy in-request `/api/admin/sync` returns 410 on GCP after authorization.
 Use the durable multi-provider collector pipeline: source imports followed by
-explicit `/api/admin/collection` publication. The Cloudflare fallback retains
-its legacy route. See [private GCP collection](gcp-collector.md) for the gated
+explicit `/api/admin/collection` publication. See [private GCP collection](gcp-collector.md) for the gated
 collector workflow. Cloud Run IAM uses `X-Serverless-Authorization`; the separate
 application sync token uses `Authorization`.
 

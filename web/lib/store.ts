@@ -1,2 +1,2 @@
-﻿// Selected at build time: Google SDKs never enter the Cloudflare worker bundle.
-export * from '#biplan/store';
+// The application uses the Node store.
+export * from './store.node.ts';

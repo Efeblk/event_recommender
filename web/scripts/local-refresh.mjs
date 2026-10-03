@@ -82,7 +82,7 @@ try {
     `Collection report not found at ${report}. Run with --collect or pass --report <path>.`,
   );
 }
-console.log('Importing the validated report into persistent local D1…');
+console.log('Importing the validated report into the configured GCP snapshot store…');
 await run(
   [
     join(collectorRoot, 'publish.mjs'),
@@ -111,5 +111,5 @@ if (values.index) {
   );
 }
 console.log(
-  'Local D1 refresh completed. The checkpoint and canonical snapshot now match the imported catalog.',
+  'Snapshot refresh completed. The checkpoint and canonical snapshot now match the imported catalog.',
 );

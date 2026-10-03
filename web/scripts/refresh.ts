@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-// The crawler runs in Node, separately from the application Worker.
+// The crawler runs in Node, separately from the application server.
 const child = spawn(
   process.execPath,
   ['--experimental-strip-types', 'run.mjs', ...process.argv.slice(2)],

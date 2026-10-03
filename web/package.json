@@ -7,27 +7,21 @@
   },
   "scripts": {
     "dev": "vinext dev",
-    "build": "vinext build",
+    "build": "npm run build:node",
     "build:node": "node scripts/build-node.mjs",
-    "start": "wrangler dev --config dist/server/wrangler.json",
+    "start": "npm run start:node",
     "start:node": "node dist-node/server.js",
     "lint": "oxlint",
     "format": "oxfmt",
-    "db:generate": "drizzle-kit generate",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
-    "test:smoke": "node --experimental-strip-types scripts/smoke.mjs && npm run test:voyage-workerd",
-    "test:voyage-workerd": "node scripts/voyage-workerd-smoke.mjs",
+    "test:smoke": "npm run test:smoke:node",
     "typecheck": "tsc --noEmit",
     "data:refresh": "node --experimental-strip-types scripts/refresh.ts",
     "local:setup": "node scripts/local-setup.mjs",
     "local:start": "node scripts/local-start.mjs",
     "local:refresh": "node scripts/local-refresh.mjs",
     "embeddings:index": "node scripts/index-embeddings.mjs",
-    "deploy:config": "node scripts/deploy-config.mjs",
-    "deploy:prepare": "node scripts/deploy.mjs prepare",
-    "deploy:dry-run": "node scripts/deploy.mjs dry-run",
     "test:deploy-config": "node --experimental-strip-types --test deploy/*.test.mjs",
-    "deploy:run": "node scripts/deploy.mjs deploy",
     "test:browser": "playwright test",
     "test:smoke:node": "node scripts/smoke-node.mjs",
     "test:deploy:gcp": "node scripts/check-gcp-deploy-config.mjs",
@@ -76,7 +70,6 @@
     "@google-cloud/storage": "8.2.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
-    "drizzle-orm": "0.45.2",
     "lucide-react": "1.31.0",
     "pg": "8.23.0",
     "react": "19.2.8",
@@ -87,9 +80,6 @@
     "vinext": "1.0.0-beta.9"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.62.2",
-    "@cloudflare/workers-types": "5.20260926.1",
-    "@openai/sites-vite-plugin": "0.2.0",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
@@ -98,17 +88,15 @@
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
     "@vitejs/plugin-rsc": "0.5.34",
-    "drizzle-kit": "0.31.10",
     "oxfmt": "0.61.0",
     "oxlint": "1.76.0",
     "oxlint-tsgolint": "7.0.2001",
     "tailwindcss": "4.2.1",
     "typescript": "5.9.3",
-    "vite": "8.2.2",
-    "wrangler": "4.144.0"
+    "vite": "8.2.2"
   },
   "type": "module",
   "imports": {
-    "#biplan/store": "./lib/store.cloudflare.ts"
+    "#biplan/store": "./lib/store.node.ts"
   }
 }

@@ -12,6 +12,11 @@ skip collection before credentials are used. `open` keeps collection active
 without an expiry. It does not enable paid indexing. Manual dispatch uses
 `master` and does not require either schedule variable.
 
+The workflow serves the v1 snapshot path. PostgreSQL preparation is frozen.
+Its opt-in workflow step is removed. Raw provider pages under
+`collector/state/raw/` are excluded from public workflow artifacts.
+JSON collection, coverage, publication and indexing reports remain available.
+
 Configure a separate `gcp-staging-collector` GitHub environment with:
 
 - `BIPLAN_URL`: the service's direct `https://…run.app` URL.

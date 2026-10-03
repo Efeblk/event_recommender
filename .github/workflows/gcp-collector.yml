@@ -105,21 +105,6 @@ jobs:
         # Reserve time in the 60-minute job for durable publication and indexing.
         run: npm run collect --prefix collector -- --max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20 --raw-max-bytes 3221225472 --snapshot state/events.json
 
-      - name: Prepare replacement PostgreSQL catalog (opt in)
-        # Activation needs reviewed raw retention, staging connectivity and a
-        # fresh managed run allowance. This does not publish or change serving.
-        if: vars.GCP_STAGING_PIPELINE_ENABLED == 'true'
-        timeout-minutes: 6
-        env:
-          BIPLAN_PG_HOST: ${{ vars.BIPLAN_PIPELINE_PG_HOST }}
-          BIPLAN_PG_PORT: ${{ vars.BIPLAN_PIPELINE_PG_PORT }}
-          BIPLAN_PG_DATABASE: ${{ vars.BIPLAN_PIPELINE_PG_DATABASE }}
-          BIPLAN_PG_USER: ${{ vars.BIPLAN_PIPELINE_PG_USER }}
-          BIPLAN_PG_PASSWORD: ${{ secrets.BIPLAN_PIPELINE_PG_PASSWORD }}
-          BIPLAN_PG_TLS: require
-          BIPLAN_PG_CA: ${{ secrets.BIPLAN_PIPELINE_PG_CA }}
-        run: npm run pipeline --prefix collector -- --initialize --raw-collection output/pipeline-raw-collection.json --raw-directory state/raw --max-jobs 20000 --time-ms 300000
-
       - name: Save durable coverage backlog
         if: always()
         uses: actions/cache/save@v4
@@ -206,7 +191,6 @@ jobs:
             collector/output/provider-listings.json
             collector/output/raw-fetches.json
             collector/output/pipeline-raw-collection.json
-            collector/state/raw/
             collector/state/events.json
             collector/state/coverage.json
             web/work/collection-embedding-index.jsonl*
