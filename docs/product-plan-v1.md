@@ -243,7 +243,8 @@ checks still pass, and the per-request cost does not increase without approval.
 - 2026-10-04: PR 45 merged as `7a7e676`. All eight CI checks passed on `dd33560`.
   The merge has the same Git tree. The local and remote PR branch are deleted.
   Phase 0 tasks 1–2 are delivered. Tasks 3–5 are now in progress.
-- 2026-10-04: Phase 0 tasks 3–5 passed local checks on Node 22.23.3.
+- 2026-10-04: [PR 46](https://github.com/Efeblk/event_recommender/pull/46)
+  implements Phase 0 tasks 3–5. Local checks passed on Node 22.23.3.
   Removed the Cloudflare runtime. Node is the default build and preview.
   PostgreSQL code stays in its current folders. Its workflow steps are removed.
   Public collection artifacts contain explicit JSON report paths and no raw pages.
