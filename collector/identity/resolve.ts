@@ -20,7 +20,7 @@ import type {
   ResolvedVenue,
 } from "./types.ts";
 
-export const IDENTITY_RULE_VERSION = `deterministic-identity.v4+${IDENTITY_SEED_VERSION}` as const;
+export const IDENTITY_RULE_VERSION = `deterministic-identity.v5+${IDENTITY_SEED_VERSION}` as const;
 const GEO_RADIUS_METRES = 75;
 // Providers geocode large buildings and malls hundreds of metres apart
 // (Torium Sahne: ~500 m), so coordinates veto a name match only beyond this.
@@ -65,12 +65,44 @@ function listingTitleKey(listing: IdentityListing) {
 
 // Providers file the same "X Stand Up" under different categories, so the
 // category-scoped suffix removal can differ; identical titles still match.
+const CONTAINMENT_RULE = "same-venue-title-containment";
+
 function titlesMatch(left: IdentityListing, right: IdentityListing): boolean {
   const leftKey = listingTitleKey(left).key;
   if (leftKey && leftKey === listingTitleKey(right).key) return true;
   const raw = (listing: IdentityListing) =>
     normalizeIdentityText(stripVenueTitlePrefix(listing.title, listing.venue.name));
   return Boolean(raw(left)) && raw(left) === raw(right);
+}
+
+function titleContains(left: IdentityListing, right: IdentityListing): boolean {
+  const [longer, shorter] = left.title.length >= right.title.length ? [left, right] : [right, left];
+  return specificTitle(shorter) && dashSegmentsContain(longer.title, shorter.title);
+}
+
+// Words that label a format or listing page rather than naming a show.
+const GENERIC_TITLE_WORDS = new Set([
+  "atolye", "atolyesi", "workshop", "workshops", "etkinlik", "etkinligi", "etkinlikleri", "takvim", "takvimi",
+  "konser", "konseri", "concert", "tiyatro", "oyun", "oyunu", "stand", "up", "standup", "gosteri", "gosterisi",
+  "show", "sergi", "sergisi", "festival", "gece", "gecesi", "night", "parti", "party", "istanbul", "event", "live", "canli",
+]);
+/** The title names something beyond its format and the venue it is held at. */
+function specificTitle(listing: IdentityListing): boolean {
+  const venueWords = new Set(normalizeIdentityText(listing.venue.name).split(" "));
+  return normalizeIdentityText(listing.title).split(" ")
+    .some((word) => word.length >= 3 && !GENERIC_TITLE_WORDS.has(word) && !venueWords.has(word));
+}
+
+// One provider adds a performer or series part around the same show title:
+// "Bir Delinin Hatıra Defteri - Muhammet Emre Aydın", "… Konser Serisi -
+// Coşkun Karademir Trio - Folk'n'Jazz", with or without the dash. The shorter
+// title must be a whole-word prefix or suffix of the longer one and specific.
+// Callers already require the same venue, instant and different providers.
+function dashSegmentsContain(longer: string, shorter: string): boolean {
+  const outer = normalizeIdentityText(longer);
+  const inner = normalizeIdentityText(shorter);
+  if (outer === inner || inner.length < 10 || inner.split(" ").length < 2) return false;
+  return outer.startsWith(`${inner} `) || outer.endsWith(` ${inner}`);
 }
 
 function cityKey(listing: IdentityListing): string {
@@ -602,6 +634,13 @@ export function assessIdentityPair(
       rule: "guarded-title-seed",
       evidence: [`title-seed:${leftSeed}`, `venue:${leftVenueId}`],
     };
+  if (titleContains(left, right))
+    return {
+      ...base,
+      outcome: "auto_merge",
+      rule: CONTAINMENT_RULE,
+      evidence: [`title-key:${leftTitle.key}`, `title-key:${rightTitle.key}`, `venue:${leftVenueId}`].sort(),
+    };
   return {
     ...base,
     outcome: "unresolved",
@@ -672,7 +711,7 @@ function resolveSessions(
         const right = listings[rightIndex];
         const leftSeed = titleSeedIdentity(left, venueSeeds.get(left.listingId));
         const rightSeed = titleSeedIdentity(right, venueSeeds.get(right.listingId));
-        const exactTitle = titlesMatch(left, right);
+        const exactTitle = titlesMatch(left, right) || titleContains(left, right);
         const manualTitle = Boolean(leftSeed && leftSeed === rightSeed);
         const sameVenue = listingVenueIds[left.listingId] === listingVenueIds[right.listingId];
         if (!sameVenue && !exactTitle && !manualTitle) continue;
@@ -693,7 +732,7 @@ function resolveSessions(
                 venueSeeds.get(candidate.listingId),
               );
               return (
-                titlesMatch(candidate, left) || Boolean(leftSeed && candidateSeed === leftSeed)
+                titlesMatch(candidate, left) || titleContains(candidate, left) || Boolean(leftSeed && candidateSeed === leftSeed)
               );
             });
           const leftTag = aggregatePolicyTag(left, family);
@@ -712,8 +751,13 @@ function resolveSessions(
           acceptedPairs.push([leftIndex, rightIndex]);
       }
   }
+  // Exact and reviewed title matches join first; a containment match can only
+  // add a listing whose provider is not already in the session.
+  const weak = (pair: [number, number]) =>
+    decisionByPair.get(pairKey(listings[pair[0]].listingId, listings[pair[1]].listingId))?.rule === CONTAINMENT_RULE ? 1 : 0;
   acceptedPairs.sort(
     (a, b) =>
+      weak(a) - weak(b) ||
       listings[a[0]].listingId.localeCompare(listings[b[0]].listingId) ||
       listings[a[1]].listingId.localeCompare(listings[b[1]].listingId),
   );

@@ -43,7 +43,8 @@ const categoryMap: Record<string, Category[]> = {
   theatre: ['Tiyatro'],
   standup: ['Stand-up'],
   workshop: ['Workshop', 'Eğitim'],
-  exhibition: ['Sergi'],
+  // Immersive and museum-hosted exhibitions are sold as "Müze".
+  exhibition: ['Sergi', 'Müze'],
   festival: ['Festival'],
   sport: ['Spor'],
   cinema: ['Sinema'],
@@ -196,8 +197,10 @@ function atomResult(
     }
     case 'topic': {
       if (!genreTopics.has(atom.value)) {
+        // "müzikal" is also an ordinary adjective in descriptions ("müzikal bir
+        // yolculuk"); a musical names itself in its title or category.
         const text = normalize(
-          [event.title, event.description, event.sourceCategory]
+          [event.title, atom.value === 'musical' ? '' : event.description, event.sourceCategory]
             .filter(Boolean)
             .join('. '),
         );

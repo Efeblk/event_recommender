@@ -475,7 +475,7 @@ test("identity decisions retain stable review evidence", () => {
   ]);
   assert.equal(result.decisions[0].outcome, "auto_merge");
   assert.match(result.decisions[0].inputHash, /^[a-f0-9]{64}$/);
-  assert.match(result.decisions[0].ruleVersion, /^deterministic-identity\.v4/);
+  assert.match(result.decisions[0].ruleVersion, /^deterministic-identity\.v5/);
   assert.ok(result.decisions[0].evidence.length > 0);
 });
 
@@ -581,4 +581,27 @@ test("provider category and uncredited prose are not format or adaptation eviden
     }),
   ]);
   assert.equal(play.sessions.length, 1);
+});
+
+test("performer or series parts around a show title merge; exact pairs keep precedence", () => {
+  const venue = { name: "Cafe Theatre Koşuyolu", district: "Kadıköy" };
+  const sessions = (...titles) =>
+    resolveIdentity(titles.map(([provider, title], index) => listing({ listingId: `t${index}`, provider, title, venue }))).sessions;
+  assert.equal(sessions(["biletix", "Bir Delinin Hatıra Defteri"], ["bubilet", "Bir Delinin Hatıra Defteri - Metin Zakoğlu"]).length, 1);
+  assert.equal(
+    sessions(
+      ["biletix", "Bir Delinin Hatıra Defteri"],
+      ["bubilet", "Bir Delinin Hatıra Defteri - Metin Zakoğlu"],
+      ["biletinial", "Bir Delinin Hatıra Defteri Metin Zakoğlu"],
+    ).length,
+    1,
+  );
+  // A generic listing page title names no show and never joins a specific one.
+  const generic = resolveIdentity([
+    listing({ listingId: "g1", provider: "biletinial", title: "3D Figür Boyama Workshop: Sosyal Sanathane", category: "Workshop", venue: { name: "Sosyal Sanathane" } }),
+    listing({ listingId: "g2", provider: "bubilet", title: "3D Figür Boyama Workshop: Sosyal Sanathane", category: "Workshop", venue: { name: "Sosyal Sanathane" } }),
+    listing({ listingId: "g3", provider: "bubilet", title: "Workshop: Sosyal Sanathane", category: "Workshop", venue: { name: "Sosyal Sanathane" } }),
+  ]);
+  const together = generic.sessions.find((s) => s.listingIds.includes("g1"));
+  assert.deepEqual(together.listingIds, ["g1", "g2"]);
 });
