@@ -121,7 +121,7 @@ Priorities from this assessment: fix the `tür`/tour collision, preserve evening
 
 ## Preserved evidence
 
-Evidence directory: [`web/work/product-benchmark-2026-10-03/`](../web/work/product-benchmark-2026-10-03/). It is intentionally ignored by Git and must be retained with this report.
+Evidence directory: `web/work/product-benchmark-2026-10-03/`. It is intentionally ignored by Git and must be retained with this report. The directory is local evidence, not a repository link.
 
 - `manifest.json`: revision, environment, dataset hash, and individual file hashes.
 - `web-checks/`, `collector/`: complete test logs and per-command receipts, including failed minimum-version runs.

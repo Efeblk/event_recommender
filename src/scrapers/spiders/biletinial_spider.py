@@ -31,7 +31,7 @@ class BiletinialSpider(BaseEventSpider):
         self.playwright_page = None
         self.limit = int(limit) if limit else None
 
-        # All categories from docs/scraped_websites.md - REMOVED /istanbul suffix
+        # All categories from docs/archive/scraped_websites.md - REMOVED /istanbul suffix
         self.start_urls = [
             "https://biletinial.com/tr-tr/muzik",
             "https://biletinial.com/tr-tr/tiyatro",

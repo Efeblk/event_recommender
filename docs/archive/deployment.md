@@ -1,6 +1,6 @@
 # Deployment
 
-GCP is the selected target. Start with [GCP deployment](gcp-deployment.md).
+GCP is the selected target. Start with [GCP deployment](../gcp-deployment.md).
 The Cloudflare instructions below are retained for the existing staging fallback;
 they do not deploy the chosen GCP architecture.
 

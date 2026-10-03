@@ -1,6 +1,16 @@
 # GCP staging collector
 
-`Collect GCP staging event data` supports manual runs and a six-hour schedule for the private staging Cloud Run service. A scheduled run starts only when the repository variable `GCP_STAGING_COLLECTION_ENABLED` is exactly `true` and `GCP_STAGING_COLLECTION_UNTIL` is a canonical UTC timestamp (`YYYY-MM-DDTHH:mm:ss.sssZ`) that is still in the future and no more than 60 hours away. Missing, malformed, expired, or overly distant deadlines skip collection before the collector environment or credentials are used. Merging the workflow does not enable collection. Manual dispatch remains available from the default `master` branch and does not require either schedule variable.
+The [product plan](product-plan-v1.md) defines current scope and acceptance checks.
+Use [the v1 architecture](architecture.md) for the current data flow.
+
+`Collect GCP staging event data` supports manual runs and a six-hour schedule.
+The service is private. A scheduled run requires
+`GCP_STAGING_COLLECTION_ENABLED=true`. `GCP_STAGING_COLLECTION_UNTIL` must be
+the literal `open` or a future canonical UTC timestamp
+(`YYYY-MM-DDTHH:mm:ss.sssZ`) no more than 60 hours away. Missing or invalid values
+skip collection before credentials are used. `open` keeps collection active
+without an expiry. It does not enable paid indexing. Manual dispatch uses
+`master` and does not require either schedule variable.
 
 Configure a separate `gcp-staging-collector` GitHub environment with:
 
@@ -38,7 +48,10 @@ Leave `GCP_STAGING_COLLECTION_ENABLED` absent or set to any other value to keep 
 gh variable set GCP_STAGING_COLLECTION_ENABLED --body false
 ```
 
-After activation, collect at least 48 hours of successful scheduled staging evidence before public release. Manual runs, merged configuration, configured variables, and skipped scheduled jobs do not by themselves satisfy that gate.
+Phase 2 requires seven days of scheduled collection and an hourly readiness
+monitor. Manual runs and skipped jobs do not prove that acceptance condition.
+The older 48-hour observation procedure above describes a bounded window.
+Use `open` for the product plan's seven-day check.
 
 ## Optional bounded embedding follow-up
 
@@ -109,10 +122,11 @@ recovery. Reuse valid captured vectors after a publication failure rather than
 paying for the same input again. Preserve original failed evidence and admission
 counts during recovery.
 
-Successful batches merge through the existing lease-fenced vector writer without
-deleting old cached vectors. A bounded stop leaves surplus documents pending and
-returns exit 2; a failure returns exit 1. Both remain visible as a failed indexing
-step, while an already published collection still receives its own soak report.
+Successful batches use the existing vector writer and retain cached vectors.
+A bounded stop leaves documents pending and returns exit 2. The workflow records
+a warning and keeps the successful collection result. A fatal indexing failure
+returns exit 1 and fails the job. An already published collection still receives
+its own soak report in both cases.
 The always-upload artifact includes `collection-embedding-index.jsonl` and
 original admin HTTP response files; server-side provider evidence remains in the
 private bucket. These records must distinguish publication success, embedding

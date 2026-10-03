@@ -61,7 +61,7 @@ The second request, at 21:15:32, was captured with live Wrangler tail:
 This confirms a CPU failure for this request. It does not establish the cause
 of either earlier import failure. Tail collection stopped immediately; headers,
 authorization, IP and network metadata were discarded before persistence.
-The [sanitized evidence](../web/evals/reports/2026-09-27-staging-bootstrap.json)
+The [sanitized evidence](../../web/evals/reports/2026-09-27-staging-bootstrap.json)
 preserves the distinguishing results. No staging recommendation or embedding
 provider calls were made during these diagnostics.
 

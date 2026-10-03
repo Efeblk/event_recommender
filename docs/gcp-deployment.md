@@ -1,35 +1,34 @@
 # GCP deployment
 
-GCP is the selected target as of September 27, 2026. After Google sign-in and
+The [product plan](product-plan-v1.md) defines current scope and release checks.
+Use [the v1 architecture](architecture.md) for the current data flow.
+PostgreSQL cutover is outside v1. Phase 0 will remove the Cloudflare runtime.
+
+GCP staging was first deployed on September 27, 2026. After Google sign-in and
 explicit approval of the private staging proposal, the dedicated staging
 foundation was provisioned with a TRY 100 budget alert, and one private
 application revision was deployed, bootstrapped, and verified. See the
-[September 27 execution evidence](gcp-staging-execution-2026-09-27.md). This
-private staging execution is not a public launch. The existing Cloudflare staging
-deployment is retained for comparison and recovery.
+[September 27 execution evidence](archive/gcp-staging-execution-2026-09-27.md). This
+private staging execution is not a public launch. These records describe
+historical checks. They do not establish current readiness.
 
-The [September 27 validation record](gcp-staging-validation-2026-09-27.md)
+The [September 27 validation record](archive/gcp-staging-validation-2026-09-27.md)
 records the subsequent embedding completion, live recommendation/source review,
 rollback, full isolated restore, bounded capacity checks and remaining gates.
-The subsequent [catalog coverage record](catalog-coverage-2026-09-28.md)
+The subsequent [catalog coverage record](archive/catalog-coverage-2026-09-28.md)
 tracks the expanded provider inventory, conservative offer merging, source
 quarantines and current embedding/publication evidence. Earlier complete-vector
 counts do not establish coverage of the enlarged catalog.
 
-## Deployed architecture and selected target
+## Current v1 architecture
 
-The table and runtime procedures below describe the deployed snapshot/Firestore
-foundation. The September 29 [catalog enrichment architecture decision](catalog-enrichment-architecture.md)
-selects PostgreSQL + PostGIS + pgvector, separate durable preparation jobs, and
-versioned search publications as the target. That migration is not implemented
-by the decision. Keep the deployed adapters operational until an authorized,
-verified cutover; new database provisioning needs a concrete configuration/cost
-review. Do not infer PostgreSQL deployment or readiness from this historical
-foundation's evidence.
+The table and procedures below describe the snapshot/Firestore system used by v1.
+The [earlier PostgreSQL design](archive/catalog-enrichment-architecture.md)
+remains archived. Do not start that migration as part of v1.
 
-The separately approved [September 30 PostgreSQL staging evidence](gcp-postgres-staging-validation-2026-09-30.md)
+The separately approved [September 30 PostgreSQL staging evidence](archive/gcp-postgres-staging-validation-2026-09-30.md)
 records the provisioned database, frozen import, preparation/export Jobs and recovery
-tests. The existing snapshot services retain traffic until PostgreSQL cutover qualifies.
+tests. It does not change the v1 snapshot deployment.
 
 | Component | Service | Stored data |
 | --- | --- | --- |
@@ -79,8 +78,8 @@ docker build -f Dockerfile -t biplan-gcp-local ..
 
 `build:node` copies source into an isolated temporary directory and writes only
 `web/dist-node`. It excludes local credentials. It does not compete with the
-Cloudflare build output. `npm run build` and the existing D1/R2 smoke test continue
-to verify that fallback. Node smoke verifies compiled startup, UI, authorization
+Cloudflare build output. Until Phase 0 removes Cloudflare, `npm run build` and
+the D1/R2 smoke test check that runtime. Node smoke verifies compiled startup, UI, authorization
 and missing-storage behavior; it does not claim a real GCP integration test.
 
 Review [the infrastructure definition](../infra/gcp/README.md), its plan, the
@@ -91,8 +90,8 @@ as part of a read-only account check. No resource activation or spending has
 been authorized by preparing these files.
 
 The manual **Deploy GCP staging** workflow builds and checks a candidate before
-entering the protected `gcp-staging` GitHub environment. Configure required
-reviewers on that environment before use. Workload Identity Federation replaces
+entering the protected `gcp-staging` GitHub environment. The product plan permits
+staging deploys and approval of that gate. Workload Identity Federation replaces
 downloaded service-account keys. Supply the infrastructure outputs as environment
 variables. The collector uses the separate reviewer-free, `master`-restricted
 `gcp-staging-collector` environment described below; keep runtime, deployment and
@@ -132,11 +131,10 @@ expiry; collection makes no paid calls, and indexing keeps its own window).
 Missing, malformed, expired, and overly distant deadlines fail closed; manual dispatch remains available without these variables. After a
 successful manual run, IAM verification, and cost review, set the deadline first
 and enable the schedule deliberately. See [private GCP collection](gcp-collector.md)
-for the exact activation and early-stop procedure. Collect 48 hours of actual
-scheduled evidence. Authenticated Cloud Monitoring now checks
-the private readiness endpoint through service-agent OIDC, and controlled email
-delivery was verified; see the execution evidence. This bounded verification and
-the old Cloudflare monitor do not establish the required 48-hour GCP uptime record.
+for activation and the stop procedure. Phase 2 requires an hourly readiness
+monitor and seven days of scheduled collection. Historical monitoring checks
+do not prove that acceptance condition. Keep the schedule active unless a
+specific maintenance task requires a pause. Record and restore any pause.
 
 ## Cost and abuse controls
 
@@ -176,15 +174,18 @@ to an old live object. Prune only objects proven unreferenced by all retained
 catalog/source/vector heads, with a recovery window. Storage growth and this
 maintenance policy are production gates.
 
-## Release gates
+## Release checks
 
-Before public release, record actual GCP deployment identity, catalog/vector
-coverage, source-evidence review of every returned card, live Turkish/English
-quality, provider failure behavior, authenticated recovery/rollback and measured
-memory/latency under load. Exercise loss of a referenced object, a stale lease,
-and restoration into an isolated project/bucket. Keep the original checkpoint
-and previous image digest. Local timings and fake SDK tests are not Cloud Run
-capacity or IAM evidence. Complete [the launch checklist](launch-checklist.md).
+Use the phase acceptance checks in [the product plan](product-plan-v1.md).
+Phase 0 needs green CI on `master`, a successful staging deploy and collection,
+HTTP 200 from `/api/ready`, and user acceptance of the short `AGENTS.md`.
+Phase 1 measures retrieval against a fixed test set. Phase 2 requires seven days
+of collection and monitoring. Phase 3 needs the user's choice of private beta
+access and URL. Public access needs separate user approval.
+
+The [old launch checklist](archive/launch-checklist.md) is historical reference.
+Its unrelated capacity and PostgreSQL work does not block the v1 test link.
+Keep the original checkpoint and previous image digest for recovery.
 
 The initial SDK install includes the Storage SDK's transitive `gaxios -> uuid`
 moderate advisory GHSA-w5hq-g745-h8pq. Our storage path does not call the affected

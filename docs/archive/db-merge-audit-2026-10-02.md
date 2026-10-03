@@ -8,7 +8,7 @@ The reported duplicate could not be reproduced on the deployed service. This aud
 - Literal aliases cover `Son Lux` / `%100 Müzik Sunar: Son Lux` and `Bahçeşehir Kültür Sanat Merkezi` / `Bahçeşehir Kültür Merkezi`. Regression fixtures retain the original provider IDs and cover the full observed families. Session merging still requires the same time, supported title and venue; offers remain separate within the merged session.
 - The migration replay verifier failed on Windows because its migration-012 fixture retained CRLF while PostgreSQL returned LF. Normalizing that fixture fixes the check. No runtime migration definitions changed.
 
-The fixture is [reviewed-merge-families.json](../web/tests/fixtures/reviewed-merge-families.json): 3 Son Lux provider records and 19 records across 9 Bahçeşehir performances. Titles/venues/addresses are frozen database projections, not verbatim provider responses. The exact read-only query, result, publication ID and observation times are preserved under ignored `web/work/db-merge-audit/`; disposable migration receipts are under `web/work/catalog-foundation/migration-replay-verification-*.json`.
+The fixture is [reviewed-merge-families.json](../../web/tests/fixtures/reviewed-merge-families.json): 3 Son Lux provider records and 19 records across 9 Bahçeşehir performances. Titles/venues/addresses are frozen database projections, not verbatim provider responses. The exact read-only query, result, publication ID and observation times are preserved under ignored `web/work/db-merge-audit/`; disposable migration receipts are under `web/work/catalog-foundation/migration-replay-verification-*.json`.
 
 ## Validation and limits
 

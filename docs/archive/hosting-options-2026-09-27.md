@@ -55,7 +55,7 @@ scratch dependency junction; pointing `NODE_PATH` at that existing dependency
 directory allowed the second build to pass without installing packages. Both
 logs were preserved. This proves the framework's local Node entrypoint, not a
 complete application migration, Linux container build or Cloud Run performance.
-The [Node compatibility record](../web/evals/reports/2026-09-27-node-compatibility.json)
+The [Node compatibility record](../../web/evals/reports/2026-09-27-node-compatibility.json)
 preserves the results; logs and the full source hash manifest remain under
 `web/work/cloud-run-compatibility/`.
 

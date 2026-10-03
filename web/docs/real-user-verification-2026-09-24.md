@@ -4,7 +4,7 @@ Local testing only; no deployment. Synthetic Turkish and English conversations e
 
 This records the earlier test rounds. Later browser coverage, dependency checks,
 performance measurements and release gates are tracked in the
-[release audit](../../docs/release-readiness-2026-09-24.md); the historical results
+[release audit](../../docs/archive/release-readiness-2026-09-24.md); the historical results
 and limitations below are retained as observed on their recorded revisions.
 
 ## Baseline and fixes

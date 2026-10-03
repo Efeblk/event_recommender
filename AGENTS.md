@@ -1,88 +1,62 @@
-# Agent workflow
+# Agent instructions
 
-Optimize token usage by matching the model and scope to the task.
+Read [the product plan](docs/product-plan-v1.md) first.
+The product plan has priority over older instructions and archived documents.
+Use [the v1 architecture](docs/architecture.md) for the current system.
 
-- Use `gpt-6-astra` for substantial planning, architecture decisions, and difficult reasoning.
-- Use `gpt-5.6-sol` as the default model for implementation, debugging, tests, and routine reviews.
-- Handle trivial edits directly without adding a planning phase solely to follow these defaults.
-- Reuse existing findings and run checks appropriate to the change. Escalate to Astra when Sol encounters a substantive reasoning blocker rather than repeating unproductive attempts.
+## Product scope
 
-These are model-selection defaults for sessions. This file does not change the model of an already running agent; apply them through the available model-selection controls.
+- v1 returns relevant, correct and bookable Istanbul events from a request.
+- Support Turkish and English requests.
+- Keep dates, places, budgets, categories, negations and age limits correct.
+- Do not show duplicate sessions or events without required source evidence.
+- Retrieve from the full eligible catalog before the shortlist of up to 16.
+- Return each distinct shortlisted event that passes the support threshold.
+- Keep collection work outside search requests.
+- Leave PostgreSQL, new providers, promotions and quality scoring outside v1.
+- Start v2 ranking only after Phase 3.
 
-## Communication
+## Work rules
 
-- Use ASD-STE100 Simplified Technical English for all explanations from now on. This includes progress updates, final responses, and explanations in project documents.
-- Use short sentences and active voice. Give one instruction in each sentence. Use the same term for the same thing.
-- Keep technical names, commands, code, paths, and quoted source text exact. Explain a necessary technical term when you first use it.
-
-## Development priorities
-
-- This project is still in development. Everything can be rewritten or replaced, including application code, architecture, database schemas and contents, preparation pipelines, and deployments, when doing so produces a better working system and workflow.
-- Prioritize a working product and a clear, reliable, efficient development and operating workflow. An active database or existing deployment is not a reason to preserve an implementation, avoid a rewrite, or add compatibility work with no demonstrated benefit.
-- Treat the selected architecture and implementation notes as the current starting point, not permanent constraints. Where later guidance favors preserving existing systems, this development priority takes precedence; judge changes by demonstrated correctness, usefulness, workflow quality, and cost.
-
-## Delivery cadence and scope
-
-- Deliver a usable milestone early. For work likely to exceed 30 minutes, state the first concrete deliverable, its acceptance checks, and the expected expensive or slow steps. Share the working URL as soon as a deployed milestone is usable; do not withhold it while unrelated release gates run.
-- Reassess scope after 30 minutes without a usable milestone. Identify the actual blocker, elapsed time, completed work and smallest remaining path. Continue necessary authorized work, but do not silently turn a focused fix into hours of broader production qualification.
-- Separate the requested fix from public-launch readiness. Keep the launch checklist accurate, but treat long soak periods and unrelated capacity work as explicit outstanding gates rather than prerequisites for handing over a working test link.
-- Investigate a defect's affected family before repeated rollout cycles. For example, when organizer-prefixed titles cause duplicates, inspect all such titles in the current catalog, including counterexamples, before deploying individual aliases one at a time.
-- Batch related fixes and review them before the final build/deploy/live-test cycle. Once the agreed acceptance checks pass, close the task instead of adding speculative improvements, extra reviews or another evaluation round. Record newly discovered unrelated issues separately.
-- Keep progress reports concrete: what works now, what is still failing, and what the current wait will establish. If only CI remains, say so plainly. Avoid repeatedly presenting a deployed, verified fix as unfinished development.
-- Keep documentation proportional. Prefer one concise evidence summary linking preserved raw artifacts; do not create repeated reports merely to restate the same result. Handle documentation-only requests directly without application builds or live API calls.
-
-## Product and architecture
-
-- Bi’ Plan recommends Istanbul events from multiple ticket providers. Keep the interface simple: a hero with a chat input, event cards, support section, and reserved advertising areas. Donation and ad integrations remain placeholders until destinations/providers are chosen.
-- Bi’ Plan's enduring goal is continuous catalog enrichment and evaluation for fast, inexpensive, reliable recommendations. Search is a consumer of prepared knowledge. Judge changes by evidence quality, freshness, recall, ranking usefulness, end-to-end latency and total operating cost. Give existing code/database choices no preference in architecture decisions.
-- The selected target is a modular Node/TypeScript codebase with separate HTTP and durable preparation-job entry points; PostgreSQL for canonical data, typed relationships, evidence, offers/evaluations and publication/job metadata; PostGIS for geography; pgvector plus lexical/trigram retrieval; private object storage for raw responses/artifacts. Follow [docs/catalog-enrichment-architecture.md](docs/catalog-enrichment-architecture.md). This is a selected target, not a claim of implementation or provisioning. Do not add graph/vector/search engines or microservices without a concrete workload and measured benefit; relationship count or hypothetical future features alone are insufficient.
-- Model work, production/activity, session/admission window, person, organization, venue/place, provider offer and potential promotion separately. A classic work's reputation does not establish adaptation quality. Preserve stable identities, explicit role relationships, source IDs/links and conservative merge decisions; use typed fields for decision-critical facts rather than opaque JSON or arbitrary triples.
-- Preserve source observations and field-level evidence with source/record ID, content hash, observation/ingestion times, source update/effective validity when known and conflict/refresh status; event time is separate. Later fetch does not imply greater authority. Derived fields, scores, documents and embeddings retain dependency hashes and model/rubric/profile versions; expiry and cohort changes can invalidate derived results. Unknown or absent quality evidence is not poor quality; stale, failed, disputed and canceled are different states. Location precision and neighborhood evidence must be explicit.
-- Prepare incrementally: collect → validate/quarantine → canonicalize → enrich/reconcile → evaluate/derive offer rules → prepare search records/embeddings → validate → publish. Reuse unchanged work; recompute only affected dependencies. `collector/` owns preparation/publication; `web/` serves requests using shared versioned contracts. Never collect, merge identities, enrich or rescore the full catalog in a search request.
-- Resume implementation from [docs/catalog-enrichment-implementation.md](docs/catalog-enrichment-implementation.md); inspect actual files/receipts before repeating work. Stable offer revisions, atomic acceptance, fenced workers/outbox, canonical creation/correction and opt-in PostgreSQL HTTP retrieval are implemented locally. Migration 006 prepares a sealed collection batch and publishes one coherent generation; per-record publication in migrations 004/005 remains a bounded legacy verification path, not the production collection workflow. Configure storage admission explicitly and retain rollback evidence; do not claim indefinite retention on a fixed disk. PostgreSQL application integration is not a managed GCP cutover or automatic live enrichment. Current collectors provide aggregate starting prices without verified checkout fees or provider update clocks. Versioned typed terms are authoritative; raw offers are evidence, not guaranteed EventOffer objects. Revalidate pinned heads/canonical state/freshness and the exact selected offer; availabilityUsable is not a complete hard-constraint verdict. SQL NULL and JSON null attendance metadata both mean unknown, while actual attendance-policy changes remain mandatory failures. Do not mistake queued work for completed enrichment or deterministic price facts for calibrated quality scoring.
-- Preparation jobs require idempotency, durable checkpoints, bounded batches, leases/fencing and recorded attempts/costs. Commit work records with canonical changes, perform external calls outside transactions and reject stale results. Use separate job execution, not detached work after an HTTP response. Optional enrichment/indexing failures remain explicit and retain eligible base/lexical coverage; required integrity failures block publication.
-- Keep HTTP and durable publication SQL budgets separate. Longer publication statements require explicit remaining process/lease admission, short control queries, timeout reset and bounded failure/close handling; aborting a signal or awaiting pool closure does not cancel an active SQL statement. Preserve task limits, fences and mandatory validators.
-- Initialize existing databases with pending migrations only. Validate the known contiguous migration history and strict installed-function guards before writes; never replay historical function definitions over newer migrations. Keep frozen-import initial-offer backfill separate from migration replay.
-- Publish coherent versioned search records and a validated manifest, then atomically switch the active pointer with a previous-version guard. Verify immutable objects before committing database references; storage/database writes are not one transaction. Pin a publication ID for every multi-step search and retain compatible referenced versions; never mix unrelated generations or hold database transactions over AI calls. Retain rollback versions. Critical cancellation/time/venue/offer changes must not wait behind optional enrichment; final mandatory checks can invalidate older candidates even after rollback. A pointer switch alone does not guarantee coherent successive reads.
-- Optional serving artifacts are compressed transports of an already prepared publication, with a PostgreSQL-computed content root and exact storage generation binding. Export and verify them in durable preparation work. HTTP may fall back to SQL only for the same pinned publication; dynamic availability, offer selection and final source checks remain mandatory. Do not cache current readiness by publication alone. See the actual managed/local state in [docs/gcp-postgres-staging-validation-2026-09-30.md](docs/gcp-postgres-staging-validation-2026-09-30.md).
-- Store separate evidence-backed quality/experience/value dimensions; keep evidence sufficiency separate from AI confidence. Jev judges supplied evidence under descriptive, tested rubrics; code owns calculations and weight composition. Marketing copies are not independent reviews, fame is not production quality, and scores must not automatically bury new/unknown productions. Calibrate/version rubrics and weights on human-reviewed held-out examples before using them in ranking. General features are reusable; relevance/effective value may depend on the current request without persistent user memory.
-- Future promotions are separate from base prices and production quality. Model validity, applicability, eligibility, channel/redemption requirements, caps, group/ticket limits, fees and stacking with typed rules and unknown/unsupported states. Compute effective offer/group costs from known applicable rules; distinguish verified, estimated and conditional prices. Unverified benefits cannot satisfy a hard budget; cashback is not a checkout discount. Do not assume stock, adjacent seating, membership eligibility or promotion combinations.
-- The request workflow preserves original input/corrections, pins a publication before catalog-dependent entity lookup, finds value/entity candidates and bounded typo suggestions, uses Jev for typed intent/role judgments, validates ambiguity/constraints, resolves applicable offers, retrieves dense/lexical candidates with prepared quality signals, shortlists distinct candidates, gets Jev relevance judgments and revalidates mandatory evidence before rendering. Code owns exact values, Europe/Istanbul date resolution, budgets and hard constraints. Revalidate inherited entities per request. Clarify material unresolved ambiguity instead of silently dropping a constraint; no unrequested persistent profile/chatbot.
-- Use selective exact vector ranking when appropriate and measure approximate retrieval against an exact eligible-set baseline. Never filter a small global ANN top-k and treat zero survivors as catalog absence. Missing vectors retain lexical coverage. Combine retrieval ranks deliberately, include quality/value before final shortlisting, and key caches by publication, intent, embedding profile, relevant time and benefit inputs. Explanations must be grounded in recorded facts; neither scores nor discounts override mandatory rules.
-- `collector/` owns collection and publishing; `web/` owns the application, recommendation pipeline, and cloud storage/runtime adapters. Use Node from `web/.nvmrc` (both packages require Node >=22.13).
-- Retrieve across the full eligible catalog using Voyage embeddings and lexical signals before shortlisting up to 16 distinct candidates for TypeSafe Jev. The shortlist is not the database search limit. Return every distinct shortlisted event that passes the support threshold; do not impose a separate fixed result count or fill with unsuitable events. Keep alternatives available and retain the bounded shortlist to control per-request cost.
-- Preserve Turkish and English constraints through follow-ups, corrections, resets, and group-budget changes. Hard constraints and mandatory source-evidence checks apply to both AI recommendations and fallback search. Unknown price, accessibility, or venue policy is not positive evidence.
-- Merge provider offers conservatively: require matching session time and venue plus a supported title identity. Preserve source links, prices, and raw IDs; do not merge different sessions or adaptations merely because titles resemble each other.
-- Keep failed collection pages, quarantined records, and stale data distinguishable from successfully refreshed records. Preserve durable checkpoints and embedding-cache reuse.
-- Production preparation uses migration 007 page/record receipts over migration 006 batches. Detail URL coverage and event-record counts are separate units; preserve zero-record pages, original source clocks and carried/recovered provenance. Full coverage requires a declared cycle/horizon, immutable URL inventory and matching fresh evidence. Historical unknown scope cannot become complete by replay. Negative or disappeared page evidence currently withholds linked offers and blocks publication until reconciliation; it does not fabricate cancellations. The bounded Cloud Run preparation entry refuses legacy record-only receipts.
-- “Every event” means exhausting the supported providers' discoverable inventory within the documented horizon, not sampling a fixed number of pages. Report verified, retired, failed, quarantined and unvisited counts separately; attempted pages are not necessarily successfully collected events, and provider coverage is not all of Istanbul.
+- Work on one branch and one PR from `master` at a time.
+- Merge that PR before the next PR. Delete the branch after merge.
+- Do not create extra worktrees.
+- Complete each phase when its acceptance checks pass.
+- Put unrelated issues in the product plan's Later list.
+- Update the product plan's status log with the date, PR or run ID, and result.
+- Do not create new report documents. Link to preserved evidence.
+- Stop after 2 hours without a merged PR. Record the blocker in the status log.
+- Show the Phase 0 `AGENTS.md` to the user before merge. Get user acceptance.
+- Use short sentences and active voice. Follow ASD-STE100 Simplified Technical English.
+- Keep technical names, commands, paths and quoted source text exact.
+- Use `gpt-6-astra` for substantial planning and difficult reasoning.
+- Use `gpt-5.6-sol` for implementation, tests and routine reviews.
+- Handle trivial edits directly. Reuse existing findings.
 
 ## Verification
 
-- Prefer the T3Code integrated browser for UI checks. If its automation host is unavailable, report that limitation and use headless Playwright when possible; avoid native desktop control unless necessary.
-- Run checks appropriate to changed paths. Web checks include `npm test`, `npm run typecheck`, and `npm run lint` from `web/`; collector checks use `npm test` from `collector/`. Deployment changes also need `npm run test:deploy-config` from `web/`.
-- Reuse passing evidence for unchanged code. After a test-only or documentation-only correction, rerun the affected checks rather than automatically repeating every local build, container test and paid evaluation. Required exact-revision CI still applies; record which checks ran on which revision and prove tree equality when reusing runtime evidence.
-- GCP changes also require `npm run test:deploy:gcp`, `npm run build:node`, and `npm run test:smoke:node`; verify the Linux Docker image in CI. `dist-node` is isolated from the Cloudflare build.
-- Build before compiled smoke or browser checks: from `web/`, run `npm run build`, then `npm run test:smoke` and, when relevant, `BIPLAN_BROWSER_START=1 npm run test:browser`. The isolated browser suite mocks provider calls. Do not run competing builds against the same output directory.
-- `web/scripts/check-release-cases.mjs` checks the frozen conversational fixture offline. Its relative dates use the fixture's reference date; do not blindly reuse old dated fixtures for a new live run against today's catalog.
-- For live evaluation, use existing authorization and a bounded call budget; otherwise prepare offline checks first. Keep request pacing, application rate limits, and no automatic retries. Reuse cached document embeddings rather than paying to recreate unchanged vectors.
-- Establish one cumulative live-evaluation budget for the task, including a reserved final confirmation. Track all ledgers and addenda against that total; creating another ledger does not reset the budget. Prefer offline replay and source audits while fixing known defects. Any budget extension must fit existing authorization or receive approval for its concrete additional scope and cost.
-- Review every returned card against source evidence, not just HTTP success or the first result. Review empty results against actual catalog availability; empty does not automatically mean correct. Distinguish hard-constraint correctness, subjective relevance, and recall.
-- Check semantic distinctness separately from source validity: two fully source-verified cards can still be duplicates. Coverage audits must assert their expected family labels and record IDs, not merely report success for whichever records their matcher happened to select.
-- Preserve frozen cases and original provider responses, including failures. Record the tested runtime revision, dirty-state provenance, actual calls and limitations. Never rewrite old results to make a new policy appear to have passed live testing.
-- For enrichment/scoring work, validate source independence, subject identity, unknown/conflicting evidence, classic-versus-adaptation boundaries and rankings for new/independent events. For offer rules, use fixtures for conditional eligibility, expiry/staleness, fees, quantities/caps, stacking and cashback. Verify job interruption/idempotency/stale completions and publication pinning/rollback where changed.
-- Establish measurable acceptance targets before bounded evaluations. Record dataset/concurrency, cold/warm/cache status, p50/p95 stage and end-to-end latency, search/preparation cost, freshness/coverage and retrieval/ranking quality separately. Architecture documentation does not prove performance; retain exact-baseline recall checks and every-card source review. Documentation-only architecture decisions require consistency/link/diff checks, not builds or paid inference.
-- Check and record PostgreSQL planner statistics after a logical restore before measuring query or preparation performance; recreate missing statistics with a reviewed `ANALYZE`. Preserve sanitized caller-stage, elapsed time and SQLSTATE evidence for failed preparation steps rather than guessing the failing SQL statement from a generic timeout. Capture durable state and diagnostics for every preparation/publish phase inside the operator's failure path before deleting its database; a later observer can race cleanup and lose evidence.
-- Local Node/workerd timing and host memory are diagnostics, not measurements of Cloudflare CPU limits, isolate memory, or production capacity.
+- Use Node from `web/.nvmrc`. Both packages require Node >=22.13.
+- For web changes, run `npm test`, `npm run typecheck` and `npm run lint` in `web/`.
+- For collector changes, run `npm test` in `collector/`.
+- For deployment changes, run `npm run test:deploy-config` in `web/`.
+- For GCP changes, also run `npm run test:deploy:gcp`, `npm run build:node`
+  and `npm run test:smoke:node` in `web/`. Verify the Linux Docker image in CI.
+- Until Phase 0 removes Cloudflare, build before its smoke or browser checks.
+  Run `npm run build`, then `npm run test:smoke` in `web/`.
+  Use `BIPLAN_BROWSER_START=1 npm run test:browser` when a browser check applies.
+- Prefer the T3 Code browser. Report an unavailable host before using Playwright.
+- For documentation changes only, check links and the diff. Do not build or call APIs.
+- Check CI on the exact latest PR revision. Fix failures before merge.
+- Review every returned card and every empty result against source evidence.
+- Preserve failed results. Do not treat old evidence as a new live test.
 
-## Deployment and cost
+## Cost, deployment and secrets
 
-- Follow the user's free-first preference for development and staging. `WORKERS_PLAN=free` is the default; only select a paid profile when measured needs justify it and existing user authorization covers the change. Preparing a profile does not activate a subscription.
-- GCP remains the selected cloud. The selected architecture uses Cloud Run HTTP plus bounded preparation Jobs, PostgreSQL (preferred managed GCP host: Cloud SQL, configuration/cost review before provisioning), private Cloud Storage and Secret Manager. The existing deployed foundation uses Firestore coordination/rate limits and object snapshots; keep it operational until a tested cutover, but do not mistake it for the new canonical database design. Workers/D1/R2 remains a fallback. Follow `docs/gcp-deployment.md` for deployed operations and `docs/catalog-enrichment-architecture.md` for target architecture. Keep compatible embedding profiles/caches during migration; local checks do not establish GCP/IAM/performance/recovery readiness. This decision does not authorize new paid resources; respect existing concrete cost authorization.
-- Keep staging and production resources separate; do not reuse unrelated account resources. Keep credentials in ignored local settings such as `web/.dev.vars` or protected deployment secrets. Never print, commit, or request secrets in chat.
-- Preparing the project for publication is not itself authorization to publish publicly or purchase a plan. Continue already-authorized local work, tests, and PR work without asking for permission again.
-- When pushing or updating a PR, check CI on the exact latest revision and address failures. Do not describe a previous green revision as verification of later changes.
-- Reuse an already tested immutable image when its runtime contents are unchanged; do not rebuild or redeploy merely to attach a documentation or merge-commit SHA. Preserve the original image provenance and record the relationship to the newer commit. Where dependencies allow, run merged-commit CI alongside staging verification instead of serializing both waits.
-- If collection or monitoring is temporarily paused for maintenance, record its prior state and deadline, restore it as soon as compatible code is available, and verify restoration before finishing. Do not extend a bounded authorization window or count maintenance time as unattended evidence.
-- Use [docs/launch-checklist.md](docs/launch-checklist.md) and [docs/deployment.md](docs/deployment.md) for release gates. Public readiness requires actual staging evidence, recovery drills, capacity checks, and at least 48 hours of unattended collection/monitoring; local smoke tests cannot substitute for these.
-- The [September 24 release audit](docs/release-readiness-2026-09-24.md) contains historical results and outstanding gates at that time. Recheck changing account state, catalog freshness, and deployment status; avoid copying dated counts or blockers into permanent assumptions.
+- Ask once per phase for a paid TypeSafe/Jev or Voyage budget. Give a cost estimate.
+- Keep paid calls within that budget. Do not retry paid calls automatically.
+- Prefer free development and staging options. New paid resources need user approval.
+- Staging deploys and approval of the `gcp-staging` gate are permitted by the plan.
+- Keep staging private. Public access needs user approval.
+- Keep staging and production resources separate.
+- Never print or commit secrets. Use ignored local settings or protected secrets.
+- Follow [GCP deployment](docs/gcp-deployment.md) and [GCP collection](docs/gcp-collector.md).
