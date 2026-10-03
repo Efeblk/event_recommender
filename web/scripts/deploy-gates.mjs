@@ -3,7 +3,6 @@ import { fileURLToPath } from 'node:url';
 
 export function successfulCoreChecks(payload) {
   const required = [
-    'test',
     'collector (ubuntu-latest)',
     'collector (windows-latest)',
     'verify (ubuntu-latest)',

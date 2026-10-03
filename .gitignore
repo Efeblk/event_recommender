@@ -1,82 +1,21 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
+# Dependencies and builds
+node_modules/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
 
-# Virtual Environment
-venv/
-env/
-ENV/
-.venv
-
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Environment variables
+# Local settings and secrets
 .env
 .env.local
 .env.*.local
 
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# Node.js
-node_modules/
-dist/
-
-# Scrapy
-.scrapy/
-
-# Logs
-*.log
-logs/
-
-# Database
-*.db
-*.sqlite3
-
-# OS
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+*~
 .DS_Store
 Thumbs.db
 
-# Project specific
-scraped_data/
-temp/
-cache/
-*.html
-biletinial_page_content.html
-scrapy_page_content.html
-coverage.xml
-dump.rdb
-
+# Logs and local caches
+*.log
 .claude/
-# Archived files
 .archive/
-*.pyc
-__pycache__/
-node_modules/
