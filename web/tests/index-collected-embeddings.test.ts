@@ -112,7 +112,7 @@ await test('unattended indexing defaults off and validates enabled windows befor
   assert.equal(JSON.parse(await readFile(report, 'utf8')).outcome, 'disabled');
   const bad = await cli(['--live'], {
     BIPLAN_URL: 'https://fixture.run.app',
-    GCP_STAGING_INDEXING_MAX_CALLS: '33',
+    GCP_STAGING_INDEXING_MAX_CALLS: '97',
   });
   assert.notEqual(bad.code, 0);
   assert.match(bad.stderr, /Invalid or expired indexing window/);
@@ -123,6 +123,19 @@ await test('unattended indexing defaults off and validates enabled windows befor
   });
   assert.equal(plan.code, 0);
   assert.equal(JSON.parse(plan.stdout).requests, 0);
+  const daily = await cli([], {
+    BIPLAN_URL: 'https://fixture.run.app',
+    GCP_STAGING_INDEXING_FROM: '',
+    GCP_STAGING_INDEXING_UNTIL: 'open',
+    GCP_STAGING_INDEXING_MAX_CALLS: '96',
+    SYNC_TOKEN: '',
+    SERVERLESS_ID_TOKEN: '',
+  });
+  assert.equal(daily.code, 0, daily.stderr);
+  const window = JSON.parse(daily.stdout).input.window;
+  assert.equal(window.maxCalls, 96);
+  assert.match(window.startedAt, /T00:00:00\.000Z$/);
+  assert.equal(Date.parse(window.until) - Date.parse(window.startedAt), 24 * 3600000);
 });
 await test('fully cached catalog makes one activation POST without provider usage', async () => {
   const report = await reportPath();

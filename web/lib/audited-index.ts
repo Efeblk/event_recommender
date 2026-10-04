@@ -16,7 +16,7 @@ export const auditIndexLimits = Object.freeze({
   inputBytesPerCall: 8000,
   inputBytesPerRun: 32000,
   observedTokensPerRun: 32000,
-  callsPerWindow: 32,
+  callsPerWindow: 96,
   windowHours: 60,
   intervalMs: 21000,
   rollingTokens: 9000,
@@ -67,6 +67,17 @@ export function parseAuditedIndexInput(
     window: { startedAt: w.startedAt, until: w.until, maxCalls: w.maxCalls },
   };
 }
+/** `GCP_STAGING_INDEXING_UNTIL=open`: one call budget per UTC day, renewed
+ * automatically so new collection documents keep receiving vectors. */
+export function dailyIndexWindow(maxCalls: number, now = Date.now()) {
+  const day = new Date(now);
+  day.setUTCHours(0, 0, 0, 0);
+  return {
+    startedAt: day.toISOString(),
+    until: new Date(day.getTime() + 24 * 3600000).toISOString(),
+    maxCalls,
+  };
+}
 const encoder = new TextEncoder();
 const bytes = (s: string) => encoder.encode(s).byteLength;
 export async function auditDigest(value: string | Uint8Array) {
@@ -110,7 +121,7 @@ function validateWindow(value: WindowState | null) {
       !Number.isFinite(Date.parse(value.until)) ||
       !validCounters(value, ['calls', 'tokens', 'maxCalls', 'lastStartAt']) ||
       value.maxCalls < 1 ||
-      value.maxCalls > 32 ||
+      value.maxCalls > auditIndexLimits.callsPerWindow ||
       value.calls > value.maxCalls ||
       typeof value.halted !== 'boolean' ||
       typeof value.inFlight !== 'string' ||

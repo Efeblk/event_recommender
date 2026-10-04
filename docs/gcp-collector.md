@@ -70,8 +70,10 @@ repository variables:
 | --- | --- |
 | `GCP_STAGING_INDEXING_ENABLED` | Exactly `true` |
 | `GCP_STAGING_INDEXING_FROM` | Canonical UTC timestamp when the reviewed window starts |
-| `GCP_STAGING_INDEXING_UNTIL` | Canonical UTC expiry, at most 60 hours after the start |
-| `GCP_STAGING_INDEXING_MAX_CALLS` | Integer 1–32 for the entire window, across collection runs |
+| `GCP_STAGING_INDEXING_UNTIL` | Canonical UTC expiry, at most 60 hours after the start, or `open` for a daily window renewed at 00:00 UTC (`FROM` is then ignored) |
+| `GCP_STAGING_INDEXING_MAX_CALLS` | Integer 1–96 for the entire window (per UTC day when `open`), across all runs |
+
+An hourly schedule (`47 * * * *`) in the same workflow runs only the `index_only` job when indexing is enabled. It does not collect. Each run makes at most 4 calls.
 
 Align expiry with the collection observation window. The CLI and server reject
 expired, future-starting, malformed or overlong windows. The server will not
