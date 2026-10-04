@@ -314,7 +314,7 @@ checks still pass, and the per-request cost does not increase without approval.
   The fix keeps this weekend on Sunday, shares 21-second Voyage pacing across
   local jobs, and records an explicit recovery separately from the failed charge.
   Lowercase district names now survive mixed-case currency text such as `TL`.
-  Local checks passed: 781 web tests, typecheck and lint on Node 22.23.3.
+  Local checks passed: 784 web tests, typecheck and lint on Node 22.23.3.
   Node build/smoke and GCP configuration checks passed with zero cloud/AI calls.
   An initial paced recovery exhausted the evaluation embedding timeout while
   waiting. That failed attempt stays recorded. The harness timeout includes its
@@ -322,3 +322,10 @@ checks still pass, and the per-request cost does not increase without approval.
   locks no longer cover provider waits. The separately recorded recovery passed.
   Full indexing and the recovered diagnostic baseline are running. Their partial
   vector coverage cannot pass the final quality gate. Labels remain pending.
+- 2026-10-04: Oracle comparison now follows production evidence semantics:
+  per-ticket and per-person ceilings compare the same listed ticket price;
+  positive companion atoms describe attendees; equivalent De Morgan trees keep
+  their exclusions. Group totals and strict comparisons stay distinct. The
+  approved requests and expected constraints are unchanged. The diagnostic run
+  has exposed category-negation scope and attendee-dancing interpretation
+  failures. A calm partner request is empty and needs full-index/source review.

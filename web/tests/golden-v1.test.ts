@@ -35,6 +35,88 @@ const embedding = {
   dimensions: 1024 as const,
 };
 const hash = 'a'.repeat(64);
+void test('oracle comparison preserves group totals while accepting equivalent individual ticket ceilings', () => {
+  const ticket = {
+    type: 'atom',
+    atom: {
+      kind: 'budget',
+      comparison: 'lte',
+      amount: 500,
+      currency: 'TRY',
+      basis: 'per_ticket',
+    },
+  } satisfies Plan['hard'];
+  assert.equal(
+    canonicalCondition(ticket),
+    canonicalCondition({
+      ...ticket,
+      atom: { ...ticket.atom, basis: 'per_person' },
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(ticket),
+    canonicalCondition({
+      ...ticket,
+      atom: { ...ticket.atom, basis: 'group_total' },
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(ticket),
+    canonicalCondition({
+      ...ticket,
+      atom: { ...ticket.atom, comparison: 'lt' },
+    }),
+  );
+});
+void test('positive companion context is not an event filter; excluded companions stay visible to the oracle', () => {
+  const context: Plan['hard'] = {
+    type: 'atom',
+    atom: { kind: 'companion', value: 'partner' },
+  };
+  assert.equal(
+    canonicalCondition({ type: 'all', children: [plan.hard, context] }),
+    canonicalCondition(plan.hard),
+  );
+  assert.notEqual(
+    canonicalCondition({ type: 'not', child: context }),
+    canonicalCondition({ type: 'all', children: [] }),
+  );
+});
+void test('oracle comparison accepts De Morgan equivalents without discarding exclusion or OR scope', () => {
+  const a: Plan['hard'] = {
+    type: 'atom',
+    atom: { kind: 'content', value: 'profanity' },
+  };
+  const b: Plan['hard'] = {
+    type: 'atom',
+    atom: { kind: 'content', value: 'sexual_content' },
+  };
+  const neither: Plan['hard'] = {
+    type: 'not',
+    child: { type: 'any', children: [a, b] },
+  };
+  assert.equal(
+    canonicalCondition(neither),
+    canonicalCondition({
+      type: 'all',
+      children: [
+        { type: 'not', child: a },
+        { type: 'not', child: b },
+      ],
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(neither),
+    canonicalCondition({
+      type: 'not',
+      child: { type: 'all', children: [a, b] },
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(neither),
+    canonicalCondition({ type: 'any', children: [a, b] }),
+  );
+});
 void test('lowercase districts survive mixed-case currency and category text', () => {
   for (const message of [
     'bu akşam kadıköyde en fazla 500 TL stand-up',

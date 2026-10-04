@@ -108,20 +108,42 @@ export function validateGoldenFixture(value: unknown): GoldenFixture {
   return fixture;
 }
 
-/** IDs and conjunction order do not change meaning. Do not discard negations. */
+/** IDs, conjunction order and equivalent ticket ceilings do not change meaning. */
 export function canonicalCondition(condition: Condition): string {
-  if (condition.type === 'atom')
+  if (condition.type === 'atom') {
+    // Positive companion atoms describe attendees and never filter an event.
+    if (condition.atom.kind === 'companion') return 'all()';
+    // Production evidence compares both per-person and per-ticket ceilings
+    // against one listed ticket price. Group totals remain distinct.
+    const atom =
+      condition.atom.kind === 'budget' && condition.atom.basis === 'per_person'
+        ? { ...condition.atom, basis: 'per_ticket' }
+        : condition.atom;
     return JSON.stringify(
       Object.fromEntries(
-        Object.entries(condition.atom).sort(([a], [b]) => a.localeCompare(b)),
+        Object.entries(atom).sort(([a], [b]) => a.localeCompare(b)),
       ),
     );
-  if (condition.type === 'not')
+  }
+  if (condition.type === 'not') {
+    if (condition.child.type === 'not')
+      return canonicalCondition(condition.child.child);
+    if (condition.child.type === 'all' || condition.child.type === 'any')
+      return canonicalCondition({
+        type: condition.child.type === 'all' ? 'any' : 'all',
+        children: condition.child.children.map((child) => ({
+          type: 'not',
+          child,
+        })),
+      });
     return `not(${canonicalCondition(condition.child)})`;
+  }
   const children = condition.children.flatMap((child) =>
     child.type === condition.type ? child.children : [child],
   );
-  const values = [...new Set(children.map(canonicalCondition))].sort();
+  const values = [...new Set(children.map(canonicalCondition))]
+    .filter((value) => condition.type !== 'all' || value !== 'all()')
+    .sort();
   return values.length === 1
     ? values[0]
     : `${condition.type}(${values.join(',')})`;
