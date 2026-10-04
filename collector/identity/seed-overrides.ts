@@ -1,7 +1,7 @@
 import { normalizeIdentityText } from "../normalize/identity.ts";
 import type { IdentityListing } from "./types.ts";
 
-export const IDENTITY_SEED_VERSION = "identity-seeds.2026-10-04.v1" as const;
+export const IDENTITY_SEED_VERSION = "identity-seeds.2026-10-04.v2" as const;
 
 // Source-reviewed aliases migrated from web/lib/event-merge.ts. These seeds
 // never bypass city, instant, provider, venue, or policy guards.
@@ -76,6 +76,7 @@ export function venueSeedIdentity(listing: IdentityListing): string | undefined 
 
 const TITLE_ALIAS_GROUPS = [
   // Phase 1 source review: same programs, venues and instants across providers.
+  ["Tanış - Konuş - Dans Et - (Sosyal Buluşma Etkinliği)", "Tanış • Konuş • Paylaş • Dans Et"],
   ["Bir İshak'sın Bir Cemil Oyunu", "Bir İshaksın Bir Cemil"],
   ["DJ Can Giray - Geçmişten Günümüze 90lar 2000ler Türkçe Pop", "Geçmişten Günümüze 90'lar 2000'ler Türkçe Pop"],
   ["Discman 90’lar & 2000’ler Türkçe Pop Gecesi", "Discman 90lar & 2000ler Türkçe Pop"],

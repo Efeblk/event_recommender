@@ -30,6 +30,7 @@ function listing(overrides = {}) {
 
 test('Phase 1 reviewed aliases merge only under the existing session and venue guards', () => {
   const pairs = [
+    ["Tanış - Konuş - Dans Et - (Sosyal Buluşma Etkinliği)", "Tanış • Konuş • Paylaş • Dans Et", "Rossi Suadiye", "Diğer"],
     ["Bir İshak'sın Bir Cemil Oyunu", "Bir İshaksın Bir Cemil", "Bakırköy Butik Sahne", "Tiyatro"],
     ["DJ Can Giray - Geçmişten Günümüze 90lar 2000ler Türkçe Pop", "Geçmişten Günümüze 90'lar 2000'ler Türkçe Pop", "Hayal Kahvesi Emaar", "Konser"],
     ["Discman 90’lar & 2000’ler Türkçe Pop Gecesi", "Discman 90lar & 2000ler Türkçe Pop", "Ayı Pub & Disko Rıhtım", "Konser"],

@@ -38,6 +38,7 @@ const VENUE_ALIASES = [
 // These are literal show aliases, never a general performer/suffix heuristic.
 const TITLE_ALIASES = [
   // Retain display deduplication for snapshots prepared before these aliases.
+  ['Tanış - Konuş - Dans Et - (Sosyal Buluşma Etkinliği)', 'Tanış • Konuş • Paylaş • Dans Et'],
   ["Bir İshak'sın Bir Cemil Oyunu", "Bir İshaksın Bir Cemil"],
   ["DJ Can Giray - Geçmişten Günümüze 90lar 2000ler Türkçe Pop", "Geçmişten Günümüze 90'lar 2000'ler Türkçe Pop"],
   ["Discman 90’lar & 2000’ler Türkçe Pop Gecesi", "Discman 90lar & 2000ler Türkçe Pop"],
@@ -684,8 +685,27 @@ function cachedDisplayShowIdentity(event: EventRecord, policies?: ReadonlySet<St
   const cached = displayIdentityCache.get(source);
   if (cached && sameDisplayFields(event,cached)) return cached.identity;
   const title = identityTitle(event);
-  const identity = !title || GENERIC_SHOW_TITLES.has(title) ? undefined :
-    [normalize(event.city), event.category, title, [...(policies ?? strongPolicies(event))].sort().join('|')].join('\u001f');
+  const sourcePolicies = policies ?? strongPolicies(event);
+  // Source-reviewed Sanat Performance programme. Providers disagree on the
+  // clock and category, so retain separate sessions/offers but show one card.
+  // This presentation identity establishes no attendance or age guarantee.
+  const sanatDanceNight = normalize(event.city) === 'istanbul' &&
+    normalize(event.venue) === 'sanat performance' &&
+    (event.category === 'Konser' || event.category === 'Dans') &&
+    (normalize(event.title) === '90lar dans gecesi ekim etkinlikleri' ||
+      normalize(event.title) === '90 lar dans gecesi') &&
+    !sourcePolicies.has('child-only') && !sourcePolicies.has('workshop');
+  // Rossi provider districts/categories conflict. Preserve those source facts
+  // and session guards while preventing two cards for the reviewed programme.
+  const rossiSocialNight = normalize(event.city) === 'istanbul' &&
+    normalize(event.venue) === 'rossi suadiye' &&
+    (event.category === 'Gösteri' || event.category === 'Diğer') &&
+    title === canonicalShowTitle('Tanış • Konuş • Paylaş • Dans Et') &&
+    !sourcePolicies.has('child-only') && !sourcePolicies.has('workshop');
+  const identity = rossiSocialNight ? 'istanbul\u001frossi suadiye\u001freviewed:social-night' :
+    sanatDanceNight ? 'istanbul\u001fsanat performance\u001freviewed:90lar-dans-gecesi' :
+    !title || GENERIC_SHOW_TITLES.has(title) ? undefined :
+      [normalize(event.city), event.category, title, [...sourcePolicies].sort().join('|')].join('\u001f');
   displayIdentityCache.set(source,{...displayFields(event),identity});
   return identity;
 }

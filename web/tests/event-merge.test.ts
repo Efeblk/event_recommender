@@ -30,6 +30,38 @@ function event(overrides: Partial<EventRecord> = {}): EventRecord {
   };
 }
 
+await test('reviewed Sanat dance night shows one card while preserving conflicting source clocks', () => {
+  const biletix = event({ id: 'dance-biletix', source: 'biletix', title: '90lar Dans Gecesi - Ekim Etkinlikleri', category: 'Konser', venue: 'Sanat Performance', description: '90lar DJ partisi. 18+.', startsAt: '2026-10-09T19:00:00.000Z' });
+  const bubilet = event({ id: 'dance-bubilet', source: 'bubilet', title: "90'lar Dans Gecesi", category: 'Dans', venue: 'Sanat Performance', description: "90'lar Dans Gecesi", startsAt: '2026-10-09T17:30:00.000Z' });
+  const sessions = mergeEventSessions([biletix, bubilet]);
+  assert.equal(sessions.length, 2);
+  assert.deepEqual(new Set(sessions.map(item => item.startsAt)), new Set([biletix.startsAt, bubilet.startsAt]));
+  assert.ok(sessions.every(item => item.offers?.length === 1));
+  assert.equal(diverseEvents(sessions).length, 1);
+  for (const other of [
+    { ...bubilet, city: 'Ankara' },
+    { ...bubilet, venue: 'Başka Sahne' },
+    { ...bubilet, title: 'Başka Dans Gecesi' },
+    { ...bubilet, category: 'Workshop' },
+    { ...bubilet, description: 'Yalnızca 6 ile 9 yaş çocuklar için.' },
+    { ...bubilet, description: 'Uygulamalı workshop çalışması.' },
+  ]) assert.equal(diverseEvents([biletix, other]).length, 2);
+});
+
+await test('reviewed Rossi social night displays once despite conflicting provider categories and districts', () => {
+  const biletix = event({ id: 'rossi-biletix', source: 'biletix', title: 'Tanış - Konuş - Dans Et - (Sosyal Buluşma Etkinliği)', category: 'Gösteri', venue: 'Rossi Suadiye', district: 'BEYOĞLU', address: '', description: 'Tanışma, sohbet ve dans.' });
+  const biletinial = event({ id: 'rossi-biletinial', source: 'biletinial', title: 'Tanış • Konuş • Paylaş • Dans Et', category: 'Diğer', venue: 'Rossi Suadiye', district: 'İstanbul Avrupa', address: 'Suadiye, Plaj Yolu Sk. No:23, 34740 Kadıköy/İstanbul', description: 'Friend Point tanışma, sohbet ve dans.' });
+  assert.equal(diverseEvents([biletix, biletinial]).length, 1);
+  assert.equal(biletix.district, 'BEYOĞLU');
+  assert.equal(biletinial.district, 'İstanbul Avrupa');
+  for (const other of [
+    { ...biletinial, city: 'Ankara' },
+    { ...biletinial, venue: 'Başka Sahne' },
+    { ...biletinial, category: 'Workshop' },
+    { ...biletinial, description: 'Yalnızca 6 ile 9 yaş çocuklar için.' },
+  ]) assert.equal(diverseEvents([biletix, other]).length, 2);
+});
+
 await test('display identity memo stays generation-scoped and validates every identity input', () => {
   const source = {}, base = event({
     title: 'İstanbul Workshops Hat Sanatı Atölyesi',
@@ -90,6 +122,34 @@ await test('reviewed Kütüphanedeki Ceset titles combine offers only for the sa
     { ...alias, title: 'Kütüphanedeki Ceset - Başka Uyarlama' },
   ])
     assert.equal(mergeEventSessions([base, different]).length, 2);
+});
+
+await test('reviewed Rossi social event combines offers only at the matching venue and instant', () => {
+  const base = event({
+    title: 'Tanış - Konuş - Dans Et - (Sosyal Buluşma Etkinliği)',
+    venue: 'Rossi Suadiye',
+    startsAt: '2026-10-15T17:00:00.000Z',
+    category: 'Diğer',
+    source: 'biletix',
+    description: 'Tanışma ve sohbet, ardından müzik ve dans.',
+    price: 395.5,
+  });
+  const alias = event({
+    ...base,
+    id: 'biletinial:rossi',
+    source: 'biletinial',
+    title: 'Tanış • Konuş • Paylaş • Dans Et',
+    price: 392,
+  });
+  const [merged] = mergeEventSessions([base, alias]);
+  assert.equal(mergeEventSessions([base, alias]).length, 1);
+  assert.equal(merged.price, 392);
+  assert.equal(merged.offers?.length, 2);
+  for (const different of [
+    { ...alias, startsAt: '2026-10-15T18:00:00.000Z' },
+    { ...alias, venue: 'Başka Sahne' },
+    { ...alias, title: 'Rossi Suadiye - Başka Buluşma' },
+  ]) assert.equal(mergeEventSessions([base, different]).length, 2);
 });
 
 await test('reviewed Son Lux sponsor prefix merges the exact session and retains all provider offers', () => {
