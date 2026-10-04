@@ -261,3 +261,51 @@ jobs:
           path: web/work/collection-embedding-index.jsonl*
           if-no-files-found: warn
           retention-days: 7
+
+  monitor:
+    # Hourly health check. A failed scheduled run makes GitHub send a failure
+    # email. It lives here because the collector identity trusts only this file.
+    if: github.event.schedule == '47 * * * *'
+    environment: gcp-staging-collector
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - id: auth_monitor
+        name: Authenticate for the private readiness check
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ vars.BIPLAN_URL }}
+
+      - name: Require a ready and fresh staging catalog
+        env:
+          BIPLAN_URL: ${{ vars.BIPLAN_URL }}
+          ID_TOKEN: ${{ steps.auth_monitor.outputs.id_token }}
+          MAX_AGE_HOURS: '14'
+        run: |
+          set -euo pipefail
+          curl --silent --show-error --max-time 60 -o ready.json -w '%{http_code}' \
+            -H "Authorization: Bearer $ID_TOKEN" "$BIPLAN_URL/api/ready" > status.txt || true
+          node -e '
+            const fs = require("node:fs");
+            const status = fs.readFileSync("status.txt", "utf8").trim();
+            let body = {};
+            try { body = JSON.parse(fs.readFileSync("ready.json", "utf8")); } catch {}
+            const checked = Date.parse(body.catalog?.lastCheckedAt ?? "");
+            const ageHours = (Date.now() - checked) / 3600000;
+            console.log(JSON.stringify({ status, ready: body.ready, reasons: body.reasons,
+              eligible: body.catalog?.eligible, lastCheckedAt: body.catalog?.lastCheckedAt,
+              ageHours: Number.isFinite(ageHours) ? ageHours.toFixed(1) : null }));
+            const problems = [];
+            if (status !== "200" || body.ready !== true) problems.push(`not ready (HTTP ${status}, reasons ${JSON.stringify(body.reasons ?? null)})`);
+            if (!Number.isFinite(ageHours) || ageHours > Number(process.env.MAX_AGE_HOURS))
+              problems.push(`catalog is ${Number.isFinite(ageHours) ? ageHours.toFixed(1) : "unknown"} h old (limit ${process.env.MAX_AGE_HOURS} h)`);
+            if (problems.length) {
+              console.log(`::error title=Staging unhealthy::${problems.join("; ")}`);
+              process.exit(1);
+            }'

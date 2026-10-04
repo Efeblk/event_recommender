@@ -189,3 +189,12 @@ The initial SDK install includes the Storage SDK's transitive `gaxios -> uuid`
 moderate advisory GHSA-w5hq-g745-h8pq. Our storage path does not call the affected
 UUID variants with caller-provided buffers. Track the upstream fix; do not force
 a potentially incompatible major transitive override just to suppress the audit.
+
+## Recovery
+
+1. See the failure: the hourly `monitor` job in `Collect GCP staging event data`
+   fails and GitHub sends an email. Open the run; the error line names the cause.
+2. Find the last good SHA: `gh run list --workflow gcp-staging.yml --status success --limit 1 --json headSha`.
+3. Deploy it: `gh workflow run gcp-staging.yml -f expected_sha=<SHA> -f input_interpreter=span-v2`, then approve the `gcp-staging` gate.
+4. Collect: `gh workflow run gcp-collector.yml` and wait for success.
+5. Check: `curl -H "Authorization: Bearer $(gcloud auth print-identity-token)" <BIPLAN_URL>/api/ready` returns 200 with `"ready":true`.

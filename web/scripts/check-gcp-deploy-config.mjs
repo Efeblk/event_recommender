@@ -128,6 +128,10 @@ assert.match(
   collectorWorkflow,
   /^\s{2}schedule_gate:\n\s{4}if: github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
 );
+// The hourly monitor checks readiness and catalog age with the collector identity.
+assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \* \* \* \*'/m);
+assert.match(collectorWorkflow, /\/api\/ready/);
+assert.match(collectorWorkflow, /MAX_AGE_HOURS: '14'/);
 // The hourly schedule runs only the indexing job; it never collects.
 assert.match(
   collectorWorkflow,
