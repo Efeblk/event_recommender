@@ -150,11 +150,13 @@ Tasks:
 1. Add one scheduled monitor workflow. Every hour, it calls `/api/ready` on
    staging. If the result is not ready, or if `lastCheckedAt` is more than
    14 h old, the workflow fails. GitHub then sends a failure email.
+   Done in PR 57 (job `monitor` in `gcp-collector.yml`; the collector identity
+   trusts only that file).
 2. Let scheduled collection run for 7 days. Do not deploy during that time,
    unless you must fix a fault.
 3. Write down a 5-line recovery procedure in `gcp-deployment.md`: how to see a
    failure, deploy the last good SHA, run a collection and check
-   `/api/ready`.
+   `/api/ready`. Done in PR 57.
 
 Acceptance: 7 days with no failed collection that you did not see, and the
 catalog never stale.
@@ -447,3 +449,10 @@ checks still pass, and the per-request cost does not increase without approval.
   $2 cap, including the conservative $0.80 staging reserve; exact staging token
   usage is not exposed. Voyage remains under the user's unrestricted approval.
   Frozen catalog and result hashes remain recorded above. Phase 2 has not started.
+- 2026-10-04: [PR 56](https://github.com/Efeblk/event_recommender/pull/56)
+  merged as `88492e1` and deployed (37214269011). Indexing runs hourly with a
+  daily window (`GCP_STAGING_INDEXING_UNTIL=open`, 96 calls). First hourly run
+  37225790152 succeeded with 0 pending documents. Phase 2 started.
+- 2026-10-04: PR 57 adds the hourly `monitor` job and the recovery steps.
+  The 7-day unattended run starts at its merge. No deploy is needed: the runtime
+  is unchanged.
