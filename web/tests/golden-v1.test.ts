@@ -7,6 +7,7 @@ import { GoldenTransport } from '../evals/golden-cache.ts';
 import {
   auditGoldenResult,
   canonicalCondition,
+  sha256,
   qualitySummary,
   resultDigest,
   validateGoldenFixture,
@@ -17,7 +18,11 @@ import {
 import { recommend, validateInput } from '../lib/recommend.ts';
 import { interpretSpanInput } from '../lib/span-interpreter.ts';
 import { rankWithJev } from '../lib/jev.ts';
-import { embedWithVoyage } from '../lib/voyage.ts';
+import {
+  embedWithVoyage,
+  voyageCacheKey,
+  voyageDocumentText,
+} from '../lib/voyage.ts';
 import {
   emptyFilters,
   type EventRecord,
@@ -25,7 +30,7 @@ import {
 } from '../lib/types.ts';
 import type { Plan } from '../parser/contract.ts';
 import { extract } from '../parser/extract.ts';
-import { main, documentEstimate } from '../scripts/golden-run.ts';
+import { main, documentEstimate, loadVectors } from '../scripts/golden-run.ts';
 
 const now = new Date('2026-10-04T06:50:27.793Z');
 const config = { apiKey: 'offline-test-key', model: 'jev-1.13.0' };
@@ -204,6 +209,36 @@ const item: GoldenCase = {
   reviewSummary: 'Concert',
   expected: plan,
 };
+void test('scored vector loading requires complete coverage; diagnostic loading records missing vectors', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-vectors-'));
+  try {
+    const path = join(directory, 'vectors.json');
+    const envelope = {
+      schemaVersion: 1,
+      profile: voyageCacheKey(embedding),
+      dimensions: 1024,
+      entries: [] as { hash: string; vector: number[] }[],
+    };
+    await writeFile(path, JSON.stringify(envelope));
+    await assert.rejects(
+      loadVectors(path, [event]),
+      /Full frozen vector coverage required: 0\/1/,
+    );
+    const partial = await loadVectors(path, [event], true);
+    assert.equal(partial.complete, false);
+    assert.equal(partial.byId.size, 0);
+    const vector = Array.from({ length: 1024 }, (_, index) =>
+      index === 0 ? 1 : 0,
+    );
+    envelope.entries.push({ hash: sha256(voyageDocumentText(event)), vector });
+    await writeFile(path, JSON.stringify(envelope));
+    const complete = await loadVectors(path, [event]);
+    assert.equal(complete.complete, true);
+    assert.deepEqual(complete.byId.get(event.id), vector);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 void test('40 reviewable requests retain language counts, corrections and valid hard plans', async () => {
   const fixture = validateGoldenFixture(

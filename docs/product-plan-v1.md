@@ -314,7 +314,7 @@ checks still pass, and the per-request cost does not increase without approval.
   The fix keeps this weekend on Sunday, shares 21-second Voyage pacing across
   local jobs, and records an explicit recovery separately from the failed charge.
   Lowercase district names now survive mixed-case currency text such as `TL`.
-  Local checks passed: 784 web tests, typecheck and lint on Node 22.23.3.
+  Local checks passed: 785 web tests, typecheck and lint on Node 22.23.3.
   Node build/smoke and GCP configuration checks passed with zero cloud/AI calls.
   An initial paced recovery exhausted the evaluation embedding timeout while
   waiting. That failed attempt stays recorded. The harness timeout includes its
