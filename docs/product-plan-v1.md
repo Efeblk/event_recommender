@@ -300,3 +300,25 @@ checks still pass, and the per-request cost does not increase without approval.
   remain pending. The offline catalog audit finds hard matches for 34 requests;
   six require empty-result review. Full indexing, the scored baseline, user label
   review and staging p95 remain pending. Phase 1 is not complete.
+- 2026-10-04: [PR 50](https://github.com/Efeblk/event_recommender/pull/50)
+  merged as `6ccc264`. All six CI checks passed on `f63edde`. The branch is
+  deleted. Recovered the old `37061051538:1` response: six vectors and 1,892
+  tokens, with zero new paid calls. Its private recovery receipt remains under
+  `embedding-audit/staging/3ae905c06ef26ad917d367f08a246d9f3fd5980bee3910c12c61543981ac27a8/37061051538/`.
+  The reservation is cleared. A new finite index window is recorded; automated
+  indexing stays disabled while the approved manual full-index job runs.
+- 2026-10-04: Preserved the first partial baseline in
+  `web/work/phase-one/baseline-partial.json`. Voyage query four returned HTTP 429.
+  New paid baseline calls stopped. The first three requests exposed a Sunday
+  date error: "this weekend" selected October 10–11 instead of October 3–4.
+  The fix keeps this weekend on Sunday, shares 21-second Voyage pacing across
+  local jobs, and records an explicit recovery separately from the failed charge.
+  Lowercase district names now survive mixed-case currency text such as `TL`.
+  Local checks passed: 781 web tests, typecheck and lint on Node 22.23.3.
+  Node build/smoke and GCP configuration checks passed with zero cloud/AI calls.
+  An initial paced recovery exhausted the evaluation embedding timeout while
+  waiting. That failed attempt stays recorded. The harness timeout includes its
+  shared pacing wait; staging keeps the production timeout. Document accounting
+  locks no longer cover provider waits. The separately recorded recovery passed.
+  Full indexing and the recovered diagnostic baseline are running. Their partial
+  vector coverage cannot pass the final quality gate. Labels remain pending.

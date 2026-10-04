@@ -24,6 +24,7 @@ import {
   type SearchResult,
 } from '../lib/types.ts';
 import type { Plan } from '../parser/contract.ts';
+import { extract } from '../parser/extract.ts';
 import { main, documentEstimate } from '../scripts/golden-run.ts';
 
 const now = new Date('2026-10-04T06:50:27.793Z');
@@ -34,6 +35,43 @@ const embedding = {
   dimensions: 1024 as const,
 };
 const hash = 'a'.repeat(64);
+void test('lowercase districts survive mixed-case currency and category text', () => {
+  for (const message of [
+    'bu akşam kadıköyde en fazla 500 TL stand-up',
+    'kadikoy theatre under 500 TRY',
+  ]) {
+    assert.ok(
+      extract(message, '2026-10-04').mentions.some(
+        (mention) =>
+          mention.kind === 'location' &&
+          mention.name === 'Kadıköy' &&
+          mention.precision === 'district',
+      ),
+    );
+  }
+});
+void test('this weekend keeps the current Saturday and Sunday when requested on Sunday', () => {
+  for (const message of ['this weekend', 'bu hafta sonu']) {
+    for (const [reference, from, to] of [
+      ['2026-10-03', '2026-10-03', '2026-10-04'],
+      ['2026-10-04', '2026-10-03', '2026-10-04'],
+      ['2026-10-05', '2026-10-10', '2026-10-11'],
+    ]) {
+      const date = extract(message, reference).mentions.find(
+        (mention) => mention.kind === 'date',
+      );
+      assert.ok(date?.kind === 'date');
+      assert.equal(date.from, from);
+      assert.equal(date.to, to);
+    }
+  }
+  const next = extract('next weekend', '2026-10-04').mentions.find(
+    (mention) => mention.kind === 'date',
+  );
+  assert.ok(next?.kind === 'date');
+  assert.equal(next.from, '2026-10-10');
+  assert.equal(next.to, '2026-10-11');
+});
 const budget = {
   scope: 'phase-1' as const,
   jevCapUsd: 1,
@@ -318,6 +356,39 @@ void test('failed calls retain reservations and never retry, including a new pro
     );
     assert.equal(JSON.parse(ledger.trim()).reservedUsd, 0.02);
     assert.ok(!ledger.includes('provider body'));
+    const first = JSON.parse(ledger.trim());
+    const retry = {
+      key: first.key,
+      reason: 'Inspected outage resolved',
+      attemptId: 'reviewed-1',
+    };
+    await new GoldenTransport({
+      ...options,
+      reviewedRetry: retry,
+      network: async () => {
+        calls++;
+        return Response.json({ usage: { input_tokens: 10 } });
+      },
+    }).fetcher('concert')('https://api.typesafe.ai/v1/systemone', init);
+    const attempts = (
+      await readFile(join(directory, 'budget-ledger.jsonl'), 'utf8')
+    )
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    assert.equal(attempts.length, 2);
+    assert.deepEqual(attempts[0], first);
+    assert.equal(attempts[1].cacheKey, first.key);
+    assert.deepEqual(attempts[1].reviewedRetry, retry);
+    assert.equal(calls, 2);
+    await rm(join(directory, `${first.key}.json`));
+    await assert.rejects(
+      new GoldenTransport({ ...options, reviewedRetry: retry }).fetcher(
+        'concert',
+      )('https://api.typesafe.ai/v1/systemone', init),
+      /no automatic retry/,
+    );
+    assert.equal(calls, 2);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
