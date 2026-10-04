@@ -352,3 +352,10 @@ checks still pass, and the per-request cost does not increase without approval.
   GCP configuration, Node build and smoke. Full indexing, source labels, user
   sample review and staging latency remain pending. Partial vectors cover
   3,934 of 8,831 eligible sessions; this diagnostic cannot pass Phase 1.
+- 2026-10-04: `fix-two.json` completed 40 requests with zero parser mismatches,
+  hard violations or automatic duplicate candidates; it reused 103 responses
+  and made two new ranking calls. Source review then found a hologram circus
+  and pub quiz sold under `Tiyatro`. Ranking now checks the described program
+  when it contradicts a provider category. Preserved targeted probes exclude
+  both entries and retain matching plays. `fix-two-format.json` checks the
+  policy across all 40 requests. Full vectors and reviewed labels remain pending.
