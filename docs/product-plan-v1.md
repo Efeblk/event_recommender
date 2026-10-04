@@ -145,6 +145,8 @@ Acceptance (the v1 quality bar):
 
 Tasks:
 
+0. Keep vectors current: indexing runs hourly with a daily call window
+   (`GCP_STAGING_INDEXING_UNTIL=open`). Done in PR 56.
 1. Add one scheduled monitor workflow. Every hour, it calls `/api/ready` on
    staging. If the result is not ready, or if `lastCheckedAt` is more than
    14 h old, the workflow fails. GitHub then sends a failure email.

@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util';
 import {
   auditIndexLimits,
   auditPayloadIsSafe,
+  dailyIndexWindow,
   parseAuditedIndexInput,
 } from '../lib/audited-index.ts';
 
@@ -52,11 +53,14 @@ const input = parseAuditedIndexInput({
   expectedProfile: profile,
   expectedRevision: '0'.repeat(40),
   checkpointSha256: '0'.repeat(64),
-  window: {
-    startedAt: process.env.GCP_STAGING_INDEXING_FROM,
-    until: process.env.GCP_STAGING_INDEXING_UNTIL,
-    maxCalls: Number(process.env.GCP_STAGING_INDEXING_MAX_CALLS),
-  },
+  window:
+    process.env.GCP_STAGING_INDEXING_UNTIL === 'open'
+      ? dailyIndexWindow(Number(process.env.GCP_STAGING_INDEXING_MAX_CALLS))
+      : {
+          startedAt: process.env.GCP_STAGING_INDEXING_FROM,
+          until: process.env.GCP_STAGING_INDEXING_UNTIL,
+          maxCalls: Number(process.env.GCP_STAGING_INDEXING_MAX_CALLS),
+        },
 });
 const origin = new URL(process.env.BIPLAN_URL ?? '');
 const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);

@@ -126,7 +126,12 @@ assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \
 assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:$/m);
 assert.match(
   collectorWorkflow,
-  /^\s{2}schedule_gate:\n\s{4}if: github\.event_name == 'workflow_dispatch' \|\| vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'$/m,
+  /^\s{2}schedule_gate:\n\s{4}if: github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
+);
+// The hourly schedule runs only the indexing job; it never collects.
+assert.match(
+  collectorWorkflow,
+  /^\s{2}index_only:\n[\s\S]*?\n\s{4}if: github\.event\.schedule == '47 \* \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'$/m,
 );
 const collectorGate = collectorWorkflow.slice(
   collectorWorkflow.indexOf('  schedule_gate:'),
