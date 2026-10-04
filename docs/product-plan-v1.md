@@ -359,3 +359,15 @@ checks still pass, and the per-request cost does not increase without approval.
   when it contradicts a provider category. Preserved targeted probes exclude
   both entries and retain matching plays. `fix-two-format.json` checks the
   policy across all 40 requests. Full vectors and reviewed labels remain pending.
+- 2026-10-04: [PR 52](https://github.com/Efeblk/event_recommender/pull/52)
+  merged as `cf66417` after all six checks passed on `64d3b1a`; its branch is
+  deleted. The 40-request format diagnostic and zero-paid replay share result
+  hash `d0dbe5ec209d9e7d07bf469345127c7dff5c3a46eecf85550004fa2b38c9ec18`.
+  The replay uses 105 cached responses. Full coverage and labels remain pending.
+- 2026-10-04: The source audit of empty results finds 84 age-supported theatre
+  sessions excluded by the broad `show` category. The two child-show empties
+  are incorrect. A narrow follow-up includes theatre in shows, retains age
+  evidence and category exclusions, and passes 791 web tests, typecheck, lint,
+  Node build and smoke. `child-shows.json` reruns all 40 approved requests.
+  This follow-up exceeds the two planned fix PRs in task 6; obtain user approval
+  for the concrete additional PR before merge. Phase 1 remains incomplete.

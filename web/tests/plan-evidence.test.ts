@@ -284,6 +284,10 @@ void test('everyday event types accept the catalog labels they cover', () => {
     'supported',
   );
   assert.equal(
+    evaluatePlan({ ...event, category: 'Tiyatro' }, show).status,
+    'supported',
+  );
+  assert.equal(
     evaluatePlan({ ...event, category: 'Konser' }, show).status,
     'contradicted',
   );
@@ -301,6 +305,10 @@ void test('everyday event types accept the catalog labels they cover', () => {
   });
   assert.equal(
     evaluatePlan({ ...event, category: 'Stand-up' }, notShow).status,
+    'contradicted',
+  );
+  assert.equal(
+    evaluatePlan({ ...event, category: 'Tiyatro' }, notShow).status,
     'contradicted',
   );
 });

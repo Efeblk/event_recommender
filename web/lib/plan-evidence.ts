@@ -58,7 +58,7 @@ const categoryMap: Record<string, Category[]> = {
   cinema: ['Sinema'],
   talk: ['Söyleşi'],
   dance: ['Dans'],
-  show: ['Gösteri', 'Stand-up', 'Dans'],
+  show: ['Gösteri', 'Tiyatro', 'Stand-up', 'Dans'],
   course: ['Eğitim', 'Workshop'],
   tour: ['Gezi'],
   museum: ['Müze'],
