@@ -7,6 +7,7 @@ import { GoldenTransport } from '../evals/golden-cache.ts';
 import {
   auditGoldenResult,
   canonicalCondition,
+  sha256,
   qualitySummary,
   resultDigest,
   validateGoldenFixture,
@@ -17,14 +18,19 @@ import {
 import { recommend, validateInput } from '../lib/recommend.ts';
 import { interpretSpanInput } from '../lib/span-interpreter.ts';
 import { rankWithJev } from '../lib/jev.ts';
-import { embedWithVoyage } from '../lib/voyage.ts';
+import {
+  embedWithVoyage,
+  voyageCacheKey,
+  voyageDocumentText,
+} from '../lib/voyage.ts';
 import {
   emptyFilters,
   type EventRecord,
   type SearchResult,
 } from '../lib/types.ts';
 import type { Plan } from '../parser/contract.ts';
-import { main, documentEstimate } from '../scripts/golden-run.ts';
+import { extract } from '../parser/extract.ts';
+import { main, documentEstimate, loadVectors } from '../scripts/golden-run.ts';
 
 const now = new Date('2026-10-04T06:50:27.793Z');
 const config = { apiKey: 'offline-test-key', model: 'jev-1.13.0' };
@@ -34,6 +40,136 @@ const embedding = {
   dimensions: 1024 as const,
 };
 const hash = 'a'.repeat(64);
+void test('oracle comparison preserves group totals while accepting equivalent individual ticket ceilings', () => {
+  const ticket = {
+    type: 'atom',
+    atom: {
+      kind: 'budget',
+      comparison: 'lte',
+      amount: 500,
+      currency: 'TRY',
+      basis: 'per_ticket',
+    },
+  } satisfies Plan['hard'];
+  assert.equal(
+    canonicalCondition(ticket),
+    canonicalCondition({
+      ...ticket,
+      atom: { ...ticket.atom, basis: 'per_person' },
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(ticket),
+    canonicalCondition({
+      ...ticket,
+      atom: { ...ticket.atom, basis: 'group_total' },
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(ticket),
+    canonicalCondition({
+      ...ticket,
+      atom: { ...ticket.atom, comparison: 'lt' },
+    }),
+  );
+});
+void test('positive companion context is not an event filter; excluded companions stay visible to the oracle', () => {
+  const context: Plan['hard'] = {
+    type: 'atom',
+    atom: { kind: 'companion', value: 'partner' },
+  };
+  assert.equal(
+    canonicalCondition({ type: 'all', children: [plan.hard, context] }),
+    canonicalCondition(plan.hard),
+  );
+  assert.notEqual(
+    canonicalCondition({ type: 'not', child: context }),
+    canonicalCondition({ type: 'all', children: [] }),
+  );
+});
+void test('oracle comparison accepts De Morgan equivalents without discarding exclusion or OR scope', () => {
+  const a: Plan['hard'] = {
+    type: 'atom',
+    atom: { kind: 'content', value: 'profanity' },
+  };
+  const b: Plan['hard'] = {
+    type: 'atom',
+    atom: { kind: 'content', value: 'sexual_content' },
+  };
+  const neither: Plan['hard'] = {
+    type: 'not',
+    child: { type: 'any', children: [a, b] },
+  };
+  assert.equal(
+    canonicalCondition(neither),
+    canonicalCondition({
+      type: 'all',
+      children: [
+        { type: 'not', child: a },
+        { type: 'not', child: b },
+      ],
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(neither),
+    canonicalCondition({
+      type: 'not',
+      child: { type: 'all', children: [a, b] },
+    }),
+  );
+  assert.notEqual(
+    canonicalCondition(neither),
+    canonicalCondition({ type: 'any', children: [a, b] }),
+  );
+  assert.equal(
+    canonicalCondition({ type: 'all', children: [plan.hard, neither] }),
+    canonicalCondition({
+      type: 'all',
+      children: [
+        plan.hard,
+        { type: 'not', child: a },
+        { type: 'not', child: b },
+      ],
+    }),
+  );
+});
+void test('lowercase districts survive mixed-case currency and category text', () => {
+  for (const message of [
+    'bu akşam kadıköyde en fazla 500 TL stand-up',
+    'kadikoy theatre under 500 TRY',
+  ]) {
+    assert.ok(
+      extract(message, '2026-10-04').mentions.some(
+        (mention) =>
+          mention.kind === 'location' &&
+          mention.name === 'Kadıköy' &&
+          mention.precision === 'district',
+      ),
+    );
+  }
+});
+void test('this weekend keeps the current Saturday and Sunday when requested on Sunday', () => {
+  for (const message of ['this weekend', 'bu hafta sonu']) {
+    for (const [reference, from, to] of [
+      ['2026-10-03', '2026-10-03', '2026-10-04'],
+      ['2026-10-04', '2026-10-03', '2026-10-04'],
+      ['2026-10-05', '2026-10-10', '2026-10-11'],
+    ]) {
+      const date = extract(message, reference).mentions.find(
+        (mention) => mention.kind === 'date',
+      );
+      assert.ok(date?.kind === 'date');
+      assert.equal(date.from, from);
+      assert.equal(date.to, to);
+    }
+  }
+  const next = extract('next weekend', '2026-10-04').mentions.find(
+    (mention) => mention.kind === 'date',
+  );
+  assert.ok(next?.kind === 'date');
+  assert.equal(next.from, '2026-10-10');
+  assert.equal(next.to, '2026-10-11');
+});
 const budget = {
   scope: 'phase-1' as const,
   jevCapUsd: 1,
@@ -73,6 +209,36 @@ const item: GoldenCase = {
   reviewSummary: 'Concert',
   expected: plan,
 };
+void test('scored vector loading requires complete coverage; diagnostic loading records missing vectors', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-vectors-'));
+  try {
+    const path = join(directory, 'vectors.json');
+    const envelope = {
+      schemaVersion: 1,
+      profile: voyageCacheKey(embedding),
+      dimensions: 1024,
+      entries: [] as { hash: string; vector: number[] }[],
+    };
+    await writeFile(path, JSON.stringify(envelope));
+    await assert.rejects(
+      loadVectors(path, [event]),
+      /Full frozen vector coverage required: 0\/1/,
+    );
+    const partial = await loadVectors(path, [event], true);
+    assert.equal(partial.complete, false);
+    assert.equal(partial.byId.size, 0);
+    const vector = Array.from({ length: 1024 }, (_, index) =>
+      index === 0 ? 1 : 0,
+    );
+    envelope.entries.push({ hash: sha256(voyageDocumentText(event)), vector });
+    await writeFile(path, JSON.stringify(envelope));
+    const complete = await loadVectors(path, [event]);
+    assert.equal(complete.complete, true);
+    assert.deepEqual(complete.byId.get(event.id), vector);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 void test('40 reviewable requests retain language counts, corrections and valid hard plans', async () => {
   const fixture = validateGoldenFixture(
@@ -318,6 +484,39 @@ void test('failed calls retain reservations and never retry, including a new pro
     );
     assert.equal(JSON.parse(ledger.trim()).reservedUsd, 0.02);
     assert.ok(!ledger.includes('provider body'));
+    const first = JSON.parse(ledger.trim());
+    const retry = {
+      key: first.key,
+      reason: 'Inspected outage resolved',
+      attemptId: 'reviewed-1',
+    };
+    await new GoldenTransport({
+      ...options,
+      reviewedRetry: retry,
+      network: async () => {
+        calls++;
+        return Response.json({ usage: { input_tokens: 10 } });
+      },
+    }).fetcher('concert')('https://api.typesafe.ai/v1/systemone', init);
+    const attempts = (
+      await readFile(join(directory, 'budget-ledger.jsonl'), 'utf8')
+    )
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    assert.equal(attempts.length, 2);
+    assert.deepEqual(attempts[0], first);
+    assert.equal(attempts[1].cacheKey, first.key);
+    assert.deepEqual(attempts[1].reviewedRetry, retry);
+    assert.equal(calls, 2);
+    await rm(join(directory, `${first.key}.json`));
+    await assert.rejects(
+      new GoldenTransport({ ...options, reviewedRetry: retry }).fetcher(
+        'concert',
+      )('https://api.typesafe.ai/v1/systemone', init),
+      /no automatic retry/,
+    );
+    assert.equal(calls, 2);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

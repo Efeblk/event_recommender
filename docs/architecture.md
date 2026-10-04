@@ -91,6 +91,15 @@ records explicit approval of unrestricted Voyage use. Keys come from `TYPESAFE_A
 `VOYAGE_API_KEY`. The runner reserves each attempt before the call, retains failed
 reservations, settles successful calls from reported usage, stops new live calls
 after a provider failure, and does not retry.
+Live query and document jobs share a 21-second Voyage pacer and the phase ledger
+lock. A diagnostic baseline may use `--allow-partial-vectors`; its recorded
+coverage prevents it from passing the frozen quality gate. The final run requires
+full coverage. Live cases also have a minimum 13-second interval.
+After inspecting a failed attempt and correcting its cause, an explicit
+`--reviewed-retry work/phase-one/<recovery>.json` can identify one failed cache
+`key`, a nonempty `reason` and a unique `attemptId`. The recovery has a separate
+reservation. The original failed reservation stays charged. Repeating that
+recovery cannot make another paid call if its response is missing.
 All cache directories share `web/work/phase-one/budget-ledger.jsonl`. Account for
 indexing and staging reservations in that same phase budget before those calls.
 

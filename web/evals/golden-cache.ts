@@ -1,6 +1,7 @@
 import { mkdir, open, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { sha256 } from './golden-v1.ts';
+import { acquireGoldenLock, paceGoldenVoyage } from './golden-pacing.ts';
 
 export interface GoldenBudget {
   scope: 'phase-1';
@@ -30,6 +31,9 @@ interface TransportOptions {
   live?: boolean;
   budget?: GoldenBudget;
   network?: typeof fetch;
+  paceVoyage?: boolean;
+  /** Explicit recovery of one inspected failed attempt, never an automatic retry. */
+  reviewedRetry?: { key: string; reason: string; attemptId: string };
 }
 export class GoldenTransport {
   hits = 0;
@@ -148,14 +152,7 @@ export class GoldenTransport {
       this.options.budgetDirectory ?? this.options.directory;
     await mkdir(budgetDirectory, { recursive: true });
     // File lock and write-ahead reservations also guard process crashes and reruns.
-    let lock;
-    try {
-      lock = await open(join(budgetDirectory, 'live.lock'), 'wx', 0o600);
-    } catch {
-      throw new GoldenCacheError(
-        'Golden live lock exists; inspect the previous attempt before continuing.',
-      );
-    }
+    const release = await acquireGoldenLock(budgetDirectory);
     this.inProgress = true;
     try {
       const ledgerFile = join(budgetDirectory, 'budget-ledger.jsonl');
@@ -189,7 +186,20 @@ export class GoldenTransport {
         )
       )
         throw new GoldenCacheError('Invalid golden budget ledger.');
-      if (entries.some((entry) => entry.key === key))
+      const retry = this.options.reviewedRetry;
+      const prior = entries.some((entry) => entry.key === key);
+      const recovering =
+        prior &&
+        retry?.key === key &&
+        retry.reason.trim() &&
+        retry.attemptId.trim();
+      const attemptKey = recovering
+        ? sha256(JSON.stringify({ key, retry }))
+        : key;
+      if (
+        (prior && !recovering) ||
+        entries.some((entry) => entry.key === attemptKey)
+      )
         throw new GoldenCacheError(
           'An uncached attempt already has a reservation; no automatic retry.',
         );
@@ -235,13 +245,28 @@ export class GoldenTransport {
       const ledgerHandle = await open(ledgerFile, 'a', 0o600);
       try {
         await ledgerHandle.write(
-          `${JSON.stringify({ key, provider: voyage ? 'voyage' : 'typesafe', reservedUsd, at: new Date().toISOString() })}\n`,
+          `${JSON.stringify({ key: attemptKey, cacheKey: key, ...(recovering ? { reviewedRetry: retry } : {}), provider: voyage ? 'voyage' : 'typesafe', reservedUsd, at: new Date().toISOString() })}\n`,
         );
         await ledgerHandle.sync();
       } finally {
         await ledgerHandle.close();
       }
       this.paidCalls++;
+      if (voyage && this.options.paceVoyage)
+        await paceGoldenVoyage(budgetDirectory);
+      await writeFile(
+        join(this.options.directory, `${attemptKey}-request.json`),
+        JSON.stringify({
+          key: attemptKey,
+          cacheKey: key,
+          requestText,
+          url,
+          body,
+          catalogSha256: this.options.catalogSha256,
+          referenceTime: this.options.referenceTime,
+        }) + '\n',
+        { flag: 'wx', mode: 0o600 },
+      );
       const response = await (this.options.network ?? fetch)(url, init);
       if (!response.ok) {
         await response.body?.cancel();
@@ -295,7 +320,7 @@ export class GoldenTransport {
       );
       try {
         await usageHandle.write(
-          `${JSON.stringify({ key, tokens, estimatedUsd, reservedUsd })}\n`,
+          `${JSON.stringify({ key: attemptKey, tokens, estimatedUsd, reservedUsd })}\n`,
         );
         await usageHandle.sync();
       } finally {
@@ -328,9 +353,7 @@ export class GoldenTransport {
     } finally {
       this.inProgress = false;
       // Successful cleanup does not erase a paid-attempt reservation.
-      await lock.close();
-      const { unlink } = await import('node:fs/promises');
-      await unlink(join(budgetDirectory, 'live.lock'));
+      await release();
     }
   }
 }

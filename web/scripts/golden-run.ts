@@ -171,7 +171,11 @@ export function documentEstimate(events: EventRecord[]) {
   };
 }
 
-async function loadVectors(path: string, events: EventRecord[]) {
+export async function loadVectors(
+  path: string,
+  events: EventRecord[],
+  allowPartial = false,
+) {
   const raw = await readFile(path);
   const value = JSON.parse(raw.toString('utf8')) as {
     schemaVersion: number;
@@ -206,11 +210,11 @@ async function loadVectors(path: string, events: EventRecord[]) {
     const vector = byHash.get(sha256(voyageDocumentText(event)));
     if (vector) byId.set(event.id, vector);
   }
-  if (byId.size !== events.length)
+  if (byId.size !== events.length && !allowPartial)
     throw new Error(
       `Full frozen vector coverage required: ${byId.size}/${events.length}.`,
     );
-  return { byId, sha256: sha256(raw) };
+  return { byId, sha256: sha256(raw), complete: byId.size === events.length };
 }
 
 function reviewHtml(fixture: GoldenFixture, fixtureSha256: string): string {
@@ -241,8 +245,11 @@ export async function main(args = process.argv.slice(2)) {
       fixture: { type: 'string', default: 'fixtures/golden-v1.json' },
       catalog: { type: 'string' },
       vectors: { type: 'string' },
+      'allow-partial-vectors': { type: 'boolean', default: false },
+      'interval-ms': { type: 'string', default: '13000' },
       cache: { type: 'string', default: 'work/phase-one/cache' },
       budget: { type: 'string' },
+      'reviewed-retry': { type: 'string' },
       output: { type: 'string' },
       labels: { type: 'string', default: 'fixtures/golden-v1-labels.json' },
     },
@@ -292,7 +299,20 @@ export async function main(args = process.argv.slice(2)) {
     console.log(JSON.stringify(report));
     return;
   }
-  const vectors = await loadVectors(workPath(values.vectors!), events);
+  const vectors = await loadVectors(
+    workPath(values.vectors!),
+    events,
+    values['allow-partial-vectors'],
+  );
+  const intervalMs = Number(values['interval-ms']);
+  if (
+    !Number.isSafeInteger(intervalMs) ||
+    intervalMs < 0 ||
+    (values.live && intervalMs < 13000)
+  )
+    throw new Error(
+      'Live golden requests must be paced at least 13 seconds apart.',
+    );
   const config = values.live
     ? jevConfigFrom({
         TYPESAFE_API_KEY: process.env.TYPESAFE_API_KEY,
@@ -326,6 +346,10 @@ export async function main(args = process.argv.slice(2)) {
     referenceTime: fixture.referenceTime,
     live: values.live,
     budget,
+    paceVoyage: values.live,
+    reviewedRetry: values['reviewed-retry']
+      ? JSON.parse(await readFile(workPath(values['reviewed-retry']), 'utf8'))
+      : undefined,
   });
   const rows: GoldenRow[] = [];
   const out = workPath(
@@ -341,11 +365,22 @@ export async function main(args = process.argv.slice(2)) {
     referenceTime: fixture.referenceTime,
     preparationProfile: profile,
     vectorsSha256: vectors.sha256,
+    vectorCoverage: {
+      available: vectors.byId.size,
+      eligible: events.length,
+      complete: vectors.complete,
+    },
     jevModel: config.model,
     voyageProfile: voyageCacheKey(voyage),
   };
+  let lastStart = 0;
   try {
     for (const item of fixture.cases) {
+      if (values.live && lastStart)
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.max(0, lastStart + intervalMs - Date.now())),
+        );
+      lastStart = Date.now();
       const start = performance.now(),
         hits = transport.hits,
         paid = transport.paidCalls,
@@ -390,13 +425,19 @@ export async function main(args = process.argv.slice(2)) {
             embeddingConfig,
             inputInterpreter: 'span-v2',
             vectors: async (candidates) =>
-              new Map(candidates.map((e) => [e.id, vectors.byId.get(e.id)!])),
+              new Map(
+                candidates
+                  .filter((e) => vectors.byId.has(e.id))
+                  .map((e) => [e.id, vectors.byId.get(e.id)!]),
+              ),
             spanInterpret: (input, options) =>
               interpretSpanInput(input, { ...options, fetcher }),
             rank: (cfg, input, candidates) =>
               rankWithJev(cfg, input, candidates, fetcher),
             embed: (cfg, texts, type) =>
-              embedWithVoyage(cfg, texts, type, fetcher),
+              // The evaluation transport can wait for the shared local pacer.
+              // Production/staging keeps its normal provider timeout.
+              embedWithVoyage(cfg, texts, type, fetcher, 120_000),
           },
         );
         rowErrors.push(...transport.errors.slice(errors));
@@ -489,6 +530,7 @@ export async function main(args = process.argv.slice(2)) {
       ...provenance,
       resultSha256,
     });
+    if (!vectors.complete) summary.frozenQualityPassed = false;
     await writeFile(
       `${out}.summary.json`,
       JSON.stringify(summary, null, 2) + '\n',

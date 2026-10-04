@@ -268,6 +268,9 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
       const inThisWeek = (near.getTime() - today.getTime()) / 86400000 < 7 - ((today.getUTCDay() + 6) % 7);
       if (inThisWeek && iso(near) !== ref) dateDraft(start, end, a, b, [{ from: iso(a), to: iso(b) }, { from: iso(c), to: iso(d) }]);
       else dateDraft(start, end, iso(near) === ref ? c : a, iso(near) === ref ? d : b);
+    } else if (isWeekend && /^(?:bu|this)$/u.test(mod) && today.getUTCDay() === 0) {
+      // Sunday still belongs to this weekend, including its Saturday.
+      dateDraft(start, end, addDays(today, -1), today);
     } else {
       const [a, b] = span(nextWeekday(day, false));
       dateDraft(start, end, a, b);
@@ -296,8 +299,9 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
   for (const [name, kind, precision] of places) {
     for (const m of f.matchAll(termRegex(fold(name)))) {
       const s = m.index!, e = s + m[0].length;
-      // Proper names: the original should be capitalised unless the whole message is lowercase.
-      if (text[s] !== text[s].toLocaleUpperCase('tr-TR') && text !== text.toLocaleLowerCase('tr-TR')) continue;
+      // District names are explicit location candidates even beside uppercase TL.
+      // Keep the capitalization guard for ambiguous neighborhood/outside names.
+      if (precision !== 'district' && text[s] !== text[s].toLocaleUpperCase('tr-TR') && text !== text.toLocaleLowerCase('tr-TR')) continue;
       if (kind === 'outside_location') add({ kind, name, ...span(s, e) });
       else add({ kind: 'location', name, precision: precision!, ...span(s, e) });
     }
