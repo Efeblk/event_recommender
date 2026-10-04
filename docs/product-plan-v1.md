@@ -371,3 +371,40 @@ checks still pass, and the per-request cost does not increase without approval.
   Node build and smoke. `child-shows.json` reruns all 40 approved requests.
   This follow-up exceeds the two planned fix PRs in task 6; obtain user approval
   for the concrete additional PR before merge. Phase 1 remains incomplete.
+- 2026-10-04: The user approved the additional child-show fix in
+  [PR 53](https://github.com/Efeblk/event_recommender/pull/53). It merged as
+  `bb5f123` at 12:40 UTC after all six checks passed on `bb67eba`; its branch
+  is deleted. Both child requests return ten age-supported plays. The preserved
+  40-request diagnostic and zero-paid replay share result hash
+  `60d05f813659e83c4a7468478179f1a802ba97aad57dd1c2ebe2cb1795158af3`.
+  Full indexing, final labels, user sample review and staging latency remain pending.
+- 2026-10-04: Private staging deployment
+  [37203260179](https://github.com/Efeblk/event_recommender/actions/runs/37203260179)
+  succeeded on `bb5f123`; all six exact-commit CI checks and the immutable Linux
+  candidate checks passed. Revision `biplan-staging-00037-f2m` receives 100% traffic.
+  Health reports the expected SHA and `/api/ready` returns 200. IAM remains private.
+  The frozen-catalog source audit confirms 84 supported matches for each child
+  request and zero hard matches for `tr21`, `tr22`, `tr24` and `tr25`.
+  Full-vector coverage and measured acceptance remain pending.
+- 2026-10-04: Full indexing published 1,418 new vectors and read back all 3,948
+  document hashes. `vectors.json` covers all 8,831 frozen eligible sessions;
+  SHA-256 is `a793e40584120cefb97099e0a384e9a15ad5597166cc25a55ec30102bb0e4841`.
+  `full-baseline.json` starts the 40-request full-vector run. Scheduled collection
+  [37201756266](https://github.com/Efeblk/event_recommender/actions/runs/37201756266)
+  succeeded and published 8,699 eligible sessions (205 failed pages, 13 quarantines).
+  A readback found 152 new document hashes; incremental indexing reuses the captured
+  cache and preserves the frozen export. Staging latency awaits that coverage.
+- 2026-10-04: The first full-vector baseline completed 40 requests; its
+  zero-paid replay matches result hash
+  `618e36b5f296d129004267e3b5ca792c1bc8652df5dd95a8801f6f87e403799d`.
+  Source review found a duplicated Rossi Suadiye social event, a talk sold as
+  a concert and a child-only workshop in a friends' dance request. These prevent
+  acceptance. A focused fix adds the reviewed Rossi title pair, keeps separate
+  Sanat dance-night source clocks while displaying one programme, and tightens
+  format/audience scoring. Checks pass: 793 web tests, typecheck, lint, Node build
+  and smoke, 275 collector tests (one skipped). `full-fixed-two.json` reruns all
+  40 requests. This additional fix PR needs user merge approval under task 6.
+- 2026-10-04: Incremental indexing completed at 13:48 UTC. It published the
+  remaining 152 vectors and read back 4,275 frozen/current document hashes.
+  The frozen vector export is unchanged. Final coverage readback, result labels,
+  user sample review and staging latency remain pending.
