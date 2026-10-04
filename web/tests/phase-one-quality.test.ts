@@ -12,6 +12,96 @@ import { recommend, validateInput } from '../lib/recommend.ts';
 import { shortlistEvents } from '../lib/retrieval.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
 
+void test('a child-show request admits age-supported theatre before ranking and rejects unknown or excluded formats', async () => {
+  const now = new Date('2026-10-04T06:50:27.793Z');
+  const event: EventRecord = {
+    id: 'age-supported-play',
+    title: 'Süper Patates ve Kaçak Bezelye - Süper Köpüklü Bir Macera',
+    description: 'Etkinlik 2 yaş ve üzeri için uygundur.',
+    startsAt: '2026-10-10T10:00:00.000Z',
+    checkedAt: now.toISOString(),
+    venue: 'Akasya Kültür Sanat',
+    city: 'İstanbul',
+    district: 'Üsküdar',
+    address: '',
+    price: 300,
+    currency: 'TRY',
+    url: 'https://example.test/child-play',
+    imageUrl: '',
+    category: 'Tiyatro',
+    availability: 'available',
+  };
+  const records: EventRecord[] = [
+    event,
+    {
+      ...event,
+      id: 'unknown-age',
+      title: 'Çocuk Oyunu',
+      description: 'Çocuklar için tiyatro.',
+    },
+    {
+      ...event,
+      id: 'older-audience',
+      title: 'Sekiz Yaş ve Üzeri',
+      description: 'Yaş sınırı: 8+',
+    },
+    { ...event, id: 'concert', title: 'Konser', category: 'Konser' },
+  ];
+  const plan: Plan = {
+    hard: {
+      type: 'all',
+      children: [
+        { type: 'atom', atom: { kind: 'category', value: 'show' } },
+        { type: 'atom', atom: { kind: 'age', years: 6 } },
+      ],
+    },
+    preferences: [],
+    order: 'none',
+  };
+  for (const message of [
+    '6 yaşındaki çocuğum için uygun bir gösteri',
+    'A show suitable for my 6-year-old child',
+  ]) {
+    const result = await recommend(
+      validateInput({ message, intentVersion: 2, filters: emptyFilters }),
+      {
+        now,
+        config: { apiKey: 'offline-test-key', model: 'jev-1.13.0' },
+        inputInterpreter: 'span-v2',
+        candidates: async () => records,
+        spanInterpret: async () => ({
+          status: 'accepted',
+          operations: [],
+          resultingPlan: plan,
+          debug: { mentions: [], answers: {} },
+        }),
+        rank: async (_config, _input, candidates) => {
+          assert.deepEqual(
+            candidates.map((candidate) => candidate.id),
+            [event.id],
+          );
+          return {
+            model: 'synthetic-offline-test',
+            usage: { inputTokens: 0, outputTokens: 0 },
+            ranked: candidates.map((candidate) => ({
+              event: candidate,
+              score: 3,
+              confidence: 1,
+              probabilities: [0, 0, 0, 1] as const,
+              supportProbability: 1,
+            })),
+          };
+        },
+      },
+    );
+    assert.equal(result.status, 'results');
+    assert.deepEqual(
+      result.recommendations.map((card) => card.event.id),
+      [event.id],
+    );
+  }
+});
+
 function parse(
   message: string,
   choices: Record<string, string> = {},
