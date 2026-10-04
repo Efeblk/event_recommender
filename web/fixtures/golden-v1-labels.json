@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "catalogSha256": "20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6",
+  "fixtureSha256": null,
+  "runSha256": null,
+  "resultSha256": null,
+  "labelMeanings": {
+    "relevant": "Meets all hard constraints and has source-backed support for the requested experience.",
+    "partly_relevant": "Meets hard constraints but only weakly supports the requested experience.",
+    "not_relevant": "Violates a hard constraint or does not support the requested experience."
+  },
+  "userReview": {
+    "status": "pending",
+    "reviewedCaseIds": [],
+    "reviewer": null,
+    "reviewedAt": null
+  },
+  "cases": [
+    {
+      "caseId": "tr01",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr02",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr03",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr04",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr05",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr06",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr07",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr08",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr09",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr10",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr11",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr12",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr13",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr14",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr15",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr16",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr17",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr18",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr19",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr20",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr21",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr22",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr23",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr24",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "tr25",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en01",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en02",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en03",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en04",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en05",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en06",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en07",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en08",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en09",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en10",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en11",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en12",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en13",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en14",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    },
+    {
+      "caseId": "en15",
+      "status": "pending",
+      "cards": [],
+      "emptyReview": null,
+      "notes": null
+    }
+  ]
+}

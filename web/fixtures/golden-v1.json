@@ -1,0 +1,1595 @@
+{
+  "schemaVersion": 1,
+  "referenceTime": "2026-10-04T06:50:27.793Z",
+  "timezone": "Europe/Istanbul",
+  "review": {
+    "status": "approved",
+    "reviewer": "user, T3 Code conversation",
+    "reviewedAt": "2026-10-04T10:08:00.000Z"
+  },
+  "catalog": {
+    "githubRunId": "37181072133",
+    "artifactId": "11295709772",
+    "artifactName": "gcp-event-data-staging-37181072133",
+    "artifactPath": "collector/state/events.json",
+    "sha256": "20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6",
+    "bytes": 29467263,
+    "sourceRecords": 14577,
+    "defaultPath": "work/phase-one/artifact/collector/state/events.json",
+    "runUrl": "https://github.com/Efeblk/event_recommender/actions/runs/37181072133",
+    "collectionFinishedAt": "2026-10-04T06:32:35.334Z",
+    "artifactExpiresAt": "2026-10-18T06:51:50Z",
+    "privateArchive": "gs://biplan-staging-efeblk-biplan-staging-data/evals/golden-v1/20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6/events.json"
+  },
+  "seeds": [
+    "tests/span-parser-human-cases.test.ts",
+    "../docs/archive/product-benchmark-2026-10-03.md"
+  ],
+  "oracleNotes": [
+    "Constraints are written before observing results. Do not relax them to make a run pass.",
+    "Dates and clock ranges use Europe/Istanbul. The current weekend includes October 3–4; eligibility excludes past sessions.",
+    "Budgets compare listed ticket prices. Fees and adjacent seats are not established by these records.",
+    "Unknown source evidence cannot satisfy a mandatory condition or its negation.",
+    "Empty-result hard-match counts are candidates for human relevance review, not proof that every candidate matches the mood.",
+    "Two corrections reuse the actual previous response state, never an expected plan injected as parser output."
+  ],
+  "cases": [
+    {
+      "id": "tr01",
+      "language": "tr",
+      "message": "bu akşam kadıköyde en fazla 500 TL stand-up",
+      "reviewSummary": "4 Oct, 18:00–23:59; Kadıköy; stand-up; ticket ≤500 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-04",
+                "to": "2026-10-04"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "standup"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 500,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr02",
+      "language": "tr",
+      "message": "yarın 500 tl altı tiyatro",
+      "reviewSummary": "5 Oct; theatre; ticket <500 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-05",
+                "to": "2026-10-05"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 500,
+                "comparison": "lt",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr03",
+      "language": "tr",
+      "message": "bu hafta sonu İstanbul’da konser",
+      "reviewSummary": "Current weekend 3–4 Oct; concert; past sessions excluded",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-03",
+                "to": "2026-10-04"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr04",
+      "language": "tr",
+      "message": "ekim sonunda harbiyede açık hava konseri",
+      "reviewSummary": "21–31 Oct; Şişli; concert; source-backed outdoors. Prefer Harbiye",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-21",
+                "to": "2026-10-31"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Şişli",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "experience",
+                "value": "outdoors"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "location",
+              "name": "Harbiye",
+              "precision": "neighborhood"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr05",
+      "language": "tr",
+      "message": "standap izlemek istiyorum",
+      "reviewSummary": "Typo: stand-up; no date/place/budget constraint",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "standup"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr06",
+      "language": "tr",
+      "message": "kadikoyde tiyatro izlemek istiyorum",
+      "reviewSummary": "ASCII typo: Kadıköy; theatre",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr07",
+      "language": "tr",
+      "message": "Anadolu yakasında caz konseri",
+      "reviewSummary": "Asian side; concert; source-backed jazz",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Anadolu yakası",
+                "precision": "side"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "jazz"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr08",
+      "language": "tr",
+      "message": "Avrupa yakasında tiyatro, en fazla 800 TL",
+      "reviewSummary": "European side; theatre; ticket ≤800 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Avrupa yakası",
+                "precision": "side"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 800,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr09",
+      "language": "tr",
+      "message": "iki kişi toplam en fazla 1600 TL tiyatro",
+      "reviewSummary": "Two people; theatre; listed ticket total ≤1600 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 2
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 1600,
+                "comparison": "lte",
+                "basis": "group_total",
+                "currency": "TRY"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr10",
+      "language": "tr",
+      "message": "dört kişi kişi başı en fazla 600 TL konser",
+      "reviewSummary": "Four people; concert; listed price per person ≤600 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 4
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 600,
+                "comparison": "lte",
+                "basis": "per_person",
+                "currency": "TRY"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr11",
+      "language": "tr",
+      "message": "ücretsiz bir etkinlik istiyorum",
+      "reviewSummary": "Verified zero-price ticket; unknown prices fail",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 0,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr12",
+      "language": "tr",
+      "message": "tiyatro veya stand-up, konser olmasın",
+      "reviewSummary": "Theatre OR stand-up; exclude concerts",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "theatre"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "standup"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "concert"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr13",
+      "language": "tr",
+      "message": "rock konseri ama rap olmasın",
+      "reviewSummary": "Concert; source-backed rock; exclude rap; absence of rap evidence is unknown",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "rock"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "rap"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr14",
+      "language": "tr",
+      "message": "Kadıköy dışında tiyatro",
+      "reviewSummary": "Theatre; district must be known and outside Kadıköy",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "location",
+                  "name": "Kadıköy",
+                  "precision": "district"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr15",
+      "language": "tr",
+      "message": "10 ekimde saat 20:00’den sonra konser",
+      "reviewSummary": "10 Oct; concert; start strictly after 20:00 Istanbul",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-10",
+                "to": "2026-10-10"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "20:00",
+                "fromExclusive": true
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr16",
+      "language": "tr",
+      "message": "11 ekimde 16:00’dan önce tiyatro",
+      "reviewSummary": "11 Oct; theatre; start strictly before 16:00 Istanbul",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-11",
+                "to": "2026-10-11"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "to": "16:00",
+                "toExclusive": true
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr17",
+      "language": "tr",
+      "message": "sevgilimle sakin samimi bir akşam geçirmek istiyorum, tür fark etmez",
+      "reviewSummary": "18:00–23:59; prefer partner/calm/intimate; no category constraint",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "partner"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "calm"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "intimate"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr18",
+      "language": "tr",
+      "message": "romantik caz konseri",
+      "reviewSummary": "Concert; jazz; romantic is a preference",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "jazz"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "romantic"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr19",
+      "language": "tr",
+      "message": "arkadaşlarla bir şeyler yapalım, dans etmek istiyoruz",
+      "reviewSummary": "Friends and attendee dancing are relevance wishes; no hard category",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": []
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "friends"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "relevanceNotes": "The activity must plausibly let attendees dance; watching ballet alone is not sufficient."
+    },
+    {
+      "id": "tr20",
+      "language": "tr",
+      "message": "6 yaşındaki çocuğum için uygun bir gösteri",
+      "reviewSummary": "Show; positive admission evidence for age 6",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "show"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 6
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "children"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr21",
+      "language": "tr",
+      "message": "tekerlekli sandalye erişimi olan bir konser",
+      "reviewSummary": "Concert; positive wheelchair access evidence",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "experience",
+                "value": "wheelchair_accessible"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr22",
+      "language": "tr",
+      "message": "küfür ve cinsel içerik olmayan bir gösteri",
+      "reviewSummary": "Show; positive evidence of no profanity and no sexual content",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "show"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "content",
+                  "value": "profanity"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "content",
+                  "value": "sexual_content"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr23",
+      "language": "tr",
+      "message": "bir müzikal izlemek istiyoruz",
+      "reviewSummary": "Musical program; no forced theatre category",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "musical"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr24",
+      "language": "tr",
+      "message": "yarın Beşiktaş’ta en fazla 700 TL konser",
+      "reviewSummary": "5 Oct; Beşiktaş; concert; ticket ≤700 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-05",
+                "to": "2026-10-05"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Beşiktaş",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 700,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "tr25",
+      "language": "tr",
+      "message": "Beşiktaş değil Kadıköy olsun, bütçeyi de 1000 TL yap",
+      "reviewSummary": "Correction to tr24: keep 5 Oct/concert; replace district with Kadıköy and ceiling with 1000 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-05",
+                "to": "2026-10-05"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 1000,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "previousCaseId": "tr24"
+    },
+    {
+      "id": "en01",
+      "language": "en",
+      "message": "A stand-up show in Kadikoy tonight, up to 500 TL",
+      "reviewSummary": "4 Oct, 18:00–23:59; Kadıköy; stand-up; ticket ≤500 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-04",
+                "to": "2026-10-04"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "standup"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 500,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en02",
+      "language": "en",
+      "message": "Theatre tomorrow under 500 TL",
+      "reviewSummary": "5 Oct; theatre; ticket <500 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-05",
+                "to": "2026-10-05"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 500,
+                "comparison": "lt",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en03",
+      "language": "en",
+      "message": "A concert this weekend",
+      "reviewSummary": "Current weekend 3–4 Oct; concert; past sessions excluded",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-03",
+                "to": "2026-10-04"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en04",
+      "language": "en",
+      "message": "An open-air concert in Harbiye in late October",
+      "reviewSummary": "21–31 Oct; Şişli; concert; source-backed outdoors. Prefer Harbiye",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-21",
+                "to": "2026-10-31"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Şişli",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "experience",
+                "value": "outdoors"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "location",
+              "name": "Harbiye",
+              "precision": "neighborhood"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en05",
+      "language": "en",
+      "message": "Jazz on the Asian side of Istanbul",
+      "reviewSummary": "Asian side; source-backed jazz; no forced category",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Anadolu yakası",
+                "precision": "side"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "jazz"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en06",
+      "language": "en",
+      "message": "Theatre on the European side, no more than 800 TL",
+      "reviewSummary": "European side; theatre; ticket ≤800 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Avrupa yakası",
+                "precision": "side"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 800,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en07",
+      "language": "en",
+      "message": "Four people, total budget up to 2400 TL, a concert",
+      "reviewSummary": "Four people; concert; listed ticket total ≤2400 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 4
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 2400,
+                "comparison": "lte",
+                "basis": "group_total",
+                "currency": "TRY"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en08",
+      "language": "en",
+      "message": "A pottery workshop for beginners",
+      "reviewSummary": "Workshop; pottery; beginner-friendly is a relevance preference",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "workshop"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "ceramics"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "beginner_friendly"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en09",
+      "language": "en",
+      "message": "A museum or an exhibition",
+      "reviewSummary": "Museum OR exhibition; admission-window dates must be source-backed",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "museum"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "exhibition"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en10",
+      "language": "en",
+      "message": "Something calm and intimate with my partner in the evening",
+      "reviewSummary": "18:00–23:59; partner/calm/intimate are preferences",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "partner"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "calm"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "intimate"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en11",
+      "language": "en",
+      "message": "A show suitable for my 6-year-old child",
+      "reviewSummary": "Show; positive admission evidence for age 6",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "show"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 6
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "children"
+            }
+          }
+        ],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en12",
+      "language": "en",
+      "message": "Theatre or stand-up, but no concerts",
+      "reviewSummary": "Theatre OR stand-up; exclude concerts",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "theatre"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "standup"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "concert"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en13",
+      "language": "en",
+      "message": "Cinema on October 11 before 18:00",
+      "reviewSummary": "11 Oct; cinema; start strictly before 18:00 Istanbul",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-11",
+                "to": "2026-10-11"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "cinema"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "to": "18:00",
+                "toExclusive": true
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en14",
+      "language": "en",
+      "message": "A concert on October 10 in Kadikoy, up to 900 TL",
+      "reviewSummary": "10 Oct; Kadıköy; concert; ticket ≤900 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-10",
+                "to": "2026-10-10"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 900,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      }
+    },
+    {
+      "id": "en15",
+      "language": "en",
+      "message": "Make it theatre instead, on October 11. Keep the location and budget.",
+      "reviewSummary": "Correction to en14: 11 Oct/theatre; keep Kadıköy and ≤900 TRY",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-11",
+                "to": "2026-10-11"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "amount": 900,
+                "comparison": "lte",
+                "basis": "per_ticket",
+                "currency": "TRY"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "previousCaseId": "en14"
+    }
+  ]
+}
