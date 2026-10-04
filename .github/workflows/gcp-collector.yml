@@ -1,11 +1,19 @@
 name: Collect GCP staging event data
 
 on:
+  # Google Cloud Scheduler is the main clock (docs/gcp-collector.md): it
+  # dispatches mode=collect every 6 hours and mode=index every hour. GitHub
+  # schedules can be delayed or skipped, so this hourly cron is only a backup
+  # for indexing and the monitor job.
   schedule:
-    - cron: '17 */6 * * *'
-    # Hourly: index new documents only (no collection).
     - cron: '47 * * * *'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: collect runs a full collection; index only indexes new documents
+        type: choice
+        options: [collect, index]
+        default: collect
 
 permissions:
   contents: read
@@ -16,7 +24,7 @@ concurrency:
 
 jobs:
   schedule_gate:
-    if: github.event_name == 'workflow_dispatch' || (github.event.schedule == '17 */6 * * *' && vars.GCP_STAGING_COLLECTION_ENABLED == 'true')
+    if: github.event_name == 'workflow_dispatch' && inputs.mode != 'index'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
@@ -202,7 +210,7 @@ jobs:
   index_only:
     # Hourly vector refresh between collections. The per-run and daily call
     # caps in web/lib/audited-index.ts still apply.
-    if: github.event.schedule == '47 * * * *' && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
+    if: (github.event.schedule == '47 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.mode == 'index')) && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 12

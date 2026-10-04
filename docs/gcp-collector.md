@@ -3,14 +3,11 @@
 The [product plan](product-plan-v1.md) defines current scope and acceptance checks.
 Use [the v1 architecture](architecture.md) for the current data flow.
 
-`Collect GCP staging event data` supports manual runs and a six-hour schedule.
-The service is private. A scheduled run requires
-`GCP_STAGING_COLLECTION_ENABLED=true`. `GCP_STAGING_COLLECTION_UNTIL` must be
-the literal `open` or a future canonical UTC timestamp
-(`YYYY-MM-DDTHH:mm:ss.sssZ`) no more than 60 hours away. Missing or invalid values
-skip collection before credentials are used. `open` keeps collection active
-without an expiry. It does not enable paid indexing. Manual dispatch uses
-`master` and does not require either schedule variable.
+`Collect GCP staging event data` runs when Google Cloud Scheduler (or an
+operator) dispatches it. The service is private. `mode=collect` runs a full
+collection; `mode=index` only indexes new documents. GitHub schedules can be
+delayed or skipped, so the workflow keeps only an hourly backup cron for
+indexing and the `monitor` job. See [Clock and alerts](#clock-and-alerts).
 
 The workflow serves the v1 snapshot path. PostgreSQL preparation is frozen.
 Its opt-in workflow step is removed. Raw provider pages under
@@ -30,33 +27,33 @@ The workflow requests a short-lived Google identity token whose audience is `BIP
 
 Each run restores the canonical private checkpoint and cached coverage backlog before collection, preserves source failures and quarantined records, imports verified pages, saves a checkpoint, reads it back, and uploads evidence artifacts. Each scheduled run is bounded to 2,000 detail pages, 6,000 HTTP requests, 40 minutes, and 20 pagination requests per listing; unfinished listing cursors and detail URLs remain durable for later runs. The 40-minute collection allowance reserves the rest of the 60-minute job for publication and indexing. Source HTTP 429/5xx retries are bounded; publication and paid AI calls have no automatic retries. Verified empty pages carry an explicit retirement timestamp, preventing older imports from resurrecting removed sessions. Collection never calls TypeSafe. The optional Voyage follow-up below is disabled by default and requires its own reviewed window and call budget; collection alone does not imply complete embedding coverage.
 
-Before enabling scheduled collection, apply and verify the dedicated identity's updated environment subject, complete a successful manual run, and inspect its checkpoint readback and source-health artifacts. Then review expected collection and storage cost separately. Set `GCP_STAGING_COLLECTION_UNTIL` first to an expiry at most 60 hours in the future, then set `GCP_STAGING_COLLECTION_ENABLED=true`. For a 48-hour initial soak, use the full 60-hour window and enable shortly before a scheduled tick. GitHub scheduling delays can still shorten the evidence span, so verify the actual artifact timestamps instead of treating the deadline as proof of 48 hours. The deadline is checked when the gate job starts; it does not extend itself.
+## Clock and alerts
 
-After the workflow and collector environment changes are integrated, an authorized operator can create the bounded window from PowerShell with:
+Cloud Scheduler (project `biplan-staging-efeblk`, region `us-central1`) calls the
+GitHub `workflow_dispatch` API with a fine-grained token (Actions: read and write
+on this repository only):
 
-```powershell
-$collectionUntil = (Get-Date).ToUniversalTime().AddHours(60).ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-gh variable set GCP_STAGING_COLLECTION_UNTIL --body $collectionUntil
-gh variable set GCP_STAGING_COLLECTION_ENABLED --body true
-```
+| Job | Schedule (UTC) | Input |
+| --- | --- | --- |
+| `biplan-collect` | `5 */6 * * *` | `mode=collect` |
+| `biplan-index` | `35 * * * *` | `mode=index` |
 
-To keep scheduled collection on without renewal, set `GCP_STAGING_COLLECTION_UNTIL` to the literal `open`. Collection makes no paid calls; Voyage indexing keeps its own bounded window. A skipped scheduled run shows a "Scheduled collection skipped" warning.
+Pause collection: `gcloud scheduler jobs pause biplan-collect --location us-central1`.
+Resume with `resume`. Dispatched runs pass the schedule gate as manual runs, so
+`GCP_STAGING_COLLECTION_ENABLED` and `GCP_STAGING_COLLECTION_UNTIL` no longer
+control collection. Indexing still requires `GCP_STAGING_INDEXING_ENABLED=true`.
 
-```powershell
-gh variable set GCP_STAGING_COLLECTION_UNTIL --body open
-gh variable set GCP_STAGING_COLLECTION_ENABLED --body true
-```
+Cloud Monitoring sends email through channel `biplan-staging-uptime-email`:
 
-Leave `GCP_STAGING_COLLECTION_ENABLED` absent or set to any other value to keep scheduled collection disabled. To stop early, unset it or set it to `false`; after the deadline, scheduled runs fail closed even if the enable variable remains `true`. Extending the window requires a separate deliberate update to the deadline after reviewing usage. These repository-variable changes are operational actions outside deployment.
+- `biplan-staging-ready-failure`: the authenticated uptime check of `/api/ready`
+  fails in two locations for 10 minutes.
+- `biplan-staging-catalog-not-refreshed`: no `POST /api/admin/collection` with
+  HTTP 200 (log metric `biplan_collection_published`) for 14 hours.
 
-```powershell
-gh variable set GCP_STAGING_COLLECTION_ENABLED --body false
-```
+These alerts do not depend on GitHub. The workflow `monitor` job is a backup.
 
-Phase 2 requires seven days of scheduled collection and an hourly readiness
-monitor. Manual runs and skipped jobs do not prove that acceptance condition.
-The older 48-hour observation procedure above describes a bounded window.
-Use `open` for the product plan's seven-day check.
+Phase 2 requires seven days of unattended collection with these alerts active.
+Manual runs do not count toward that check.
 
 ## Optional bounded embedding follow-up
 
