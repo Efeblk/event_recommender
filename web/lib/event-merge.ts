@@ -695,7 +695,15 @@ function cachedDisplayShowIdentity(event: EventRecord, policies?: ReadonlySet<St
     (normalize(event.title) === '90lar dans gecesi ekim etkinlikleri' ||
       normalize(event.title) === '90 lar dans gecesi') &&
     !sourcePolicies.has('child-only') && !sourcePolicies.has('workshop');
-  const identity = sanatDanceNight ? 'istanbul\u001fsanat performance\u001freviewed:90lar-dans-gecesi' :
+  // Rossi provider districts/categories conflict. Preserve those source facts
+  // and session guards while preventing two cards for the reviewed programme.
+  const rossiSocialNight = normalize(event.city) === 'istanbul' &&
+    normalize(event.venue) === 'rossi suadiye' &&
+    (event.category === 'Gösteri' || event.category === 'Diğer') &&
+    title === canonicalShowTitle('Tanış • Konuş • Paylaş • Dans Et') &&
+    !sourcePolicies.has('child-only') && !sourcePolicies.has('workshop');
+  const identity = rossiSocialNight ? 'istanbul\u001frossi suadiye\u001freviewed:social-night' :
+    sanatDanceNight ? 'istanbul\u001fsanat performance\u001freviewed:90lar-dans-gecesi' :
     !title || GENERIC_SHOW_TITLES.has(title) ? undefined :
       [normalize(event.city), event.category, title, [...sourcePolicies].sort().join('|')].join('\u001f');
   displayIdentityCache.set(source,{...displayFields(event),identity});

@@ -46,7 +46,7 @@ export interface JevRanking {
 }
 const criteria = [
   'The supplied event facts contradict the requested experience or do not address it.',
-  'The event has only a broad topical connection, or its program and intended audience are a weak fit for the requested outing; the requested experience is not supported by its description. For a generic partner outing, place a predominantly child-directed educational or character show here unless the request includes children, family, explicit interest in that format, or explicitly names that event or program; an all-age ticket rule alone does not establish adult-program relevance.',
+  'The event has only a broad topical connection, or its program and intended audience are a weak fit for the requested outing; the requested experience is not supported by its description. For an ordinary friends or partner outing, place an explicitly child-only participation activity or predominantly child-directed educational or character show here unless the request includes children, family, explicit interest in that format, or explicitly names that event or program; an all-age ticket rule alone does not establish adult-program relevance.',
   "All mandatory requirements are supported. The description provides a specific activity or format, with an intended audience that fits the main requested experience; a broad promise of entertainment alone is insufficient for a specific mood. Explicitly naming an event or program is positive evidence of the user's audience preference for it, but never overrides a mandatory requirement or a stated contradiction. Literal mood words are unnecessary when the format supports that fit.",
   'The description directly supports the requested experience without a stated contradiction.',
 ];

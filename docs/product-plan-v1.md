@@ -401,7 +401,7 @@ checks still pass, and the per-request cost does not increase without approval.
   a concert and a child-only workshop in a friends' dance request. These prevent
   acceptance. A focused fix adds the reviewed Rossi title pair, keeps separate
   Sanat dance-night source clocks while displaying one programme, and tightens
-  format/audience scoring. Checks pass: 793 web tests, typecheck, lint, Node build
+  format/audience scoring. Checks pass: 794 web tests, typecheck, lint, Node build
   and smoke, 275 collector tests (one skipped). `full-fixed-two.json` reruns all
   40 requests. This additional fix PR needs user merge approval under task 6.
 - 2026-10-04: Incremental indexing completed at 13:48 UTC. It published the

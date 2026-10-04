@@ -48,6 +48,20 @@ await test('reviewed Sanat dance night shows one card while preserving conflicti
   ]) assert.equal(diverseEvents([biletix, other]).length, 2);
 });
 
+await test('reviewed Rossi social night displays once despite conflicting provider categories and districts', () => {
+  const biletix = event({ id: 'rossi-biletix', source: 'biletix', title: 'Tanış - Konuş - Dans Et - (Sosyal Buluşma Etkinliği)', category: 'Gösteri', venue: 'Rossi Suadiye', district: 'BEYOĞLU', address: '', description: 'Tanışma, sohbet ve dans.' });
+  const biletinial = event({ id: 'rossi-biletinial', source: 'biletinial', title: 'Tanış • Konuş • Paylaş • Dans Et', category: 'Diğer', venue: 'Rossi Suadiye', district: 'İstanbul Avrupa', address: 'Suadiye, Plaj Yolu Sk. No:23, 34740 Kadıköy/İstanbul', description: 'Friend Point tanışma, sohbet ve dans.' });
+  assert.equal(diverseEvents([biletix, biletinial]).length, 1);
+  assert.equal(biletix.district, 'BEYOĞLU');
+  assert.equal(biletinial.district, 'İstanbul Avrupa');
+  for (const other of [
+    { ...biletinial, city: 'Ankara' },
+    { ...biletinial, venue: 'Başka Sahne' },
+    { ...biletinial, category: 'Workshop' },
+    { ...biletinial, description: 'Yalnızca 6 ile 9 yaş çocuklar için.' },
+  ]) assert.equal(diverseEvents([biletix, other]).length, 2);
+});
+
 await test('display identity memo stays generation-scoped and validates every identity input', () => {
   const source = {}, base = event({
     title: 'İstanbul Workshops Hat Sanatı Atölyesi',
