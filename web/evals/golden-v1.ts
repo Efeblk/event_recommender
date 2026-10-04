@@ -138,9 +138,19 @@ export function canonicalCondition(condition: Condition): string {
       });
     return `not(${canonicalCondition(condition.child)})`;
   }
-  const children = condition.children.flatMap((child) =>
-    child.type === condition.type ? child.children : [child],
-  );
+  const operands = (child: Condition): Condition[] => {
+    if (child.type === condition.type) return child.children.flatMap(operands);
+    if (child.type === 'not') {
+      if (child.child.type === 'not') return operands(child.child.child);
+      const opposite = condition.type === 'all' ? 'any' : 'all';
+      if (child.child.type === opposite)
+        return child.child.children.flatMap((item) =>
+          operands({ type: 'not', child: item }),
+        );
+    }
+    return [child];
+  };
+  const children = condition.children.flatMap(operands);
   const values = [...new Set(children.map(canonicalCondition))]
     .filter((value) => condition.type !== 'all' || value !== 'all()')
     .sort();

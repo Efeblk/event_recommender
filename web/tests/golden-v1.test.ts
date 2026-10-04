@@ -116,6 +116,17 @@ void test('oracle comparison accepts De Morgan equivalents without discarding ex
     canonicalCondition(neither),
     canonicalCondition({ type: 'any', children: [a, b] }),
   );
+  assert.equal(
+    canonicalCondition({ type: 'all', children: [plan.hard, neither] }),
+    canonicalCondition({
+      type: 'all',
+      children: [
+        plan.hard,
+        { type: 'not', child: a },
+        { type: 'not', child: b },
+      ],
+    }),
+  );
 });
 void test('lowercase districts survive mixed-case currency and category text', () => {
   for (const message of [

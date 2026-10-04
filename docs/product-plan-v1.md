@@ -329,3 +329,10 @@ checks still pass, and the per-request cost does not increase without approval.
   approved requests and expected constraints are unchanged. The diagnostic run
   has exposed category-negation scope and attendee-dancing interpretation
   failures. A calm partner request is empty and needs full-index/source review.
+- 2026-10-04: The paced diagnostic run reached all 40 requests. No further
+  provider failure occurred. Its first complete replay made zero paid calls and
+  used 103 cached responses. It preserves 10 category violations in `tr12`, an
+  unsupported beginner request (`en08`), and the attendee-dancing mismatch
+  (`tr19`). Source review found two duplicate sessions under variant titles in
+  `tr02` and `tr03`; the exact-title audit missed them. The full-index run still
+  has pending documents. This diagnostic is not a passing Phase 1 score.
