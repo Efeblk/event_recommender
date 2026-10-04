@@ -26,6 +26,9 @@ export interface ResolvedRetrievalContext {
   order: 'none' | 'soonest' | 'cheapest';
   /** Bounded soft location/budget nudges; never admission rules. */
   softPreferences?: SoftPreferences;
+  /** Committed preferences; do not reconstruct them from superseded requests. */
+  calmOptionalMood?: boolean;
+  childAudienceRequested?: boolean;
 }
 
 export interface SearchContext {
@@ -268,12 +271,17 @@ function calmMoodShortlistCoverage(
   history: Message[],
   limit: number,
   intent?: IntentState,
+  resolved?: ResolvedRetrievalContext,
 ) {
-  const calm = intent
+  const calm = resolved
+    ? resolved.calmOptionalMood === true
+    : intent
     ? intent.preferences.mood === 'calm'
     : requestsCalmOptionalMood(message, history);
   if (!calm || limit < 2) return null;
-  const requestedChildEvent = intent
+  const requestedChildEvent = resolved
+    ? resolved.childAudienceRequested === true
+    : intent
     ? intent.requirements.some(
         (requirement) =>
           requirement.kind === 'audience' &&
@@ -544,16 +552,18 @@ export function shortlistEvents(
     resolved,
   );
   const diverseRanked = diverseEvents(ranked, ranked.length);
-  const relevanceCovered =
-    semantic && !resolved
-      ? (calmMoodShortlistCoverage(
-          diverseRanked,
-          message,
-          context.history,
-          limit,
-          intent,
-        ) ?? diverseRanked.slice(0, limit))
-      : diverseRanked;
+  const calmCoverage = semantic
+    ? calmMoodShortlistCoverage(
+        diverseRanked,
+        message,
+        context.history,
+        limit,
+        intent,
+        resolved,
+      )
+    : null;
+  const relevanceCovered = calmCoverage ??
+    (semantic && !resolved ? diverseRanked.slice(0, limit) : diverseRanked);
   if (resolved?.order === 'cheapest') {
     const cheapest = diverseEvents(
       uniqueEvents(

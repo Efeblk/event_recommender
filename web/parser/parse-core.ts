@@ -159,7 +159,7 @@ export function buildRequest(input: ParserInput, proposals: Proposal[] = []) {
   mentions.forEach((m, i) => {
     const path = `mentions[${i}]`;
     questions[`polarity_${m.id}`] = choice(
-      { question: `\`message\` is a request for events to attend in Istanbul. How does it use the phrase \`${path}.text\` (${path}.detectedAs)? Short or fragmentary requests still state what the user wants.` },
+      { question: `\`message\` is a request for events to attend in Istanbul. How does it use the exact phrase \`${path}.text\` (${path}.detectedAs)? Short or fragmentary requests still state what the user wants. Judge the negation's grammatical scope: a later excluded option does not negate earlier accepted options. In "theatre or stand-up, but no concerts" / "tiyatro veya stand-up, konser olmasın", theatre and stand-up are wanted; concerts are unwanted. In "no concerts or theatre", both are unwanted.` },
       {
         wanted: 'Describes events the user is asking for or will accept: the date, time, place, price, type, topic, company or experience they want, including acceptable options ("X or Y works", "X olabilir", "X uygun") and a new value replacing an old one.',
         unwanted: 'Rules it out: not, no, without, except, exclude, avoid, "olmasın", "hariç", "dışında", "istemiyorum", "içermeyen", "-siz/-süz", "gelmeyecek".',
@@ -212,6 +212,18 @@ export function buildRequest(input: ParserInput, proposals: Proposal[] = []) {
         type: 'noul',
         instructions: { question: `Does \`message\` make \`${path}.text\` a concrete mandatory venue/environment guarantee, rather than a mood or format preference for the outing?`,
           examples: ['"sakin, samimi bir akşam" and "a calm evening" are outing preferences.', '"kesinlikle sakin/sessiz bir ortam şart" and "the venue must be quiet" require a quiet environment.'] },
+      };
+    }
+    if (m.kind === 'category' && m.value === 'dance') {
+      questions[`attendee_activity_${m.id}`] = {
+        type: 'noul',
+        instructions: { question: `Does \`message\` ask for the attendees themselves to dance, rather than to watch a dance/ballet performance?`, examples: ['"dans etmek istiyoruz" and "we want to dance" describe attendee activity.', '"a dance show", "bale izlemek" and "watch a dance performance" describe a stage format.'] },
+      };
+    }
+    if (m.kind === 'experience' && m.value === 'beginner_friendly') {
+      questions[`mandatory_beginner_${m.id}`] = {
+        type: 'noul',
+        instructions: { question: `Does \`message\` explicitly require a confirmed beginner admission/instruction guarantee, rather than express a beginner's activity preference?`, examples: ['"a pottery workshop for beginners" and "başlangıç seviyesine uygun bir seramik atölyesi" are relevance wishes.', '"the course must explicitly confirm that no prior experience is required" and "başlangıç seviyesi olduğu kesin olarak belirtilmeli" require a source guarantee.'] },
       };
     }
     if (m.kind === 'time' && !m.until) {
@@ -486,6 +498,8 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
   const undecidedSlots = new Map<string, number>();
   const dateSlots = new Map<string, number>();
   const atomFor = (m: Mention, pickSlot: (slot: number) => unknown): Atom | null => {
+    if (m.kind === 'category' && m.value === 'dance' && noul(`attendee_activity_${m.id}`) > 0.5)
+      return { kind: 'topic', value: 'dancing' };
     if (m.kind === 'amount') {
       // Free admission has no per-person/total distinction.
       const basis = m.amount === 0 ? 'per_person' : pick(`basis_${m.id}`) ?? 'unstated';
@@ -601,6 +615,18 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
         }
         if (!atom) continue;
         const replacement = atom;
+        // A rejected old district in an explicit district replacement names the
+        // superseded value ("not X, Y instead"). Consume that reference so it
+        // does not survive as a second constraint in later corrections.
+        if (old.kind === 'location' && old.precision === 'district' &&
+            replacement.kind === 'location' && replacement.precision === 'district' &&
+            !sameValue(old, replacement)) {
+          for (const reference of mentions) {
+            const value = mentionAtom(reference);
+            if (value && role(reference) === 'exclude' && sameValue(old, value))
+              used.add(reference.id);
+          }
+        }
         const condition = wholeKind && e.condition.type !== 'not' ? { type: 'atom' as const, atom: replacement } : replaceAtom(e.condition, old, replacement);
         ops.push({ op: 'replace', targetId: e.id, condition });
       }
@@ -621,7 +647,9 @@ export function compose(input: ParserInput, built: BuiltRequest, response: JevRe
       // Subjective experiences ("romantik") are never stated by providers, so a
       // mandatory one could only ever empty the results; rank by them instead.
       const subjective = (m.kind === 'experience' && SUBJECTIVE_EXPERIENCES.has(m.value) && r === 'require')
-        || (m.kind === 'mood' && noul(`mandatory_mood_${m.id}`) < 0.5);
+        || (m.kind === 'mood' && noul(`mandatory_mood_${m.id}`) < 0.5)
+        || (m.kind === 'experience' && m.value === 'beginner_friendly' && r === 'require' && noul(`mandatory_beginner_${m.id}`) < 0.5)
+        || (m.kind === 'category' && m.value === 'dance' && r === 'require' && noul(`attendee_activity_${m.id}`) > 0.5);
       const strength = (r === 'require' || r === 'exclude') && !subjective ? 'hard' : 'preferred';
       if (scopedIds.has(m.id)) { i++; continue; }
       const atom = atomFor(m, choose);

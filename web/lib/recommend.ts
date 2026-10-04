@@ -44,7 +44,14 @@ import { softPreferencesFor } from './soft-preferences.ts';
 import { interpretSpanInput } from './span-interpreter.ts';
 import { isStandaloneInputReset } from './input-reset.ts';
 import { isAlternativesRequest, isStandaloneAlternativesRequest } from './intent.ts';
-import type { Plan } from '../parser/contract.ts';
+import type { Atom, Condition, Plan } from '../parser/contract.ts';
+
+function positivePlanAtoms(condition: Condition, positive = true): Atom[] {
+  if (condition.type === 'not')
+    return positivePlanAtoms(condition.child, !positive);
+  if (condition.type === 'atom') return positive ? [condition.atom] : [];
+  return condition.children.flatMap((child) => positivePlanAtoms(child, positive));
+}
 
 export interface RecommendInput {
   message: string;
@@ -579,6 +586,13 @@ async function recommendResolved(
         query: input.message,
         order: plan.order === 'nearest' ? ('none' as const) : plan.order,
         softPreferences: softPreferencesFor(plan),
+        calmOptionalMood: plan.preferences
+          .flatMap((item) => positivePlanAtoms(item))
+          .some((atom) => atom.kind === 'mood' && atom.value === 'calm'),
+        childAudienceRequested: [plan.hard, ...plan.preferences]
+          .flatMap((item) => positivePlanAtoms(item))
+          .some((atom) => atom.kind === 'age' ||
+            (atom.kind === 'companion' && atom.value === 'children')),
       }
     : undefined;
   let shortlist = shortlistEvents(
