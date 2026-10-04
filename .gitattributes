@@ -1,0 +1,2 @@
+# Preserve the user-approved golden fixture bytes and replay hash on every OS.
+/web/fixtures/golden-v1.json text eol=crlf

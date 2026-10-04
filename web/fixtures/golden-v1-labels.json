@@ -1,300 +1,1979 @@
 {
   "schemaVersion": 1,
   "catalogSha256": "20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6",
-  "fixtureSha256": null,
-  "runSha256": null,
-  "resultSha256": null,
+  "fixtureSha256": "b4fc63d47fe2de9f25c1b61098cc14f66c08455802c9c2ec664b309ec224c4d0",
+  "runSha256": "5973db4013b96cc905bd74cb2d07366dc72ac7efac7190e7fed77659badc665b",
+  "resultSha256": "b0bcd6f53db8d388381d5f9794864edf712365c6e1c2accd80d81cf7cff4ea6c",
   "labelMeanings": {
     "relevant": "Meets all hard constraints and has source-backed support for the requested experience.",
     "partly_relevant": "Meets hard constraints but only weakly supports the requested experience.",
     "not_relevant": "Violates a hard constraint or does not support the requested experience."
   },
   "userReview": {
-    "status": "pending",
-    "reviewedCaseIds": [],
-    "reviewer": null,
-    "reviewedAt": null
+    "status": "reviewed",
+    "reviewedCaseIds": [
+      "tr01",
+      "tr09",
+      "tr11",
+      "tr12",
+      "tr14",
+      "tr15",
+      "tr16",
+      "tr17",
+      "tr19",
+      "tr20",
+      "tr23",
+      "tr25",
+      "en08",
+      "en11",
+      "en12",
+      "en14",
+      "en15"
+    ],
+    "reviewer": "user: T3 Code conversation, I reviewed and approve all 17 sample labels",
+    "reviewedAt": "2026-10-04T14:25:56.642Z"
   },
   "cases": [
     {
       "caseId": "tr01",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-904afeedf635b5cdf915616b88df8b7d",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Stand Up Bir Saat supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-50b685a3d0faecf34aad61184bcdb423",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Stand Up Gecesi Pazar 19:00 supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-d8c49ec755a49a1700a6482eeb1c6c13",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Komedi Gecesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "a36e2b1187e36b66e00af5a0",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Motto Stand-Up Her Pazar supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-b695a7b452c9d1317f29ff94ecfab970",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Açık Mikrofon Stand-up - Comedy Lab Istanbul supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-3c036193a34ca56f622821272e1f612b",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Furkan Bozdağ Stand Up “Kaset” supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "The Ada Bar programmes have different titles/producers; Motto uses another venue. Source session IDs and reviewed aliases show each actual programme once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 6 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr02",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-9f3c340b16fcead15106fb0fc899c191",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Sinekli Bakkal supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-70bd9586a1ce6b93da864a8c632f0b49",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kürk Mantolu Madonna supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f01ec1eac28571652efa7a2508936912",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kütüphanedeki Ceset supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f7036eeb76905dccec73d0ab5d19db37",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Madam Bovary supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-99906d883d214c087565d9110324162b",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Vadideki Zambak supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "cd8158a82176a1c8aba490e5",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Anna Karenina supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-7d18b8bd64303058960d41ca1647a941",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Çalıkuşu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-10776b674e52f3aebd9a79cfc51b8cf5",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Üç Kız Kardeş supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-6f0cacad7e0de81d4f30796db292f8dc",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bir İdam Mahkumunun Son Günü supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-ffb63afa6e737887a2e089c1e34317ef",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bir İshaksın Bir Cemil supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Kütüphanedeki Ceset and Gece Yarısı Kütüphanesi are different works. Reviewed literal aliases appear once; matching clocks alone do not establish duplication."
+      },
+      "notes": "Source review against frozen collection 37181072133; 15 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr03",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-605fe666f72767082397ae7745308190",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Leyla The Band supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-643e8a8a5817e6d0d449dba6a47822f7",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Çağrı Sinci supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-7919a68e88ddadf80f8a55f930169b71",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Evgeny Grinko supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-3dadc08f7aa2a117a4913b2318ccc167",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Candela Concert supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "ac1f2bfc3af886c87023b832",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Sibel Köse “Vistula’dan Boğaz’a Uzanan Caz Köprüsü” supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "6190d482e831232c8d6da936",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Chromas supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "bd9528efa4592497ba35c311",
+          "label": "relevant",
+          "notes": "The saved Konser listing for JEFE supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "c1893173ff183143d6bbcd19",
+          "label": "relevant",
+          "notes": "The saved Konser listing for JamZZ Sessions supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9b2d3e3871a99a7e2422c285ca64ee9c",
+          "label": "relevant",
+          "notes": "The saved Konser listing for DJ Can Giray - Geçmişten Günümüze 90lar 2000ler Türkçe Pop supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 20 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr04",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-282100b2cfebf7dac0401d06b81ac2b9",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Sıla supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-d752cac478fedb2e2f8fd87a71c12f88",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Mabel Matiz supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-7c14bfb2f24b82957e5aeaf03ae70b36",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Kenan Doğulu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0957620a7d5e2b68c4a37a67",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Mahsun Kırmızıgül supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "a990e32741be4caf8f0e741e",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Hakan Altun supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e2bee4b81bfd447abdb99d2b",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Deha Bilimlier Konseri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-3fcc9e3479c387f043e42c6917f1fc2d",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Hande Yener supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-c55ee86f5b6576c45a8fc79c06df714c",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Mustafa Sandal supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 10 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr05",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-3a936293117b3f1961e92fb34b902d96",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Lesli Karavil Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-19aa98bcdf1e7b077865a1f8ff53b211",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Anlatanadam Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f3ec6ba98613f1761a650ffeed58373f",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Uçak Modu - Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-cd118ba7b12be449e97f1c0ea9a4344d",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Still Standing (Uraz Kaygılaroğlu Stand up) supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "08e2ea9b484a76ec0aad27a0",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Mustafa Boz Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-b28b0c16deb60028d4d662f84d5ec978",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Sergen Deveci – Ketenpere / Olan Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "d275227494951c39f29f8e32",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Safa Sarı Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "9858c42d2766b662094af2cf",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kudret Aşan Tek Kişilik Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-7739cc07e6ca121566a4e53f7e27c6d3",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Alpay Erdem Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "4839025bc8ef15e2917f0afd",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Yoshi Enomoto Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 607 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr06",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "dc5ac9d4191932ee4aca649b",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Karışık Kaset supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-b89aa5a4b107ae034c233b8901ee4ec7",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Nazım supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "5a2c3f1c76bce1f40eb493d7",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bu Bir Prova Değil “Le Réel” supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-039dfc480c8cf82462fa7b22a0ebdcb7",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bir Delinin Hatıra Defteri Metin Zakoğlu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-168281fedfad4ef64e01c15569d01e5a",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for İçimizdeki Şeytan supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "28f11671aa0a908e0359802c",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kadın Aklı Erkek Aklı supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f3b2c31d67ced722022a32c70edfcaf9",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Dönüşüm - Franz Kafka supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0b322263e8d075fda2ac1143",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Shirley Valentine - Sumru Yavrucuk supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-dc9aebcfd9e452123c633990c737c0bf",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for İki Bekar supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "36acd6dbfad1ed481f468a32",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for O Çatının Altında supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 443 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr07",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-d157e21aa07b4e73e0226493497aad4f",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Coşkun Karademir Trio - Folk’n’Jazz supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "ac4f076871760f254787849e",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İmer Demirer Quartet supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "f94a9072bc2c94f3ac2dd4a9",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Jazz in Love supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "5fd39931687b1ff97c65a82d",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Girls in Airports supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "7bcc78ccefaab42c2cae7d14",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Elif Çağlar ft. Cenk Erdoğan Konseri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9dc4fe2f3290bc4ae25e9f6142a982bd",
+          "label": "partly_relevant",
+          "notes": "Source has mixed genres, jazz influences or jazz alongside the primary activity. Jazz is only partly supported as the requested experience."
+        },
+        {
+          "recordId": "session-98237223daf9ba66aaa7c6b5f73ecacc",
+          "label": "partly_relevant",
+          "notes": "Source has mixed genres, jazz influences or jazz alongside the primary activity. Jazz is only partly supported as the requested experience."
+        },
+        {
+          "recordId": "aef910903fd10cfc3467a776",
+          "label": "partly_relevant",
+          "notes": "Source has mixed genres, jazz influences or jazz alongside the primary activity. Jazz is only partly supported as the requested experience."
+        },
+        {
+          "recordId": "session-46edb6ecf805619de07cc7399f72a399",
+          "label": "partly_relevant",
+          "notes": "Source has mixed genres, jazz influences or jazz alongside the primary activity. Jazz is only partly supported as the requested experience."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 12 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr08",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "8556e888332951c3ee74b5e7",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Savaş ve Barış supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "c81a3b1b9141828d2fcc8050",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for HEPYEK supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "5e16998632cfe1a9d77101e8",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Zenginlik Tanrısı supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e3e7f4863ac03cd9ccae546c",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Sherlock Holmes Baskerville'lerin Köpeği supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "dce1bd3f0402b8de62f04b76",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bazı Kötü Alışkanlıkların Politik Tarihi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "f766fb2caf481da58bccbfe9",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Lady Macbeth supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-473e4fa947068ad2a57ff969d9571cfc",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Palto supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "8a7e06e140eb3e1ff7241c33",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for İçimizdeki Şeytan supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "eac73e626612fac7d7b6eea3",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Çalıkuşu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-e4fb183afa07f8aff7c9d3ac90b796e8",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Aydınlıkevler supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 945 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr09",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-07a0d491a0b3d54615a6d396dae256fb",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Berfu & Eser Yenenler - Çift Terapisi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-e4fb183afa07f8aff7c9d3ac90b796e8",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Aydınlıkevler supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e3e7f4863ac03cd9ccae546c",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Sherlock Holmes Baskerville'lerin Köpeği supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-81616ad557dc23e2686acea7f9982b30",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Aşk ve Gurur supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-215a5569138561a914bbf50880c918c6",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Lüküs Hayat Kabare supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-addcb0c2e7490ae820b2a5d2411df449",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Meçhul Paşa supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-2c86c3f6a8268614110a1857b4d6c948",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Düş Payı supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-1cefddc6f3b79a0f66416589e4394798",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Edepsiz Komedi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9895bc76402a2bf43f94e3fd90228852",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Lady Diana supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "597ca4c1cf59e1f235f07ea4",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Müdahale supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 1830 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr10",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "0e87b78d2fdacb67be1975ad",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Resonance Elvin Hoxha Ganiyev (keman) Dilbağ Tokay ( Viyolonsel) İlyun Bürkev (Piyano) supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "06e0a1bd8ed6df15fc955fdf",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Rıza - Akustik Sahne supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "78bf5de25c51f61c22b717d0",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Okan Reis - Akustik Sahne supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "6e887f5c357e8f7bd17fdf87",
+          "label": "relevant",
+          "notes": "The saved Konser listing for CRR Senfoni Orkestrası supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0cbd291c6dea12ba1722a711",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Schumann Quartett & Agapi Triantayfllidi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "452e98b7c68fdf1b5a135255",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Sehabe & Yeis Sensura supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "ac4f076871760f254787849e",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İmer Demirer Quartet supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "8f1417da3e6afdfa180d6f69",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Savina Yannatou & Primavera en Salonico with Lamia Bedioui supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e04525089ad6988bdd847f87",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Calefax supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "41119ecb43f9a53f8ce22695",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Holy Fuck supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 397 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr11",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "81b3f5a35f24fed73a4621d3",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İstanbul Devlet Senfoni Orkestrası \"Türkiye - Romanya Dostluk Konseri\" supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "264b1724e5d0aec37c821027",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İstanbul Devlet Senfoni Orkestrası \"Türkiye - Polonya Dostluk Konseri - Tadeusz Strugała Onuruna\" supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "839cc7866729b392fd17de7f",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İstanbul Devlet Senfoni Orkestrası \"Benim Adım Cumhuriyet – “Cumhuriyet’in Kalbine Yolculuk” supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "20a7e4defff5793aab3990e6",
+          "label": "not_relevant",
+          "notes": "Saved source describes online participation and an older free introduction. The record price is zero, but it is a poor fit for the Istanbul outing and current free participation remains uncertain."
+        },
+        {
+          "recordId": "c1893173ff183143d6bbcd19",
+          "label": "relevant",
+          "notes": "The saved Konser listing for JamZZ Sessions supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "3471a61dc0e0256d8f4efdc4",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for İstanbul Şiirle Buluşuyor - Birden Bire Orhan Veli supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "10d85a229d8798753d95bb2c",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İlhan Mimaroğlu'nun Yapıtlarında Caz Ögeleri - Leyla Diana Gücük, Alper Maral supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 10 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr12",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "aabce2f13e48792a8252811e",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Deniz Özturhan - Tek Kişilik Stand Up Gösterisi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "cf8b41370951c9291c3a7cc3",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kudret Aşan Stand up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-2cb0ab2d8e7cfbaf9df9453bd35efba7",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for İlker Gümüşoluk - Tek Kişilik Gösteri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "96f70a3ef47a8adf15f6b87e",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Serdar Nalçakar - Çok Bozdu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "7329519daf94b5694f9a0192",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Melikşah Altuntaş - Bunu Kendime Neden Yapıyorum? supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "1d16c4defda58f10995f0642",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Talip Karamahmutoğlu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "334d9cfd84aeb9c8cacd3127",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for AZOT Doğaçlama Tiyatro Gösterisi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "c0b58af4d831cffc0a5e0bba",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Keşanlı Ali Destanı supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "cf54f48999ea4c5614afcfab",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Şeref Erdeniz ile Güldük Eğlendik Bitti supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "61b6b2d236ced776abd3a304",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Özlem Akbudak supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 3156 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr13",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "a0369899edaa1dec87aedcd8",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Redd Konseri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9b67cddec63a6e411b90ed9f6ada6555",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Yüksek Sadakat supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-0c1200ead248f0035a1ef71cab89bdf0",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Malt supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-e5e135376115c3bb458ac0a7ace46d20",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Duman Konseri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-80c3d88234b42131cf25aa43897057c8",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Gece Yolcuları supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-e0cdf04f664c7c380c5907de7b2f935b",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Ogün Sanlısoy supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9ac7bd79d63c256a0990dfe13e98211f",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Batu Akdeniz supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-0e7c257a667f43c512e565076a10cbb3",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Murat Bolat ve Anadolu Retrosu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-de12791b16335b37437706ea3a2e4dae",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Kaan Tangöze supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e038e2ce6a802f55ed40a6c9",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Evrencan Gündüz supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 65 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr14",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "94bdfcd33e4437ffb61ace6f",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kel Diva supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "1e6d83e96f7d3dd74ee1ef6f",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Ahududu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-970d1cf6d6eb3798cf9fbc7692a23d7f",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Olağanüstü Bir Gece supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0a0dee11d109dd7be66a91bc",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Sanatçısı Belirsiz* İvi Buradaydı supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f5f74c08df8a7f1a8a3adb2baa1bc349",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bozkır - Payidar Muhtar supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "ffde6d024991e10437f2dc0d",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Baba supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-8e4bfc3b741bf61b92fe8388c183754e",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Ağzı Çiçekli Adam supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-a4899b7c798289e824a6a14008f5b9ca",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Mahşer-i Cümbüş supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "57de724944aa49439964e9b4",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Saatleri Ayarlama Enstitüsü supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "aabaaa9e4d2f54591bf7f198",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Amadeus supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 548 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr15",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "ab93fbf448a3d369d94bd3b3",
+          "label": "partly_relevant",
+          "notes": "Programme matches the concert request, but saved promotional text says tickets sold out while the later checked offer is available. Confirm inventory with the provider; the frozen record cannot resolve the conflict."
+        },
+        {
+          "recordId": "ade77de8c8fecf47c629961d",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Yasmine Hamdan supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0fad76cc01e02cc93fa72830",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Samora Pinderhughes Trio ft. Elena Pinderhughes supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "d1c6e89c2a9644b7ee939559",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Maximum Sunar: Yann Tiersen supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "2d4253f49e585eefdc49a5f8",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Nicole Zuraitis supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "f359bf2c57f3b977e3ed6ad3",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Selami Şahin supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-c307bae25a98b191e99450dcf7fc99d2",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Murat Dalkılıç supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-0fc9663a1eda3051d4418230f7b720fe",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Arctic Monkeys Tribute supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "06e0a1bd8ed6df15fc955fdf",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Rıza - Akustik Sahne supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f039d1672804d631a45933686dc77166",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Emre Aydın supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 40 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr16",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-80c6f4f220c12eef99d25f71b8869cc8",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bir Fahişenin Akıl Hastanesindeki Günlüğü supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "21dde0d8460e80cb429e4b18",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Altıncı Koğuş supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "The two simultaneous Bakırköy plays are different named works/adaptations. Their shared venue and clock do not establish duplicate identity."
+      },
+      "notes": "Source review against frozen collection 37181072133; 46 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr17",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "afdd732a4f962121da834f79",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        },
+        {
+          "recordId": "session-b5a8daee5a709c5f583ad84c5f2f5ed5",
+          "label": "partly_relevant",
+          "notes": "The chamber or candle setting is plausible, but the saved description gives limited support for the main calm/intimate preference. It establishes no noise or crowd guarantee."
+        },
+        {
+          "recordId": "90006556bce976de8016e16d",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        },
+        {
+          "recordId": "bcda5ef05269e3f07ad75f06",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        },
+        {
+          "recordId": "session-631093943f99d8c862a5c440b3c66475",
+          "label": "partly_relevant",
+          "notes": "The chamber or candle setting is plausible, but the saved description gives limited support for the main calm/intimate preference. It establishes no noise or crowd guarantee."
+        },
+        {
+          "recordId": "f08f53854f736981036894f7",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 4404 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr18",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "f94a9072bc2c94f3ac2dd4a9",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Jazz in Love supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-569585a05186c46a5177319170bc0b7b",
+          "label": "partly_relevant",
+          "notes": "The saved programme supports jazz, but gives only weak support for the optional romantic preference."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 53 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr19",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "4f50c984d6445cf7b7223289",
+          "label": "relevant",
+          "notes": "Saved source establishes a dance-night programme or participatory dance music suitable for the ordinary friends outing."
+        },
+        {
+          "recordId": "2142f88ee2aec5012f5d5c15",
+          "label": "partly_relevant",
+          "notes": "Source describes networking and conversation before music and dancing. Dancing is secondary; provider district fields conflict, so the record does not establish a district guarantee."
+        },
+        {
+          "recordId": "session-555c01c4d925a384b4de1a3094fbcf60",
+          "label": "relevant",
+          "notes": "Saved source establishes a dance-night programme or participatory dance music suitable for the ordinary friends outing."
+        },
+        {
+          "recordId": "79bedba8b834b481e57299d7",
+          "label": "not_relevant",
+          "notes": "Source describes children singing, dancing and playing in a child-directed concert. This does not support the ordinary friends outing."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "The reviewed Rossi and Sanat programme title pairs appear once. Conflicting provider clocks, districts and offers remain separate source records; 2MUCH and Şubadap are different programmes."
+      },
+      "notes": "Source review against frozen collection 37181072133; 8831 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr20",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-6f067581c64ff930b251e25eda0937f9",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "d5d777d6084f8e94936e6465",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "session-077a548b2bc8b31477141b40c6370419",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "c62da4edb3e5c187c65cedd1",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "36fef7e7ebf8853b3a3d5a45",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "c1a934da764f2f5baa395be0",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "ef5cc94852ba91e3383ba4a7",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "2f53eae516dfe13810567ab9",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "a964194290a0de369dec9bdf",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "63e2188bbc1f548840ff84ae",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 84 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr21",
-      "status": "pending",
+      "status": "labelled",
       "cards": [],
-      "emptyReview": null,
-      "notes": null
+      "emptyReview": {
+        "verdict": "no_matching_event",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Full frozen catalog has no concert with positive wheelchair-access evidence. Source mentions of disabled admission, seating or contact instructions do not confirm wheelchair access; reviewed explicit accessibility statements are negative.",
+        "evidenceRecordIds": []
+      },
+      "notes": "Source review against frozen collection 37181072133; 0 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr22",
-      "status": "pending",
+      "status": "labelled",
       "cards": [],
-      "emptyReview": null,
-      "notes": null
+      "emptyReview": {
+        "verdict": "no_matching_event",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Full frozen catalog has no show with positive evidence establishing absence of both profanity and sexual content. Family-friendly, age limits and generic suitability do not establish these content guarantees.",
+        "evidenceRecordIds": []
+      },
+      "notes": "Source review against frozen collection 37181072133; 0 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr23",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-7e5e9111b2b89b9a300284b7aaf1e48d",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Gırgıriye Müzikali supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "17f84b1029c710a5867abbe3",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Pir Sultan Abdal Müzikali supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0abada4d8b280aa46c05cd3c",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for 7 Kocalı Hürmüz Müzikali supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "703ac8cacae177d6c4c7a3f7",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Yasak Müzikal supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9622f1796461baed759648e19cedfe4b",
+          "label": "partly_relevant",
+          "notes": "Source supports a musical, but the programme is primarily child-directed and the request does not mention children. No adult-only constraint was requested."
+        },
+        {
+          "recordId": "a7287284c1f95a35a4f76260",
+          "label": "partly_relevant",
+          "notes": "Source supports a musical, but the programme is primarily child-directed and the request does not mention children. No adult-only constraint was requested."
+        },
+        {
+          "recordId": "session-fe4a8d2f314730b308d490f675a5efc0",
+          "label": "partly_relevant",
+          "notes": "Source supports a musical, but the programme is primarily child-directed and the request does not mention children. No adult-only constraint was requested."
+        },
+        {
+          "recordId": "session-3d40a21cf3d73392fa2e5590e2b901ff",
+          "label": "partly_relevant",
+          "notes": "Source supports a musical, but the programme is primarily child-directed and the request does not mention children. No adult-only constraint was requested."
+        },
+        {
+          "recordId": "fc4112ae6e608dc8dda7e866",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bir Şehnaz Oyun Müzikali supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "1f6b9ce70911f524952bada0",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Ceviz Adam Müzikali Yeni Gösteri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 174 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr24",
-      "status": "pending",
+      "status": "labelled",
       "cards": [],
-      "emptyReview": null,
-      "notes": null
+      "emptyReview": {
+        "verdict": "no_matching_event",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Full frozen catalog has zero available October 5 concerts in Beşiktaş within 700 TRY.",
+        "evidenceRecordIds": []
+      },
+      "notes": "Source review against frozen collection 37181072133; 0 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "tr25",
-      "status": "pending",
+      "status": "labelled",
       "cards": [],
-      "emptyReview": null,
-      "notes": null
+      "emptyReview": {
+        "verdict": "no_matching_event",
+        "reviewer": "Codex: frozen source review",
+        "notes": "The actual prior response plan is corrected to Kadıköy and 1000 TRY while retaining October 5 and concert. Full frozen catalog has zero supported matches; the superseded Beşiktaş location is removed.",
+        "evidenceRecordIds": []
+      },
+      "notes": "Source review against frozen collection 37181072133; 0 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en01",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "a36e2b1187e36b66e00af5a0",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Motto Stand-Up Her Pazar supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-904afeedf635b5cdf915616b88df8b7d",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Stand Up Bir Saat supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-d8c49ec755a49a1700a6482eeb1c6c13",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Komedi Gecesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-50b685a3d0faecf34aad61184bcdb423",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Stand Up Gecesi Pazar 19:00 supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-b695a7b452c9d1317f29ff94ecfab970",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Kadıköy Açık Mikrofon Stand-up - Comedy Lab Istanbul supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-3c036193a34ca56f622821272e1f612b",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Furkan Bozdağ Stand Up “Kaset” supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "The Ada Bar programmes have different titles/producers; Motto uses another venue. Source session IDs and reviewed aliases show each actual programme once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 6 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en02",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-6f0cacad7e0de81d4f30796db292f8dc",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bir İdam Mahkumunun Son Günü supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9f3c340b16fcead15106fb0fc899c191",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Sinekli Bakkal supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f01ec1eac28571652efa7a2508936912",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kütüphanedeki Ceset supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f7036eeb76905dccec73d0ab5d19db37",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Madam Bovary supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-99906d883d214c087565d9110324162b",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Vadideki Zambak supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e68d8cf3c254e2eaa25812a7",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Gece Yarısı Kütüphanesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-7d18b8bd64303058960d41ca1647a941",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Çalıkuşu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-10776b674e52f3aebd9a79cfc51b8cf5",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Üç Kız Kardeş supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-70bd9586a1ce6b93da864a8c632f0b49",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kürk Mantolu Madonna supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "cd8158a82176a1c8aba490e5",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Anna Karenina supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Kütüphanedeki Ceset and Gece Yarısı Kütüphanesi are different works. Reviewed literal aliases appear once; matching clocks alone do not establish duplication."
+      },
+      "notes": "Source review against frozen collection 37181072133; 15 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en03",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-643e8a8a5817e6d0d449dba6a47822f7",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Çağrı Sinci supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-605fe666f72767082397ae7745308190",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Leyla The Band supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-7919a68e88ddadf80f8a55f930169b71",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Evgeny Grinko supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "ac1f2bfc3af886c87023b832",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Sibel Köse “Vistula’dan Boğaz’a Uzanan Caz Köprüsü” supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "6190d482e831232c8d6da936",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Chromas supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "bd9528efa4592497ba35c311",
+          "label": "relevant",
+          "notes": "The saved Konser listing for JEFE supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-3dadc08f7aa2a117a4913b2318ccc167",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Candela Concert supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-9b2d3e3871a99a7e2422c285ca64ee9c",
+          "label": "relevant",
+          "notes": "The saved Konser listing for DJ Can Giray - Geçmişten Günümüze 90lar 2000ler Türkçe Pop supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "7cd69ec919f599b78a836328",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Candle Experience - Kırım Kilisesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "c1893173ff183143d6bbcd19",
+          "label": "relevant",
+          "notes": "The saved Konser listing for JamZZ Sessions supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 20 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en04",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-d752cac478fedb2e2f8fd87a71c12f88",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Mabel Matiz supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-282100b2cfebf7dac0401d06b81ac2b9",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Sıla supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-1adbce3d7e0ffd1191f37ae622652e16",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Kenan Doğulu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e2bee4b81bfd447abdb99d2b",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Deha Bilimlier Konseri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-3fcc9e3479c387f043e42c6917f1fc2d",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Hande Yener supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "a990e32741be4caf8f0e741e",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Hakan Altun supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0957620a7d5e2b68c4a37a67",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Mahsun Kırmızıgül supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-c55ee86f5b6576c45a8fc79c06df714c",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Mustafa Sandal supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 10 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en05",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "ac4f076871760f254787849e",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İmer Demirer Quartet supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "5fd39931687b1ff97c65a82d",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Girls in Airports supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "71ef0e1a91a1e0ea4705bec5",
+          "label": "relevant",
+          "notes": "The saved Diğer listing for Marquis Hill Blacktet Revisited supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-d157e21aa07b4e73e0226493497aad4f",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Coşkun Karademir Trio - Folk’n’Jazz supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "f94a9072bc2c94f3ac2dd4a9",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Jazz in Love supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "cdc1c5b32b69148dacad26e4",
+          "label": "relevant",
+          "notes": "The saved Diğer listing for İsaiah Collier supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "55280cfdb996f3ff5e0c029a",
+          "label": "relevant",
+          "notes": "The saved Diğer listing for Takuya Kuroda supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "d3de7e191a6e0d159acbbf09",
+          "label": "relevant",
+          "notes": "The saved Diğer listing for Tomoki Sanders supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "7bcc78ccefaab42c2cae7d14",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Elif Çağlar ft. Cenk Erdoğan Konseri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "aef910903fd10cfc3467a776",
+          "label": "partly_relevant",
+          "notes": "Source has mixed genres, jazz influences or jazz alongside the primary activity. Jazz is only partly supported as the requested experience."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 18 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en06",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-473e4fa947068ad2a57ff969d9571cfc",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Palto supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-f01ec1eac28571652efa7a2508936912",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kütüphanedeki Ceset supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "c81a3b1b9141828d2fcc8050",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for HEPYEK supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "896ea44621dde13db8a73940",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for NEREYE - İSTANBUL DT supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "8a7e06e140eb3e1ff7241c33",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for İçimizdeki Şeytan supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "5e16998632cfe1a9d77101e8",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Zenginlik Tanrısı supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "b769cfca9cba4b2616c815db",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Anna Karenina supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "eac73e626612fac7d7b6eea3",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Çalıkuşu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "ccfd7dba542616467ee74c72",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Afife Jale supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-e4fb183afa07f8aff7c9d3ac90b796e8",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Aydınlıkevler supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 945 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en07",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "452e98b7c68fdf1b5a135255",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Sehabe & Yeis Sensura supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-d5821ad6ad08d2e533e2c154015c2728",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Levent Yüksel supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-0fc9663a1eda3051d4418230f7b720fe",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Arctic Monkeys Tribute supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-a87e9cc33e3ace5165ca20ff9df03526",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Soner Arıca supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "ac4f076871760f254787849e",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İmer Demirer Quartet supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-71d06f86c2f5925bb4841ce2246bc101",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Reggae Night with Sattas supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "39ec8526898bb192a9780b3d",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Gala Konser - İstanbul DOB supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "246d35df985d204968a1986f",
+          "label": "relevant",
+          "notes": "The saved Konser listing for The Sisters 90's 2000's Pop Gecesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "62a23aea2dceb661e801b8e0",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Başar Keklik supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "5d60ca8bdcfb3c5a49bc498e",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Stabil Konseri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 397 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en08",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "61e49db062a2dd0fe6df44d9",
+          "label": "relevant",
+          "notes": "Saved source explicitly supports beginner participation and hands-on ceramic/pottery making. Reservation conditions remain in the source text."
+        },
+        {
+          "recordId": "c132292c736985fb43164c8f",
+          "label": "relevant",
+          "notes": "Saved source explicitly supports beginner participation and hands-on ceramic/pottery making. Reservation conditions remain in the source text."
+        },
+        {
+          "recordId": "1d584c6313eca33bfed4955d",
+          "label": "partly_relevant",
+          "notes": "Source welcomes beginners but describes a recurring monthly course; this is a weaker fit than a one-session pottery workshop."
+        },
+        {
+          "recordId": "d533a0603439bf04c785f03c",
+          "label": "partly_relevant",
+          "notes": "No experience is needed, but pottery-wheel participation is limited to the last slot and capacity. The broad art workshop does not guarantee pottery."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 86 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en09",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "7d52cc300e68d7bf6183e4f4",
+          "label": "relevant",
+          "notes": "The saved Müze listing for Rahmi Mustafa Koç Müzesi Giriş supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "5739f357cfcaf8c33edbf28e",
+          "label": "relevant",
+          "notes": "The saved Müze listing for İstanbul Modern - Müze Girişi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0a54706b1aa7b011dc49477c",
+          "label": "relevant",
+          "notes": "The saved Müze listing for Pera Müzesi Giriş supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "11b255f1de49875e326e7ab0",
+          "label": "relevant",
+          "notes": "The saved Müze listing for İstanbul Diyalog Müzesi | Sessizlik Deneyimi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "d5d0ab9b6942a882591353f7",
+          "label": "relevant",
+          "notes": "The saved Müze listing for İstanbul Diyalog Müzesi | Karanlık Deneyimi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "0dd5288fd49bf515be79c6cc",
+          "label": "relevant",
+          "notes": "The saved Sergi listing for 212 Photography Istanbul 2026 supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "86a1d45fe3e73db636fd7014",
+          "label": "relevant",
+          "notes": "The saved Müze listing for İstanbul Robot Müzesi - Ekim Ayı supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "fce2b1123e7b54bbda79fbca",
+          "label": "relevant",
+          "notes": "The saved Sergi listing for Olivo Barbieri: Zaman Mekan Geometri Ve Perili Sergileri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "f23fb494891f47a0d5b83088",
+          "label": "relevant",
+          "notes": "The saved Sergi listing for Arter Sergi Girişi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "27a112fd09d121d9a518abc1",
+          "label": "relevant",
+          "notes": "The saved Müze listing for Türkiye İş Bankası Resim Heykel Müzesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Sessizlik and Karanlık are distinct museum experiences. The other named exhibitions/museums have separate programmes and source records."
+      },
+      "notes": "Source review against frozen collection 37181072133; 1520 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en10",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "afdd732a4f962121da834f79",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        },
+        {
+          "recordId": "90006556bce976de8016e16d",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        },
+        {
+          "recordId": "session-85543f741f101fe84e1ca4144ca5c1fe",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        },
+        {
+          "recordId": "bcda5ef05269e3f07ad75f06",
+          "label": "relevant",
+          "notes": "The source-described acoustic/chamber performance, gentle musical programme, shared dining/conversation or partner film provides a plausible basis for the preference. This claims no guaranteed quietness or crowd size."
+        },
+        {
+          "recordId": "session-631093943f99d8c862a5c440b3c66475",
+          "label": "partly_relevant",
+          "notes": "The chamber or candle setting is plausible, but the saved description gives limited support for the main calm/intimate preference. It establishes no noise or crowd guarantee."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 4404 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en11",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "session-b910f5dba8851e057efe7e2d843e49fc",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "c62da4edb3e5c187c65cedd1",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "d5d777d6084f8e94936e6465",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "session-077a548b2bc8b31477141b40c6370419",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "session-f3cad7b8e20661c54bd7c7c14f1c1b30",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "2f53eae516dfe13810567ab9",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "c1a934da764f2f5baa395be0",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "338c9e866f77eeabc2faba9a",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "a964194290a0de369dec9bdf",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        },
+        {
+          "recordId": "36fef7e7ebf8853b3a3d5a45",
+          "label": "relevant",
+          "notes": "The saved play/show programme and positive source age evidence support a six-year-old attendee; the complete expected age and format conditions pass the source audit."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 84 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en12",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "cf8b41370951c9291c3a7cc3",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kudret Aşan Stand up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "aabce2f13e48792a8252811e",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Deniz Özturhan - Tek Kişilik Stand Up Gösterisi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "e8c4379714158905639653c8",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Tuba Ulu (Lady Malumat) - Stand Up Gösterisi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-93a27a228aa4d229ca7647027bf9ec0e",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Anlatanadam Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-28f90c7c9378cf6e126cfeadce65a4a5",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for Berkan Aytekin Tek Kişilik Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "1d16c4defda58f10995f0642",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Talip Karamahmutoğlu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "334d9cfd84aeb9c8cacd3127",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for AZOT Doğaçlama Tiyatro Gösterisi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "1e57765668b5404db12486bb",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Morkomedyen Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-2cb0ab2d8e7cfbaf9df9453bd35efba7",
+          "label": "relevant",
+          "notes": "The saved Stand-up listing for İlker Gümüşoluk - Tek Kişilik Gösteri supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "c72b86303b092736cfc5b645",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Pınar Fidan Stand Up supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 3156 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en13",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "de89d1de803bc4ce2f63a639",
+          "label": "relevant",
+          "notes": "The saved Sinema listing for Ucuz Roman supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "notes": "Source review against frozen collection 37181072133; 1 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en14",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "adf7d8ef3803a12175134946",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Arctic Monkeys Tribute supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-3fd1de99cf0ff37380e3ed7fcd41d282",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Discman 90’lar & 2000’ler Türkçe Pop Gecesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "98647dcc788e9e59bcd04e76",
+          "label": "relevant",
+          "notes": "The saved Konser listing for İkiye On Kala (Akustik) supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "session-d933e34ddde9ca1d5806d8b237cb083c",
+          "label": "relevant",
+          "notes": "The saved Konser listing for Özgün supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 6 supported hard matches. User sample review is separate and pending."
     },
     {
       "caseId": "en15",
-      "status": "pending",
-      "cards": [],
+      "status": "labelled",
+      "cards": [
+        {
+          "recordId": "48cef95bbf582258ef8065fe",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for BlueScat supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "11611f9cbc09219661c5fc44",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kat:9 Daire:34 supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "4217c154389cd0551bfa8f9b",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Kefaret Tiyatro Oyunu supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "03bc6f43b1dc1d624b84b3d2",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for 9/8'lik Kıyamet supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        },
+        {
+          "recordId": "d3a2091385beb3035fa13865",
+          "label": "relevant",
+          "notes": "The saved Tiyatro listing for Bir Aşk Hikayesi supports the requested programme. Its session, place, price, availability and complete expected constraint tree pass the source audit. No contradictory programme evidence was found in review."
+        }
+      ],
       "emptyReview": null,
-      "notes": null
+      "duplicateReview": {
+        "verdict": "distinct",
+        "reviewer": "Codex: frozen source review",
+        "notes": "Compared returned programme titles, source record IDs, venues, session clocks and described works. Each card is a distinct programme/session; reviewed provider aliases appear once."
+      },
+      "notes": "Source review against frozen collection 37181072133; 15 supported hard matches. User sample review is separate and pending."
     }
   ]
 }

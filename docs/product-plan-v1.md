@@ -408,3 +408,40 @@ checks still pass, and the per-request cost does not increase without approval.
   remaining 152 vectors and read back 4,275 frozen/current document hashes.
   The frozen vector export is unchanged. Final coverage readback, result labels,
   user sample review and staging latency remain pending.
+- 2026-10-04: The user approved the additional fix in
+  [PR 54](https://github.com/Efeblk/event_recommender/pull/54). It merged as
+  `1989694` at 14:24 UTC after all six checks passed on `4a1bf8b`; its branch
+  is deleted. `full-fixed-three.json` and its zero-paid replay complete 40
+  requests with result hash
+  `b0bcd6f53db8d388381d5f9794864edf712365c6e1c2accd80d81cf7cff4ea6c`.
+  Source review labels all 286 cards: zero hard violations or duplicates,
+  four correct empties, and relevant top-three cards for 36/40 requests (90%).
+  The user reviewed and approved 17 actual result lists. Labels bind the fixture,
+  catalog, original run and result hashes. `frozen-quality-final.json` passes
+  the frozen quality bar. Staging latency remains pending.
+- 2026-10-04: `index-verification-final-three.json` confirms all 3,832 current
+  staging document hashes and all 8,831 frozen eligible sessions have vectors.
+  The private published catalog is fully indexed. No source checkpoint changed
+  during verification; frozen export hash remains `a793e40584120cefb97099e0a384e9a15ad5597166cc25a55ec30102bb0e4841`.
+- 2026-10-04: Pin the approved golden fixture to CRLF in `.gitattributes`.
+  Git's stored LF blob otherwise changes the raw fixture hash on Linux.
+  Export checks with `core.autocrlf=false`, `true` and `input` all preserve
+  the approved hash `b4fc63d47fe2de9f25c1b61098cc14f66c08455802c9c2ec664b309ec224c4d0`.
+  The requests, constraints and existing captured responses are unchanged.
+- 2026-10-04: Private staging deploy
+  [37209512632](https://github.com/Efeblk/event_recommender/actions/runs/37209512632)
+  succeeded on merged fix `1989694`. All six master checks and immutable image
+  checks passed. `staging-latency-one.json` measured all 40 serial searches:
+  HTTP 200 for every request, p95 5.530 s, maximum 16.782 s. The 10.383 s and
+  16.782 s responses stay included; no timed search was excluded or retried.
+  Source SHA stayed fixed. The benchmark flag affects visitor limits only.
+  `staging-latency-final-restored.json` verifies normal limits on active revision
+  `biplan-staging-00040-w9z`, 100% traffic, private IAM and full index readiness.
+- 2026-10-04: Phase 1 is complete. `phase-one-acceptance-final.json` passes all
+  acceptance checks: full frozen/current vectors, 40 labelled requests, 17
+  user-reviewed lists, zero hard violations or duplicates, four correct empties,
+  36/40 relevant top-three results (90%), matching zero-paid replay (112 cache
+  hits), and staging p95 5.530 s. Jev accounting is $0.92805 against the approved
+  $2 cap, including the conservative $0.80 staging reserve; exact staging token
+  usage is not exposed. Voyage remains under the user's unrestricted approval.
+  Frozen catalog and result hashes remain recorded above. Phase 2 has not started.
