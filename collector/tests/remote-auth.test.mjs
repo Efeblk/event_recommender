@@ -52,14 +52,13 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
   );
   assert.match(workflow, /^\s*workflow_dispatch:\s*$/m);
   assert.match(workflow, /^\s*schedule:\s*$/m);
-  assert.match(workflow, /cron: '17 \*\/6 \* \* \*'/);
-  assert.match(
-    workflow,
-    /github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)/,
-  );
-  // The hourly schedule only indexes; it never starts collection.
+  // Cloud Scheduler dispatches collection (mode=collect); GitHub never schedules it.
+  assert.doesNotMatch(workflow, /cron: '17 /);
+  assert.match(workflow, /options: \[collect, index\]/);
+  assert.match(workflow, /if: github\.event_name == 'workflow_dispatch' && inputs\.mode != 'index'/);
+  // The hourly schedule and mode=index only index; they never start collection.
   assert.match(workflow, /cron: '47 \* \* \* \*'/);
-  assert.match(workflow, /if: github\.event\.schedule == '47 \* \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
+  assert.match(workflow, /if: \(github\.event\.schedule == '47 \* \* \* \*' \|\| \(github\.event_name == 'workflow_dispatch' && inputs\.mode == 'index'\)\) && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
   assert.match(workflow, /GCP_STAGING_COLLECTION_UNTIL/);
   assert.match(workflow, /needs\.schedule_gate\.outputs\.run == 'true'/);
   assert.match(workflow, /environment: gcp-staging-collector/);
