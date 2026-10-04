@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { AttendanceTiming, EventOffer, EventRecord } from './types.ts';
 
 const VENUE_ALIASES = [
+  ['Ayı Pub & Disko Rıhtım', 'Ayı Pub & Disko Rıhtım Kadıköy'],
   ['Cafe Theatre', 'Cafe Theatre Koşuyolu'],
   ['Ada Bar Kadıköy', 'Ada Bar'],
   ['HoP Sahne', 'House of Performance - HoP'],
@@ -36,6 +37,10 @@ const VENUE_ALIASES = [
 // Reviewed against matching source schedules and descriptions (September 2026).
 // These are literal show aliases, never a general performer/suffix heuristic.
 const TITLE_ALIASES = [
+  // Retain display deduplication for snapshots prepared before these aliases.
+  ["Bir İshak'sın Bir Cemil Oyunu", "Bir İshaksın Bir Cemil"],
+  ["DJ Can Giray - Geçmişten Günümüze 90lar 2000ler Türkçe Pop", "Geçmişten Günümüze 90'lar 2000'ler Türkçe Pop"],
+  ["Discman 90’lar & 2000’ler Türkçe Pop Gecesi", "Discman 90lar & 2000ler Türkçe Pop"],
   [
     'Kadıköy Açık Mikrofon Stand-up - Comedy Lab',
     'Kadıköy Açık Mikrofon Stand-up - Comedy Lab Istanbul',

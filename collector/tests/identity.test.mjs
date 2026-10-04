@@ -28,6 +28,24 @@ function listing(overrides = {}) {
   };
 }
 
+test('Phase 1 reviewed aliases merge only under the existing session and venue guards', () => {
+  const pairs = [
+    ["Bir İshak'sın Bir Cemil Oyunu", "Bir İshaksın Bir Cemil", "Bakırköy Butik Sahne", "Tiyatro"],
+    ["DJ Can Giray - Geçmişten Günümüze 90lar 2000ler Türkçe Pop", "Geçmişten Günümüze 90'lar 2000'ler Türkçe Pop", "Hayal Kahvesi Emaar", "Konser"],
+    ["Discman 90’lar & 2000’ler Türkçe Pop Gecesi", "Discman 90lar & 2000ler Türkçe Pop", "Ayı Pub & Disko Rıhtım", "Konser"],
+  ];
+  for (const [left, right, venue, category] of pairs) {
+    const a = listing({ title: left, category, venue: { name: venue, district: 'Kadıköy' } });
+    const b = listing({ listingId: 'b', provider: 'bubilet', providerSessionIds: ['b'], url: 'https://example/b', title: right, category, venue: { ...a.venue, name: left.startsWith('Discman') ? 'Ayı Pub & Disko Rıhtım Kadıköy' : venue } });
+    assert.equal(resolveIdentity([a, b]).sessions.length, 1, left);
+    assert.equal(resolveIdentity([a, { ...b, startsAt: '2026-10-03T17:00:00.000Z' }]).sessions.length, 2);
+    assert.equal(resolveIdentity([a, { ...b, venue: { name: 'Different venue', district: 'Şişli' } }]).sessions.length, 2);
+    assert.equal(resolveIdentity([{ ...a, description: 'Sadece çocuklar için' }, { ...b, description: 'Sadece yetişkinler için' }]).sessions.length, 2);
+  }
+  const museum = listing({ title: 'İstanbul Diyalog Müzesi Sessizlik Deneyimi', category: 'Müze' });
+  assert.equal(resolveIdentity([museum, { ...museum, listingId: 'b', provider: 'bubilet', providerSessionIds: ['b'], title: 'İstanbul Diyalog Müzesi Karanlık Deneyimi' }]).sessions.length, 2);
+});
+
 test("frozen held-out pairs have zero wrong and missed merges", () => {
   const report = auditIdentityPairs(fixture, "heldout");
   assert.equal(report.wrongMerges, 0);

@@ -336,3 +336,26 @@ checks still pass, and the per-request cost does not increase without approval.
   (`tr19`). Source review found two duplicate sessions under variant titles in
   `tr02` and `tr03`; the exact-title audit missed them. The full-index run still
   has pending documents. This diagnostic is not a passing Phase 1 score.
+- 2026-10-04: [PR 51](https://github.com/Efeblk/event_recommender/pull/51)
+  merged as `da0a4ef`. All six CI checks passed on `fa65052`; its branch is
+  deleted. The second fix batch corrects negation scope, attendee dancing,
+  beginner preferences, superseded district references and structured calm
+  shortlist coverage. Three source-reviewed title pairs and one venue pair
+  preserve distinct times, venues and audience policies.
+- 2026-10-04: `web/work/phase-one/fix-one.json` completed all 40 requests:
+  zero hard violations and zero automatic duplicate candidates. Its run hash
+  is `8d0e573afcd5f9b0b3d63c8e29cad6c22df881722955c5c2edcaa94718b23e00`.
+  The district correction exposed a superseded exclusion; its fix passes a
+  zero-paid replay. Merging the Discman offers requires new rankings for the
+  English correction chain. `fix-two.json` is filling those cache entries.
+  Checks pass: 790 web tests, typecheck, lint, 275 collector tests (one skipped),
+  GCP configuration, Node build and smoke. Full indexing, source labels, user
+  sample review and staging latency remain pending. Partial vectors cover
+  3,934 of 8,831 eligible sessions; this diagnostic cannot pass Phase 1.
+- 2026-10-04: `fix-two.json` completed 40 requests with zero parser mismatches,
+  hard violations or automatic duplicate candidates; it reused 103 responses
+  and made two new ranking calls. Source review then found a hologram circus
+  and pub quiz sold under `Tiyatro`. Ranking now checks the described program
+  when it contradicts a provider category. Preserved targeted probes exclude
+  both entries and retain matching plays. `fix-two-format.json` checks the
+  policy across all 40 requests. Full vectors and reviewed labels remain pending.
