@@ -284,3 +284,19 @@ checks still pass, and the per-request cost does not increase without approval.
   `.gitignore` no longer hides new `collector/lib/` files. Removed extra
   worktrees and merged branches; `archive/postgres-catalog-staging-wip-2026-10-03`
   remains.
+- 2026-10-04: Phase 1 preparation pins collection `37181072133` and its
+  `collector/state/events.json`: 14,577 source records, 29,467,263 bytes,
+  SHA-256 `20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6`.
+  The frozen time is `2026-10-04T06:50:27.793Z`. Production preparation admits
+  8,845 sessions. A private GCS archive has the same verified SHA-256.
+- 2026-10-04: The user approved all 40 golden requests and expected constraints
+  (25 Turkish, 15 English, two corrections). The user approved a $2 Phase 1 Jev
+  cap and unrestricted Voyage use. No paid calls have been made in Phase 1 yet.
+  The current index estimate is 3,920 documents, approximately 1.22 million
+  Voyage tokens ($0.15; conservative byte envelope $0.48, no free-credit assumption).
+  The old `37061051538:1` reservation is still in flight. Recovery is pending.
+- 2026-10-04: The golden runner uses production parsing, identity, retrieval and
+  ranking. It caches provider responses and preserves failed attempts. Labels
+  remain pending. The offline catalog audit finds hard matches for 34 requests;
+  six require empty-result review. Full indexing, the scored baseline, user label
+  review and staging p95 remain pending. Phase 1 is not complete.

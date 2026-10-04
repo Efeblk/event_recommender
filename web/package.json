@@ -26,6 +26,7 @@
     "test:smoke:node": "node scripts/smoke-node.mjs",
     "test:deploy:gcp": "node scripts/check-gcp-deploy-config.mjs",
     "test:input-intent": "node --experimental-strip-types scripts/check-input-intent.mjs",
+    "test:golden": "node --experimental-strip-types scripts/golden-run.ts",
     "graph:start": "node experiments/graph/local.mjs",
     "graph:load": "node --experimental-strip-types experiments/graph/load.ts",
     "graph:demo": "node --experimental-strip-types experiments/graph/server.ts",
