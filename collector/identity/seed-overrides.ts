@@ -170,6 +170,17 @@ const TITLE_ALIAS_GROUPS = [
   ["Celile (Nazım Hikmet'in Annesi) Oyunu", "Celile (Nazım Hikmet'in Annesi)"],
   ["Çocuklar İçin Yaratıcı Drama Eğitimi", "Çocuklar için Yaratıcı Drama Eğitim"],
   ["Güncel Gürsel Artıktay Konseri", "Güncel Gürsel Artıktay"],
+  // October 5, 2026 staging review: the İnfiniti Sahne open-mic night has the
+  // same Wednesday and Thursday 20:30 sessions on all three providers, and the
+  // Biletix and Biletinial descriptions match. "Bi Şaka" runs at the same time
+  // on all three providers as a separate show, so it is not in this group.
+  [
+    "Stand up Açık Mikrofon Beyoğlu | İnfiniti Sahne",
+    "Stand Up Açık Mikrofon Beyoğlu Çarşamba",
+    "Stand Up Açık Mikrofon Beyoğlu Perşembe",
+    "Stand Up Taksim Gecesi & Açık Mikrofon Çarşamba",
+    "Stand Up Taksim Gecesi & Açık Mikrofon Perşembe",
+  ],
 ] as const;
 
 const titleSeeds = new Map<string, string>();

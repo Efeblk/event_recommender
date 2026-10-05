@@ -34,3 +34,19 @@ void test('identical venue names resolve to one venue in this snapshot', () => {
     [],
   );
 });
+
+void test('unresolved same-session pairs are listed by title pair for review', () => {
+  const base = events.find((event) => event.venue && event.startsAt)!;
+  const pair = [
+    { ...base, id: 'review-a', source: 'biletix', title: 'Ortak Gece A', mergedIds: undefined },
+    { ...base, id: 'review-b', source: 'bubilet', title: 'Başka Ad B', mergedIds: undefined },
+  ] as EventRecord[];
+  const report = auditIdentitySnapshot(pair);
+  assert.equal(report.unresolvedPairs, 1);
+  assert.deepEqual(report.unresolvedTitlePairs, [{
+    venue: base.venue,
+    titles: [`biletix: Ortak Gece A @ ${base.venue}`, `bubilet: Başka Ad B @ ${base.venue}`],
+    sessions: 1,
+    firstStartsAt: base.startsAt,
+  }]);
+});

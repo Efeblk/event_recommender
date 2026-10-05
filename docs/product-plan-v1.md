@@ -496,3 +496,11 @@ checks still pass, and the per-request cost does not increase without approval.
   review found one duplicate: "Stand Up Açık Mikrofon Beyoğlu Çarşamba"
   (Biletix) and "Stand Up Taksim Gecesi & Açık Mikrofon Çarşamba" (Bubilet).
   Both are İnfiniti Sahne at 20:30 with the same programme. This is open.
+- 2026-10-06: Duplicate fix for the İnfiniti Sahne open-mic night. One title
+  seed joins the Biletix, Bubilet and Biletinial titles for the same Wednesday
+  and Thursday 20:30 sessions. "Bi Şaka" stays a separate show. Audit of the
+  2026-10-05T12:38 staging checkpoint (14,416 listings): sessions 11,288 →
+  11,272. Unreviewed splits stay at the same 8; same-provider sessions stay 0.
+  `audit-identity-snapshot.ts` now lists the unresolved same-venue,
+  same-time title pairs (439 pairs, 1,108 session pairs) for source review.
+  The fix applies after a deploy and the next collection publication.
