@@ -122,13 +122,11 @@ assert.match(deploy, /id_token_audience: \$\{\{ steps\.service\.outputs\.url \}\
 assert.doesNotMatch(deploy, /gcloud auth print-identity-token/);
 assert.match(deploy, /h\.status!=='ok'/);
 
-// Cloud Scheduler dispatches collection; the only GitHub cron is the hourly backup.
-assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '47 \* \* \* \*'$/m);
-assert.doesNotMatch(collectorWorkflow, /cron: '17 /);
-assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:\n\s{4}inputs:\n\s{6}mode:/m);
+assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
+assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:$/m);
 assert.match(
   collectorWorkflow,
-  /^\s{2}schedule_gate:\n\s{4}if: github\.event_name == 'workflow_dispatch' && inputs\.mode != 'index'$/m,
+  /^\s{2}schedule_gate:\n\s{4}if: github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
 );
 // The hourly monitor checks readiness and catalog age with the collector identity.
 assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \* \* \* \*'/m);
@@ -137,7 +135,7 @@ assert.match(collectorWorkflow, /MAX_AGE_HOURS: '14'/);
 // The hourly schedule runs only the indexing job; it never collects.
 assert.match(
   collectorWorkflow,
-  /^\s{2}index_only:\n[\s\S]*?\n\s{4}if: \(github\.event\.schedule == '47 \* \* \* \*' \|\| \(github\.event_name == 'workflow_dispatch' && inputs\.mode == 'index'\)\) && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'$/m,
+  /^\s{2}index_only:\n[\s\S]*?\n\s{4}if: github\.event\.schedule == '47 \* \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'$/m,
 );
 const collectorGate = collectorWorkflow.slice(
   collectorWorkflow.indexOf('  schedule_gate:'),
