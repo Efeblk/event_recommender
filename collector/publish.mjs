@@ -31,6 +31,11 @@ export function shouldFlushImportBatch({ pages, events, bytes, upserts = 0 }, { 
     bytes + nextBytes > MAX_IMPORT_BYTES || queries > MAX_D1_QUERY_BUDGET;
 }
 
+// The server rejects retirement/quarantine stamps older than 72 hours. Such
+// pages are carried forward from the checkpoint and were applied earlier, so
+// skip them (with a margin for request latency) instead of failing the import.
+const MAX_INACTIVE_STAMP_AGE_MS = 71 * 3600000;
+
 export function prepareImportPages(pages, now = new Date()) {
   const cutoff = now.getTime();
   const omittedExpiredIds = [];
@@ -41,6 +46,8 @@ export function prepareImportPages(pages, now = new Date()) {
         (page.quarantinedAt !== undefined && page.quarantineReason !== 'session_time_conflict') ||
         (page.quarantineReason !== undefined && page.quarantinedAt === undefined))
       throw new Error('Invalid empty source state');
+    const inactiveAt = page.events.length === 0 ? Date.parse(page.retiredAt ?? page.quarantinedAt) : NaN;
+    if (cutoff - inactiveAt > MAX_INACTIVE_STAMP_AGE_MS) continue;
     const events = page.events.filter((event) => {
       const expired = Number.isFinite(Date.parse(event.startsAt)) && Date.parse(event.startsAt) < cutoff;
       if (expired) omittedExpiredIds.push(event.id);

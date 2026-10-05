@@ -14,6 +14,14 @@ test('publication preserves quarantine watermarks and rejects conflicting empty 
   assert.throws(() => prepareImportPages([{ ...page, quarantinedAt: undefined }], now), /Invalid empty source state/);
 });
 
+test('publication skips carried-forward inactive pages the server would reject as stale', () => {
+  const now = new Date('2026-10-05T10:20:00.000Z');
+  const retired = (retiredAt) => ({ url: `https://biletinial.com/tr-tr/muzik/${retiredAt}`, events: [], retiredAt });
+  const quarantined = { url: 'https://biletinial.com/tr-tr/tiyatro/q', events: [], quarantinedAt: '2026-10-02T10:00:00.000Z', quarantineReason: 'session_time_conflict' };
+  const fresh = retired('2026-10-02T12:00:00.000Z');
+  assert.deepEqual(prepareImportPages([retired('2026-10-02T10:02:03.402Z'), quarantined, fresh], now).pages, [fresh]);
+});
+
 const publish = resolve(import.meta.dirname, "../publish.mjs");
 
 function invoke(origin, extra = []) {
