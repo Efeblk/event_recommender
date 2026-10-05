@@ -168,7 +168,7 @@ test("publisher preserves explicit verified retirement without treating unknown 
     bodies.push(JSON.parse(Buffer.concat(chunks))); json(response, 200, { imported: 0 });
   });
   t.after(remote.close);
-  const page = { url: 'https://source.test/retired', events: [], retiredAt: '2026-09-26T10:00:00.000Z' };
+  const page = { url: 'https://source.test/retired', events: [], retiredAt: new Date(Date.now() - 3600000).toISOString() };
   assert.deepEqual(prepareImportPages([page, { url: 'https://source.test/unknown', events: [] }]).pages, [page]);
   const result = await publish({ origin: remote.origin, token: 'secret', report: { schemaVersion: 1, summary: {}, pages: [page] }, allowLoopbackHttp: true });
   assert.deepEqual(bodies, [{ schemaVersion: 1, pages: [page] }]);
