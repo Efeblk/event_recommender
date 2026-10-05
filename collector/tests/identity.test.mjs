@@ -624,3 +624,22 @@ test("performer or series parts around a show title merge; exact pairs keep prec
   const together = generic.sessions.find((s) => s.listingIds.includes("g1"));
   assert.deepEqual(together.listingIds, ["g1", "g2"]);
 });
+
+test("İnfiniti Sahne open-mic titles merge per session and stay apart from Bi Şaka", () => {
+  const venue = { name: "İnfiniti Sahne", district: "Beyoğlu" };
+  const at = (listingId, provider, title, startsAt = "2026-10-07T17:30:00.000Z") =>
+    listing({ listingId, provider, providerSessionIds: [listingId], url: `https://example/${listingId}`, title, category: "Stand-up", startsAt, venue });
+  const wednesday = [
+    at("x1", "biletix", "Stand Up Açık Mikrofon Beyoğlu Çarşamba"),
+    at("u1", "bubilet", "Stand Up Taksim Gecesi & Açık Mikrofon Çarşamba"),
+    at("n1", "biletinial", "Stand up Açık Mikrofon Beyoğlu | İnfiniti Sahne"),
+    at("x2", "biletix", "Bi Şaka Stand Up"),
+    at("u2", "bubilet", "Bi Şaka Stand up Programı"),
+    at("n2", "biletinial", "Bi Şaka Stand up Programı"),
+  ];
+  const sessions = resolveIdentity(wednesday).sessions.map((s) => [...s.listingIds].sort().join(","));
+  assert.deepEqual(sessions.sort(), ["n1,u1,x1", "n2,u2,x2"]);
+  const thursday = "2026-10-08T17:30:00.000Z";
+  const split = resolveIdentity([at("x1", "biletix", "Stand Up Açık Mikrofon Beyoğlu Çarşamba"), at("u3", "bubilet", "Stand Up Taksim Gecesi & Açık Mikrofon Perşembe", thursday)]);
+  assert.equal(split.sessions.length, 2);
+});

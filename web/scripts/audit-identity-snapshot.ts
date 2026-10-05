@@ -27,6 +27,8 @@ export interface IdentitySnapshotReport {
   newMergedSessions: number;
   sameProviderSessions: string[][];
   unresolvedPairs: number;
+  /** Same venue and instant, different titles: review before adding a title seed. */
+  unresolvedTitlePairs: { venue: string; titles: [string, string]; sessions: number; firstStartsAt: string }[];
   decisions: Record<string, number>;
 }
 
@@ -55,6 +57,7 @@ export function auditIdentitySnapshot(
     newMergedSessions: 0,
     sameProviderSessions: [],
     unresolvedPairs: 0,
+    unresolvedTitlePairs: [],
     decisions: {},
   };
   for (const card of legacy) {
@@ -74,18 +77,33 @@ export function auditIdentitySnapshot(
     if (new Set(providers).size < providers.length) report.sameProviderSessions.push(session.listingIds);
     if (new Set(session.listingIds.map((id) => legacyOf.get(id))).size > 1) report.newMergedSessions++;
   }
+  const unresolvedByTitles = new Map<string, IdentitySnapshotReport['unresolvedTitlePairs'][number]>();
   for (const decision of resolution.decisions) {
     const key = `${decision.outcome}:${decision.rule}`;
     report.decisions[key] = (report.decisions[key] ?? 0) + 1;
-    if (decision.outcome === 'unresolved') report.unresolvedPairs++;
+    if (decision.outcome !== 'unresolved') continue;
+    report.unresolvedPairs++;
+    const [left, right] = decision.listingIds.map((id) => byId.get(id)!);
+    const titles = [label(left), label(right)].sort() as [string, string];
+    const titleKey = titles.join('\u001f');
+    const pair = unresolvedByTitles.get(titleKey);
+    if (pair) {
+      pair.sessions++;
+      if (left.startsAt < pair.firstStartsAt) pair.firstStartsAt = left.startsAt;
+    } else unresolvedByTitles.set(titleKey, { venue: left.venue, titles, sessions: 1, firstStartsAt: left.startsAt });
   }
+  report.unresolvedTitlePairs = [...unresolvedByTitles.values()].sort(
+    (a, b) => b.sessions - a.sessions || a.titles[0].localeCompare(b.titles[0]) || a.titles[1].localeCompare(b.titles[1]),
+  );
   return report;
 }
 
 async function main(): Promise<void> {
   const [catalogPath = fileURLToPath(new URL('../data/events.json', import.meta.url)), reviewedPath] =
     process.argv.slice(2);
-  const events = JSON.parse(await readFile(catalogPath, 'utf8')) as EventRecord[];
+  // Accepts a plain event array or a collection checkpoint ({ events }).
+  const parsed = JSON.parse(await readFile(catalogPath, 'utf8')) as EventRecord[] | { events: EventRecord[] };
+  const events = Array.isArray(parsed) ? parsed : parsed.events;
   const reviewed = reviewedPath
     ? (JSON.parse(await readFile(reviewedPath, 'utf8')) as ReviewedSplit[])
     : [];
