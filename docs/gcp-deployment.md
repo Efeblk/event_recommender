@@ -28,7 +28,9 @@ remains archived. Do not start that migration as part of v1.
 
 The separately approved [September 30 PostgreSQL staging evidence](archive/gcp-postgres-staging-validation-2026-09-30.md)
 records the provisioned database, frozen import, preparation/export Jobs and recovery
-tests. It does not change the v1 snapshot deployment.
+tests. It does not change the v1 snapshot deployment. That Cloud SQL instance,
+its secrets and preparation identity were deleted on 2026-10-05
+(`postgres_staging_enabled = false`); recreating it requires new approval.
 
 | Component | Service | Stored data |
 | --- | --- | --- |
