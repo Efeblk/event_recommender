@@ -456,3 +456,16 @@ checks still pass, and the per-request cost does not increase without approval.
 - 2026-10-04: PR 57 adds the hourly `monitor` job and the recovery steps.
   The 7-day unattended run starts at its merge. No deploy is needed: the runtime
   is unchanged.
+- 2026-10-05: Kept GitHub as the collection clock. PR 58 (Cloud Scheduler
+  dispatch) was reverted in PR 59. Cloud Monitoring emails if the authenticated
+  `/api/ready` uptime check fails or no collection is published for 14 h
+  (`docs/gcp-collector.md`). The unused Cloud SQL instance, its secrets and
+  identity were deleted (PR 60).
+- 2026-10-05: Two collection faults were seen and fixed; the catalog never
+  expired. Run 37291537657 failed with import HTTP 400: carried-forward
+  retirement stamps were older than the server's 72 h limit (fixed in PR 61).
+  Run 37296836433 hit the 60-minute job limit during a 20-minute import; the job
+  now has 90 minutes (PR 62). Collection
+  [37304234732](https://github.com/Efeblk/event_recommender/actions/runs/37304234732)
+  succeeded: 8,788 eligible events, `lastCheckedAt` 2026-10-05T12:19:09Z.
+  No deploy; the runtime is unchanged.
