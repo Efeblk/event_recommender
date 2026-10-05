@@ -190,3 +190,30 @@ void test('full 16-candidate mood ranking retains the bounded serialized request
   assert.equal(Object.keys(body.questions).length, 32);
   assert.ok(new TextEncoder().encode(JSON.stringify(body)).length <= 100000);
 });
+
+void test('an excluded event type is a supported condition, not an unsupported clause', () => {
+  const input = parserInput('yarın iki kişilik sevgilimle taksim civarı konser olmayan etkinlik');
+  const built = buildRequest(input);
+  const question = built.questions.unsupported_s0;
+  assert.equal(question?.type, 'noul');
+  assert.match(JSON.stringify(question), /excluding a supported event type, topic or genre \(\\"konser olmayan\\"/u);
+  const concert = built.mentions.find(m => m.kind === 'category' && m.value === 'concert');
+  assert.ok(concert);
+  const answers = Object.fromEntries(Object.entries(built.questions).map(([id, q]) => {
+    if (q.type === 'noul') return [id, { type: 'noul', noul: 0 }];
+    const keys = Object.keys(q.criteria);
+    const choice = id === `polarity_${concert.id}` ? 'unwanted' : id.startsWith('polarity_') ? 'wanted'
+      : id.startsWith('hedge_') ? 'none' : id === 'action' ? 'continue' : id === 'order' ? 'unchanged' : keys[0];
+    return [id, { type: 'choice', choice, confidence: 1, probabilities: Object.fromEntries(keys.map(key => [key, key === choice ? 1 : 0])) }];
+  }));
+  const result = compose(input, built, { model: config.model, answers, usage: { input_tokens: 0, output_tokens: 0 } } as JevResponse);
+  assert.equal(result.status, 'accepted');
+  if (result.status !== 'accepted') return;
+  const hard = atoms(result.resultingPlan.hard);
+  assert.ok(hard.some(a => a.kind === 'date' && a.from === '2026-10-04' && a.to === '2026-10-04'));
+  assert.ok(hard.some(a => a.kind === 'party' && a.count === 2));
+  assert.ok(hard.some(a => a.kind === 'companion' && a.value === 'partner'));
+  assert.ok(hard.some(a => a.kind === 'location' && a.name === 'Beyoğlu'));
+  assert.ok(result.resultingPlan.preferences.flatMap(atoms).some(a => a.kind === 'location' && a.name === 'Taksim'));
+  assert.ok((result.resultingPlan.hard.type === 'all' ? result.resultingPlan.hard.children : []).some(c => c.type === 'not' && c.child.type === 'atom' && c.child.atom.kind === 'category' && c.child.atom.value === 'concert'));
+});

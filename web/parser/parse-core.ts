@@ -350,7 +350,7 @@ export function buildRequest(input: ParserInput, proposals: Proposal[] = []) {
   segs.forEach((s, i) => {
     questions[`unsupported_s${i}`] = {
       type: 'noul',
-      instructions: { supportedConditions: SUPPORTED, question: `Does \`segments[${i}]\` make the search depend on something outside \`supportedConditions\` (for example a guarantee, ratings, awards, travel time, weather, admission rules, seat availability, final fees, subjective quality, a place relative to a landmark, or filtering on what a venue explicitly says it does NOT offer)? Ordinary supported conditions, sorting instructions (including asking for no particular order), edits to earlier conditions, politeness and commands are not.` },
+      instructions: { supportedConditions: SUPPORTED, question: `Does \`segments[${i}]\` make the search depend on something outside \`supportedConditions\` (for example a guarantee, ratings, awards, travel time, weather, admission rules, seat availability, final fees, subjective quality, a place relative to a landmark, or filtering on what a venue explicitly says it does NOT offer)? Ordinary supported conditions, including excluding a supported event type, topic or genre ("konser olmayan", "konser dışı", "not a concert"), sorting instructions (including asking for no particular order), edits to earlier conditions, politeness and commands are not.` },
     };
   });
   return { state, questions, mentions, invalidSpans, segments: segs, existing, scopes, hedges };

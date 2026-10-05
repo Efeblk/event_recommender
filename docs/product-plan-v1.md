@@ -476,3 +476,13 @@ checks still pass, and the per-request cost does not increase without approval.
   Admin endpoints return 401 without the sync token. Close at 2026-10-06 13:47
   UTC: remove the `allUsers` binding and set `BIPLAN_PREVIEW_TESTING=false`.
   Five live searches before opening returned correct results.
+- 2026-10-05: A staging search "yarın iki kişilik sevgilimle taksim civarı
+  konser olmayan etkinlik" returned `unsupported_constraint`. The parser's
+  unsupported-clause judgment (`unsupported_s0`) scored "konser olmayan" at
+  0.58–0.66 (limit 0.55). Taksim and "sevgilimle" were not the cause. The
+  question now names an excluded event type, topic or genre as supported.
+  The sentence then scores 0.28; valet and smoke-free venue requests stay
+  unsupported. Parser benchmark (200 cases, live, about $0.04 in total): 186
+  before and 186 after; unsupported 40/40 in both runs; false unsupported 2 → 1.
+  One borderline ambiguous case (`en-ambiguous-12`) changed on an unrelated
+  edit judgment. Not deployed yet.
