@@ -469,3 +469,10 @@ checks still pass, and the per-request cost does not increase without approval.
   [37304234732](https://github.com/Efeblk/event_recommender/actions/runs/37304234732)
   succeeded: 8,788 eligible events, `lastCheckedAt` 2026-10-05T12:19:09Z.
   No deploy; the runtime is unchanged.
+- 2026-10-05: The user approved opening staging for 24 h to friends. At 13:46 UTC
+  `allUsers` received `roles/run.invoker` and `BIPLAN_PREVIEW_TESTING=true`
+  (revision `biplan-staging-00041-4hr`, same image `88492e1`) turned off the
+  shared visitor limit. `AI_DAILY_LIMIT=100` still applies (at most about $2/day).
+  Admin endpoints return 401 without the sync token. Close at 2026-10-06 13:47
+  UTC: remove the `allUsers` binding and set `BIPLAN_PREVIEW_TESTING=false`.
+  Five live searches before opening returned correct results.
