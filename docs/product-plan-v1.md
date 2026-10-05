@@ -486,3 +486,13 @@ checks still pass, and the per-request cost does not increase without approval.
   before and 186 after; unsupported 40/40 in both runs; false unsupported 2 → 1.
   One borderline ambiguous case (`en-ambiguous-12`) changed on an unrelated
   edit judgment. Not deployed yet.
+- 2026-10-05: Deployed `9102e0b` to staging (run
+  [37377931807](https://github.com/Efeblk/event_recommender/actions/runs/37377931807)).
+  The deploy removed `allUsers` and set `BIPLAN_PREVIEW_TESTING=false`. Both were
+  restored for the approved 24 h test on revision `biplan-staging-00044-85f`
+  (same image). The test still closes at 2026-10-06 13:47 UTC. The live search
+  "yarın iki kişilik sevgilimle taksim civarı konser olmayan etkinlik" returned
+  16 cards for 2026-10-07: Beyoğlu hard, Taksim preferred, no concerts. Source
+  review found one duplicate: "Stand Up Açık Mikrofon Beyoğlu Çarşamba"
+  (Biletix) and "Stand Up Taksim Gecesi & Açık Mikrofon Çarşamba" (Bubilet).
+  Both are İnfiniti Sahne at 20:30 with the same programme. This is open.
