@@ -70,10 +70,15 @@ const opts = (keys: string[], describe: (key: string) => string = (key) => key) 
 export function numberCandidates(text: string): Array<{ text: string; value: number }> {
   const folded = fold(text);
   const words = Object.keys(NUMBER_WORDS).sort((a, b) => b.length - a.length).join('|');
-  const re = new RegExp(`(?<![\\p{L}\\p{N}])(?:\\d+(?:[.,]\\d+)?\\s?k(?![a-z])|\\d{1,3}(?:[.,]\\d{3})+|\\d+(?:[.,]\\d{1,2})?|(?:${words})(?:\\s+(?:${words}))*)(?![\\p{L}\\p{N}])`, 'gu');
+  // Over-find (pre-parsed value extraction cookbook): any run of digits is a
+  // candidate, whatever letters touch it ("1000tl", "500₺", "x2"). Number
+  // words need word boundaries, or "on" and "bir" would match inside words.
+  const digits = /(?<!\p{N})(?:\d+(?:[.,]\d+)?\s?k(?![a-z])|\d{1,3}(?:[.,]\d{3})+(?![.,]?\d)|\d+(?:[.,]\d{1,2})?)(?!\p{N})/gu;
+  const named = new RegExp(`(?<![\\p{L}\\p{N}])(?:${words})(?:\\s+(?:${words}))*(?![\\p{L}\\p{N}])`, 'gu');
+  const matches = [...folded.matchAll(digits), ...folded.matchAll(named)].sort((a, b) => a.index! - b.index!);
   const seen = new Set<string>();
   const out: Array<{ text: string; value: number }> = [];
-  for (const m of folded.matchAll(re)) {
+  for (const m of matches) {
     const value = numberValue(m[0]);
     if (value === null) continue;
     const surface = text.slice(m.index!, m.index! + m[0].length);
@@ -288,11 +293,11 @@ export function buildFieldRequest(input: ParserInput) {
   // Price: amounts are selected from the numbers found in the message.
   questions.budget = choice(`${context} What price limit does the user set for tickets?`, {
     ...edit('budget', 'price'),
-    max: 'At most an amount / up to / does not exceed / a budget of / can spend: "en fazla 500 TL", "500 liraya kadar", "500 TL\'yi geçmesin", "aşmasın", "bütçem 1000", "max 500".',
+    max: 'At most an amount / up to / does not exceed / a budget of / can spend: "en fazla 500 TL", "500 liraya kadar", "500 TL\'yi geçmesin", "aşmasın", "bütçem 1000", "max 500", or a plain amount with no comparison word ("1000 tl kişi başı").',
     under: 'Strictly under an amount: "500 TL altı", "500 TL altında", "500\'den ucuz", "500\'den az", "under 500", "less than 500".',
     min: 'At least an amount: "en az 300 TL".',
     over: 'More than an amount: "300 TL üstü", "over 300".',
-    around: 'About an amount: "500 TL civarı", "around 500".',
+    around: 'About an amount: "500 TL civarı", "around 500". "Civarı"/"around" changes only the word right before it: "Taksim civarı" is about a place, not the price.',
     between: 'Between two amounts: "300 ile 600 TL arası", "300-600 TL".',
     free: 'Free events only: "ücretsiz", "bedava", "free".',
     vague: 'Cheap or affordable without an amount: "ucuz", "uygun fiyatlı", "affordable".',

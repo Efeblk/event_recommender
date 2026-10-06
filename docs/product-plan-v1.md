@@ -560,3 +560,14 @@ checks still pass, and the per-request cost does not increase without approval.
   request after the deploy took 29 s (cold start); later ones 1–3 s.
 - 2026-10-06: Request log for parser evaluation and training. It is active only
   while an approved staging test runs and the page shows a notice.
+- 2026-10-06: Deployed `871aa91` (request log, PR #73) to staging (run
+  [37504718574](https://github.com/Efeblk/event_recommender/actions/runs/37504718574)),
+  revision `biplan-staging-00052-hck` with the friends test restored. The
+  first logged user search, "üç gün sonra sevgilimle gideceğimiz 1000tl kişi
+  başı taksim civarı konser olmayan etkinlik", asked for clarification: the
+  number finder needed a space after digits, so "1000tl" had no candidate, and
+  "Taksim civarı" made the price "around". Fix: every digit run is a
+  candidate; the budget question limits "civarı" to the word before it. The
+  search now reads 2026-10-09, Beyoğlu (Taksim preferred), partner, no
+  concerts, at most 1000 TL per person. Realistic set: 36/40 (Jev variance on
+  three earlier failures and "bu ay").
