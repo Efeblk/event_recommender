@@ -904,13 +904,22 @@ async function recommendSpan(
       isBudgetBasisAmbiguity(
         interpreted.alternatives.map((x) => x.resultingPlan),
       );
+    // A stated field that could not be read asks for that field.
+    const unreadable =
+      interpreted.status === 'unsupported' ? interpreted.reason : '';
     const reason = unavailable
       ? ('interpreter_unavailable' as const)
       : basisOnly
         ? ('budget_ambiguous' as const)
         : interpreted.status === 'ambiguous'
           ? ('constraint_ambiguous' as const)
-          : ('unsupported_constraint' as const);
+          : unreadable === 'unsupported outside_location'
+            ? ('unsupported_location' as const)
+            : unreadable === 'unreadable date' || unreadable === 'past date'
+              ? ('date_ambiguous' as const)
+              : unreadable.startsWith('unreadable ')
+                ? ('constraint_ambiguous' as const)
+                : ('unsupported_constraint' as const);
     return {
       ...base,
       status: 'needs_input',
