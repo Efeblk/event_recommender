@@ -1,6 +1,7 @@
 import { runtime } from '@/lib/store';
 import { jevConfigFrom } from '@/lib/jev';
 import { inputInterpreterFrom } from '@/lib/interpreter-config';
+import { requestLogEnabled } from '@/lib/request-log';
 
 export async function GET() {
   let donationUrl: string | null = null;
@@ -18,6 +19,7 @@ export async function GET() {
   return Response.json(
     {
       donationUrl,
+      requestLog: requestLogEnabled(configuredRuntime),
       intentVersion:
         inputInterpreterFrom(
           configuredRuntime,

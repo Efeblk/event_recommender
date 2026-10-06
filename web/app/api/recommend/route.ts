@@ -3,6 +3,7 @@ import {
   aiDailyRateLimit,
   candidates,
   catalogStatus,
+  logRequest,
   requestRateLimit,
   runtime,
   pinRecommendationCatalog,
@@ -17,6 +18,7 @@ import { voyageVectorsFor } from '@/lib/voyage-index';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
 import { visitorRateLimitEnabled } from '@/lib/rate-limit';
 import { publicEventRecord } from '@/lib/catalog';
+import { requestLogEnabled, requestLogEntry } from '@/lib/request-log';
 function limited(result: RateLimitResult) {
   const daily = result.scope === 'daily';
   const wait = daily
@@ -110,6 +112,7 @@ export async function POST(request: Request) {
       );
       if (!dailyLimit.allowed) return limited(dailyLimit);
     }
+    let parsed: Awaited<ReturnType<typeof interpretSpanInput>> | null = null;
     const result = await recommend(input, {
       now,
       pinCatalog: async () => {
@@ -151,10 +154,27 @@ export async function POST(request: Request) {
         measured('query_embedding', () => embedWithVoyage(config, texts, kind)),
       rank: (config, input, events) =>
         measured('rank', () => rankWithJev(config, input, events)),
-      spanInterpret: (input, options) =>
-        measured('interpret', () => interpretSpanInput(input, options)),
+      spanInterpret: async (input, options) =>
+        (parsed = await measured('interpret', () =>
+          interpretSpanInput(input, options),
+        )),
       inputInterpreter,
     });
+    // Approved staging tests keep requests for parser evaluation; a failed
+    // write never fails the search.
+    if (requestLogEnabled(runtime()))
+      await measured('request_log', () =>
+        logRequest(
+          requestLogEntry({
+            id: crypto.randomUUID(),
+            at: now,
+            deploymentSha: runtime().DEPLOYMENT_SHA,
+            input,
+            parse: parsed,
+            result,
+          }),
+        ),
+      ).catch(() => undefined);
     return Response.json(
       {
         ...result,

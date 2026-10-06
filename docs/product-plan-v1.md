@@ -232,6 +232,10 @@ checks still pass, and the per-request cost does not increase without approval.
   providers. It takes 2–3 runs to refresh all Biletix pages.
 - Remove the span-first parser (`web/parser/parse-core.ts`, `extract.ts`,
   `gliner.ts`) and its tests after the field reader passes a staging human test.
+- Domain request model: after about 1,000 logged and reviewed requests, train
+  a small model on the field reader's judgments and compare both on the same
+  reviewed set. Switch only if it matches accuracy. Set a retention period for
+  `requestLog/` objects before production.
 - Field reader gaps: vague replacements of one bound ("onu 21.00 yap"), "the
   other option" of an OR group, and the scope of a modifier over coordinated
   types ("quiet concerts and theatre").
@@ -554,3 +558,5 @@ checks still pass, and the per-request cost does not increase without approval.
   (Fikirtepe is not in the neighbourhood list). "önümüzdeki 10 gün içinde
   ücretsiz sergiler" was empty: no listing confirms a free price. The first
   request after the deploy took 29 s (cold start); later ones 1–3 s.
+- 2026-10-06: Request log for parser evaluation and training. It is active only
+  while an approved staging test runs and the page shows a notice.

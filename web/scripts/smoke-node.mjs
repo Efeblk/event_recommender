@@ -71,6 +71,7 @@ try {
   assert.match(await home.text(), /Bi.{0,10}Plan/);
   assert.deepEqual(await (await fetch(`${origin}/api/site`)).json(), {
     donationUrl: null,
+    requestLog: false,
     intentVersion: 1,
   });
   assert.equal(
