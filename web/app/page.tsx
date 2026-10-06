@@ -71,7 +71,7 @@ type RetryAction =
   | { kind: 'events' }
   | { kind: 'search'; attempt: SearchAttempt }
   | null;
-type SiteConfig = { donationUrl: string | null; intentVersion?: 1 | 2 };
+type SiteConfig = { donationUrl: string | null; intentVersion?: 1 | 2; requestLog?: boolean };
 const formatShortDate = (date: string) =>
   new Intl.DateTimeFormat('tr-TR', {
     timeZone: 'Europe/Istanbul',
@@ -260,6 +260,7 @@ export default function Home() {
   const [retryAction, setRetryAction] = useState<RetryAction>(null);
   const [excluded, setExcluded] = useState<string[]>([]);
   const [donationUrl, setDonationUrl] = useState<string | null>(null);
+  const [requestLog, setRequestLog] = useState(false);
   const [intentVersion, setIntentVersion] = useState<1 | 2>(1);
   const controller = useRef<AbortController | null>(null);
   const searchGeneration = useRef(0);
@@ -339,6 +340,7 @@ export default function Home() {
         if (!response.ok) return;
         const data = (await response.json()) as SiteConfig;
         setDonationUrl(data.donationUrl);
+        setRequestLog(data.requestLog === true);
         setIntentVersion(data.intentVersion === 2 ? 2 : 1);
       })
       .catch(() => undefined);
@@ -615,7 +617,9 @@ export default function Home() {
                 <div className="chat-actions">
                   <span>
                     {aiEnabled
-                      ? 'Mesajın öneri üretmek için AI sağlayıcısına gönderilir.'
+                      ? requestLog
+                        ? 'Mesajın öneri üretmek için AI sağlayıcısına gönderilir. Test süresince aramalar, aramayı iyileştirmek için kaydedilir.'
+                        : 'Mesajın öneri üretmek için AI sağlayıcısına gönderilir.'
                       : 'Şimdilik güncel katalogda arama yapar. AI desteği yakında.'}
                   </span>
                   <Button

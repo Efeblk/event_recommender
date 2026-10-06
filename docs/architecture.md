@@ -59,6 +59,13 @@ holds source records before that preparation.
 - Missing vectors retain word matching. Provider failures use an explicit
   fallback. Unknown prices or policies do not satisfy a hard constraint.
 
+During an approved staging test (`BIPLAN_PREVIEW_TESTING=true`),
+`web/lib/request-log.ts` stores each search as one object under
+`biplan/staging/requestLog/<UTC day>/` in the collection bucket: the request,
+its earlier requests, the field reader's judgments, the plan and the returned
+event IDs. It stores no IP address or identifier. The page tells testers.
+These entries are the evaluation and training data for the request parser.
+
 Search consumes the prepared catalog. It does not collect provider pages or
 enrich the full catalog.
 The catalog remains searchable when the vector index is incomplete.

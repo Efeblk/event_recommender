@@ -16,6 +16,7 @@ import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts
 import type { Lease } from './storage-contract.ts';
 import { createPostgresCatalog } from './postgres-catalog.node.ts';
 import { createPipelineCatalog } from './pipeline-catalog.node.ts';
+import { requestLogKey, type RequestLogEntry } from './request-log.ts';
 export type { RateLimitResult } from './rate-limit.ts';
 
 export function runtime() {
@@ -29,6 +30,11 @@ function postgresCatalog() {
   if (backend === 'snapshots') return null;
   if (!['postgres', 'pipeline'].includes(backend)) throw new Error('Unsupported catalog backend');
   return postgres ??= backend === 'pipeline' ? createPipelineCatalog(env) : createPostgresCatalog(env);
+}
+/** Stores one request log entry in the collection bucket. */
+export async function logRequest(entry: RequestLogEntry) {
+  const { blobs } = await storageClients();
+  await blobs.putImmutable(requestLogKey(env.DEPLOYMENT_ENV ?? 'default', entry), JSON.stringify(entry));
 }
 export async function pinRecommendationCatalog(now: Date) {
   return postgresCatalog()?.pin(now) ?? null;
