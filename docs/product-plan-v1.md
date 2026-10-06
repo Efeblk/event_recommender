@@ -602,3 +602,10 @@ checks still pass, and the per-request cost does not increase without approval.
   The friends test has `allUsers` run.invoker and `BIPLAN_PREVIEW_TESTING=true`.
   It still closes at 2026-10-07 14:12 UTC. No paid calls. Deployment provenance
   and live checks stay in `web/work/request-isolation/`.
+- 2026-10-07: Correction to the entry above. Revision `biplan-staging-00055-j9k`
+  had `BIPLAN_PREVIEW_TESTING=false`, so `/api/site` returned
+  `requestLog: false`. Revision `00056-bnc` had the setting but served no
+  traffic. At 21:55 UTC, revision `biplan-staging-00057-mz9` (same SHA, setting
+  `true`) took 100% of traffic. `/api/site` now returns `requestLog: true`.
+  Searches from about 21:42 to 21:55 UTC were not logged. `allUsers` access
+  stayed on. No paid calls.
