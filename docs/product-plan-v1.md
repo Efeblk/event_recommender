@@ -516,3 +516,9 @@ checks still pass, and the per-request cost does not increase without approval.
   The friends test closed at 13:56 UTC: `allUsers` removed and
   `BIPLAN_PREVIEW_TESTING=false` on revision `biplan-staging-00047-m8n`.
   Anonymous requests return 403.
+- 2026-10-06: User approved a second 24 h friends test. Opened at 14:12 UTC
+  on revision `biplan-staging-00048-vfx` (image `58b76e2`): `allUsers`
+  run.invoker and `BIPLAN_PREVIEW_TESTING=true`. Catalog published 07:07 UTC.
+  An anonymous search for the same request returned 15 cards. The borderline
+  "Bu Gece Boğazdayız" card dropped out. The test closes at 2026-10-07
+  14:12 UTC: remove `allUsers` and set `BIPLAN_PREVIEW_TESTING=false`.
