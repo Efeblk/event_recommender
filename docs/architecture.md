@@ -38,7 +38,10 @@ holds source records before that preparation.
 
 ## Request flow
 
-`web/app/api/recommend/route.ts` runs `web/lib/recommend.ts`.
+`web/app/api/recommend/route.ts` runs `recommendRequest` in `web/lib/recommend.ts`.
+The API reads only `message`. It ignores legacy history, state, filters,
+clarification text and excluded IDs. The server selects the parser protocol.
+Every request starts a new plan. The page sends only the current message.
 
 - `web/parser/fields.ts` and `web/lib/span-interpreter.ts` interpret Turkish
   and English requests (`span-v2` plan protocol). One Jev request reads every
@@ -47,7 +50,8 @@ holds source records before that preparation.
   calendar math, the place hierarchy and the plan composition. Amounts and
   ages are selected from numbers found in the text. A stated field that code
   cannot resolve returns a clarification, never a search without it.
-  Follow-ups retain the request state.
+  Earlier requests do not affect parsing, retrieval or ranking. To change a
+  request, edit the full message and submit it as a new search.
 - Code resolves exact dates in Europe/Istanbul. `web/lib/plan-evidence.ts`
   checks hard constraints against catalog evidence.
 - `web/lib/hybrid.ts` combines BM25 word matching and Voyage vector matching.
@@ -62,7 +66,7 @@ holds source records before that preparation.
 During an approved staging test (`BIPLAN_PREVIEW_TESTING=true`),
 `web/lib/request-log.ts` stores each search as one object under
 `biplan/staging/requestLog/<UTC day>/` in the collection bucket: the request,
-its earlier requests, the field reader's judgments, the plan and the returned
+the field reader's judgments, the plan and the returned
 event IDs. It stores no IP address or identifier. The page tells testers.
 These entries are the evaluation and training data for the request parser.
 
@@ -75,8 +79,10 @@ Optional Voyage indexing needs a separate approved budget and bounded window.
 ## Phase 1 golden replay
 
 `web/fixtures/golden-v1.json` defines 40 requests, their expected plans and a
-fixed Istanbul reference time. Two corrections carry the actual previous result
-state. The user must review the fixture before the first scored run.
+fixed Istanbul reference time. Each request uses the same stateless entry point
+as the API. `tr25` and `en15` now state all their conditions in one message.
+The revised fixture awaits user review before a new scored run. Earlier scored
+runs retain their original fixture hash and evidence.
 
 The catalog manifest pins collection run `37181072133`, its source-record file,
 byte count and SHA-256. The large file stays outside Git. A verified private GCS

@@ -240,7 +240,7 @@ void test('scored vector loading requires complete coverage; diagnostic loading 
   }
 });
 
-void test('40 reviewable requests retain language counts, corrections and valid hard plans', async () => {
+void test('40 reviewable requests retain language counts and independent hard plans', async () => {
   const fixture = validateGoldenFixture(
     JSON.parse(
       await readFile(
@@ -250,18 +250,10 @@ void test('40 reviewable requests retain language counts, corrections and valid 
     ),
   );
   assert.equal(fixture.cases.length, 40);
-  assert.deepEqual(
-    fixture.cases
-      .filter((c) => c.previousCaseId)
-      .map((c) => [c.id, c.previousCaseId]),
-    [
-      ['tr25', 'tr24'],
-      ['en15', 'en14'],
-    ],
-  );
+  assert.ok(fixture.cases.every(c => !('previousCaseId' in c)));
   const broken = structuredClone(fixture);
-  broken.cases[0].previousCaseId = 'en15';
-  assert.throws(() => validateGoldenFixture(broken), /earlier request/);
+  Object.assign(broken.cases[0], { previousCaseId: 'en15' });
+  assert.throws(() => validateGoldenFixture(broken), /independent/);
   const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-review-'));
   try {
     const path = join(directory, 'fixture.json');

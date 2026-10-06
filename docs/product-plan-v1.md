@@ -8,6 +8,8 @@ this plan and record the conflict in the status log at the end.
 
 **v1:** A user types a request in Turkish or English. Bi' Plan returns the
 relevant, correct and bookable Istanbul events. That is the complete v1 product.
+Each request is independent. One request produces one response. Do not use
+earlier requests, plans, filters, clarification text or shown event IDs.
 
 **v2:** Enrich the data so that the best events come first. The first v2 step is
 ranking and scoring the events.
@@ -108,7 +110,8 @@ Tasks:
 1. **Golden set.** Create `web/fixtures/golden-v1.json` with 40 requests:
    25 Turkish and 15 English. Include typos, dates ("bu akşam", "hafta sonu",
    "ekim sonunda"), districts and sides, budgets, groups, categories, moods,
-   negations and two follow-up corrections. Use the earlier human-test requests
+   negations and two independent replacement requests. Use the earlier human-test
+   requests
    (`span-parser-human-cases.test.ts`, `docs/archive/product-benchmark-2026-10-03.md`)
    as a start. For each request, record the expected hard constraints. The
    user reviews the 40 requests before the first scored run.
@@ -239,6 +242,8 @@ checks still pass, and the per-request cost does not increase without approval.
 - Field reader gaps: vague replacements of one bound ("onu 21.00 yap"), "the
   other option" of an OR group, and the scope of a modifier over coordinated
   types ("quiet concerts and theatre").
+- Remove unused conversational helpers and their historical tests. The v1 API
+  and golden runner use `recommendRequest`, which reads only the current message.
 
 ## Status log
 
@@ -571,3 +576,18 @@ checks still pass, and the per-request cost does not increase without approval.
   search now reads 2026-10-09, Beyoğlu (Taksim preferred), partner, no
   concerts, at most 1000 TL per person. Realistic set: 36/40 (Jev variance on
   three earlier failures and "bu ay").
+- 2026-10-06: [PR 75](https://github.com/Efeblk/event_recommender/pull/75)
+  makes each request independent, as the user requested. The page sends only
+  the current message. The API ignores old plans, history, filters, pending
+  text and event IDs. The server selects the parser protocol. Editing uses the
+  full message. Retries send the same request. Each new search clears old results.
+  Local checks passed on Node 22.23.3: 815 unit tests, typecheck, lint, Node
+  build/smoke, 46 deployment checks and 31 browser checks (one viewport skip).
+  The T3 browser confirmed two message-only requests and replacement of the
+  first result. No paid calls. Failed browser logs and traces stay in
+  `web/work/request-isolation/`. The 40-case golden preparation passed on the
+  frozen catalog (`web/work/phase-one/request-isolation-preparation.json`).
+  `tr25` and `en15` now state all conditions. The revised fixture needs user
+  review before a new scored run. The scored attempt stopped at that gate.
+  CI and merge remain pending. Local GCP sign-in has expired. Staging deployment
+  remains pending; the approved friends-test window stays as it is.

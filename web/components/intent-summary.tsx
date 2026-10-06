@@ -1,9 +1,8 @@
 import type { IntentState } from '../lib/input-state';
 import { intentSummary } from '../lib/input-summary';
 
-export function IntentSummary({ state, pending, onEdit, onReset, disabled }: {
+export function IntentSummary({ state, onEdit, onReset, disabled }: {
   state: IntentState;
-  pending: boolean;
   onEdit: () => void;
   onReset: () => void;
   disabled: boolean;
@@ -15,7 +14,7 @@ export function IntentSummary({ state, pending, onEdit, onReset, disabled }: {
   return (
     <aside className="intent-summary" aria-label="Anlaşılan plan">
       <div className="intent-summary-heading">
-        <strong>{pending ? 'Önceki planın korunuyor' : 'Planını böyle anladık'}</strong>
+        <strong>Planını böyle anladık</strong>
         <div>
           <button type="button" disabled={disabled} onClick={onEdit}>Planı düzelt</button>
           <button type="button" disabled={disabled} onClick={onReset}>Planı temizle</button>
@@ -33,7 +32,7 @@ export function IntentSummary({ state, pending, onEdit, onReset, disabled }: {
           <ul>{preferred.map((item) => <li key={item}>{item}</li>)}</ul>
         </fieldset>
       )}
-      <p>{pending ? 'Son mesajın netleşince planını güncelleyeceğiz.' : 'Tercihler sıralamaya yardımcı olur. Bir ayrıntıyı değiştirmek için yazabilirsin.'}</p>
+      <p>Tercihler sıralamaya yardımcı olur. Tüm koşullarını tek mesajda yaz.</p>
     </aside>
   );
 }

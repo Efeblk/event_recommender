@@ -3,9 +3,9 @@
   "referenceTime": "2026-10-04T06:50:27.793Z",
   "timezone": "Europe/Istanbul",
   "review": {
-    "status": "approved",
-    "reviewer": "user, T3 Code conversation",
-    "reviewedAt": "2026-10-04T10:08:00.000Z"
+    "status": "pending",
+    "reviewer": null,
+    "reviewedAt": null
   },
   "catalog": {
     "githubRunId": "37181072133",
@@ -31,7 +31,7 @@
     "Budgets compare listed ticket prices. Fees and adjacent seats are not established by these records.",
     "Unknown source evidence cannot satisfy a mandatory condition or its negation.",
     "Empty-result hard-match counts are candidates for human relevance review, not proof that every candidate matches the mood.",
-    "Two corrections reuse the actual previous response state, never an expected plan injected as parser output."
+    "Every request is independent. tr25 and en15 restate all conditions; no prior response state is used."
   ],
   "cases": [
     {
@@ -924,8 +924,8 @@
     {
       "id": "tr25",
       "language": "tr",
-      "message": "Beşiktaş değil Kadıköy olsun, bütçeyi de 1000 TL yap",
-      "reviewSummary": "Correction to tr24: keep 5 Oct/concert; replace district with Kadıköy and ceiling with 1000 TRY",
+      "message": "yarın Kadıköy’de en fazla 1000 TL konser",
+      "reviewSummary": "5 Oct; Kadıköy; concert; ticket ≤1000 TRY. Independent replacement for the old correction.",
       "expected": {
         "hard": {
           "type": "all",
@@ -967,8 +967,7 @@
         },
         "preferences": [],
         "order": "none"
-      },
-      "previousCaseId": "tr24"
+      }
     },
     {
       "id": "en01",
@@ -1545,8 +1544,8 @@
     {
       "id": "en15",
       "language": "en",
-      "message": "Make it theatre instead, on October 11. Keep the location and budget.",
-      "reviewSummary": "Correction to en14: 11 Oct/theatre; keep Kadıköy and ≤900 TRY",
+      "message": "Theatre on October 11 in Kadikoy, up to 900 TL",
+      "reviewSummary": "11 Oct; Kadıköy; theatre; ticket ≤900 TRY. Independent replacement for the old correction.",
       "expected": {
         "hard": {
           "type": "all",
@@ -1588,8 +1587,7 @@
         },
         "preferences": [],
         "order": "none"
-      },
-      "previousCaseId": "en14"
+      }
     }
   ]
 }

@@ -90,110 +90,67 @@ async function submit(page: Page, message: string) {
   await textarea.press('Enter');
 }
 
-test.describe('span plan protocol', () => {
-  test('displays exact ages and evening bounds separately from moods and carries them into alternatives', async ({ page }) => {
+test.describe('independent span requests', () => {
+  test('shows the current plan and sends only each new message', async ({ page }) => {
     await mockShell(page);
-    const state = { ...planState, plan: {
-      hard: { type: 'all', children: [
-        { type: 'atom', atom: { kind: 'age', years: 6 } },
-        { type: 'atom', atom: { kind: 'time', from: '18:00', to: '23:59' } },
-      ] },
-      preferences: [
-        { type: 'atom', atom: { kind: 'mood', value: 'calm' } },
-        { type: 'atom', atom: { kind: 'mood', value: 'intimate' } },
-      ], order: 'none',
-    }, requests: ['6 yaşındaki çocuğumla sakin, samimi bir akşam'] };
     const payloads: Record<string, unknown>[] = [];
     await page.route('**/api/recommend', async route => {
       payloads.push(route.request().postDataJSON());
-      await route.fulfill({ json: response({ planState: state }) });
+      await route.fulfill({ json: response() });
     });
     const siteResponse = page.waitForResponse('**/api/site');
     await page.goto('/'); await siteResponse;
-    await submit(page, state.requests[0]);
+    await submit(page, 'Sakin bir konser');
     const summary = page.getByLabel('Anlaşılan plan');
-    const hard = summary.getByRole('group', { name: 'Olmazsa olmazlar' });
-    await expect(hard).toContainText('6 yaş');
-    await expect(hard).toContainText('18:00');
-    await expect(hard).toContainText('23:59');
-    const moods = summary.getByRole('group', { name: 'Tercihler', exact: true });
-    await expect(moods).toContainText('sakin'); await expect(moods).toContainText('samimi');
-    await submit(page, 'Bunları beğenmedim, başka seçenekler var mı?');
+    await expect(summary.getByRole('group', { name: 'Olmazsa olmazlar' })).toContainText('konser');
+    await expect(summary.getByRole('group', { name: 'Tercihler', exact: true })).toContainText('sakin');
+    await expect(page.getByRole('button', { name: 'Başka seçenekler' })).toHaveCount(0);
+    await summary.getByRole('button', { name: 'Planı düzelt' }).click();
+    await expect(page.getByLabel('Planını anlat')).toHaveValue('Sakin bir konser');
+    await expect.poll(() => payloads.length).toBe(1);
+    await submit(page, 'Kadıköy tiyatro');
     await expect.poll(() => payloads.length).toBe(2);
-    expect(payloads[1].planState).toEqual(state);
-  });
-  test('carries the grouped plan through follow-ups and clears it for a new search', async ({
-    page,
-  }) => {
-    await mockShell(page);
-    const payloads: Record<string, unknown>[] = [];
-    await page.route('**/api/recommend', async (route) => {
-      payloads.push(route.request().postDataJSON());
-      await route.fulfill({ json: response() });
-    });
-
-    const siteResponse = page.waitForResponse('**/api/site');
-    await page.goto('/');
-    await siteResponse;
-    await submit(page, 'Konser olsun, sakin olursa iyi olur');
-
-    const summary = page.getByLabel('Anlaşılan plan');
-    await expect(
-      summary.getByRole('group', { name: 'Olmazsa olmazlar' }),
-    ).toContainText('konser');
-    await expect(
-      summary.getByRole('group', { name: 'Tercihler', exact: true }),
-    ).toContainText('sakin');
-    await submit(page, 'Kadıköy olsun');
-    await expect.poll(() => payloads.length).toBe(2);
-    expect(payloads[0]).toMatchObject({ intentVersion: 2, history: [] });
-    expect(payloads[0].planState).toBeUndefined();
-    expect(payloads[0].intentState).toBeUndefined();
-    expect(payloads[1]).toMatchObject({
-      intentVersion: 2,
-      history: [],
-      planState,
-    });
-
-    await page.getByRole('button', { name: 'Yeni arama' }).click();
+    expect(payloads).toEqual([{ message: 'Sakin bir konser' }, { message: 'Kadıköy tiyatro' }]);
+    await page.getByRole('button', { name: 'Yeni arama', exact: true }).click();
     await expect(summary).toHaveCount(0);
     await submit(page, 'Tiyatro bul');
     await expect.poll(() => payloads.length).toBe(3);
-    expect(payloads[2].planState).toBeUndefined();
+    expect(payloads[2]).toEqual({ message: 'Tiyatro bul' });
   });
 
-  test('retries an unavailable interpretation with the same plan and pending input', async ({
-    page,
-  }) => {
+  test('prompt chips start a new request after a result', async ({ page }) => {
     await mockShell(page);
     const payloads: Record<string, unknown>[] = [];
-    await page.route('**/api/recommend', async (route) => {
+    await page.route('**/api/recommend', async route => {
       payloads.push(route.request().postDataJSON());
-      if (payloads.length === 2) {
-        await route.fulfill({
-          json: response({
-            recommendations: [],
-            notice: 'Araman şu anda yorumlanamadı.',
-            pendingInput: {
-              message: 'Kadıköy olsun',
-              reason: 'interpreter_unavailable',
-            },
-          }),
-        });
-        return;
-      }
       await route.fulfill({ json: response() });
     });
-
-    const siteResponse = page.waitForResponse('**/api/site');
     await page.goto('/');
-    await siteResponse;
+    await submit(page, '600 TL altında konser');
+    await expect(page.getByLabel('Anlaşılan plan')).toBeVisible();
+    await page.getByRole('button', { name: 'İki kişilik tiyatro akşamı' }).click();
+    await expect.poll(() => payloads.length).toBe(2);
+    expect(payloads[1]).toEqual({ message: 'İki kişilik tiyatro akşamı' });
+  });
+
+  test('retries the exact current message after an interpreter outage', async ({ page }) => {
+    await mockShell(page);
+    const payloads: Record<string, unknown>[] = [];
+    await page.route('**/api/recommend', async route => {
+      payloads.push(route.request().postDataJSON());
+      await route.fulfill({ json: payloads.length === 2 ? response({
+        recommendations: [], status: 'needs_input', notice: 'Araman şu anda yorumlanamadı.',
+        pendingInput: { message: 'Kadıköy tiyatro', reason: 'interpreter_unavailable' },
+      }) : response() });
+    });
+    await page.goto('/');
     await submit(page, 'Sakin bir konser');
-    await submit(page, 'Kadıköy olsun');
+    await expect(page.getByLabel('Anlaşılan plan')).toBeVisible();
+    await submit(page, 'Kadıköy tiyatro');
     await expect(page.getByRole('alert')).toContainText('yorumlanamadı');
     await page.getByRole('button', { name: 'Yeniden dene' }).click();
     await expect.poll(() => payloads.length).toBe(3);
+    expect(payloads[2]).toEqual({ message: 'Kadıköy tiyatro' });
     expect(payloads[2]).toEqual(payloads[1]);
-    expect(payloads[2]).toMatchObject({ intentVersion: 2, planState });
   });
 });

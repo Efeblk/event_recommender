@@ -3,13 +3,11 @@ import type { PlanState } from '../lib/plan-state';
 
 export function PlanSummary({
   state,
-  pending,
   onEdit,
   onReset,
   disabled,
 }: {
   state: PlanState;
-  pending: boolean;
   onEdit: () => void;
   onReset: () => void;
   disabled: boolean;
@@ -20,9 +18,7 @@ export function PlanSummary({
   return (
     <aside className="intent-summary" aria-label="Anlaşılan plan">
       <div className="intent-summary-heading">
-        <strong>
-          {pending ? 'Önceki planın korunuyor' : 'Planını böyle anladık'}
-        </strong>
+        <strong>Planını böyle anladık</strong>
         <div>
           <button type="button" disabled={disabled} onClick={onEdit}>
             Planı düzelt
@@ -53,9 +49,7 @@ export function PlanSummary({
         </fieldset>
       )}
       <p>
-        {pending
-          ? 'Son mesajın netleşince planını güncelleyeceğiz.'
-          : 'Tercihler sıralamaya yardımcı olur. Bir ayrıntıyı değiştirmek için yazabilirsin.'}
+        Tercihler sıralamaya yardımcı olur. Tüm koşullarını tek mesajda yaz.
       </p>
     </aside>
   );
