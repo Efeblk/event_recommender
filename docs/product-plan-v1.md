@@ -591,3 +591,14 @@ checks still pass, and the per-request cost does not increase without approval.
   review before a new scored run. The scored attempt stopped at that gate.
   CI and merge remain pending. Local GCP sign-in has expired. Staging deployment
   remains pending; the approved friends-test window stays as it is.
+- 2026-10-07: PR 75 merged as `60e38d0`. Exact master CI passed (run
+  [37524716202](https://github.com/Efeblk/event_recommender/actions/runs/37524716202)).
+  Staging deployment passed (run
+  [37535356620](https://github.com/Efeblk/event_recommender/actions/runs/37535356620)).
+  Revision `biplan-staging-00055-j9k` serves the independent-request fix.
+  Its SHA and image digest match the deployment provenance artifact.
+  Anonymous `/api/health` and `/api/ready` return 200. Readiness is true with
+  8,835 eligible events. The T3 browser also opened the live health endpoint.
+  The friends test has `allUsers` run.invoker and `BIPLAN_PREVIEW_TESTING=true`.
+  It still closes at 2026-10-07 14:12 UTC. No paid calls. Deployment provenance
+  and live checks stay in `web/work/request-isolation/`.
