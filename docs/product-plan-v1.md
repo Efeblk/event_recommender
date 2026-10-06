@@ -27,8 +27,8 @@ What works:
 - Identity and merge: `collector/identity/resolve.ts` (`deterministic-identity.v5`).
   In the last human test, all returned cards were correct and there were no
   duplicate cards.
-- Request parsing: span-v2 (`web/parser/`), with `web/lib/plan-evidence.ts`
-  for hard constraints.
+- Request parsing: the field reader (`web/parser/fields.ts`) with the span-v2
+  plan protocol, and `web/lib/plan-evidence.ts` for hard constraints.
 - Retrieval: BM25 and Voyage vectors combined with reciprocal rank fusion
   (`web/lib/hybrid.ts`). Then up to 16 candidates go to the Jev AI judge
   (`web/lib/recommend.ts`, `web/lib/jev.ts`).
@@ -230,6 +230,11 @@ checks still pass, and the per-request cost does not increase without approval.
   p95 of 3.7 s at 4 concurrent requests.
 - Collector throughput: a global limit of 1 request each second over all
   providers. It takes 2–3 runs to refresh all Biletix pages.
+- Remove the span-first parser (`web/parser/parse-core.ts`, `extract.ts`,
+  `gliner.ts`) and its tests after the field reader passes a staging human test.
+- Field reader gaps: vague replacements of one bound ("onu 21.00 yap"), "the
+  other option" of an OR group, and the scope of a modifier over coordinated
+  types ("quiet concerts and theatre").
 
 ## Status log
 
@@ -522,3 +527,18 @@ checks still pass, and the per-request cost does not increase without approval.
   An anonymous search for the same request returned 15 cards. The borderline
   "Bu Gece Boğazdayız" card dropped out. The test closes at 2026-10-07
   14:12 UTC: remove `allUsers` and set `BIPLAN_PREVIEW_TESTING=false`.
+- 2026-10-06: New request parser (field reader). The span-first parser dropped
+  conditions its patterns did not know (the friends-test search "iki gün sonra
+  taksim civarı sevgilimle gidebileceğim etkinlik" lost its date). The field
+  reader asks Jev for each supported field of the whole message and lets code
+  resolve it. PR #70 (day-count patterns for the old parser) is closed.
+  Benchmarks, `jev-1.13.0`, about $0.66 of Jev calls:
+  - Frozen 200-case plan benchmark (written for the old parser, which scores
+    186/200 on it): 179/200. Clear 117/120, unsupported 40/40, ambiguous
+    22/40. Of the 21 failures, 8 differ only by product policy, the same as
+    the old parser (bare budgets as ticket prices, romantic as a preference).
+  - New realistic first-turn set (`web/parser/bench/realistic-v1.mjs`, 40
+    requests, written after the reader): old parser 30/40, all failures
+    dropped conditions; field reader 36/40 on the first run, 37/40 after
+    fixes that the set prompted, so the set is no longer independent.
+  Median parse time 0.43 s (about 17k input tokens, $0.0007 per request).

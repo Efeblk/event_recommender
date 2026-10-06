@@ -4,13 +4,16 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { basename } from 'node:path';
 import { loadSplit } from './split.mjs';
 import * as C from './compact.mjs';
-import { parse } from '../parse.ts';
+import { parse as parseSpans } from '../parse.ts';
+import { parseFields } from '../parse-fields.ts';
 import { canonicalInterpretation, semanticPlan, stable } from '../semantics.ts';
 import { spentUsd } from '../jev.ts';
 
 const split = process.argv[2] ?? 'dev';
 const offline = process.argv.includes('--offline');
 const verbose = process.argv.includes('--verbose');
+const fieldsParser = process.argv.includes('--fields');
+const parse = fieldsParser ? parseFields : parseSpans;
 const only = process.argv.find((a) => a.startsWith('--only='))?.slice(7).split(',');
 let cases = loadSplit(split);
 if (only) cases = cases.filter((c) => only.includes(c.id));

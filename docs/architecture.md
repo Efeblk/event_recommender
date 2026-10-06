@@ -40,8 +40,14 @@ holds source records before that preparation.
 
 `web/app/api/recommend/route.ts` runs `web/lib/recommend.ts`.
 
-- `web/parser/` and `web/lib/span-interpreter.ts` interpret Turkish and English
-  requests with the `span-v2` interpreter. Follow-ups retain the request state.
+- `web/parser/fields.ts` and `web/lib/span-interpreter.ts` interpret Turkish
+  and English requests (`span-v2` plan protocol). One Jev request reads every
+  supported field from the whole message: whether it is stated, and its parts
+  (TypeSafe date-extraction and function-calling cookbooks). Code does the
+  calendar math, the place hierarchy and the plan composition. Amounts and
+  ages are selected from numbers found in the text. A stated field that code
+  cannot resolve returns a clarification, never a search without it.
+  Follow-ups retain the request state.
 - Code resolves exact dates in Europe/Istanbul. `web/lib/plan-evidence.ts`
   checks hard constraints against catalog evidence.
 - `web/lib/hybrid.ts` combines BM25 word matching and Voyage vector matching.

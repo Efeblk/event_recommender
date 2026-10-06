@@ -1,12 +1,8 @@
 import { withDeadline } from './deadline.ts';
 import type { JevConfig } from './jev.ts';
 import type { ParserInput } from '../parser/contract.ts';
-import {
-  buildRequest,
-  compose,
-  type JevResponse,
-  type ParseResult,
-} from '../parser/parse-core.ts';
+import { buildFieldRequest, composeFields } from '../parser/fields.ts';
+import type { JevResponse, ParseResult } from '../parser/parse-core.ts';
 
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
 const MAX_REQUEST_BYTES = 100_000;
@@ -69,15 +65,8 @@ export async function interpretSpanInput(
     timeoutMs?: number;
   },
 ): Promise<ParseResult> {
-  const built = buildRequest(input);
-  if (built.invalidSpans.length) {
-    return compose(input, built, {
-      model: 'unused',
-      answers: {},
-      usage: { input_tokens: 0, output_tokens: 0 },
-    });
-  }
-
+  // The field reader asks Jev for every supported field of the whole message.
+  const built = buildFieldRequest(input);
   try {
     const config = options.config;
     if (!config?.apiKey.trim() || !/^jev-[a-z0-9.-]+$/u.test(config.model))
@@ -112,7 +101,7 @@ export async function interpretSpanInput(
       },
     );
     if (!hasValidEnvelope(value)) throw new Error(UNAVAILABLE);
-    const result = compose(input, built, value);
+    const result = composeFields(input, built, value);
     if (
       result.status === 'unsupported' &&
       result.reason === 'invalid or incomplete provider judgments'

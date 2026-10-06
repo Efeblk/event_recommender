@@ -99,13 +99,16 @@ void test('missing server configuration fails before any provider call', async (
   assert.equal(calls, 0);
 });
 
-void test('invalid calendar dates bypass configuration and provider calls', async () => {
+void test('an impossible calendar date asks for the date after one provider call', async () => {
   let calls = 0;
-  const fetcher: typeof fetch = async () => { calls++; throw new Error('must not run'); };
-  const result = await interpretSpanInput(input('concert on 2027-02-30'), { config: null, fetcher });
-  assert.equal(calls, 0);
+  const fetcher: typeof fetch = async (_url, init) => {
+    calls++;
+    return Response.json(completeResponse(init?.body as string, { date: 'calendar_date', date_day: '30', date_month: 'February' }));
+  };
+  const result = await interpretSpanInput(input('concert on 2027-02-30'), { config, fetcher });
+  assert.equal(calls, 1);
   assert.equal(result.status, 'unsupported');
-  assert.equal(result.status === 'unsupported' && result.reason, 'invalid calendar date');
+  assert.equal(result.status === 'unsupported' && result.reason, 'unreadable date');
 });
 
 void test('times out across the response body without retrying', async () => {

@@ -21,7 +21,7 @@ const includedFiles = new Set([
   'vite.config.ts',
 ]);
 // Serving parser modules only; never copy benchmark clients, caches or fixtures.
-const parserFiles = ['contract.ts', 'extract.ts', 'lexicon.ts', 'parse-core.ts', 'semantics.ts', 'state.ts'];
+const parserFiles = ['contract.ts', 'extract.ts', 'fields.ts', 'lexicon.ts', 'parse-core.ts', 'semantics.ts', 'state.ts'];
 function safeSource(source) {
   const name = basename(source);
   return (

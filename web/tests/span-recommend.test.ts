@@ -5,8 +5,9 @@ import { emptyPlanState } from '../lib/plan-state.ts';
 import { recommend, validateInput, type Dependencies } from '../lib/recommend.ts';
 import { interpretSpanInput } from '../lib/span-interpreter.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
-import { buildRequest, compose, type JevResponse, type ParseResult } from '../parser/parse-core.ts';
+import { buildRequest, compose, type JevResponse, type ParseResult, type Question } from '../parser/parse-core.ts';
 import type { Condition, ParserInput, Plan } from '../parser/contract.ts';
+import { fieldAnswers } from './field-answers.ts';
 
 const now = new Date('2026-10-02T09:00:00Z');
 const config = { apiKey: 'test-only', model: 'jev-1.13.0' };
@@ -50,20 +51,6 @@ function actualInterpret(overrides: (built: ReturnType<typeof buildRequest>) => 
   };
 }
 
-function providerResponse(body: string) {
-  const request = JSON.parse(body) as { model: string; questions: Record<string, { type: 'choice' | 'noul'; criteria?: Record<string, unknown> }> };
-  const answers = Object.fromEntries(Object.entries(request.questions).map(([id, question]) => {
-    if (question.type === 'noul') return [id, { type: 'noul', noul: id.startsWith('supported_') ? 1 : 0 }];
-    const keys = Object.keys(question.criteria ?? {});
-    const choice = id.startsWith('polarity_') ? 'wanted' : id.startsWith('cmp_') ? 'lt'
-      : id.startsWith('basis_') ? 'per_person' : id === 'order' ? 'unchanged'
-        : id === 'action' ? 'continue' : keys[0];
-    return [id, { type: 'choice', choice, confidence: 1,
-      probabilities: Object.fromEntries(keys.map((key) => [key, key === choice ? 1 : 0])) }];
-  }));
-  return { model: request.model, answers, usage: { input_tokens: 10, output_tokens: 5 } };
-}
-
 void test('initial recommendation runs through the production span transport with injected Jev fetch', async () => {
   let fetches = 0;
   const candidate = event('raw-chain', { price: 500 });
@@ -75,7 +62,12 @@ void test('initial recommendation runs through the production span transport wit
       fetches++;
       const body = init?.body;
       if (typeof body !== 'string') throw new Error('expected request body');
-      return Response.json(providerResponse(body));
+      const request = JSON.parse(body) as { questions: Record<string, Question>; state: { numbersInMessage: Array<{ ref: string; text: string }> } };
+      const amount = request.state.numbersInMessage.find((n) => n.text === '600')!.ref;
+      return Response.json(fieldAnswers(request.questions, {
+        date: 'calendar_date', date_day: '3', date_month: 'October', category_concert: 'want',
+        budget: 'under', budget_amount: amount, budget_basis: 'unstated',
+      }));
     } }),
     rank: async (_config, _input, candidates) => supported(candidates),
   });
