@@ -15,6 +15,7 @@
 !web/parser/
 !web/parser/contract.ts
 !web/parser/extract.ts
+!web/parser/fields.ts
 !web/parser/lexicon.ts
 !web/parser/parse-core.ts
 !web/parser/semantics.ts
