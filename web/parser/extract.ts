@@ -240,6 +240,20 @@ export function extract(text: string, referenceDate: string, proposals: Proposal
       if (r) dateDraft(m.index!, m.index! + m[0].length, r[0], r[1]);
     }
   }
+  // Day counts: "iki gün sonra", "in 3 days" name one day; "3 gün içinde",
+  // "within 3 days", "önümüzdeki 3 gün" name the range from today.
+  const dayCount = (raw: string) => {
+    const n = parseNumber(raw);
+    return n !== null && Number.isInteger(n) && n >= 1 && n <= 60 ? n : null;
+  };
+  for (const m of f.matchAll(new RegExp(`${B}(?:(${NUM})\\s*gun\\s+sonra(?:'?[a-z]{0,5})?|in\\s+(${NUM})\\s+days?|(${NUM})\\s+days?\\s+(?:from now|later))${E}`, 'gu'))) {
+    const n = dayCount(m[1] ?? m[2] ?? m[3]);
+    if (n !== null) dateDraft(m.index!, m.index! + m[0].length, addDays(today, n), addDays(today, n));
+  }
+  for (const m of f.matchAll(new RegExp(`${B}(?:(${NUM})\\s*gun\\s+icinde|(?:onumuzdeki|gelecek)\\s+(${NUM})\\s*gun(?:'?[a-z]{0,5})?|(?:within|in the next|over the next|next)\\s+(${NUM})\\s+days?)${E}`, 'gu'))) {
+    const n = dayCount(m[1] ?? m[2] ?? m[3]);
+    if (n !== null) dateDraft(m.index!, m.index! + m[0].length, today, addDays(today, n));
+  }
   // Weekend / weekday names with optional this/next/last modifiers.
   const modifier = '(?:(bu|this|gelecek|onumuzdeki|next|haftaya|coming|gecen|last|ilk|first)\\s+)?';
   for (const m of f.matchAll(new RegExp(`${B}${modifier}(hafta\\s?sonu|weekend|${weekdayAlt})(?:'?[a-z]{0,6})?${E}`, 'gu'))) {

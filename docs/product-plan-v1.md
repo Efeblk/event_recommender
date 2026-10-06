@@ -522,3 +522,8 @@ checks still pass, and the per-request cost does not increase without approval.
   An anonymous search for the same request returned 15 cards. The borderline
   "Bu Gece Boğazdayız" card dropped out. The test closes at 2026-10-07
   14:12 UTC: remove `allUsers` and set `BIPLAN_PREVIEW_TESTING=false`.
+- 2026-10-06: Friends test search "iki gün sonra taksim civarı sevgilimle
+  gidebileceğim etkinlik" returned 10 cards for 7 and 8 October. The plan had no
+  date: the extractor had no day-count pattern. Added "N gün sonra", "in N
+  days", "N days from now" (one day) and "N gün içinde", "önümüzdeki N gün",
+  "within N days", "next N days" (today to today + N), 1 to 60 days.

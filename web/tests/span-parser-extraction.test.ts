@@ -24,6 +24,23 @@ void test('dotted Turkish clocks are clocks, not invalid dates', () => {
   }
 });
 
+void test('day counts resolve to one day or a range from today', () => {
+  for (const [text, from, to] of [
+    ['iki gün sonra taksim civarı sevgilimle gidebileceğim etkinlik', '2026-10-04', '2026-10-04'],
+    ['3 gün sonraki konserler', '2026-10-05', '2026-10-05'],
+    ['something in 2 days', '2026-10-04', '2026-10-04'],
+    ['5 days from now', '2026-10-07', '2026-10-07'],
+    ['3 gün içinde tiyatro', '2026-10-02', '2026-10-05'],
+    ['önümüzdeki 7 günde konser', '2026-10-02', '2026-10-09'],
+    ['within 4 days', '2026-10-02', '2026-10-06'],
+    ['in the next 3 days', '2026-10-02', '2026-10-05'],
+  ] as const) {
+    const dates = mentions(text).flatMap((mention) => mention.kind === 'date' ? [[mention.from, mention.to]] : []);
+    assert.deepEqual(dates, [[from, to]], text);
+  }
+  assert.deepEqual(mentions('3 gün sürecek festival').filter((mention) => mention.kind === 'date'), []);
+});
+
 void test('reports impossible explicit calendar dates instead of normalizing them', () => {
   for (const text of ['2027-02-30', '30.02.2027', '30 Şubat 2027', 'February 30, 2027']) {
     const result = extract(text, referenceDate);
