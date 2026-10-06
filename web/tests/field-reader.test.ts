@@ -157,4 +157,21 @@ void test('a vague reference acts on one condition and branches when several fit
 
 void test('number candidates cover digits, separators, shorthand and Turkish words', () => {
   assert.deepEqual(numberCandidates('1.500 tl, 2,5k ya da iki yüz elli').map((n) => n.value), [1500, 2500, 250]);
+  // Units written without a space are still candidates.
+  assert.deepEqual(numberCandidates('1000tl, 500₺, 750lira').map((n) => n.value), [1000, 500, 750]);
+  assert.deepEqual(numberCandidates('üç gün sonra 1000tl kişi başı').map((n) => n.text), ['üç', '1000']);
+});
+
+void test('a plain amount with attached currency reads as a per-person limit', () => {
+  const result = read('üç gün sonra sevgilimle gideceğimiz 1000tl kişi başı taksim civarı konser olmayan etkinlik', {
+    date: 'days_later', date_count: '3', place: 'in', district: 'Beyoğlu', neighborhood: 'Taksim', companion_partner: 'yes',
+    category_concert: 'exclude', budget: 'max', budget_amount: '#1000', budget_basis: 'per_person',
+  });
+  assert.deepEqual(accepted(result), plan([
+    atom({ kind: 'date', from: '2026-10-09', to: '2026-10-09' }),
+    atom({ kind: 'location', name: 'Beyoğlu', precision: 'district' }),
+    atom({ kind: 'companion', value: 'partner' }),
+    { type: 'not', child: atom({ kind: 'category', value: 'concert' }) },
+    atom({ kind: 'budget', comparison: 'lte', amount: 1000, currency: 'TRY', basis: 'per_person' }),
+  ], [atom({ kind: 'location', name: 'Taksim', precision: 'neighborhood' })]));
 });
