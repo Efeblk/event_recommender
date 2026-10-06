@@ -576,3 +576,17 @@ checks still pass, and the per-request cost does not increase without approval.
   search now reads 2026-10-09, Beyoğlu (Taksim preferred), partner, no
   concerts, at most 1000 TL per person. Realistic set: 36/40 (Jev variance on
   three earlier failures and "bu ay").
+- 2026-10-06: [PR 75](https://github.com/Efeblk/event_recommender/pull/75)
+  makes each request independent, as the user requested. The page sends only
+  the current message. The API ignores old plans, history, filters, pending
+  text and event IDs. The server selects the parser protocol. Editing uses the
+  full message. Retries send the same request. Each new search clears old results.
+  Local checks passed on Node 22.23.3: 815 unit tests, typecheck, lint, Node
+  build/smoke, 46 deployment checks and 31 browser checks (one viewport skip).
+  The T3 browser confirmed two message-only requests and replacement of the
+  first result. No paid calls. Failed browser logs and traces stay in
+  `web/work/request-isolation/`. The 40-case golden preparation passed on the
+  frozen catalog (`web/work/phase-one/request-isolation-preparation.json`).
+  `tr25` and `en15` now state all conditions. The revised fixture needs user
+  review before a new scored run. The scored attempt stopped at that gate.
+  CI, merge and staging deployment remain pending.
