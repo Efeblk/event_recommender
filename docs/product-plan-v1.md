@@ -542,3 +542,15 @@ checks still pass, and the per-request cost does not increase without approval.
     dropped conditions; field reader 36/40 on the first run, 37/40 after
     fixes that the set prompted, so the set is no longer independent.
   Median parse time 0.43 s (about 17k input tokens, $0.0007 per request).
+- 2026-10-06: Deployed `b2d435d` (field reader, PR #71) to staging (run
+  [37492849530](https://github.com/Efeblk/event_recommender/actions/runs/37492849530)).
+  The friends test was restored on `biplan-staging-00050-ckl` and still closes
+  at 2026-10-07 14:12 UTC. Live searches, cards reviewed against date,
+  district and type: "iki gün sonra taksim civarı sevgilimle..." now has the
+  date (11 cards, 2026-10-08, Beyoğlu); "yarın iki kişilik sevgilimle taksim
+  civarı konser olmayan etkinlik" 14 cards, no concerts, one open-mic card;
+  "bu cuma akşamı kadıköyde caz konseri, kişi başı 600 tl'yi geçmesin" 1 card
+  (21:30, 500 TL); "fikirtepe civarında bu hafta sonu ne var" 8 Kadıköy cards
+  (Fikirtepe is not in the neighbourhood list). "önümüzdeki 10 gün içinde
+  ücretsiz sergiler" was empty: no listing confirms a free price. The first
+  request after the deploy took 29 s (cold start); later ones 1–3 s.
