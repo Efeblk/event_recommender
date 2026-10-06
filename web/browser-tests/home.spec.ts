@@ -164,7 +164,7 @@ test.describe('browser contracts', () => {
     await textarea.press('Enter');
     await expect.poll(() => recommendationCalls).toBe(1);
     await expect(
-      page.getByRole('button', { name: /Başka seçenekler/ }),
+      page.getByRole('button', { name: 'Yeni arama' }),
     ).toBeVisible();
     expect(unhandled).toEqual([]);
   });
@@ -200,7 +200,7 @@ test.describe('browser contracts', () => {
     expect(unhandled).toEqual([]);
   });
 
-  test('group size and total budget stay visible across a budget waiver', async ({
+  test('group size and budget labels describe only the current result', async ({
     page,
   }) => {
     const unhandled = await mockShell(page);
@@ -247,18 +247,14 @@ test.describe('browser contracts', () => {
     await textarea.fill('Para sınırını kaldır, diğer koşullar aynı.');
     await textarea.press('Enter');
     await expect.poll(() => call).toBe(2);
-    expect(payloads[1].filters).toMatchObject({
-      partySize: 4,
-      totalBudget: 1800,
-      maxPrice: 450,
-    });
+    expect(payloads[1]).toEqual({ message: 'Para sınırını kaldır, diğer koşullar aynı.' });
     await expect(filters.getByText('4 kişi', { exact: true })).toBeVisible();
     await expect(filters.getByText(/Toplam bütçe/)).toHaveCount(0);
     await expect(filters.getByText(/En fazla/)).toHaveCount(0);
     expect(unhandled).toEqual([]);
   });
 
-  test('strict group budget labels and follow-up preserve the exclusive boundary', async ({
+  test('strict group budget labels do not become hidden request filters', async ({
     page,
   }) => {
     const unhandled = await mockShell(page);
@@ -288,18 +284,14 @@ test.describe('browser contracts', () => {
     await expect(
       filters.getByText('Toplam bütçe ₺1.000 altı', { exact: true }),
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Başka seçenekler' }).click();
+    await textarea.fill('Kadıköy tiyatro');
+    await textarea.press('Enter');
     await expect.poll(() => payloads.length).toBe(2);
-    expect(payloads[1].filters).toMatchObject({
-      maxPrice: 500,
-      maxPriceExclusive: true,
-      partySize: 2,
-      totalBudget: 1000,
-    });
+    expect(payloads[1]).toEqual({ message: 'Kadıköy tiyatro' });
     expect(unhandled).toEqual([]);
   });
 
-  test('Enter submits, Shift+Enter adds a newline, and follow-up carries history and exclusions', async ({
+  test('Enter submits, Shift+Enter adds a newline, and each search sends only its message', async ({
     page,
   }) => {
     const unhandled = await mockShell(page);
@@ -326,29 +318,13 @@ test.describe('browser contracts', () => {
     ).toBeVisible();
     await expect(page.locator('.events-grid .event-card')).toHaveCount(8);
 
-    await page.getByRole('button', { name: /Başka seçenekler/ }).click();
+    await textarea.fill('Tiyatro bul');
+    await textarea.press('Enter');
     await expect.poll(() => payloads.length).toBe(2);
-    expect(payloads[0]).toMatchObject({
-      message: 'Sakin bir caz gecesi\nKadıköy olsun',
-      history: [],
-      excludeIds: [],
-    });
-    expect(payloads[1]).toMatchObject({
-      message: 'Aynı koşullarda başka etkinlikler bul.',
-      history: [
-        {
-          role: 'user',
-          content: 'Sakin bir caz gecesi\nKadıköy olsun',
-        },
-      ],
-    });
-    expect(payloads[1].excludeIds).toEqual(
-      matchingRecommendations().flatMap(({ event }) => [
-        event.id,
-        event.canonicalProductionKey,
-        event.canonicalShowKey,
-      ]),
-    );
+    expect(payloads).toEqual([
+      { message: 'Sakin bir caz gecesi\nKadıköy olsun' },
+      { message: 'Tiyatro bul' },
+    ]);
     expect(unhandled).toEqual([]);
   });
 
@@ -417,7 +393,8 @@ test.describe('browser contracts', () => {
     ).toBeVisible();
     expect(bodies[1]).toBe(bodies[0]);
 
-    await page.getByRole('button', { name: /Başka seçenekler/ }).click();
+    await textarea.fill('Tiyatro bul');
+    await textarea.press('Enter');
     await expect(page.getByRole('alert')).toContainText(
       'Arama sınırına ulaşıldı.',
     );
@@ -453,11 +430,12 @@ test.describe('browser contracts', () => {
     await textarea.fill('Caz');
     await textarea.press('Enter');
     await expect(
-      page.getByRole('button', { name: /Başka seçenekler/ }),
+      page.getByRole('button', { name: 'Yeni arama' }),
     ).toBeVisible();
-    await page.getByRole('button', { name: /Başka seçenekler/ }).click();
+    await textarea.fill('Tiyatro bul');
+    await textarea.press('Enter');
     await expect.poll(() => call).toBe(2);
-    await page.getByRole('button', { name: 'Yeni arama' }).click();
+    await page.getByRole('link', { name: 'Bi’ Plan ana sayfa' }).click();
     releasePending();
     await expect(
       page.getByRole('heading', { name: 'Şehirde ne var?' }),

@@ -1,4 +1,4 @@
-import { recommend, validateInput } from '@/lib/recommend';
+import { recommendRequest, validateRequest } from '@/lib/recommend';
 import {
   aiDailyRateLimit,
   candidates,
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
     const raw = await request.text();
     if (raw.length > 24000)
       return Response.json({ error: 'Mesaj çok uzun.' }, { status: 413 });
-    input = validateInput(JSON.parse(raw));
+    input = validateRequest(JSON.parse(raw));
   } catch {
     return Response.json(
       {
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
       if (!dailyLimit.allowed) return limited(dailyLimit);
     }
     let parsed: Awaited<ReturnType<typeof interpretSpanInput>> | null = null;
-    const result = await recommend(input, {
+    const result = await recommendRequest(input, {
       now,
       pinCatalog: async () => {
         const pinned = capturedPinned;

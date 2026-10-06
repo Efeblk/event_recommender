@@ -15,7 +15,6 @@ export interface GoldenCase {
   message: string;
   reviewSummary: string;
   expected: Plan;
-  previousCaseId?: string;
   relevanceNotes?: string;
 }
 export interface GoldenFixture {
@@ -81,13 +80,8 @@ export function validateGoldenFixture(value: unknown): GoldenFixture {
       !item.reviewSummary?.trim()
     )
       throw new Error('Invalid golden request.');
-    if (
-      item.previousCaseId &&
-      ids.get(item.previousCaseId)?.language !== item.language
-    )
-      throw new Error(
-        'Follow-up must refer to an earlier request in the same language.',
-      );
+    if ('previousCaseId' in item)
+      throw new Error('Golden requests must be independent.');
     validatePlanState({
       version: 2,
       revision: 0,
@@ -99,11 +93,10 @@ export function validateGoldenFixture(value: unknown): GoldenFixture {
   }
   if (
     fixture.cases.filter((c) => c.language === 'tr').length !== 25 ||
-    fixture.cases.filter((c) => c.language === 'en').length !== 15 ||
-    fixture.cases.filter((c) => c.previousCaseId).length !== 2
+    fixture.cases.filter((c) => c.language === 'en').length !== 15
   )
     throw new Error(
-      'Golden set requires 25 Turkish, 15 English and two corrections.',
+      'Golden set requires 25 Turkish and 15 English requests.',
     );
   return fixture;
 }

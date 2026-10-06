@@ -8,7 +8,7 @@ import {
   searchCatalogCandidates,
   type SearchCatalog,
 } from '../lib/materialized-catalog.ts';
-import { recommend, validateInput } from '../lib/recommend.ts';
+import { recommendRequest } from '../lib/recommend.ts';
 import { interpretSpanInput } from '../lib/span-interpreter.ts';
 import { rankWithJev, jevConfigFrom } from '../lib/jev.ts';
 import {
@@ -232,8 +232,8 @@ function reviewHtml(fixture: GoldenFixture, fixtureSha256: string): string {
     );
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Phase 1 request review</title>
 <style>body{font:16px/1.5 system-ui;margin:32px auto;padding:0 20px;max-width:1000px;color:#172b3a}article{border-top:1px solid #c8d6df;padding:20px 0}h2{font-size:16px;color:#496477}p{margin:8px 0}code,pre{overflow-wrap:anywhere}pre{white-space:pre-wrap}blockquote{margin:12px 0;font-size:20px}small{color:#496477}</style>
-<h1>Review the 40 golden requests</h1><p>25 Turkish + 15 English; two corrections. Fixed time: 4 October 2026, 09:50 Istanbul. No scored run or paid calls yet.</p><p>Review each request and its constraints. Reply in T3 Code with approval or the IDs to change.</p><p><small>Fixture SHA-256: <code>${fixtureSha256}</code></small></p>
-${fixture.cases.map((c) => `<article><h2>${escape(c.id)} · ${c.language}${c.previousCaseId ? ` · follows ${escape(c.previousCaseId)}` : ''}</h2><blockquote>${escape(c.message)}</blockquote><p>${escape(c.reviewSummary)}</p>${c.relevanceNotes ? `<p>${escape(c.relevanceNotes)}</p>` : ''}<details><summary>Exact expected plan</summary><pre>${escape(JSON.stringify(c.expected, null, 2))}</pre></details></article>`).join('\n')}</html>`;
+<h1>Review the 40 golden requests</h1><p>25 Turkish + 15 English; each request is independent. Fixed time: 4 October 2026, 09:50 Istanbul. This preparation makes no paid calls.</p><p>Review each request and its constraints. Reply in T3 Code with approval or the IDs to change.</p><p><small>Fixture SHA-256: <code>${fixtureSha256}</code></small></p>
+${fixture.cases.map((c) => `<article><h2>${escape(c.id)} · ${c.language}</h2><blockquote>${escape(c.message)}</blockquote><p>${escape(c.reviewSummary)}</p>${c.relevanceNotes ? `<p>${escape(c.relevanceNotes)}</p>` : ''}<details><summary>Exact expected plan</summary><pre>${escape(JSON.stringify(c.expected, null, 2))}</pre></details></article>`).join('\n')}</html>`;
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -385,39 +385,13 @@ export async function main(args = process.argv.slice(2)) {
         hits = transport.hits,
         paid = transport.paidCalls,
         errors = transport.errors.length;
-      const previous = item.previousCaseId
-        ? rows.find((r) => r.caseId === item.previousCaseId)
-        : undefined;
       let result: GoldenRow['result'] = null;
       const rowErrors: string[] = [];
-      if (
-        item.previousCaseId &&
-        (!previous?.result?.planState ||
-          previous.errors.length ||
-          previous.result.status === 'needs_input')
-      )
-        rowErrors.push(
-          'Previous request did not commit a usable plan; correction was not seeded from its oracle.',
-        );
-      else {
-        const context = JSON.stringify({
-          message: item.message,
-          previousState: previous?.result?.planState ?? null,
-          pending: previous?.result?.pendingInput ?? null,
-        });
+      {
+        const context = JSON.stringify({ message: item.message });
         const fetcher = transport.fetcher(context);
-        result = await recommend(
-          validateInput({
-            message: item.message,
-            intentVersion: 2,
-            filters: emptyFilters,
-            ...(previous?.result?.planState
-              ? { planState: previous.result.planState }
-              : {}),
-            ...(previous?.result?.pendingInput
-              ? { pendingInput: previous.result.pendingInput }
-              : {}),
-          }),
+        result = await recommendRequest(
+          { message: item.message },
           {
             now,
             candidates: async () => events,

@@ -64,6 +64,27 @@ export interface RecommendInput {
   alternativeIds?: string[];
   pendingInput?: PendingInput;
 }
+
+/** Each product request starts a new search. Ignore legacy client context. */
+export function validateRequest(value: unknown): RecommendInput {
+  if (!value || typeof value !== 'object' || Array.isArray(value))
+    throw new Error('İstek geçersiz.');
+  return validateInput({ message: (value as Record<string, unknown>).message });
+}
+
+/** Stateless entry point shared by the API and the golden runner. */
+export function recommendRequest(
+  value: unknown,
+  deps: Dependencies,
+): Promise<SearchResult> {
+  const input = validateRequest(value);
+  return recommend({
+    ...input,
+    ...(deps.inputInterpreter === 'span-v2' ? { intentVersion: 2 as const }
+      : deps.inputInterpreter === 'jev-v1' ? { intentVersion: 1 as const } : {}),
+  }, deps);
+}
+
 export function validateInput(value: unknown): RecommendInput {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('İstek geçersiz.');
@@ -267,7 +288,7 @@ const issueNotices = {
   unsupported_constraint:
     'Bu zorunlu koşulu mevcut etkinlik bilgileriyle güvenilir biçimde değerlendiremiyoruz. Koşulu değiştirerek yeniden arayabilirsin.',
   interpreter_unavailable:
-    'Arama hizmeti isteğini şu anda işleyemiyor. İsteğin ve önceki koşulların korunuyor; biraz sonra yeniden deneyebilirsin.',
+    'Arama hizmeti isteğini şu anda işleyemiyor. Biraz sonra yeniden deneyebilirsin.',
 };
 
 export async function recommend(

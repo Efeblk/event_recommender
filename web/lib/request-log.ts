@@ -23,7 +23,7 @@ export interface RequestLogEntry {
   at: string;
   deploymentSha: string | null;
   message: string;
-  /** Earlier requests of the same search, oldest first. */
+  /** Legacy schema fields. Stateless product requests leave these empty. */
   previousRequests: string[];
   previousPlan: unknown;
   pendingReason: string | null;

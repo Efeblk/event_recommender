@@ -8,6 +8,8 @@ this plan and record the conflict in the status log at the end.
 
 **v1:** A user types a request in Turkish or English. Bi' Plan returns the
 relevant, correct and bookable Istanbul events. That is the complete v1 product.
+Each request is independent. One request produces one response. Do not use
+earlier requests, plans, filters, clarification text or shown event IDs.
 
 **v2:** Enrich the data so that the best events come first. The first v2 step is
 ranking and scoring the events.
@@ -108,7 +110,8 @@ Tasks:
 1. **Golden set.** Create `web/fixtures/golden-v1.json` with 40 requests:
    25 Turkish and 15 English. Include typos, dates ("bu akşam", "hafta sonu",
    "ekim sonunda"), districts and sides, budgets, groups, categories, moods,
-   negations and two follow-up corrections. Use the earlier human-test requests
+   negations and two independent replacement requests. Use the earlier human-test
+   requests
    (`span-parser-human-cases.test.ts`, `docs/archive/product-benchmark-2026-10-03.md`)
    as a start. For each request, record the expected hard constraints. The
    user reviews the 40 requests before the first scored run.
@@ -239,6 +242,8 @@ checks still pass, and the per-request cost does not increase without approval.
 - Field reader gaps: vague replacements of one bound ("onu 21.00 yap"), "the
   other option" of an OR group, and the scope of a modifier over coordinated
   types ("quiet concerts and theatre").
+- Remove unused conversational helpers and their historical tests. The v1 API
+  and golden runner use `recommendRequest`, which reads only the current message.
 
 ## Status log
 
