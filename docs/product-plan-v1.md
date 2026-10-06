@@ -504,3 +504,15 @@ checks still pass, and the per-request cost does not increase without approval.
   `audit-identity-snapshot.ts` now lists the unresolved same-venue,
   same-time title pairs (439 pairs, 1,108 session pairs) for source review.
   The fix applies after a deploy and the next collection publication.
+- 2026-10-06: Deployed `58b76e2` to staging (run
+  [37381425679](https://github.com/Efeblk/event_recommender/actions/runs/37381425679)).
+  GitHub did not fire the scheduled collector runs from 23:47 to 02:47 UTC.
+  Monitor run [37408484720](https://github.com/Efeblk/event_recommender/actions/runs/37408484720)
+  failed on a 15 h old catalog. Collection
+  [37423794561](https://github.com/Efeblk/event_recommender/actions/runs/37423794561)
+  published the catalog at 07:07 UTC. The same search returned 16 cards for
+  2026-10-07. The open-mic night is now one card with Biletix, Biletinial and
+  Bubilet offers. "Bi Şaka Stand Up" stays a separate card. No duplicates.
+  The friends test closed at 13:56 UTC: `allUsers` removed and
+  `BIPLAN_PREVIEW_TESTING=false` on revision `biplan-staging-00047-m8n`.
+  Anonymous requests return 403.
