@@ -556,7 +556,7 @@ button:focus-visible {
   line-height: 1.6;
 }
 .recommendation-hint {
-  margin: -8px 0 20px;
+  margin: 12px 0 20px;
   color: #4f6557;
   font-size: 14px;
   line-height: 1.7;

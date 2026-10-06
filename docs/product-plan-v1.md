@@ -589,4 +589,5 @@ checks still pass, and the per-request cost does not increase without approval.
   frozen catalog (`web/work/phase-one/request-isolation-preparation.json`).
   `tr25` and `en15` now state all conditions. The revised fixture needs user
   review before a new scored run. The scored attempt stopped at that gate.
-  CI, merge and staging deployment remain pending.
+  CI and merge remain pending. Local GCP sign-in has expired. Staging deployment
+  remains pending; the approved friends-test window stays as it is.
