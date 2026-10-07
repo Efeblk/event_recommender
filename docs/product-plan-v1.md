@@ -226,6 +226,8 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Later (not in v1)
 
+- Provider page aliases: track URL changes and propagate later retirement to
+  older aliases. Source heads still use URLs. Keep old observation times.
 - PostgreSQL cutover and the target architecture in
   `docs/archive/catalog-enrichment-architecture.md`.
 - More providers. Promotions and discounts.
@@ -624,3 +626,15 @@ checks still pass, and the per-request cost does not increase without approval.
   publication and a 4.49 h catalog age. Seven stale records were omitted.
   No timestamps were reset. No paid calls. Private evidence remains under
   `gs://biplan-staging-efeblk-biplan-staging-data/operations/cloud-alarm-2026-10-07/`.
+- 2026-10-07: Collection [37629077159](https://github.com/Efeblk/event_recommender/actions/runs/37629077159)
+  failed at checkpoint publication with HTTP 503. Two Bubilet URL changes left
+  24 session IDs on old and new pages. The publisher now keeps the newer record
+  only when both full provider identities validate and match. Ambiguous IDs
+  still fail. Replay of all 5,419 staged pages passed: 14,699 records became
+  14,675 unique records. [PR 79](https://github.com/Efeblk/event_recommender/pull/79)
+  contains the fix. Node 22.23.3 checks passed: 818 web tests, typecheck, lint,
+  46 deployment checks, GCP configuration, Node build and smoke. Golden
+  preparation passed; the scored offline attempt stopped at the existing
+  fixture review gate. No paid calls. CI, merge and staging recovery are
+  pending. Preserved evidence:
+  `gs://biplan-staging-efeblk-biplan-staging-data/operations/checkpoint-failure-37629077159/`.
