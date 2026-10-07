@@ -609,3 +609,18 @@ checks still pass, and the per-request cost does not increase without approval.
   `true`) took 100% of traffic. `/api/site` now returns `requestLog: true`.
   Searches from about 21:42 to 21:55 UTC were not logged. `allUsers` access
   stayed on. No paid calls.
+- 2026-10-07: Cloud alert `biplan-staging-catalog-not-refreshed` fired at
+  10:30 UTC. Collection [37579681745](https://github.com/Efeblk/event_recommender/actions/runs/37579681745)
+  failed with import HTTP 400. Seven carried-forward Bubilet records had
+  `checkedAt` older than the server's 72 h limit. The publisher now omits
+  stale observations with a 1 h transit margin and checks each batch again.
+  It keeps the original timestamps and does not retire stale pages.
+  Node 22.23.3 collector checks passed: 279 tests, one skip, no failures.
+  Offline replay validated all 4,404 importable pages from the preserved run.
+  [PR 78](https://github.com/Efeblk/event_recommender/pull/78) contains the fix.
+  Recovery published the preserved report and passed canonical readback:
+  saved at 11:14 UTC, original collection finished at 06:46 UTC, 14,625 records.
+  Live readiness returned 200 with 8,819 eligible events, no pending
+  publication and a 4.49 h catalog age. Seven stale records were omitted.
+  No timestamps were reset. No paid calls. Private evidence remains under
+  `gs://biplan-staging-efeblk-biplan-staging-data/operations/cloud-alarm-2026-10-07/`.

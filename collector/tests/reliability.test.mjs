@@ -206,6 +206,37 @@ test("publisher rechecks expiration immediately before each import request", asy
   assert.deepEqual(result.omittedExpired, { count: 1, ids: ["expires-between-requests"] });
 });
 
+test("publisher rechecks stale observations immediately before each import request", async (t) => {
+  const bodies = [];
+  const remote = await fixture(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    bodies.push(JSON.parse(Buffer.concat(chunks)));
+    json(response, 200, { imported: 3 });
+  });
+  t.after(remote.close);
+  const pages = Array.from({ length: MAX_IMPORT_PAGES + 1 }, (_, index) => ({
+    url: `https://source.test/stale-${index}`,
+    events: index === MAX_IMPORT_PAGES
+      ? [
+          { id: "stale-between-requests", startsAt: "2026-10-10T12:00:00.000Z", checkedAt: "2026-10-04T11:00:00.000Z" },
+          { id: "remains-fresh", startsAt: "2026-10-10T12:00:00.000Z", checkedAt: "2026-10-04T12:00:00.000Z" },
+        ]
+      : [{ id: `fresh-${index}`, startsAt: "2026-10-10T12:00:00.000Z", checkedAt: "2026-10-04T12:00:00.000Z" }],
+  }));
+  const times = ["2026-10-07T09:59:00.000Z", "2026-10-07T09:59:00.000Z", "2026-10-07T10:01:00.000Z"];
+  const result = await publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, summary: {}, pages },
+    allowLoopbackHttp: true,
+    now: () => new Date(times.shift()),
+  });
+  assert.equal(bodies.length, 2);
+  assert.deepEqual(bodies[1].pages[0].events.map((event) => event.id), ["remains-fresh"]);
+  assert.deepEqual(result.omittedStale, { count: 1, ids: ["stale-between-requests"] });
+});
+
 test("publisher partitions large reports into at most three whole source pages per request", async (t) => {
   const pageCounts = [];
   const remote = await fixture(async (request, response) => {
