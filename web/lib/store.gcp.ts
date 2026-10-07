@@ -11,6 +11,7 @@ import {
 import { validVector } from './providers.ts';
 import { emptyFilters, type EventRecord } from './types.ts';
 import { voyageDocumentText } from './voyage.ts';
+import { validateProviderListing } from '../../contracts/listing.ts';
 import type {
   BlobStore,
   CatalogStatus,
@@ -70,6 +71,20 @@ const bytes = (body: string) => encoder.encode(body).byteLength;
 function checkpointEvent(event: EventRecord): EventRecord {
   const { providerListing: _providerListing, ...retained } = event;
   return retained;
+}
+function duplicateListingIdentity(event: EventRecord) {
+  if (!event.providerListing) throw new Error('Conflicting source event identity');
+  const listing = validateProviderListing(event.providerListing);
+  if (
+    !listing.providerEventId ||
+    !listing.providerSessionIds.length ||
+    listing.listingId.slice(0, 24) !== event.id ||
+    listing.provider !== event.source ||
+    listing.url !== event.url ||
+    listing.observedAt !== event.checkedAt
+  )
+    throw new Error('Conflicting source event identity');
+  return listing;
 }
 const hashPattern = /^[a-f0-9]{64}$/;
 async function digest(body: string) {
@@ -535,8 +550,10 @@ export function createGcpStore(options: {
         if (source.checkedAt > report.finishedAt)
           throw new Error('Staged source is newer than collection report');
       }
-      const events: EventRecord[] = [];
-      const ids = new Set<string>();
+      const selected = new Map<
+        string,
+        { event: EventRecord; checkpointBytes: number }
+      >();
       let approximateBytes = 2;
       for (
         let offset = 0;
@@ -571,20 +588,43 @@ export function createGcpStore(options: {
           const times = sourcePageTimes(page);
           if (times.latest !== source.checkedAt) throw new Error('Source page timestamp mismatch');
           if (source.kind && times.kind !== source.kind) throw new Error('Source page kind mismatch');
+          const pageIds = new Set<string>();
           for (const event of page.events) {
-            if (event.url !== source.url || ids.has(event.id))
+            if (event.url !== source.url || pageIds.has(event.id))
               throw new Error('Conflicting source event identity');
-            ids.add(event.id);
-            approximateBytes += bytes(JSON.stringify(checkpointEvent(event))) + 1;
+            pageIds.add(event.id);
+            const checkpointBytes = bytes(JSON.stringify(checkpointEvent(event))) + 1;
+            const prior = selected.get(event.id);
+            if (prior) {
+              const priorListing = duplicateListingIdentity(prior.event);
+              const listing = duplicateListingIdentity(event);
+              if (
+                listing.listingId !== priorListing.listingId ||
+                event.checkedAt === prior.event.checkedAt
+              )
+                throw new Error('Conflicting source event identity');
+              if (event.checkedAt > prior.event.checkedAt) {
+                if (
+                  approximateBytes + checkpointBytes - prior.checkpointBytes >
+                  MAX_CHECKPOINT_BYTES
+                )
+                  throw new Error('Checkpoint exceeds limit');
+                approximateBytes += checkpointBytes - prior.checkpointBytes;
+                selected.set(event.id, { event, checkpointBytes });
+              }
+              continue;
+            }
             if (
-              events.length >= MAX_CHECKPOINT_EVENTS ||
-              approximateBytes > MAX_CHECKPOINT_BYTES
+              selected.size >= MAX_CHECKPOINT_EVENTS ||
+              approximateBytes + checkpointBytes > MAX_CHECKPOINT_BYTES
             )
               throw new Error('Checkpoint exceeds limit');
-            events.push(event);
+            approximateBytes += checkpointBytes;
+            selected.set(event.id, { event, checkpointBytes });
           }
         }
       }
+      const events = [...selected.values()].map(({ event }) => event);
       if (!events.length)
         throw new Error('Cannot publish an empty staged catalog');
       events.sort((a, b) => a.id.localeCompare(b.id));

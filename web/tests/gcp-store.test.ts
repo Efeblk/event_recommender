@@ -12,6 +12,10 @@ import type {
 } from '../lib/storage-contract.ts';
 import type { CollectionReport } from '../lib/operations.ts';
 import { emptyFilters, type EventRecord } from '../lib/types.ts';
+import {
+  expectedProviderListingId,
+  type ProviderListingV1,
+} from '../../contracts/listing.ts';
 
 class MemoryControl implements ControlStore {
   documents = new Map<string, Record<string, unknown>>();
@@ -134,6 +138,52 @@ const page = (item: EventRecord): SourcePage => ({
   url: item.url,
   events: [item],
 });
+function listedEvent(
+  slug: string,
+  checkedAt: string,
+  changes: Partial<EventRecord> = {},
+): EventRecord {
+  const url = `https://www.bubilet.com.tr/istanbul/etkinlik/${slug}`;
+  const title = changes.title ?? `Konser ${slug}`;
+  const startsAt = changes.startsAt ?? '2026-09-29T18:00:00.000Z';
+  const availability = changes.availability ?? 'available';
+  const listing: ProviderListingV1 = {
+    contractVersion: 'provider-listing.v1',
+    listingId: '',
+    provider: 'bubilet',
+    providerEventId: '18220',
+    providerSessionIds: ['258163'],
+    url,
+    title,
+    description: 'Canlı müzik',
+    category: 'Konser',
+    startsAt,
+    timezoneEvidence: { kind: 'explicit_offset', sourceValue: startsAt },
+    venue: { name: changes.venue ?? `Sahne ${slug}`, district: 'Kadıköy' },
+    tiers: [{ price: changes.price ?? 500, currency: 'TRY', availability }],
+    availability,
+    observedAt: checkedAt,
+    extractorVersion: 'fixture.v1',
+    rawObjectRef: {
+      sha256: 'a'.repeat(64),
+      key: `bodies/${'a'.repeat(64)}.bin`,
+      bytes: 1,
+    },
+    city: 'İstanbul',
+  };
+  listing.listingId = expectedProviderListingId(listing);
+  return event(listing.listingId.slice(0, 24), {
+    title,
+    startsAt,
+    checkedAt,
+    venue: listing.venue.name,
+    price: changes.price ?? 500,
+    url,
+    availability,
+    providerListing: listing,
+    ...changes,
+  });
+}
 function report(offset = 0): CollectionReport {
   return {
     finishedAt: new Date(instant + offset).toISOString(),
@@ -356,6 +406,90 @@ await test('replacing one source keeps prior failed sources, skips older batches
     (await f.store.publishCheckpoint(report(1000), lease)).key,
     next.key,
   );
+});
+
+await test('a newer complete provider listing supersedes the same session at an old URL', async () => {
+  for (const reverse of [false, true]) {
+    const f = fixture();
+    const lease = await syncLease(f.store);
+    const older = listedEvent(
+      'old-slug',
+      new Date(instant).toISOString(),
+      { title: 'Old title', price: 400 },
+    );
+    const newer = listedEvent(
+      'new-slug',
+      new Date(instant + 1000).toISOString(),
+      { title: 'New title', price: 650 },
+    );
+    await f.store.importPages(reverse ? [page(newer), page(older)] : [page(older), page(newer)], lease);
+    const pointer = await f.store.publishCheckpoint(report(1000), lease);
+    assert.equal(pointer.events, 1);
+    const [result] = await f.store.candidates(emptyFilters);
+    assert.equal(result.title, newer.title);
+    assert.equal(result.url, newer.url);
+    assert.equal(result.price, newer.price);
+    assert.equal(result.checkedAt, newer.checkedAt);
+    assert.deepEqual(result.offers?.map(({ id }) => id), [newer.id]);
+  }
+});
+
+await test('a newer unavailable listing suppresses an older available observation', async () => {
+  for (const availability of ['sold_out', 'cancelled'] as const) {
+    const f = fixture();
+    const lease = await syncLease(f.store);
+    const older = listedEvent('old-available', new Date(instant).toISOString());
+    const newer = listedEvent(
+      'new-unavailable',
+      new Date(instant + 1000).toISOString(),
+      { availability },
+    );
+    await f.store.importPages([page(older), page(newer)], lease);
+    const pointer = await f.store.publishCheckpoint(report(1000), lease);
+    assert.equal(pointer.events, 1);
+    const checkpoint = JSON.parse((await f.store.readCheckpoint())!) as {
+      events: EventRecord[];
+    };
+    assert.equal(checkpoint.events[0].availability, availability);
+    assert.deepEqual(await f.store.candidates(emptyFilters), []);
+  }
+});
+
+await test('ambiguous duplicate source identities fail without replacing the active catalog', async () => {
+  const cases: SourcePage[][] = [];
+  const checkedAt = new Date(instant + 1000).toISOString();
+  const first = listedEvent('first-alias', checkedAt);
+  const second = listedEvent('second-alias', checkedAt, { title: 'Different title' });
+  cases.push([page(first), page(second)]);
+  cases.push([{ url: first.url, events: [first, first] }]);
+  cases.push([
+    page({ ...first, providerListing: undefined }),
+    page({ ...second, providerListing: undefined }),
+  ]);
+  const mismatched = structuredClone(second);
+  mismatched.providerListing!.providerEventId = 'different-provider-event';
+  mismatched.providerListing!.listingId = expectedProviderListingId(
+    mismatched.providerListing!,
+  );
+  cases.push([page(first), page(mismatched)]);
+  cases.push([page(first), page({ ...second, source: 'biletix' })]);
+
+  for (const pages of cases) {
+    const f = fixture();
+    const lease = await syncLease(f.store);
+    await f.store.importPages([page(event('survivor'))], lease);
+    const active = await f.store.publishCheckpoint(report(), lease);
+    await f.store.importPages(pages, lease);
+    await assert.rejects(
+      f.store.publishCheckpoint(report(1000), lease),
+      /Conflicting source event identity|Invalid provider listing/,
+    );
+    assert.equal((await f.store.checkpointPointer())?.key, active.key);
+    assert.deepEqual(
+      (await f.store.candidates(emptyFilters)).map(({ id }) => id),
+      ['survivor'],
+    );
+  }
 });
 
 await test('verified retirement removes a source and older imports cannot resurrect it', async () => {
