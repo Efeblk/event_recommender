@@ -638,3 +638,18 @@ checks still pass, and the per-request cost does not increase without approval.
   fixture review gate. No paid calls. CI, merge and staging recovery are
   pending. Preserved evidence:
   `gs://biplan-staging-efeblk-biplan-staging-data/operations/checkpoint-failure-37629077159/`.
+- 2026-10-07: PR 79 merged as `05c93e6`. Exact PR CI
+  [37680849544](https://github.com/Efeblk/event_recommender/actions/runs/37680849544)
+  passed on attempt 2. Attempt 1 timed out at the Ubuntu package mirror during
+  browser setup; its log is preserved. Exact master CI
+  [37683534225](https://github.com/Efeblk/event_recommender/actions/runs/37683534225)
+  and staging deploy
+  [37684310454](https://github.com/Efeblk/event_recommender/actions/runs/37684310454)
+  passed. Revision `biplan-staging-00058-9jn` matches the reviewed image digest.
+  Recovery saved the original 14:11 UTC collection report at 20:51 UTC.
+  Canonical readback has 14,675 unique IDs. All 24 alias records match the newer
+  source URLs and original observation times. Readiness returned 200 with
+  8,731 eligible events and no pending publication. The expired friends test
+  is closed: no public invoker, preview logging off, anonymous health returns
+  403. No paid calls. The same private evidence directory holds the deployment
+  provenance, recovery receipt, checkpoint hash and live readiness responses.
