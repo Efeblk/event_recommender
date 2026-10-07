@@ -631,6 +631,10 @@ checks still pass, and the per-request cost does not increase without approval.
   24 session IDs on old and new pages. The publisher now keeps the newer record
   only when both full provider identities validate and match. Ambiguous IDs
   still fail. Replay of all 5,419 staged pages passed: 14,699 records became
-  14,675 unique records. No cloud writes or paid calls. CI, merge and staging
-  recovery are pending. Preserved evidence:
+  14,675 unique records. [PR 79](https://github.com/Efeblk/event_recommender/pull/79)
+  contains the fix. Node 22.23.3 checks passed: 818 web tests, typecheck, lint,
+  46 deployment checks, GCP configuration, Node build and smoke. Golden
+  preparation passed; the scored offline attempt stopped at the existing
+  fixture review gate. No paid calls. CI, merge and staging recovery are
+  pending. Preserved evidence:
   `gs://biplan-staging-efeblk-biplan-staging-data/operations/checkpoint-failure-37629077159/`.
