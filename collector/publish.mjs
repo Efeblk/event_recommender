@@ -31,14 +31,16 @@ export function shouldFlushImportBatch({ pages, events, bytes, upserts = 0 }, { 
     bytes + nextBytes > MAX_IMPORT_BYTES || queries > MAX_D1_QUERY_BUDGET;
 }
 
-// The server rejects retirement/quarantine stamps older than 72 hours. Such
-// pages are carried forward from the checkpoint and were applied earlier, so
-// skip them (with a margin for request latency) instead of failing the import.
-const MAX_INACTIVE_STAMP_AGE_MS = 71 * 3600000;
+// The server rejects observation and retirement/quarantine stamps older than
+// 72 hours. These records are carried forward from the checkpoint and were
+// applied earlier, so skip them (with a margin for request latency) instead of
+// failing the import.
+const MAX_IMPORT_STAMP_AGE_MS = 71 * 3600000;
 
 export function prepareImportPages(pages, now = new Date()) {
   const cutoff = now.getTime();
   const omittedExpiredIds = [];
+  const omittedStaleIds = [];
   const prepared = [];
   for (const page of pages) {
     if ((page.retiredAt !== undefined && page.quarantinedAt !== undefined) ||
@@ -47,11 +49,15 @@ export function prepareImportPages(pages, now = new Date()) {
         (page.quarantineReason !== undefined && page.quarantinedAt === undefined))
       throw new Error('Invalid empty source state');
     const inactiveAt = page.events.length === 0 ? Date.parse(page.retiredAt ?? page.quarantinedAt) : NaN;
-    if (cutoff - inactiveAt > MAX_INACTIVE_STAMP_AGE_MS) continue;
+    if (cutoff - inactiveAt > MAX_IMPORT_STAMP_AGE_MS) continue;
     const events = page.events.filter((event) => {
       const expired = Number.isFinite(Date.parse(event.startsAt)) && Date.parse(event.startsAt) < cutoff;
+      const checkedAt = Date.parse(event.checkedAt);
+      const stale = Number.isFinite(checkedAt) && new Date(checkedAt).toISOString() === event.checkedAt &&
+        cutoff - checkedAt > MAX_IMPORT_STAMP_AGE_MS;
       if (expired) omittedExpiredIds.push(event.id);
-      return !expired;
+      if (!expired && stale) omittedStaleIds.push(event.id);
+      return !expired && !stale;
     });
     if (events.length) prepared.push({ url: page.url, events });
     else if (page.events.length === 0 && page.retiredAt)
@@ -59,7 +65,7 @@ export function prepareImportPages(pages, now = new Date()) {
     else if (page.events.length === 0 && page.quarantinedAt)
       prepared.push({ url: page.url, events: [], quarantinedAt: page.quarantinedAt, quarantineReason: page.quarantineReason });
   }
-  return { pages: prepared, omittedExpiredIds };
+  return { pages: prepared, omittedExpiredIds, omittedStaleIds };
 }
 
 export async function publish({ origin, token, report, checkpoint = false, snapshot, allowLoopbackHttp = false, now = () => new Date() }) {
@@ -77,17 +83,22 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
     if (item.bytes > MAX_IMPORT_BYTES) throw new Error("A source page exceeds the import limit.");
     if (item.page.events.length > MAX_SOURCE_PAGE_EVENTS) throw new Error("A source page exceeds the event import limit.");
   }
-  let batch = [], bytes = 0, batchEvents = 0, batchUpserts = 0, imported = 0, sentBatches = 0, omittedCount = 0;
-  const omittedIds = [];
-  function recordOmissions(ids) {
-    omittedCount += ids.length;
-    omittedIds.push(...ids.slice(0, Math.max(0, 100 - omittedIds.length)));
+  let batch = [], bytes = 0, batchEvents = 0, batchUpserts = 0, imported = 0, sentBatches = 0;
+  const omissions = {
+    expired: { count: 0, ids: [] },
+    stale: { count: 0, ids: [] },
+  };
+  function recordOmissions(omission, ids) {
+    omission.count += ids.length;
+    omission.ids.push(...ids.slice(0, Math.max(0, 100 - omission.ids.length)));
   }
-  recordOmissions(prepared.omittedExpiredIds);
+  recordOmissions(omissions.expired, prepared.omittedExpiredIds);
+  recordOmissions(omissions.stale, prepared.omittedStaleIds);
   async function send() {
     if (!batch.length) return;
     const current = prepareImportPages(batch, now());
-    recordOmissions(current.omittedExpiredIds);
+    recordOmissions(omissions.expired, current.omittedExpiredIds);
+    recordOmissions(omissions.stale, current.omittedStaleIds);
     batch = [];
     bytes = 0;
     batchEvents = 0;
@@ -111,8 +122,7 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   await send();
   if (!sentBatches)
     throw new Error("No future event sessions remain importable; checkpoint was not advanced.");
-  const omission = { count: omittedCount, ids: omittedIds };
-  if (!checkpoint) return { imported, checkpointed: false, omittedExpired: omission };
+  if (!checkpoint) return { imported, checkpointed: false, omittedExpired: omissions.expired, omittedStale: omissions.stale };
 
   const collectionEndpoint = endpointFor(origin, "/api/admin/collection", allowLoopbackHttp);
   const expectedSources = Object.keys(report.summary.sources ?? {});
@@ -135,7 +145,7 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   if (!health.response.ok || health.result?.status !== "ok" || !["local", "staging", "production"].includes(deployment?.environment) || (deployment.environment !== "local" && !/^[0-9a-f]{40}$/.test(deployment.revision ?? "")))
     throw new Error("Post-checkpoint Worker identity is invalid.");
   if (snapshot) await atomicJson(snapshot, canonical.events);
-  return { imported, checkpointed: true, canonicalReadback: true, artifactOnly: false, savedAt: canonical.savedAt, events: canonical.events.length, environment: deployment.environment, revision: deployment.revision ?? null, omittedExpired: omission };
+  return { imported, checkpointed: true, canonicalReadback: true, artifactOnly: false, savedAt: canonical.savedAt, events: canonical.events.length, environment: deployment.environment, revision: deployment.revision ?? null, omittedExpired: omissions.expired, omittedStale: omissions.stale };
 }
 
 async function main() {

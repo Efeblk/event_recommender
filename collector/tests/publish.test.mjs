@@ -22,6 +22,17 @@ test('publication skips carried-forward inactive pages the server would reject a
   assert.deepEqual(prepareImportPages([retired('2026-10-02T10:02:03.402Z'), quarantined, fresh], now).pages, [fresh]);
 });
 
+test('publication omits carried-forward events with stale observations without changing fresh records', () => {
+  const now = new Date('2026-10-07T06:51:44.000Z');
+  const stale = { id: 'cocuk-stand-up', startsAt: '2026-10-10T18:00:00.000Z', checkedAt: '2026-10-04T06:24:22.201Z' };
+  const fresh = { id: 'fresh', startsAt: '2026-10-10T20:00:00.000Z', checkedAt: '2026-10-04T07:51:44.000Z' };
+  const invalid = { id: 'invalid', startsAt: '2026-10-10T21:00:00.000Z', checkedAt: '2026-10-04 06:24:22Z' };
+  const prepared = prepareImportPages([{ url: 'https://www.bubilet.com.tr/istanbul/etkinlik/cocuk-stand-up', events: [stale, fresh, invalid] }], now);
+  assert.deepEqual(prepared.pages[0].events, [fresh, invalid]);
+  assert.deepEqual(prepared.omittedStaleIds, ['cocuk-stand-up']);
+  assert.equal(prepared.pages[0].events[0].checkedAt, fresh.checkedAt);
+});
+
 const publish = resolve(import.meta.dirname, "../publish.mjs");
 
 function invoke(origin, extra = []) {
