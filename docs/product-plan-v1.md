@@ -617,4 +617,10 @@ checks still pass, and the per-request cost does not increase without approval.
   It keeps the original timestamps and does not retire stale pages.
   Node 22.23.3 collector checks passed: 279 tests, one skip, no failures.
   Offline replay validated all 4,404 importable pages from the preserved run.
-  Private recovery is in progress with the original report time. No paid calls.
+  [PR 78](https://github.com/Efeblk/event_recommender/pull/78) contains the fix.
+  Recovery published the preserved report and passed canonical readback:
+  saved at 11:14 UTC, original collection finished at 06:46 UTC, 14,625 records.
+  Live readiness returned 200 with 8,819 eligible events, no pending
+  publication and a 4.49 h catalog age. Seven stale records were omitted.
+  No timestamps were reset. No paid calls. Private evidence remains under
+  `gs://biplan-staging-efeblk-biplan-staging-data/operations/cloud-alarm-2026-10-07/`.
