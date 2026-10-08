@@ -78,6 +78,8 @@ export interface CheckpointPublicationAttempt {
   searchBytes: number | null;
   checkpointBytes: number | null;
   elapsedMs: number;
+  /** Elapsed time when the current phase began; absent on older attempts. */
+  phaseStartedElapsedMs?: number;
   outcome: 'running' | 'succeeded' | 'failed';
   failureCode: CheckpointPublicationFailureCode | null;
 }

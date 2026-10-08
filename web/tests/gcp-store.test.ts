@@ -278,18 +278,25 @@ await test('checkpoint publication exposes only bounded phase and size diagnosti
   assert.equal(attempt.checkpointBytes, pointer.bytes);
   assert.equal(attempt.outcome, 'succeeded');
   assert.equal(attempt.failureCode, null);
+  assert.ok((attempt.phaseStartedElapsedMs ?? -1) <= attempt.elapsedMs);
   assert.deepEqual(
     Object.keys(attempt).sort(),
     [
       'attemptId', 'checkpointBytes', 'deploymentRevision', 'elapsedMs', 'events',
       'failureCode', 'outcome', 'phase', 'reportFinishedAt', 'schemaVersion',
       'searchBytes', 'sourcesRead', 'sourcesTotal', 'startedAt',
+      'phaseStartedElapsedMs',
     ].sort(),
   );
   const stored = f.control.documents.get('biplan/default/state/checkpoint-publication')!;
   stored.privateDetail = 'must not escape';
   assert.equal(
     Object.hasOwn(await latestPublication(f.store) as object, 'privateDetail'),
+    false,
+  );
+  delete stored.phaseStartedElapsedMs;
+  assert.equal(
+    Object.hasOwn(await latestPublication(f.store) as object, 'phaseStartedElapsedMs'),
     false,
   );
   stored.sourcesRead = 2;
@@ -350,9 +357,10 @@ await test('checkpoint publication rechecks its deadline inside the activation t
     /deadline_exceeded/,
   );
   const attempt = await latestPublication(f.store);
-  assert.equal(attempt?.phase, 'complete');
+  assert.equal(attempt?.phase, 'activate');
   assert.equal(attempt?.outcome, 'failed');
   assert.equal(attempt?.failureCode, 'deadline_exceeded');
+  assert.equal(attempt?.phaseStartedElapsedMs, 0);
   assert.equal(await f.store.checkpointPointer(), null);
 });
 

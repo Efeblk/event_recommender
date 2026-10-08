@@ -128,6 +128,9 @@ phases in the existing control namespace. A 260 s deadline and request-abort
 checks guard phase boundaries and final pointer activation. Synchronous
 materialization can finish before its next check. The checkpoint client waits
 up to 280 s. Cloud Run and the writer lease retain their 300 s limits.
+New attempts also record `phaseStartedElapsedMs`. Subtract it from `elapsedMs`
+to distinguish time in the final phase from the complete attempt duration.
+Older records can omit this field.
 
 For the preserved failed replay `37854227546`, checkpoint-only recovery can use
 a labelled proof derived from its immutable job log and exact Git call site.

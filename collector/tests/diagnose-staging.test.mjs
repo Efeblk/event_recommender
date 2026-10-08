@@ -45,3 +45,15 @@ test("diagnostic validation binds health to the expected runtime and requires ca
   results.canonical.value.eventsSha256 = null;
   assert.deepEqual(validateDiagnostics(results, revision).problems, ["canonical"]);
 });
+
+test("publication diagnostics keep bounded phase timing without leaking extra fields", async () => {
+  for (const [phaseStartedElapsedMs, expected] of [[120, 120], [-1, null], [241, null], ["120", null], [undefined, null]]) {
+    const result = await collectDiagnostic({
+      kind: "publication",
+      endpoint: new URL("https://service.run.app/api/admin/collection?publication=latest"),
+      fetcher: async () => new Response(JSON.stringify({ elapsedMs: 240, phaseStartedElapsedMs, secretExtra: "must-stay-private" })),
+    });
+    assert.equal(result.value.phaseStartedElapsedMs, expected);
+    assert.doesNotMatch(JSON.stringify(result.value), /must-stay-private|secretExtra/);
+  }
+});

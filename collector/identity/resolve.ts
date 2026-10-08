@@ -335,12 +335,34 @@ function resolveVenues(listings: readonly IdentityListing[]): {
   for (const edge of edgeByPair.values()) edges.push(edge);
   edges.sort((a, b) => a.priority - b.priority || a.left - b.left || a.right - b.right);
   const sets = new DisjointSet(listings.length);
+  // Component conflicts depend only on these exact inputs. Keep every graph
+  // member and edge, but compare one representative for duplicate evidence.
+  const conflictRepresentatives = listings.map(
+    (listing, index) =>
+      new Map([
+        [
+          JSON.stringify([
+            evidence[index].districts,
+            evidence[index].sides,
+            listing.venue.geo
+              ? ['geo', listing.venue.geo.lat, listing.venue.geo.lon]
+              : ['no_geo'],
+            [typeof listing.provider, listing.provider],
+            [
+              typeof listing.venue.providerVenueId,
+              listing.venue.providerVenueId,
+            ],
+          ]),
+          index,
+        ],
+      ]),
+  );
   for (const edge of edges) {
     const leftRoot = sets.find(edge.left);
     const rightRoot = sets.find(edge.right);
     if (leftRoot === rightRoot) continue;
-    const leftMembers = sets.members(leftRoot);
-    const rightMembers = sets.members(rightRoot);
+    const leftMembers = [...conflictRepresentatives[leftRoot].values()];
+    const rightMembers = [...conflictRepresentatives[rightRoot].values()];
     let conflict = false;
     for (const leftIndex of leftMembers)
       for (const rightIndex of rightMembers) {
@@ -361,7 +383,14 @@ function resolveVenues(listings: readonly IdentityListing[]): {
         )
           conflict = true;
       }
-    if (!conflict) sets.union(edge.left, edge.right);
+    if (!conflict) {
+      const root = sets.union(edge.left, edge.right);
+      const other = root === leftRoot ? rightRoot : leftRoot;
+      for (const [key, index] of conflictRepresentatives[other])
+        if (!conflictRepresentatives[root].has(key))
+          conflictRepresentatives[root].set(key, index);
+      conflictRepresentatives[other].clear();
+    }
   }
   const components = new Map<number, number[]>();
   for (let index = 0; index < listings.length; index++) {

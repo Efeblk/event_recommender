@@ -322,7 +322,47 @@ checks still pass, and the per-request cost does not increase without approval.
   This CPU result does not establish the live timeout cause. Local checks pass
   on Node 22.23.3: 861 web tests, 298 collector tests and one existing skip,
   52 deployment checks, typecheck, lint, GCP checks, Node build and smoke.
-  Smoke made zero cloud or AI calls. Exact PR CI and private recovery are pending.
+  Smoke made zero cloud or AI calls. PR 83 merged as `72533bd` after exact PR
+  CI [37858862498](https://github.com/Efeblk/event_recommender/actions/runs/37858862498)
+  passed on `8f88706`. Exact merge CI
+  [37859525944](https://github.com/Efeblk/event_recommender/actions/runs/37859525944)
+  passed all six jobs. The PR branch is deleted. Read-only runtime inspection
+  [37859548309](https://github.com/Efeblk/event_recommender/actions/runs/37859548309)
+  found healthy service conditions and unchanged CPU, memory and timeout limits.
+  It does not establish the HTTP 429 cause. Candidate preparation
+  [37859827730](https://github.com/Efeblk/event_recommender/actions/runs/37859827730)
+  stopped at its CI guard while the Windows job was pending. Its log is preserved.
+  Private staging deploy
+  [37860057207](https://github.com/Efeblk/event_recommender/actions/runs/37860057207)
+  passed. Revision `biplan-staging-00061-xw6` matches the reviewed Git tree,
+  canonical lockfile digests and Linux image checksums. Authenticated health
+  and readiness passed against the old active checkpoint. Anonymous health
+  returned 403 at `2026-10-08T23:39:02.905Z`. Delayed scheduled collection
+  [37859201249](https://github.com/Efeblk/event_recommender/actions/runs/37859201249)
+  was cancelled during fetch for checkpoint recovery maintenance. Import had
+  not started. Its evidence is preserved. Schedule variables remain enabled.
+  Checkpoint-only recovery
+  [37860529371](https://github.com/Efeblk/event_recommender/actions/runs/37860529371)
+  passed the legacy proof and sent no imports. The client timed out after 280 s.
+  Both final readbacks returned HTTP 429. These failures are preserved.
+  Diagnostic [37861178327](https://github.com/Efeblk/event_recommender/actions/runs/37861178327)
+  then returned HTTP 200. The durable attempt failed at `materialize` with
+  `deadline_exceeded`. It read all 5,578 sources and selected 14,644 records.
+  Total elapsed time was 362,620 ms. This is not the materialization duration
+  alone. No search or checkpoint object was written. The old active pointer
+  is unchanged. Readiness recovered with 8,675 eligible events. Publication
+  performance is the recovery blocker. [PR 84](https://github.com/Efeblk/event_recommender/pull/84)
+  removes repeated comparisons between identical venue-conflict evidence.
+  It keeps every listing, graph edge, traversal order and identity rule.
+  On the complete preserved 12,006-record workload, materialization took
+  30.97 s instead of 69.96 s. Full output bytes and SHA-256 are identical.
+  All 90 adversarial resolver workloads also match the old complete output.
+  An approximate 14,644-record union took 29.00 s instead of 92.76 s with
+  identical output SHA-256 `c4876e083aa8ce999db05ad7749cba473b9423f1c69c2e056dccaff3f364c999`.
+  Carried checkpoint records omit rich provider listings. This approximation
+  does not prove exact production output. New diagnostics record each phase's
+  start offset. Reader concurrency, deadlines and resource limits stay the same.
+  PR 84 validation and private recovery are pending.
   Recovery evidence stays under `web/work/comprehensive-review/`.
   Deployment evidence stays in
   `web/work/comprehensive-review/staging-deploy/`.
