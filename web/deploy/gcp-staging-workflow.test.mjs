@@ -51,6 +51,26 @@ await test('collector monitor initializes evidence after checkout on every outco
   assert.match(monitor, /name: Initialize readiness evidence\n\s+if: always\(\)/);
 });
 
+await test('collector dispatch modes isolate replay from collection, verification and paid indexing', () => {
+  const replay = collectorWorkflow.slice(collectorWorkflow.indexOf('  replay_publication:'), collectorWorkflow.indexOf('  index_only:'));
+  assert.match(collectorWorkflow, /publish_existing_run:[\s\S]*?default: ''/);
+  assert.match(collectorWorkflow, /publish_existing_report_sha256:[\s\S]*?default: ''/);
+  assert.match(collectorWorkflow, /elif \[\[ -n "\$PUBLISH_EXISTING_RUN" \|\| -n "\$PUBLISH_EXISTING_REPORT_SHA256" \]\]; then[\s\S]*?mode=replay/);
+  assert.match(collectorWorkflow, /schedule_gate:\n\s+needs: dispatch_mode\n\s+if: needs\.dispatch_mode\.outputs\.mode == 'collect'/);
+  assert.match(collectorWorkflow, /monitor:[\s\S]*?needs: dispatch_mode\n\s+if: [^\n]+needs\.dispatch_mode\.outputs\.mode == 'verify'/);
+  assert.match(replay, /if: needs\.dispatch_mode\.outputs\.mode == 'replay'/);
+  assert.match(replay, /actions: read\n\s+contents: read\n\s+id-token: write/);
+  assert.match(replay, /--validate-imports --exact-checkpoint/);
+  assert.match(replay, /timeout-minutes: 40[\s\S]*replay-evidence\/publish-status\.txt/);
+  assert.match(replay, /--status replay-evidence\/ready-status\.txt/);
+  assert.doesNotMatch(replay, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
+  const checkout = replay.indexOf('uses: actions/checkout@');
+  const initializer = replay.indexOf('name: Initialize replay evidence');
+  const setupNode = replay.indexOf('uses: actions/setup-node@');
+  assert.ok(checkout >= 0 && checkout < initializer && initializer < setupNode);
+  assert.match(replay, /name: Initialize replay evidence\n\s+if: always\(\)/);
+});
+
 await test('deployed revision validator enforces readiness, digest, SHA and snapshot runtime', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'biplan-gcp-revision-'));
   t.after(() => rm(directory, { recursive: true, force: true }));

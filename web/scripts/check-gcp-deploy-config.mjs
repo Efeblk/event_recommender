@@ -157,12 +157,14 @@ assert.match(deploy, /path: deploy-provenance/);
 
 assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
 assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:\n\s{4}inputs:\n\s{6}verify_only:[\s\S]*?type: boolean\n\s{8}default: false$/m);
+assert.match(collectorWorkflow, /publish_existing_run:[\s\S]*?type: string\n\s+default: ''/);
+assert.match(collectorWorkflow, /publish_existing_report_sha256:[\s\S]*?type: string\n\s+default: ''/);
 assert.match(
   collectorWorkflow,
-  /^\s{2}schedule_gate:\n\s{4}if: \(github\.event_name == 'workflow_dispatch' && inputs\.verify_only != true\) \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
+  /^\s{2}schedule_gate:\n\s{4}needs: dispatch_mode\n\s{4}if: needs\.dispatch_mode\.outputs\.mode == 'collect' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
 );
 // The hourly monitor checks readiness and catalog age with the collector identity.
-assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \* \* \* \*' \|\| \(github\.event_name == 'workflow_dispatch' && inputs\.verify_only == true\)/m);
+assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \* \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'verify'/m);
 assert.match(collectorWorkflow, /\/api\/ready/);
 assert.match(collectorWorkflow, /MAX_AGE_HOURS: '14'/);
 // The hourly schedule runs only the indexing job; it never collects.
@@ -208,6 +210,16 @@ assert.doesNotMatch(collectorWorkflow, /continue-on-error/);
 assert.match(collectorWorkflow, /if: always\(\) && steps\.publish\.outcome == 'success'/);
 assert.match(collectorWorkflow, /collection-embedding-index\.jsonl\*/);
 assert.doesNotMatch(collectorWorkflow, /Prepare replacement PostgreSQL|GCP_STAGING_PIPELINE_ENABLED|BIPLAN_PIPELINE_PG/);
+const replayJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  replay_publication:'), collectorWorkflow.indexOf('  index_only:'));
+assert.match(replayJob, /if: needs\.dispatch_mode\.outputs\.mode == 'replay'/);
+assert.match(replayJob, /permissions:\n\s+actions: read\n\s+contents: read\n\s+id-token: write/);
+assert.match(replayJob, /actions\/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4\.3\.0/);
+assert.match(replayJob, /github-token: \$\{\{ secrets\.GITHUB_TOKEN \}\}[\s\S]*run-id: \$\{\{ inputs\.publish_existing_run \}\}/);
+assert.match(replayJob, /--validate-imports --exact-checkpoint/);
+assert.match(replayJob, /timeout-minutes: 40[\s\S]*replay-evidence\/publish-status\.txt/);
+assert.match(replayJob, /--status replay-evidence\/ready-status\.txt/);
+assert.match(replayJob, /reportSha256|REPORT_SHA256|--report-sha256/);
+assert.doesNotMatch(replayJob, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
 const monitorJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  monitor:'));
 assert.match(monitorJob, /actions\/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4\.4\.0[\s\S]*node-version-file: web\/\.nvmrc/);
 const monitorCheckout = monitorJob.indexOf('uses: actions/checkout@');

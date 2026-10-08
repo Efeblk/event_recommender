@@ -12,6 +12,16 @@ on:
         required: true
         type: boolean
         default: false
+      publish_existing_run:
+        description: Failed collector run ID whose normalized artifact must be republished
+        required: false
+        type: string
+        default: ''
+      publish_existing_report_sha256:
+        description: Exact SHA-256 of the preserved collector/output/report.json
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -21,8 +31,38 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  dispatch_mode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+    steps:
+      - id: mode
+        name: Select one bounded workflow mode
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          VERIFY_ONLY: ${{ inputs.verify_only }}
+          PUBLISH_EXISTING_RUN: ${{ inputs.publish_existing_run }}
+          PUBLISH_EXISTING_REPORT_SHA256: ${{ inputs.publish_existing_report_sha256 }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != 'workflow_dispatch' ]]; then
+            echo 'mode=schedule' >> "$GITHUB_OUTPUT"
+          elif [[ "$VERIFY_ONLY" == 'true' ]]; then
+            test -z "$PUBLISH_EXISTING_RUN" && test -z "$PUBLISH_EXISTING_REPORT_SHA256"
+            echo 'mode=verify' >> "$GITHUB_OUTPUT"
+          elif [[ -n "$PUBLISH_EXISTING_RUN" || -n "$PUBLISH_EXISTING_REPORT_SHA256" ]]; then
+            [[ "$PUBLISH_EXISTING_RUN" =~ ^[1-9][0-9]*$ ]]
+            [[ "$PUBLISH_EXISTING_REPORT_SHA256" =~ ^[0-9a-f]{64}$ ]]
+            echo 'mode=replay' >> "$GITHUB_OUTPUT"
+          else
+            echo 'mode=collect' >> "$GITHUB_OUTPUT"
+          fi
+
   schedule_gate:
-    if: (github.event_name == 'workflow_dispatch' && inputs.verify_only != true) || (github.event.schedule == '17 */6 * * *' && vars.GCP_STAGING_COLLECTION_ENABLED == 'true')
+    needs: dispatch_mode
+    if: needs.dispatch_mode.outputs.mode == 'collect' || (github.event.schedule == '17 */6 * * *' && vars.GCP_STAGING_COLLECTION_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
@@ -205,9 +245,172 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  replay_publication:
+    needs: dispatch_mode
+    if: needs.dispatch_mode.outputs.mode == 'replay'
+    environment: gcp-staging-collector
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    env:
+      BIPLAN_URL: ${{ vars.BIPLAN_URL }}
+      SOURCE_RUN_ID: ${{ inputs.publish_existing_run }}
+      REPORT_SHA256: ${{ inputs.publish_existing_report_sha256 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Initialize replay evidence
+        if: always()
+        run: |
+          mkdir -p replay-evidence
+          printf '{"schemaVersion":1,"completed":false,"problems":["replay_not_completed"]}\n' > replay-evidence/source.json
+          cp replay-evidence/source.json replay-evidence/plan.json
+          cp replay-evidence/source.json replay-evidence/preflight.json
+          cp replay-evidence/source.json replay-evidence/publication.json
+          printf 'not-started\n' > replay-evidence/publish-status.txt
+          printf '{}\n' > replay-evidence/ready.json
+          printf 'not-requested\n' > replay-evidence/ready-status.txt
+          cp replay-evidence/source.json replay-evidence/validation.json
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: collector/package-lock.json
+
+      - run: npm ci --prefix collector
+
+      - id: source
+        name: Validate source run and normalized artifact identity
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          mkdir -p replay-private
+          api="https://api.github.com/repos/$REPOSITORY"
+          headers=(-H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28')
+          curl --fail --silent --show-error "${headers[@]}" "$api/actions/runs/$SOURCE_RUN_ID" > replay-private/run.json
+          curl --fail --silent --show-error "${headers[@]}" "$api/actions/workflows/gcp-collector.yml" > replay-private/workflow.json
+          curl --fail --silent --show-error "${headers[@]}" "$api/actions/runs/$SOURCE_RUN_ID/artifacts?per_page=100" > replay-private/artifacts.json
+          node --experimental-strip-types collector/replay-publication.mjs --mode metadata \
+            --run-id "$SOURCE_RUN_ID" --repository "$REPOSITORY" --repository-id "$REPOSITORY_ID" \
+            --default-branch "$DEFAULT_BRANCH" --workflow-path .github/workflows/gcp-collector.yml \
+            --run replay-private/run.json --workflow replay-private/workflow.json --artifacts replay-private/artifacts.json \
+            --output replay-evidence/source.json --github-output "$GITHUB_OUTPUT"
+          git merge-base --is-ancestor "$(cat replay-evidence/source.json | node -e "let s='';process.stdin.on('data',c=>s+=c).on('end',()=>process.stdout.write(JSON.parse(s).sourceHeadSha))")" "$GITHUB_SHA"
+
+      - name: Download exact normalized collection artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ steps.source.outputs.artifact_name }}
+          path: replay-artifact
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.publish_existing_run }}
+
+      - id: artifact
+        name: Verify artifact digest and preflight every import envelope
+        run: |
+          node --experimental-strip-types collector/replay-publication.mjs --mode artifact \
+            --source replay-evidence/source.json --report replay-artifact/collector/output/report.json \
+            --manifest replay-artifact/collector/output/pipeline-raw-collection.json \
+            --report-sha256 "$REPORT_SHA256" --output replay-evidence/plan.json --github-output "$GITHUB_OUTPUT"
+
+      - name: Validate private staging destination
+        shell: bash
+        env:
+          COLLECTOR_SERVICE_ACCOUNT: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          WORKLOAD_IDENTITY_PROVIDER: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          for name in BIPLAN_URL COLLECTOR_SERVICE_ACCOUNT WORKLOAD_IDENTITY_PROVIDER SYNC_TOKEN; do
+            test -n "${!name}" || { echo "Missing required gcp-staging-collector setting: $name" >&2; exit 1; }
+          done
+          case "$BIPLAN_URL" in https://*.run.app) ;; *) echo "BIPLAN_URL must be a direct HTTPS Cloud Run URL." >&2; exit 1;; esac
+          node -e "const u=new URL(process.env.BIPLAN_URL);if(u.origin!==process.env.BIPLAN_URL)throw new Error('BIPLAN_URL must be the exact Cloud Run origin without a path, query, or trailing slash.')"
+
+      - id: auth_replay
+        name: Authenticate collector for bounded publication replay
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ vars.BIPLAN_URL }}
+          id_token_include_email: true
+
+      - id: preflight
+        name: Refuse a wrong deployment or newer active checkpoint
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_replay.outputs.id_token }}
+        run: |
+          node --experimental-strip-types collector/replay-publication.mjs --mode preflight \
+            --plan replay-evidence/plan.json --expected-revision "$GITHUB_SHA" \
+            --output replay-evidence/preflight.json --github-output "$GITHUB_OUTPUT"
+
+      - name: Publish the preserved report without collection or indexing
+        if: steps.preflight.outputs.publish_required == 'true'
+        timeout-minutes: 40
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_replay.outputs.id_token }}
+        run: |
+          set -euo pipefail
+          printf 'running\n' > replay-evidence/publish-status.txt
+          set +e
+          node --experimental-strip-types collector/publish.mjs --checkpoint --validate-imports --exact-checkpoint \
+            --report replay-artifact/collector/output/report.json --snapshot replay-evidence/recovered-events.json \
+            --receipt replay-evidence/publication.json
+          status=$?
+          set -e
+          if [[ "$status" == '0' ]]; then printf 'complete\n' > replay-evidence/publish-status.txt
+          else printf 'failed\n' > replay-evidence/publish-status.txt; fi
+          exit "$status"
+
+      - name: Require exact canonical and ready publication evidence
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_replay.outputs.id_token }}
+        run: |
+          node --experimental-strip-types collector/replay-publication.mjs --mode verify \
+            --plan replay-evidence/plan.json --preflight replay-evidence/preflight.json \
+            --publication replay-evidence/publication.json --source replay-evidence/ready.json \
+            --status replay-evidence/ready-status.txt --output replay-evidence/validation.json
+
+      - name: Preserve bounded publication replay evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gcp-publication-replay-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            replay-evidence/source.json
+            replay-evidence/plan.json
+            replay-evidence/preflight.json
+            replay-evidence/publication.json
+            replay-evidence/publish-status.txt
+            replay-evidence/ready.json
+            replay-evidence/ready-status.txt
+            replay-evidence/validation.json
+          if-no-files-found: error
+          retention-days: 14
+
   index_only:
     # Hourly vector refresh between collections. The per-run and daily call
     # caps in web/lib/audited-index.ts still apply.
+    needs: dispatch_mode
     if: github.event.schedule == '47 * * * *' && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
@@ -271,7 +474,8 @@ jobs:
   monitor:
     # Hourly health check. A failed scheduled run makes GitHub send a failure
     # email. It lives here because the collector identity trusts only this file.
-    if: github.event.schedule == '47 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.verify_only == true)
+    needs: dispatch_mode
+    if: github.event.schedule == '47 * * * *' || needs.dispatch_mode.outputs.mode == 'verify'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 5

@@ -118,6 +118,75 @@ await test('import preserves validated retained venue evidence and rejects listi
   assert.equal(publicRecord.preparedSearch, undefined);
   assert.equal(JSON.stringify(publicRecord).includes(listing.rawObjectRef.key), false);
 });
+await test('import preserves only the retained categories repaired by materialization', () => {
+  function retainedRecord(input: {
+    rawCategory: string;
+    category: EventRecord['category'];
+    title: string;
+    description: string;
+    session: string;
+  }): EventRecord {
+    const listing: NonNullable<EventRecord['providerListing']> = {
+      contractVersion: 'provider-listing.v1',
+      listingId: '',
+      provider: 'bubilet',
+      providerSessionIds: [input.session],
+      url: event.url,
+      title: input.title,
+      description: input.description,
+      category: input.rawCategory,
+      startsAt: event.startsAt,
+      timezoneEvidence: {kind: 'explicit_offset', sourceValue: event.startsAt},
+      venue: {name: event.venue, district: '', address: ''},
+      tiers: [{price: 500, currency: 'TRY', availability: 'available'}],
+      availability: 'available',
+      observedAt: event.checkedAt,
+      extractorVersion: 'bubilet-provider-listing.v1',
+      rawObjectRef: {
+        sha256: 'c'.repeat(64),
+        key: `bodies/${'c'.repeat(64)}.bin`,
+        bytes: 100,
+      },
+    };
+    listing.listingId = expectedProviderListingId(listing);
+    return {
+      ...event,
+      id: listing.listingId.slice(0, 24),
+      title: input.title,
+      description: input.description,
+      category: input.category,
+      sourceSessionIds: [input.session],
+      sourceCategory: input.rawCategory,
+      sourceVersion: 'provider-listing.v1',
+      extraction: listing.extractorVersion,
+      providerListing: listing,
+    };
+  }
+
+  const standup = retainedRecord({
+    rawCategory: 'tiyatro',
+    category: 'Tiyatro',
+    title: 'Bi Şaka Stand Up Programı',
+    description: 'Bi Şaka Stand Up Programı stand up gösterisi sahnede.',
+    session: 'standup-legacy',
+  });
+  assert.equal(validateImport(envelope(standup), now)[0].events[0].category, 'Tiyatro');
+
+  const tour = retainedRecord({
+    rawCategory: 'Sergi',
+    category: 'Sergi',
+    title: "Katedralde Noel Şarkıları ile İstanbul'da Noel",
+    description:
+      "Program boyunca farklı cemaatlere ait kiliseleri ziyaret edecek, yapıların tarihini Antonina'nın uzman rehberlerinden dinleyeceğiz. Tur boyunca özel araçla ulaşım sağlanır.",
+    session: 'tour-legacy',
+  });
+  assert.equal(validateImport(envelope(tour), now)[0].events[0].category, 'Sergi');
+
+  assert.throws(
+    () => validateImport(envelope({...standup, category: 'Konser'}), now),
+    /does not match/,
+  );
+});
 await test('import rejects foreign sources, duplicate IDs, empty pages and stale dates', () => {
   assert.equal(
     sourceOf('https://www.bubilet.com.tr:8443/istanbul/etkinlik/test'),

@@ -8,7 +8,10 @@ import {
   validateProviderListing,
   type ProviderListingV1,
 } from '../../contracts/listing.ts';
-import { categoryForEvent } from '../../contracts/category.ts';
+import {
+  categoryForEvent,
+  categoryFromSource,
+} from '../../contracts/category.ts';
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_IMPORT_ENVELOPE_EVENTS = 2000;
 export const MAX_EVENT_PRICE = Number.MAX_SAFE_INTEGER / 100;
@@ -44,6 +47,24 @@ function providerListingMatchesEvent(
   const price = availablePrices.length ? Math.min(...availablePrices) : null;
   const currency = listing.tiers.find((tier) => tier.currency)?.currency ?? 'TRY';
   const listingAttendance = parseAttendanceTiming(listing.attendanceTiming);
+  const currentCategory = categoryForEvent(
+    listing.category,
+    listing.title,
+    listing.description,
+  );
+  const retainedCategory = categoryFromSource(listing.category);
+  // Retained provider-listing.v1 records predate the two narrowly verified
+  // format repairs. The materializer applies these same repairs before search.
+  // Preserve the immutable raw category here; keep every other transition
+  // strict so an arbitrary category cannot cross the import boundary.
+  const categoryMatches =
+    event.category === currentCategory ||
+    (currentCategory === 'Stand-up' &&
+      retainedCategory === 'Tiyatro' &&
+      event.category === 'Tiyatro') ||
+    (currentCategory === 'Gezi' &&
+      retainedCategory === 'Sergi' &&
+      event.category === 'Sergi');
   return (
     listing.listingId.slice(0, 24) === event.id &&
     listing.provider === source &&
@@ -60,8 +81,7 @@ function providerListingMatchesEvent(
     price === event.price &&
     currency === event.currency &&
     (listing.imageUrl ?? '') === event.imageUrl &&
-    categoryForEvent(listing.category, listing.title, listing.description) ===
-      event.category &&
+    categoryMatches &&
     listing.availability === event.availability &&
     sameStrings(event.sourceSessionIds, listing.providerSessionIds) &&
     event.sourceCategory === listing.category &&

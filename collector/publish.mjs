@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -69,11 +70,10 @@ export function prepareImportPages(pages, now = new Date()) {
   return { pages: prepared, omittedExpiredIds, omittedStaleIds };
 }
 
-export async function publish({ origin, token, report, checkpoint = false, snapshot, allowLoopbackHttp = false, now = () => new Date() }) {
-  const importEndpoint = endpointFor(origin, "/api/admin/import", allowLoopbackHttp);
+export function planImportBatches(report, now = new Date()) {
   if (report.schemaVersion !== 1 || report.summary?.blocked || !report.pages?.length)
     throw new Error("Only a validated, successful collection can be imported.");
-  const prepared = prepareImportPages(report.pages, now());
+  const prepared = prepareImportPages(report.pages, now);
   if (!prepared.pages.length)
     throw new Error("No future event sessions remain importable; checkpoint was not advanced.");
   const sizedPages = prepared.pages.map((page) => ({
@@ -84,7 +84,35 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
     if (item.bytes > MAX_IMPORT_BYTES) throw new Error("A source page exceeds the import limit.");
     if (item.page.events.length > MAX_SOURCE_PAGE_EVENTS) throw new Error("A source page exceeds the event import limit.");
   }
-  let batch = [], bytes = 0, batchEvents = 0, batchUpserts = 0, imported = 0, sentBatches = 0;
+  let batch = [], bytes = 0, batchEvents = 0, batchUpserts = 0;
+  const batches = [];
+  function flush() {
+    if (batch.length) batches.push(batch);
+    batch = [];
+    bytes = 0;
+    batchEvents = 0;
+    batchUpserts = 0;
+  }
+  for (const { page: minimal, bytes: size } of sizedPages) {
+    if (shouldFlushImportBatch(
+      { pages: batch.length, events: batchEvents, bytes, upserts: batchUpserts },
+      { events: minimal.events.length, bytes: size },
+    )) flush();
+    batch.push(minimal);
+    bytes += size;
+    batchEvents += minimal.events.length;
+    batchUpserts += estimatedUpsertStatements(minimal.events.length, size);
+  }
+  flush();
+  return { batches, omittedExpiredIds: prepared.omittedExpiredIds, omittedStaleIds: prepared.omittedStaleIds };
+}
+
+export async function publish({ origin, token, report, checkpoint = false, snapshot, allowLoopbackHttp = false, now = () => new Date(), validateImportEnvelope, exactCheckpoint = false }) {
+  const plan = planImportBatches(report, now());
+  if (validateImportEnvelope)
+    for (const pages of plan.batches) validateImportEnvelope({ schemaVersion: 1, pages }, now());
+  const importEndpoint = endpointFor(origin, "/api/admin/import", allowLoopbackHttp);
+  let imported = 0, sentBatches = 0;
   const omissions = {
     expired: { count: 0, ids: [] },
     stale: { count: 0, ids: [] },
@@ -93,34 +121,19 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
     omission.count += ids.length;
     omission.ids.push(...ids.slice(0, Math.max(0, 100 - omission.ids.length)));
   }
-  recordOmissions(omissions.expired, prepared.omittedExpiredIds);
-  recordOmissions(omissions.stale, prepared.omittedStaleIds);
-  async function send() {
-    if (!batch.length) return;
+  recordOmissions(omissions.expired, plan.omittedExpiredIds);
+  recordOmissions(omissions.stale, plan.omittedStaleIds);
+  async function send(batch) {
     const current = prepareImportPages(batch, now());
     recordOmissions(omissions.expired, current.omittedExpiredIds);
     recordOmissions(omissions.stale, current.omittedStaleIds);
-    batch = [];
-    bytes = 0;
-    batchEvents = 0;
-    batchUpserts = 0;
     if (!current.pages.length) return;
     const { response, result } = await requestJson(importEndpoint, { token, method: "POST", body: { schemaVersion: 1, pages: current.pages } });
     if (!response.ok) throw new Error(`Import returned HTTP ${response.status}; checkpoint was not advanced.`);
     imported += Number(result?.imported ?? 0);
     sentBatches += 1;
   }
-  for (const { page: minimal, bytes: size } of sizedPages) {
-    if (shouldFlushImportBatch(
-      { pages: batch.length, events: batchEvents, bytes, upserts: batchUpserts },
-      { events: minimal.events.length, bytes: size },
-    )) await send();
-    batch.push(minimal);
-    bytes += size;
-    batchEvents += minimal.events.length;
-    batchUpserts += estimatedUpsertStatements(minimal.events.length, size);
-  }
-  await send();
+  for (const batch of plan.batches) await send(batch);
   if (!sentBatches)
     throw new Error("No future event sessions remain importable; checkpoint was not advanced.");
   if (!checkpoint) return { imported, checkpointed: false, omittedExpired: omissions.expired, omittedStale: omissions.stale };
@@ -139,6 +152,8 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   const canonical = validateCollection(readback.result);
   if (canonical.savedAt !== saved.result.savedAt || canonical.events.length !== saved.result.events)
     throw new Error("Checkpoint readback does not match the save receipt.");
+  if (exactCheckpoint && canonical.report.finishedAt !== report.finishedAt)
+    throw new Error("Checkpoint readback does not exactly match the submitted collection report.");
   if (Date.parse(canonical.report.finishedAt) < Date.parse(report.finishedAt))
     throw new Error("Checkpoint readback predates the submitted collection report.");
   const health = await requestJson(endpointFor(origin, "/api/health", allowLoopbackHttp), { timeout: 15_000 });
@@ -146,17 +161,21 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   if (!health.response.ok || health.result?.status !== "ok" || !["local", "staging", "production"].includes(deployment?.environment) || (deployment.environment !== "local" && !/^[0-9a-f]{40}$/.test(deployment.revision ?? "")))
     throw new Error("Post-checkpoint Worker identity is invalid.");
   if (snapshot) await atomicJson(snapshot, canonical.events);
-  return { imported, checkpointed: true, canonicalReadback: true, artifactOnly: false, savedAt: canonical.savedAt, events: canonical.events.length, environment: deployment.environment, revision: deployment.revision ?? null, omittedExpired: omissions.expired, omittedStale: omissions.stale };
+  const eventsSha256 = createHash("sha256").update(JSON.stringify(canonical.events)).digest("hex");
+  return { imported, checkpointed: true, canonicalReadback: true, artifactOnly: false, savedAt: canonical.savedAt, reportFinishedAt: canonical.report.finishedAt, events: canonical.events.length, eventsSha256, environment: deployment.environment, revision: deployment.revision ?? null, omittedExpired: omissions.expired, omittedStale: omissions.stale };
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { report: { type: "string" }, receipt: { type: "string" }, checkpoint: { type: "boolean", default: false }, snapshot: { type: "string", default: "state/events.json" }, "allow-loopback-http": { type: "boolean", default: false } } });
+  const { values } = parseArgs({ options: { report: { type: "string" }, receipt: { type: "string" }, checkpoint: { type: "boolean", default: false }, snapshot: { type: "string", default: "state/events.json" }, "allow-loopback-http": { type: "boolean", default: false }, "validate-imports": { type: "boolean", default: false }, "exact-checkpoint": { type: "boolean", default: false } } });
   const { BIPLAN_URL: origin, SYNC_TOKEN: token } = process.env;
   if (!origin || !token) throw new Error("Set BIPLAN_URL and SYNC_TOKEN in the runner secret store.");
   endpointFor(origin, "/api/admin/import", values["allow-loopback-http"]);
   const reportPath = values.report ? resolve(values.report) : new URL("./output/report.json", import.meta.url);
   const report = JSON.parse(await readFile(reportPath, "utf8"));
-  const result = await publish({ origin, token, report, checkpoint: values.checkpoint, snapshot: values.checkpoint ? resolve(values.snapshot) : undefined, allowLoopbackHttp: values["allow-loopback-http"] });
+  const validateImportEnvelope = values["validate-imports"]
+    ? (await import("../web/lib/catalog.ts")).validateImport
+    : undefined;
+  const result = await publish({ origin, token, report, checkpoint: values.checkpoint, snapshot: values.checkpoint ? resolve(values.snapshot) : undefined, allowLoopbackHttp: values["allow-loopback-http"], validateImportEnvelope, exactCheckpoint: values["exact-checkpoint"] });
   if (values.receipt) await atomicJson(resolve(values.receipt), result);
   console.log(JSON.stringify(result));
 }
