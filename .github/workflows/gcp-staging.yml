@@ -305,17 +305,34 @@ jobs:
           set -euo pipefail
           HTTP_STATUS="$(curl --silent --show-error --max-time 30 --output health.json --write-out '%{http_code}' --header "Authorization: Bearer $ID_TOKEN" "$SERVICE_URL/api/health")"
           test "$HTTP_STATUS" = 200
-          HEALTH_ENVIRONMENT=staging HEALTH_REVISION="$EXPECTED_SHA" node -e "const fs=require('node:fs');const h=JSON.parse(fs.readFileSync('health.json','utf8'));if(h.status!=='ok'||h.deployment?.environment!==process.env.HEALTH_ENVIRONMENT||h.deployment?.revision!==process.env.HEALTH_REVISION)process.exit(1)"
+          READY_HTTP_STATUS="$(curl --silent --show-error --max-time 30 --output ready.json --write-out '%{http_code}' --header "Authorization: Bearer $ID_TOKEN" "$SERVICE_URL/api/ready")"
+          test "$READY_HTTP_STATUS" = 200
+          HEALTH_ENVIRONMENT=staging HEALTH_REVISION="$EXPECTED_SHA" node - health.json ready.json <<'NODE'
+          const fs = require('node:fs');
+          const health = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const ready = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          if (health.status !== 'ok' || health.deployment?.environment !== process.env.HEALTH_ENVIRONMENT || health.deployment?.revision !== process.env.HEALTH_REVISION)
+            throw new Error('Authenticated staging health response is invalid.');
+          if (ready.ready !== true || !Array.isArray(ready.reasons) || ready.reasons.length !== 0)
+            throw new Error('Authenticated staging readiness response is not ready.');
+          if (typeof ready.checkedAt !== 'string' || !Number.isFinite(Date.parse(ready.checkedAt)))
+            throw new Error('Authenticated staging readiness timestamp is invalid.');
+          if (ready.catalog?.status !== 'ready' || !Number.isSafeInteger(ready.catalog.stored) || !Number.isSafeInteger(ready.catalog.eligible) || ready.catalog.eligible < 1)
+            throw new Error('Authenticated staging readiness catalog is invalid.');
+          if (!ready.checkpoint || typeof ready.checkpoint.savedAt !== 'string' || typeof ready.checkpoint.finishedAt !== 'string' || !Number.isSafeInteger(ready.checkpoint.events) || !Number.isSafeInteger(ready.checkpoint.bytes) || !ready.checkpoint.summary || typeof ready.checkpoint.summary !== 'object' || Array.isArray(ready.checkpoint.summary))
+            throw new Error('Authenticated staging readiness checkpoint is invalid.');
+          NODE
       - name: Record deployment provenance
         env:
           IMAGE_REF: ${{ steps.image.outputs.ref }}
           CLOUD_RUN_REVISION: ${{ steps.revision.outputs.name }}
         run: |
           mkdir -p deploy-provenance
+          cp health.json ready.json deploy-provenance/
           node -e "const fs=require('node:fs');fs.writeFileSync('deploy-provenance/gcp-staging.json',JSON.stringify({schemaVersion:1,environment:'staging',revision:process.env.EXPECTED_SHA,image:process.env.IMAGE_REF,cloudRunRevision:process.env.CLOUD_RUN_REVISION,service:process.env.GCP_CLOUD_RUN_SERVICE,region:process.env.GCP_REGION,inputInterpreter:process.env.INPUT_INTERPRETER,runId:process.env.GITHUB_RUN_ID,runAttempt:process.env.GITHUB_RUN_ATTEMPT},null,2)+'\n')"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gcp-staging-deployment-${{ inputs.expected_sha }}
-          path: deploy-provenance/gcp-staging.json
+          path: deploy-provenance
           if-no-files-found: error
           retention-days: 30

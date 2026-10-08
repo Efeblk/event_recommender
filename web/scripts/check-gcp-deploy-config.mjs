@@ -147,7 +147,13 @@ assert.doesNotMatch(workflow, /credentials_json|service_account_key|--allow-unau
 assert.match(deploy, /token_format: id_token/);
 assert.match(deploy, /id_token_audience: \$\{\{ steps\.service\.outputs\.url \}\}/);
 assert.doesNotMatch(deploy, /gcloud auth print-identity-token/);
-assert.match(deploy, /h\.status!=='ok'/);
+assert.match(deploy, /health\.status !== 'ok'/);
+assert.match(deploy, /"\$SERVICE_URL\/api\/ready"/);
+assert.match(deploy, /test "\$READY_HTTP_STATUS" = 200/);
+assert.match(deploy, /ready\.ready !== true/);
+assert.match(deploy, /ready\.catalog\?\.status !== 'ready'/);
+assert.match(deploy, /cp health\.json ready\.json deploy-provenance\//);
+assert.match(deploy, /path: deploy-provenance/);
 
 assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
 assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:$/m);
