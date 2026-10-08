@@ -57,14 +57,22 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
     resolve(import.meta.dirname, "../../.github/workflows/gcp-collector.yml"),
     "utf8",
   );
-  assert.match(workflow, /^\s*workflow_dispatch:\s*$/m);
+  assert.match(
+    workflow,
+    /^\s*workflow_dispatch:\s*\n\s*inputs:\s*\n\s*verify_only:[\s\S]*?type: boolean\s*\n\s*default: false$/m,
+  );
   assert.match(workflow, /^\s*schedule:\s*$/m);
   assert.match(workflow, /cron: '17 \*\/6 \* \* \*'/);
   assert.match(
     workflow,
-    /github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)/,
+    /needs\.dispatch_mode\.outputs\.mode == 'collect' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)/,
   );
-  // The hourly schedule only indexes; it never starts collection.
+  // Verification-only dispatch skips the collection gate and selects the monitor.
+  assert.match(
+    workflow,
+    /if: github\.event\.schedule == '47 \* \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'verify'/,
+  );
+  // Indexing remains hourly. Verification-only dispatch does not select it.
   assert.match(workflow, /cron: '47 \* \* \* \*'/);
   assert.match(workflow, /if: github\.event\.schedule == '47 \* \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
   assert.match(workflow, /GCP_STAGING_COLLECTION_UNTIL/);
@@ -84,6 +92,11 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_restore\.outputs\.id_token \}\}/);
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_publish\.outputs\.id_token \}\}/);
   assert.doesNotMatch(workflow, /INDEX_EMBEDDINGS|index-embeddings/);
+  const replay = workflow.slice(workflow.indexOf("  replay_publication:"), workflow.indexOf("  index_only:"));
+  assert.match(replay, /if: needs\.dispatch_mode\.outputs\.mode == 'replay'/);
+  assert.match(replay, /actions: read/);
+  assert.match(replay, /--validate-imports --exact-checkpoint/);
+  assert.doesNotMatch(replay, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
 });
 
 void test("the scheduled GCP collector deadline fails closed", () => {

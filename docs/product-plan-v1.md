@@ -265,6 +265,40 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-09: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
+  merged as `8b933f4`. Final PR CI
+  [37843353597](https://github.com/Efeblk/event_recommender/actions/runs/37843353597)
+  passed on `6f8bb6a`. Exact merge CI
+  [37844642784](https://github.com/Efeblk/event_recommender/actions/runs/37844642784)
+  passed all six checks, including the Linux image. Private staging deploy
+  [37845446660](https://github.com/Efeblk/event_recommender/actions/runs/37845446660)
+  passed. Revision `biplan-staging-00059-66f` matches the reviewed Git tree,
+  lockfile bytes and image checksums. Authenticated health and readiness passed
+  with 8,675 eligible events. Anonymous health returned 403. This first readiness
+  response describes the existing active checkpoint. Manual collection
+  [37846165394](https://github.com/Efeblk/event_recommender/actions/runs/37846165394)
+  finished source collection at `2026-10-08T22:02:16.173Z`. Publication failed
+  before the checkpoint changed. The import validator rejected 116 retained
+  events on 35 pages after the verified category repairs. [PR 82](https://github.com/Efeblk/event_recommender/pull/82)
+  accepts only the proven `Tiyatro` to `Stand-up` and `Sergi` to `Gezi`
+  retained projections. All other source bindings remain strict. All 1,499
+  preserved import batches pass offline after the fix. The checkpoint
+  projection is 23,805,811 bytes, below the 32 MiB limit. The report SHA-256 is
+  `e9a2f3211b809bd0e152581ae2a8a8f1b27ff2a0a925a000fa2c2386b8186ad3`.
+  This run confirms the Tuz Biber time conflict and the Çilekeş availability
+  conflict. It did not revisit the known venue-conflict pages.
+  PR 82 adds a bounded replay mode. It checks artifact provenance and every
+  import batch before writes. It preserves all original source timestamps,
+  skips collection and indexing, and requires exact checkpoint and readiness
+  agreement with the original report time. Both authenticated readbacks bind
+  to the same saved time, event count and event-array SHA-256. Final local
+  checks pass on Node 22.23.3: 857 web tests, 291 collector tests (one existing
+  skip), typecheck, lint, 50 deployment tests, GCP checks, Node build and smoke.
+  Smoke made zero cloud or AI calls. Exact latest CI and live recovery remain
+  pending.
+  Deployment evidence stays in
+  `web/work/comprehensive-review/staging-deploy/`.
+
 - 2026-10-08: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
   contains the comprehensive v1 fixes on `t3code/comprehensive-project-review`.
   The user delegated review of the two revised golden requests and approved

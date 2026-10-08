@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -83,6 +84,7 @@ test("checkpoint publish reads canonical state back to disk", async (t) => {
   const report = { schemaVersion: 1, finishedAt: canonical.report.finishedAt, summary: { events: 1, sources: { biletix: 1, bubilet: 0 } }, pages: [{ source: "biletix", url: "https://source.test/a", events: [{ id: "submitted" }] }] };
   const result = await publish({ origin: remote.origin, token: "secret", report, checkpoint: true, snapshot, allowLoopbackHttp: true });
   assert.equal(result.checkpointed, true);
+  assert.equal(result.eventsSha256, createHash("sha256").update(JSON.stringify(canonical.events)).digest("hex"));
   assert.deepEqual(JSON.parse(await readFile(snapshot)), canonical.events);
   assert.deepEqual(calls, ["POST /api/admin/import", "POST /api/admin/collection", "GET /api/admin/collection", "GET /api/health"]);
   assert.deepEqual(checkpointBody.report.summary.missingSources, ["bubilet"]);
@@ -447,6 +449,33 @@ test("a partial import failure never advances the checkpoint", async (t) => {
   assert.equal(checkpointCalls, 0);
 });
 
+test("replay validation checks every planned batch before the first HTTP write", async (t) => {
+  let requests = 0, validations = 0;
+  const remote = await fixture((request, response) => {
+    requests += 1;
+    json(response, 500, { error: "unexpected request" });
+  });
+  t.after(remote.close);
+  const now = new Date();
+  const pages = Array.from({ length: 4 }, (_, index) => ({
+    url: `https://source.test/${index}`,
+    events: [{ id: String(index), startsAt: new Date(now.getTime() + 86400000).toISOString(), checkedAt: now.toISOString() }],
+  }));
+  await assert.rejects(publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, finishedAt: now.toISOString(), summary: {}, pages },
+    checkpoint: true,
+    allowLoopbackHttp: true,
+    validateImportEnvelope() {
+      validations += 1;
+      if (validations === 2) throw new Error("invalid later envelope");
+    },
+  }), /invalid later envelope/);
+  assert.equal(validations, 2);
+  assert.equal(requests, 0);
+});
+
 test("mismatched checkpoint readback does not overwrite local state", async (t) => {
   const savedAt = "2026-09-22T10:00:00.000Z";
   const remote = await fixture((request, response) => {
@@ -459,6 +488,25 @@ test("mismatched checkpoint readback does not overwrite local state", async (t) 
   await writeFile(snapshot, '[{"id":"old"}]');
   await assert.rejects(publish({ origin: remote.origin, token: "secret", report: { schemaVersion: 1, finishedAt: savedAt, summary: {}, pages: [{ url: "https://source.test/a", events: [{ id: "new" }] }] }, checkpoint: true, snapshot, allowLoopbackHttp: true }), /does not match/);
   assert.deepEqual(JSON.parse(await readFile(snapshot)), [{ id: "old" }]);
+});
+
+test("exact checkpoint replay rejects a newer canonical report", async (t) => {
+  const submittedAt = "2026-09-22T10:00:00.000Z";
+  const newerAt = "2026-09-22T11:00:00.000Z";
+  const remote = await fixture((request, response) => {
+    if (request.url === "/api/admin/import") return json(response, 200, { imported: 1 });
+    if (request.method === "POST") return json(response, 200, { schemaVersion: 1, savedAt: newerAt, key: "x", events: 1 });
+    return json(response, 200, { schemaVersion: 1, savedAt: newerAt, events: [{ id: "newer" }], report: { finishedAt: newerAt, summary: {} } });
+  });
+  t.after(remote.close);
+  await assert.rejects(publish({
+    origin: remote.origin,
+    token: "secret",
+    report: { schemaVersion: 1, finishedAt: submittedAt, summary: {}, pages: [{ url: "https://source.test/a", events: [{ id: "submitted" }] }] },
+    checkpoint: true,
+    exactCheckpoint: true,
+    allowLoopbackHttp: true,
+  }), /does not exactly match/);
 });
 
 test("monitor requires explicit readiness and reports reasons", async (t) => {

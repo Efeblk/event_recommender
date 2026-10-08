@@ -81,7 +81,9 @@ Optional Voyage indexing needs a separate approved budget and bounded window.
 `web/fixtures/golden-v1.json` defines 40 requests, their expected plans and a
 fixed Istanbul reference time. Each request uses the same stateless entry point
 as the API. `tr25` and `en15` now state all their conditions in one message.
-The revised fixture awaits user review before a new scored run. Earlier scored
+The user delegated review of those two replacements on 2026-10-08. The revised
+fixture passed the frozen parser and source checks with the approved paid budget.
+The new human sample review and staging latency check remain open. Earlier scored
 runs retain their original fixture hash and evidence.
 
 The catalog manifest pins collection run `37181072133`, its source-record file,

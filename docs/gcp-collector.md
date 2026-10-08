@@ -58,6 +58,55 @@ monitor. Manual runs and skipped jobs do not prove that acceptance condition.
 The older 48-hour observation procedure above describes a bounded window.
 Use `open` for the product plan's seven-day check.
 
+To verify the active private publication without starting collection or indexing,
+run the workflow with `verify_only=true`:
+
+```powershell
+gh workflow run gcp-collector.yml -f verify_only=true
+```
+
+The verification-only run uses the collector's private identity and the same
+concurrency group as collection, so it waits for an active collection instead of
+interrupting it. Its `gcp-ready-staging-<run-id>-<attempt>` artifact contains only
+`ready.json`, `status.txt` and `validation.json`. The validator requires HTTP 200,
+`ready: true`, an empty `reasons` array, a catalog observation no more than 14
+hours old, no pending search publication, and matching canonical non-null
+`latestCollectedAt`, `activeCollectedAt` and checkpoint `finishedAt` values. It
+does not require the workflow commit to equal the deployed runtime commit.
+
+This probe proves that the active publication is healthy and converged. An older
+fresh publication can pass every check. To verify one target collection, compare
+the artifact's checkpoint `finishedAt` with that collection run's publication
+receipt and report, and verify the checkpoint hash in the collection evidence.
+The manual probe does not count as an hourly Phase 2 monitor run.
+
+If collection completes but publication fails, preserve the failed run before
+recovery. Do not rerun its 40-minute fetch. Record the exact SHA-256 of
+`collector/output/report.json` from its normalized artifact. Then dispatch the
+same workflow with the failed run ID and that digest:
+
+```powershell
+gh workflow run gcp-collector.yml -f publish_existing_run=37846165394 -f publish_existing_report_sha256=e9a2f3211b809bd0e152581ae2a8a8f1b27ff2a0a925a000fa2c2386b8186ad3
+```
+
+Replay mode is mutually exclusive with verification and normal collection. It
+downloads only `gcp-event-data-staging-<source-run-id>`, requires one failed run
+from this repository, workflow and default branch, and binds the report bytes to
+the supplied digest and the artifact collector revision. It validates every
+prepared import envelope before staging writes. It also requires the deployed
+revision to equal the replay workflow revision and refuses a newer active checkpoint.
+It publishes the original report with unchanged observation times. It does not
+restore a checkpoint, collect provider pages, save coverage or run indexing.
+The replay job is bounded to 45 minutes and never retries publication
+automatically. Its publish status remains in the evidence if a step fails or is
+cancelled before the final readiness check.
+
+The replay passes only when the canonical checkpoint and `/api/ready` report the
+artifact's exact `finishedAt`. Its evidence artifact contains safe source,
+digest, preflight, publication and readiness summaries. A source page that is
+newer than the preserved report still stops checkpoint publication. Never alter
+the report timestamp to bypass that guard.
+
 GitHub schedules can be delayed or skipped. The catalog stays valid for 72 hours,
 so a few missed runs are harmless. Cloud Monitoring emails through channel
 `biplan-staging-uptime-email`, independently of GitHub:
