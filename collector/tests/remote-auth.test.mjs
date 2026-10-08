@@ -57,14 +57,22 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
     resolve(import.meta.dirname, "../../.github/workflows/gcp-collector.yml"),
     "utf8",
   );
-  assert.match(workflow, /^\s*workflow_dispatch:\s*$/m);
+  assert.match(
+    workflow,
+    /^\s*workflow_dispatch:\s*\n\s*inputs:\s*\n\s*verify_only:[\s\S]*?type: boolean\s*\n\s*default: false$/m,
+  );
   assert.match(workflow, /^\s*schedule:\s*$/m);
   assert.match(workflow, /cron: '17 \*\/6 \* \* \*'/);
   assert.match(
     workflow,
-    /github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)/,
+    /\(github\.event_name == 'workflow_dispatch' && inputs\.verify_only != true\) \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)/,
   );
-  // The hourly schedule only indexes; it never starts collection.
+  // Verification-only dispatch skips the collection gate and selects the monitor.
+  assert.match(
+    workflow,
+    /if: github\.event\.schedule == '47 \* \* \* \*' \|\| \(github\.event_name == 'workflow_dispatch' && inputs\.verify_only == true\)/,
+  );
+  // Indexing remains hourly. Verification-only dispatch does not select it.
   assert.match(workflow, /cron: '47 \* \* \* \*'/);
   assert.match(workflow, /if: github\.event\.schedule == '47 \* \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
   assert.match(workflow, /GCP_STAGING_COLLECTION_UNTIL/);
