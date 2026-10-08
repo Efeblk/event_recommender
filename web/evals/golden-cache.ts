@@ -3,6 +3,73 @@ import { join } from 'node:path';
 import { sha256 } from './golden-v1.ts';
 import { acquireGoldenLock, paceGoldenVoyage } from './golden-pacing.ts';
 
+const VOYAGE_USD_PER_MILLION_TOKENS = 0.12;
+const MAX_GOLDEN_DOCUMENT_USD = 0.01;
+const SAFE_ERROR_NAMES = new Set([
+  'AbortError',
+  'AggregateError',
+  'Error',
+  'RangeError',
+  'SyntaxError',
+  'TimeoutError',
+  'TypeError',
+]);
+const SAFE_NETWORK_CODES = new Set([
+  'EAI_AGAIN',
+  'ECONNABORTED',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'EHOSTUNREACH',
+  'ENETDOWN',
+  'ENETRESET',
+  'ENETUNREACH',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'UND_ERR_ABORTED',
+  'UND_ERR_BODY_TIMEOUT',
+  'UND_ERR_CONNECT_TIMEOUT',
+  'UND_ERR_HEADERS_TIMEOUT',
+  'UND_ERR_SOCKET',
+]);
+
+function sanitizedAttemptFailure(error: unknown) {
+  let errorName = 'Error';
+  try {
+    if (error instanceof Error && SAFE_ERROR_NAMES.has(error.name))
+      errorName = error.name;
+  } catch {
+    // An unusual error object must not prevent safe failure evidence.
+  }
+  const pending: unknown[] = [error];
+  const seen = new Set<unknown>();
+  while (pending.length) {
+    const current = pending.shift();
+    if (
+      (!current || (typeof current !== 'object' && typeof current !== 'function')) ||
+      seen.has(current)
+    )
+      continue;
+    seen.add(current);
+    try {
+      const candidate = current as {
+        code?: unknown;
+        cause?: unknown;
+        errors?: unknown;
+      };
+      if (
+        typeof candidate.code === 'string' &&
+        SAFE_NETWORK_CODES.has(candidate.code)
+      )
+        return { errorName, networkCode: candidate.code };
+      pending.push(candidate.cause);
+      if (Array.isArray(candidate.errors)) pending.push(...candidate.errors);
+    } catch {
+      // Read no other properties from an unsafe thrown value.
+    }
+  }
+  return { errorName };
+}
+
 export interface GoldenBudget {
   scope: 'phase-1';
   jevCapUsd: number;
@@ -32,6 +99,8 @@ interface TransportOptions {
   budget?: GoldenBudget;
   network?: typeof fetch;
   paceVoyage?: boolean;
+  /** Opt in to document embeddings and cap paid document inputs for this run. */
+  voyageDocumentLimit?: number;
   /** Explicit recovery of one inspected failed attempt, never an automatic retry. */
   reviewedRetry?: { key: string; reason: string; attemptId: string };
 }
@@ -40,8 +109,16 @@ export class GoldenTransport {
   paidCalls = 0;
   errors: string[] = [];
   private inProgress = false;
+  private documentInputs = 0;
   private options: TransportOptions;
   constructor(options: TransportOptions) {
+    if (
+      options.voyageDocumentLimit !== undefined &&
+      (!Number.isSafeInteger(options.voyageDocumentLimit) ||
+        options.voyageDocumentLimit < 1 ||
+        options.voyageDocumentLimit > 512)
+    )
+      throw new Error('Invalid golden Voyage document input limit.');
     this.options = options;
   }
 
@@ -80,6 +157,37 @@ export class GoldenTransport {
     )
       throw new GoldenCacheError('Unsupported golden provider request.');
     const body = init.body;
+    const voyage = url.includes('voyageai');
+    const voyageInputType =
+      this.options.voyageDocumentLimit === undefined ? 'query' : 'document';
+    let voyageInputs: string[] | undefined;
+    if (voyage) {
+      const payload = JSON.parse(body) as {
+        input?: unknown;
+        input_type?: string;
+        model?: string;
+      };
+      if (
+        payload.input_type !== voyageInputType ||
+        payload.model !== 'voyage-4-large'
+      )
+        throw new GoldenCacheError(
+          `Golden runner only embeds ${voyageInputType} inputs with voyage-4-large.`,
+        );
+      if (
+        !Array.isArray(payload.input) ||
+        payload.input.length < 1 ||
+        payload.input.length > 32 ||
+        payload.input.some(
+          (text) =>
+            typeof text !== 'string' || !text.trim() || text.length > 10_000,
+        )
+      )
+        throw new GoldenCacheError('Invalid golden Voyage input.');
+      voyageInputs = payload.input as string[];
+    }
+    if (Buffer.byteLength(body) > 100_000)
+      throw new GoldenCacheError('Golden provider request exceeds limit.');
     const key = sha256(
       JSON.stringify({
         version: 1,
@@ -134,17 +242,13 @@ export class GoldenTransport {
       !Number.isFinite(Date.parse(budget.approvedAt))
     )
       throw new GoldenCacheError('User-approved Phase 1 budget is required.');
-    const voyage = url.includes('voyageai');
-    const payload = JSON.parse(body) as { input_type?: string; model?: string };
     if (
       voyage &&
-      (payload.input_type !== 'query' || payload.model !== 'voyage-4-large')
+      voyageInputType === 'document' &&
+      this.documentInputs + voyageInputs!.length >
+        this.options.voyageDocumentLimit!
     )
-      throw new GoldenCacheError(
-        'Golden runner only embeds queries with voyage-4-large.',
-      );
-    if (Buffer.byteLength(body) > 100_000)
-      throw new GoldenCacheError('Golden provider request exceeds limit.');
+      throw new GoldenCacheError('Golden Voyage document input limit reached.');
     if (this.inProgress)
       throw new GoldenCacheError('Golden requests must run serially.');
     await mkdir(this.options.directory, { recursive: true });
@@ -154,6 +258,7 @@ export class GoldenTransport {
     // File lock and write-ahead reservations also guard process crashes and reruns.
     const release = await acquireGoldenLock(budgetDirectory);
     this.inProgress = true;
+    let attemptEvidence: { key: string; cacheKey: string } | undefined;
     try {
       const ledgerFile = join(budgetDirectory, 'budget-ledger.jsonl');
       let halted = false;
@@ -203,7 +308,17 @@ export class GoldenTransport {
         throw new GoldenCacheError(
           'An uncached attempt already has a reservation; no automatic retry.',
         );
-      const reservedUsd = voyage ? 0.01 : 0.02;
+      // A UTF-8 byte count is a conservative token envelope for the exact
+      // validated query texts. It keeps each write-ahead reservation bounded
+      // to this request while provider-reported usage settles the ledger.
+      const reservedUsd = voyage
+        ? ((voyageInputs as string[]).reduce(
+            (sum, text) => sum + Buffer.byteLength(text),
+            0,
+          ) *
+            VOYAGE_USD_PER_MILLION_TOKENS) /
+          1_000_000
+        : 0.02;
       let usageRaw = '';
       try {
         usageRaw = await readFile(join(budgetDirectory, 'usage.jsonl'), 'utf8');
@@ -230,6 +345,14 @@ export class GoldenTransport {
       const cap = voyage ? budget.voyageCapUsd : budget.jevCapUsd;
       const provider = voyage ? 'voyage' : 'typesafe';
       if (
+        voyage &&
+        voyageInputType === 'document' &&
+        (cap === null || cap > MAX_GOLDEN_DOCUMENT_USD)
+      )
+        throw new GoldenCacheError(
+          'Golden Voyage document mode requires a budget cap of at most $0.01.',
+        );
+      if (
         cap !== null &&
         entries
           .filter((entry) => entry.provider === provider)
@@ -252,6 +375,9 @@ export class GoldenTransport {
         await ledgerHandle.close();
       }
       this.paidCalls++;
+      if (voyage && voyageInputType === 'document')
+        this.documentInputs += voyageInputs!.length;
+      attemptEvidence = { key: attemptKey, cacheKey: key };
       if (voyage && this.options.paceVoyage)
         await paceGoldenVoyage(budgetDirectory);
       await writeFile(
@@ -312,7 +438,9 @@ export class GoldenTransport {
         : parsed.usage?.input_tokens;
       if (!Number.isSafeInteger(tokens) || tokens! < 0)
         throw new GoldenCacheError('Golden token accounting is missing.');
-      const estimatedUsd = (tokens! * (voyage ? 0.12 : 0.042)) / 1_000_000;
+      const estimatedUsd =
+        (tokens! * (voyage ? VOYAGE_USD_PER_MILLION_TOKENS : 0.042)) /
+        1_000_000;
       const usageHandle = await open(
         join(budgetDirectory, 'usage.jsonl'),
         'a',
@@ -350,6 +478,22 @@ export class GoldenTransport {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       });
+    } catch (error) {
+      if (attemptEvidence)
+        await writeFile(
+          join(
+            this.options.directory,
+            `${attemptEvidence.key}-failure.json`,
+          ),
+          JSON.stringify({
+            schemaVersion: 1,
+            ...attemptEvidence,
+            ...sanitizedAttemptFailure(error),
+            at: new Date().toISOString(),
+          }) + '\n',
+          { flag: 'wx', mode: 0o600 },
+        );
+      throw error;
     } finally {
       this.inProgress = false;
       // Successful cleanup does not erase a paid-attempt reservation.

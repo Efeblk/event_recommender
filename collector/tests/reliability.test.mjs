@@ -380,33 +380,42 @@ test("soak evidence flags selected sources with no retained events or refreshed 
   assert.equal(evidence.observation.includes("does not claim"), true);
 });
 
-test("48-hour soak verification requires overlapping healthy unique workflow evidence", () => {
+test("seven-day soak verification requires overlapping healthy unique workflow evidence", () => {
   const revision = "b".repeat(40);
   const provenance = (id) => ({ githubRunId: String(id), githubRunAttempt: "1", githubEventName: "schedule" });
-  const collections = Array.from({ length: 5 }, (_, index) => ({
+  const collections = Array.from({ length: 29 }, (_, index) => ({
     schemaVersion: 2, kind: "collection-run", environment: "staging", revision,
     provenance: provenance(100 + index),
     publication: { artifactOnly: false, canonicalReadback: true },
-    run: { finishedAt: new Date(Date.UTC(2026, 8, 24, index * 12)).toISOString() },
+    run: { finishedAt: new Date(Date.UTC(2026, 8, 24, index * 6)).toISOString() },
     sourceHealth: { refreshedPages: { biletinial: 1, bubilet: 1, biletix: 1 }, missingSources: [] },
   }));
-  const monitors = Array.from({ length: 49 }, (_, index) => ({
+  const monitors = Array.from({ length: 169 }, (_, index) => ({
     schemaVersion: 1, kind: "readiness-monitor", environment: "staging", revision,
     provenance: provenance(1000 + index), ready: true, reasons: [],
     recordedAt: new Date(Date.UTC(2026, 8, 24, index)).toISOString(),
   }));
   const pass = verifySoakEvidence({ collections, monitors, environment: "staging", revision });
   assert.equal(pass.status, "pass");
-  assert.equal(pass.overlap.spanHours, 48);
+  assert.equal(pass.overlap.spanHours, 168);
+
+  const fortyEightHours = verifySoakEvidence({
+    collections: collections.slice(0, 9),
+    monitors: monitors.slice(0, 49),
+    environment: "staging",
+    revision,
+  });
+  assert.equal(fortyEightHours.status, "fail");
+  assert.equal(fortyEightHours.reasons.includes("healthy_overlap_under_168h"), true);
 
   const broken = structuredClone(monitors);
-  broken[24].ready = false;
-  broken[24].reasons = ["checkpoint_stale"];
-  broken[25].recordedAt = broken[23].recordedAt;
-  broken[25].provenance = broken[24].provenance;
-  const fail = verifySoakEvidence({ collections: collections.slice(0, 4), monitors: broken, environment: "staging", revision });
+  broken[84].ready = false;
+  broken[84].reasons = ["checkpoint_stale"];
+  broken[85].recordedAt = broken[83].recordedAt;
+  broken[85].provenance = broken[84].provenance;
+  const fail = verifySoakEvidence({ collections: collections.slice(0, 28), monitors: broken, environment: "staging", revision });
   assert.equal(fail.status, "fail");
-  assert.equal(fail.reasons.includes("healthy_overlap_under_48h"), true);
+  assert.equal(fail.reasons.includes("healthy_overlap_under_168h"), true);
   assert.equal(fail.reasons.includes("monitor_run_provenance_reused"), true);
   assert.equal(fail.reasons.some((reason) => reason.includes("not_ready:checkpoint_stale")), true);
 

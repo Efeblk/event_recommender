@@ -3,9 +3,9 @@
   "referenceTime": "2026-10-04T06:50:27.793Z",
   "timezone": "Europe/Istanbul",
   "review": {
-    "status": "pending",
-    "reviewer": null,
-    "reviewedAt": null
+    "status": "approved",
+    "reviewer": "user (review delegated to agent on 2026-10-08)",
+    "reviewedAt": "2026-10-08T19:29:00Z"
   },
   "catalog": {
     "githubRunId": "37181072133",

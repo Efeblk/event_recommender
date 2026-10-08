@@ -27,6 +27,34 @@ test('conflicting source sessions stay quarantined through failure, restart and 
   assert.equal(restored.entries[0].quarantinedAt, null);
 });
 
+test('availability conflicts use the same durable source quarantine path', () => {
+  const state = normalizeCoverage(null), url = 'https://a.test/event/sold-out';
+  const checkedAt = '2026-09-28T01:00:00.000Z';
+  addCoverageEntries(state, [{url, source: 'a'}]);
+  recordCoverageAttempt(state, url, {
+    success: false,
+    quarantined: true,
+    failure: 'session_availability_conflict',
+  }, checkedAt);
+  checkpointCoverageEvents(state, url, [], checkedAt);
+  const [page] = unpublishedCoveragePages([], state, () => [], new Date('2026-09-28T02:00:00.000Z'));
+  assert.equal(page.quarantineReason, 'session_availability_conflict');
+});
+
+test('venue conflicts use the same durable source quarantine path', () => {
+  const state = normalizeCoverage(null), url = 'https://a.test/event/wrong-venue';
+  const checkedAt = '2026-09-28T01:00:00.000Z';
+  addCoverageEntries(state, [{url, source: 'a'}]);
+  recordCoverageAttempt(state, url, {
+    success: false,
+    quarantined: true,
+    failure: 'venue_conflict',
+  }, checkedAt);
+  checkpointCoverageEvents(state, url, [], checkedAt);
+  const [page] = unpublishedCoveragePages([], state, () => [], new Date('2026-09-28T02:00:00.000Z'));
+  assert.equal(page.quarantineReason, 'venue_conflict');
+});
+
 test('verified retirement watermark is replayed even when local snapshot is already empty', () => {
   const state = normalizeCoverage(null), url = 'https://a.test/event/1', stamp = '2026-09-28T01:00:00.000Z';
   addCoverageEntries(state, [{ url, source: 'a' }]);

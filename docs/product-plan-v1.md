@@ -246,8 +246,70 @@ checks still pass, and the per-request cost does not increase without approval.
   types ("quiet concerts and theatre").
 - Remove unused conversational helpers and their historical tests. The v1 API
   and golden runner use `recommendRequest`, which reads only the current message.
+- Replace the vulnerable Vinext build dependency chain when an upstream fix is
+  available. Six high npm advisories remain in the current build tools. The
+  suggested automatic fix downgrades Vinext and is not a safe runtime update.
+- Map Node client disconnects to the request AbortSignal in the Vinext adapter.
+  Measure cancellation of Cloud Storage and Firestore work. The application
+  deadline already stops later paid calls.
+- Define whether online-only listings belong in the Istanbul catalog. Keep the
+  decision explicit before changing the current eligibility policy.
+- Choose private durable storage and a retention period for raw source evidence.
+  Keep public workflow uploads off. This needs a storage and cost decision.
+- Review the captured `tr19` audience-fit miss before changing Jev judgments.
+  A child-directed concert is weak support for friends who want to dance.
+  Do not infer a hard adult-age condition from that request.
+- Corroborate the Canbay / Canbay & Wolker and Ada Bar identity pairs in
+  `web/work/comprehensive-review/golden-labels-agent-verified.json`.
+  The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-10-08: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
+  contains the comprehensive v1 fixes on `t3code/comprehensive-project-review`.
+  The user delegated review of the two revised golden requests and approved
+  $0.25 for TypeSafe/Jev plus $0.01 for Voyage. The first live frozen run
+  (`web/work/comprehensive-review/golden-live.json`, SHA-256
+  `f872f7b58fc246a3683d92e2a581093ebd45de0f6a270d9a386e406d2def551a`)
+  stopped paid calls after a provider failure in `tr14`. Source review covered
+  all 144 returned cards and 225 offers. It found nine category violations,
+  false clarification in `tr04`, false empty in `tr13`, one source time
+  conflict and inconsistent top-level source metadata. Later guard rows are
+  not live tests. All three failed diagnostic runs remain preserved. The later
+  runs exposed mixed-category polarity, soft-wish filtering, same-date venue
+  conflicts and door-clock evidence lost across merged offers. The fixes now
+  resolve only proven clause roles. They preserve ambiguous model judgments,
+  raw source records and selected-offer metadata. They withhold conflicting
+  sessions and keep uncertain performance times out of start-time filters.
+  The final frozen run is `web/work/comprehensive-review/golden-live-verified.json`
+  (SHA-256 `e650cec04083811e79b295497f43d4bfa9957fe30dbd55df59493ff2f6dfc147`).
+  Full vectors cover all 8,752 eligible events. All 40 parser checks pass.
+  Source review covered all 379 cards, 578 offers and four valid empty results.
+  There are zero audited hard violations, grounding mismatches or confirmed
+  duplicates. Relevant top-three coverage is 36/40 (90%). The run made 11 new
+  paid calls and reused 101 exact cached calls. Changed questions received
+  fresh judgments in the preserved preceding runs. Final agent labels bind
+  to result SHA-256 `f98790807db8ecd574e37d5ce02438e2545cbc34b1d0232902d8835524f29c13`.
+  The child-directed dancing card and unproven identity pairs remain explicit
+  review limits. Estimated total validation charges are $0.11168577, including
+  the failed-call reserve: TypeSafe/Jev $0.10961853 and Voyage $0.00206724.
+  No paid call was retried automatically. The new human sample review and
+  staging latency remain pending. Phase 1 is not newly declared complete.
+  Codex Security scan `b3de800a-3974-4a49-abd4-fef9d6286542` reported one low
+  request-body resource issue at `dd59bbb`. Byte and time limits are applied
+  in the working patch. Security coverage is partial; archived and frozen
+  paths were not assessed as active v1 code.
+  Local checks passed on Node 22.23.3: 856 web tests, 285 collector tests
+  (one existing skip), typecheck, lint, 47 deployment tests, GCP configuration,
+  Node build and smoke. Browser checks passed: 39 tests and one viewport skip.
+  The T3 browser checked the compiled error state and independent messages
+  with mocked local APIs. No live staging latency is claimed. Evidence stays
+  under `web/work/comprehensive-review/`. Exact implementation CI passed on
+  `78131fb` (run [37841719970](https://github.com/Efeblk/event_recommender/actions/runs/37841719970)),
+  including the Linux image. Deployment now requires authenticated health and
+  readiness evidence and preserves both in its existing provenance artifact.
+  Final revision CI, merge, private staging and new collection publication
+  remain pending.
 
 - 2026-10-03: Plan written. `master` = `bad42d0`. Staging deployed
   (37148883212). Scheduled collection is on. Collection 37149121969 succeeded.

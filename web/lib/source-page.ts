@@ -1,4 +1,5 @@
 import type { SourcePage } from './storage-contract.ts';
+import { isSourceQuarantineReason } from '../../contracts/source-evidence.ts';
 
 /** Empty pages require an explicit timestamp so older imports cannot revive them. */
 export function sourcePageTimes(page: SourcePage) {
@@ -9,7 +10,7 @@ export function sourcePageTimes(page: SourcePage) {
     const quarantined = page.quarantinedAt !== undefined || page.quarantineReason !== undefined;
     if (!retired && !quarantined) throw new Error('Invalid source retirement');
     if (retired && quarantined) throw new Error('Invalid empty source page');
-    if (quarantined && page.quarantineReason !== 'session_time_conflict')
+    if (quarantined && !isSourceQuarantineReason(page.quarantineReason))
       throw new Error('Invalid source quarantine');
     const value = retired ? page.retiredAt : page.quarantinedAt;
     const stamp = Date.parse(value ?? '');

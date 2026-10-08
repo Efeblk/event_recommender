@@ -52,10 +52,6 @@ type EventsResponse = {
 type SearchAttempt = {
   query: string;
 };
-type RetryAction =
-  | { kind: 'events' }
-  | { kind: 'search'; attempt: SearchAttempt }
-  | null;
 type SiteConfig = { donationUrl: string | null; requestLog?: boolean };
 const formatShortDate = (date: string) =>
   new Intl.DateTimeFormat('tr-TR', {
@@ -198,9 +194,14 @@ function EventCard({ event }: { event: EventRecord }) {
   );
 }
 
-function LoadingCards() {
+function LoadingCards({ announce = false }: { announce?: boolean }) {
   return (
-    <div className="events-grid" aria-label="Etkinlikler yükleniyor">
+    <div
+      className="events-grid"
+      role={announce ? 'status' : undefined}
+      aria-label={announce ? 'Etkinlikler yükleniyor' : undefined}
+      aria-hidden={announce ? undefined : true}
+    >
       {[0, 1, 2, 3, 4, 5].map((item) => (
         <div className="event-card event-skeleton" key={item}>
           <div className="event-poster" />
@@ -230,18 +231,22 @@ export default function Home() {
   const [catalog, setCatalog] = useState<CatalogInfo | null>(null);
   const [aiEnabled, setAiEnabled] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [eventsLoadFailed, setEventsLoadFailed] = useState(false);
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
     hydratedSnapshot,
     serverHydrationSnapshot,
   );
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
+  const [eventsError, setEventsError] = useState('');
+  const [searchError, setSearchError] = useState('');
   const [rateLimited, setRateLimited] = useState(false);
-  const [retryAction, setRetryAction] = useState<RetryAction>(null);
+  const [searchRetryAction, setSearchRetryAction] =
+    useState<SearchAttempt | null>(null);
   const [donationUrl, setDonationUrl] = useState<string | null>(null);
   const [requestLog, setRequestLog] = useState(false);
   const controller = useRef<AbortController | null>(null);
+  const eventsController = useRef<AbortController | null>(null);
   const searchGeneration = useRef(0);
   const searchBusy = useRef(false);
   const textarea = useRef<HTMLTextAreaElement | null>(null);
@@ -274,41 +279,42 @@ export default function Home() {
     setAiEnabled(data.aiEnabled);
     setCatalog(data.catalog ?? null);
   }
-  async function loadEvents() {
+  async function loadEvents(abort = new AbortController()) {
+    if (abort.signal.aborted) return;
+    eventsController.current?.abort();
+    eventsController.current = abort;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      abort.abort(new DOMException('Etkinlik yükleme zaman aşımı.', 'TimeoutError'));
+    }, 15_000);
     setInitialLoading(true);
+    setEventsLoadFailed(false);
     try {
-      const response = await fetch('/api/events');
+      const response = await fetch('/api/events', { signal: abort.signal });
       if (!response.ok) throw new Error();
       applyEvents((await response.json()) as EventsResponse);
-      setError('');
-      setRetryAction(null);
+      setEventsError('');
     } catch {
-      setError(
+      if (abort.signal.aborted && !timedOut) return;
+      setEventsLoadFailed(true);
+      setEventsError(
         'Etkinlikler şu an yüklenemedi. Bağlantını kontrol edip tekrar dene.',
       );
-      setRetryAction({ kind: 'events' });
     } finally {
-      setInitialLoading(false);
+      window.clearTimeout(timeout);
+      if (eventsController.current === abort) {
+        eventsController.current = null;
+        if (!abort.signal.aborted || timedOut) setInitialLoading(false);
+      }
     }
   }
   useEffect(() => {
     const abort = new AbortController();
-    void fetch('/api/events', { signal: abort.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error();
-        applyEvents((await response.json()) as EventsResponse);
-      })
-      .catch((reason: unknown) => {
-        if (!(reason instanceof Error && reason.name === 'AbortError'))
-          setError(
-            'Etkinlikler şu an yüklenemedi. Birazdan tekrar deneyebilirsin.',
-          );
-        if (!(reason instanceof Error && reason.name === 'AbortError'))
-          setRetryAction({ kind: 'events' });
-      })
-      .finally(() => setInitialLoading(false));
+    void Promise.resolve().then(() => loadEvents(abort));
     return () => {
       abort.abort();
+      eventsController.current?.abort();
       controller.current?.abort();
     };
   }, []);
@@ -354,9 +360,9 @@ export default function Home() {
     setBusy(true);
     setResult(null);
     setLastRequest(query);
-    setError('');
+    setSearchError('');
     setRateLimited(false);
-    setRetryAction(null);
+    setSearchRetryAction(null);
     try {
       const response = await fetch('/api/recommend', {
         method: 'POST',
@@ -364,24 +370,32 @@ export default function Home() {
         signal: abort.signal,
         body: JSON.stringify({ message: query }),
       });
-      const data = (await response.json()) as SearchResult & { error?: string };
+      const parsed = (await response.json().catch(() => null)) as
+        | (SearchResult & { error?: unknown })
+        | null;
+      const responseError =
+        typeof parsed?.error === 'string' ? parsed.error : null;
       if (generation !== searchGeneration.current) return;
       if (response.status === 429) {
-        setError(
-          data.error ||
+        setSearchError(
+          responseError ||
             'Arama sınırına ulaşıldı. Lütfen daha sonra yeniden dene.',
         );
         setRateLimited(true);
-        setRetryAction(null);
+        setSearchRetryAction(null);
         return;
       }
-      if (!response.ok) throw new Error(data.error || 'Arama tamamlanamadı.');
+      if (!response.ok)
+        throw new Error(responseError || 'Arama tamamlanamadı.');
+      if (!parsed || !Array.isArray(parsed.recommendations))
+        throw new Error('Arama tamamlanamadı.');
+      const data = parsed;
       if (data.pendingInput?.reason === 'interpreter_unavailable') {
-        setError(
+        setSearchError(
           data.notice ||
             'Araman şu anda yorumlanamadı. Birazdan tekrar deneyebilirsin.',
         );
-        setRetryAction({ kind: 'search', attempt });
+        setSearchRetryAction(attempt);
         return;
       }
       setResult(data);
@@ -402,19 +416,19 @@ export default function Home() {
     } catch (reason) {
       if (generation !== searchGeneration.current) return;
       if (timedOut) {
-        setError(
+        setSearchError(
           'Arama 40 saniye içinde tamamlanamadı. Tekrar deneyebilirsin.',
         );
-        setRetryAction({ kind: 'search', attempt });
+        setSearchRetryAction(attempt);
         return;
       }
       if (reason instanceof Error && reason.name === 'AbortError') return;
-      setError(
+      setSearchError(
         reason instanceof Error
           ? reason.message
           : 'Bir sorun oluştu. Tekrar dene.',
       );
-      setRetryAction({ kind: 'search', attempt });
+      setSearchRetryAction(attempt);
     } finally {
       window.clearTimeout(timeout);
       if (
@@ -436,9 +450,11 @@ export default function Home() {
     setResult(null);
     setBusy(false);
     searchBusy.current = false;
-    setError('');
+    setEventsError('');
+    setSearchError('');
     setRateLimited(false);
-    setRetryAction(null);
+    setSearchRetryAction(null);
+    if (eventsLoadFailed) void loadEvents();
     const reduceMotion = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
     ).matches;
@@ -447,6 +463,7 @@ export default function Home() {
   const displayedEvents = result
     ? result.recommendations.map((item) => item.event)
     : events;
+  const visibleError = searchError || (!lastRequest ? eventsError : '');
 
   return (
     <div className="site-shell">
@@ -605,16 +622,16 @@ export default function Home() {
           </div>
         </section>
 
-        {error && (
+        {visibleError && (
           <div className="error-banner" role="alert">
-            <span>{error}</span>
+            <span>{visibleError}</span>
             {!rateLimited && (
               <Button
                 variant="ghost"
                 disabled={busy || initialLoading}
                 onClick={() => {
-                  if (retryAction?.kind === 'search')
-                    void search('', retryAction.attempt);
+                  if (searchError && searchRetryAction)
+                    void search('', searchRetryAction);
                   else void loadEvents();
                 }}
               >
@@ -644,7 +661,7 @@ export default function Home() {
           className="events-section"
           id="etkinlikler"
           ref={resultsRef}
-          aria-busy={busy}
+          aria-busy={busy || initialLoading}
         >
           <div className="section-heading">
             <div>
@@ -702,8 +719,8 @@ export default function Home() {
           {busy ? (
             <LoadingCards />
           ) : initialLoading ? (
-            <LoadingCards />
-          ) : displayedEvents.length ? (
+            <LoadingCards announce />
+          ) : eventsLoadFailed && !result ? null : displayedEvents.length ? (
             <div className="events-grid">
               {result
                 ? result.recommendations.map((item) => (
@@ -819,15 +836,16 @@ export default function Home() {
             <summary>Veriler nasıl kullanılıyor?</summary>
             <div>
               <p>
-                Arama mesajın, önceki isteklerinden tutulan tercihler ve
-                gerektiğinde son kullanıcı mesajların, öneri üretmek için AI
+                Yalnızca o an gönderdiğin arama mesajı, öneri üretmek için AI
                 araması etkin olduğunda Voyage AI ve TypeSafe AI’a gönderilir.
                 Etkinlik bilgileri de eşleştirme ve sıralama için bu servislere
                 gönderilebilir.
               </p>
               <p>
-                Bi’ Plan sohbet geçmişini sunucuda saklamaz; arayüzdeki kopya bu
-                sekmenin belleğinde tutulur ve sayfayı yenilediğinde silinir.
+                Her arama bağımsızdır. Önceki isteklerin yeni aramaya eklenmez.
+                Bi’ Plan sohbet geçmişi oluşturmaz. Onaylı test dönemlerinde,
+                sayfadaki bildirim açıkken, bağımsız aramalar değerlendirme için
+                kaydedilebilir.
                 İstek sınırlandırması için ham IP adresi yerine türetilmiş bir
                 anahtar ve süre sonu bilgisi saklanır. Süresi geçen sayaçlar
                 istek sınırı hesabında kullanılmaz.

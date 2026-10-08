@@ -31,6 +31,12 @@ void test("Cloud Run IAM identity does not replace application authorization", a
 
 void test("the Cloud Run identity header remains optional", async (t) => {
   let received;
+  const previousSitesToken = process.env.SITES_ACCESS_TOKEN;
+  process.env.SITES_ACCESS_TOKEN = "unrelated-sites-token";
+  t.after(() => {
+    if (previousSitesToken === undefined) delete process.env.SITES_ACCESS_TOKEN;
+    else process.env.SITES_ACCESS_TOKEN = previousSitesToken;
+  });
   const server = createServer((request, response) => {
     received = request.headers;
     response.writeHead(200, { "content-type": "application/json" });
@@ -43,6 +49,7 @@ void test("the Cloud Run identity header remains optional", async (t) => {
   await requestJson(endpoint, { token: "sync-secret", serverlessToken: "" });
   assert.equal(received.authorization, "Bearer sync-secret");
   assert.equal(received["x-serverless-authorization"], undefined);
+  assert.equal(received["oai-sites-authorization"], undefined);
 });
 
 void test("the GCP collector schedule is opt-in and uses a dedicated identity", async () => {
@@ -65,7 +72,10 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
   assert.match(workflow, /environment: gcp-staging-collector/);
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /--max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20/);
-  assert.match(workflow, /actions\/cache\/restore@v4/);
+  assert.match(
+    workflow,
+    /actions\/cache\/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4\.3\.0/,
+  );
   assert.match(workflow, /collector\/state\/coverage\.json/);
   assert.match(workflow, /GCP_COLLECTOR_SERVICE_ACCOUNT/);
   assert.match(workflow, /GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER/);

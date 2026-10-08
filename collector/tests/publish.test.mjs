@@ -9,6 +9,10 @@ test('publication preserves quarantine watermarks and rejects conflicting empty 
   const now = new Date('2026-09-28T02:00:00.000Z');
   assert.deepEqual(prepareImportPages([page], now).pages, [page]);
   assert.deepEqual(prepareImportPages(prepareImportPages([page], now).pages, now).pages, [page]);
+  const availability = { ...page, quarantineReason: 'session_availability_conflict' };
+  assert.deepEqual(prepareImportPages([availability], now).pages, [availability]);
+  const venue = { ...page, quarantineReason: 'venue_conflict' };
+  assert.deepEqual(prepareImportPages([venue], now).pages, [venue]);
   assert.throws(() => prepareImportPages([{ ...page, retiredAt: page.quarantinedAt }], now), /Invalid empty source state/);
   assert.throws(() => prepareImportPages([{ ...page, quarantineReason: 'http_503' }], now), /Invalid empty source state/);
   assert.throws(() => prepareImportPages([{ ...page, quarantinedAt: undefined }], now), /Invalid empty source state/);

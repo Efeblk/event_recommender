@@ -12,6 +12,33 @@ const collectorWorkflow = (await readFile(
   'utf8',
 )).replaceAll('\r\n', '\n');
 
+const ciWorkflow = (await readFile(
+  resolve(import.meta.dirname, '../../.github/workflows/web.yml'),
+  'utf8',
+)).replaceAll('\r\n', '\n');
+
+const actionPins = new Map([
+  ['actions/checkout', ['11d5960a326750d5838078e36cf38b85af677262', 'v4.4.0']],
+  ['actions/setup-node', ['49933ea5288caeca8642d1e84afbd3f7d6820020', 'v4.4.0']],
+  ['actions/cache/restore', ['0057852bfaa89a56745cba8c7296529d2fc39830', 'v4.3.0']],
+  ['actions/cache/save', ['0057852bfaa89a56745cba8c7296529d2fc39830', 'v4.3.0']],
+  ['actions/upload-artifact', ['ea165f8d65b6e75b540449e92b4886f43607fa02', 'v4.6.2']],
+  ['actions/download-artifact', ['d3f86a106a0bac45b974a628896c90dbdf5c8093', 'v4.3.0']],
+  ['google-github-actions/auth', ['7c6bc770dae815cd3e89ee6cdf493a5fab2cc093', 'v3.0.0']],
+  ['google-github-actions/setup-gcloud', ['aa5489c8933f4cc7a4f7d45035b3b1440c9c10db', 'v3.0.1']],
+  ['hashicorp/setup-terraform', ['b9cd54a3c349d3f38e8881555d616ced269862dd', 'v3.1.2']],
+]);
+
+for (const contents of [workflow, collectorWorkflow, ciWorkflow]) {
+  const lines = contents.split('\n').filter((line) => /^\s*(?:-\s*)?uses:/.test(line));
+  assert.ok(lines.length > 0);
+  for (const line of lines) {
+    const match = line.match(/^\s*(?:-\s*)?uses:\s+([^@\s]+)@([0-9a-f]{40})\s+#\s+(v\d+(?:\.\d+){0,2})\s*$/);
+    assert.ok(match, `Action must use a full commit SHA and version comment: ${line.trim()}`);
+    assert.deepEqual([match[2], match[3]], actionPins.get(match[1]), `Unexpected action pin: ${match[1]}`);
+  }
+}
+
 assert.match(workflow, /^\s{2}workflow_dispatch:/m);
 assert.match(workflow, /input_interpreter:[\s\S]*?default: span-v2[\s\S]*?- rules\n\s*- jev-v1\n\s*- span-v2/);
 assert.doesNotMatch(workflow, /^\s{2}(push|pull_request|schedule):/m);
@@ -60,7 +87,7 @@ assert.match(deploy, /environment: gcp-staging/);
 assert.match(deploy, /id-token: write/);
 assert.match(
   deploy,
-  /uses: actions\/checkout@v4\n\s+with:\n\s+ref: \$\{\{ inputs\.expected_sha \}\}\n\s+persist-credentials: false/,
+  /uses: actions\/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4\.4\.0\n\s+with:\n\s+ref: \$\{\{ inputs\.expected_sha \}\}\n\s+persist-credentials: false/,
 );
 assert.match(deploy, /sha256sum --check manifest\.sha256/);
 assert.match(deploy, /gunzip --stdout image\.tar\.gz \| docker load/);
@@ -68,7 +95,7 @@ assert.match(deploy, /Refuse snapshot deployment over PostgreSQL runtime/);
 assert.match(deploy, /node web\/scripts\/guard-gcp-snapshot-deploy\.mjs/);
 assert.match(deploy, /status\?\.traffic/);
 assert.match(deploy, /gcloud run revisions describe/);
-assert.ok(deploy.indexOf('actions/checkout@v4') < deploy.indexOf('guard-gcp-snapshot-deploy.mjs'));
+assert.ok(deploy.indexOf('actions/checkout@11d5960a326750d5838078e36cf38b85af677262') < deploy.indexOf('guard-gcp-snapshot-deploy.mjs'));
 assert.ok(deploy.indexOf('guard-gcp-snapshot-deploy.mjs') < deploy.indexOf('docker push "$REMOTE_TAG"'));
 assert.doesNotMatch(deploy, /docker build/);
 assert.match(deploy, /@sha256:\[0-9a-f\]\{64\}/);
@@ -120,7 +147,13 @@ assert.doesNotMatch(workflow, /credentials_json|service_account_key|--allow-unau
 assert.match(deploy, /token_format: id_token/);
 assert.match(deploy, /id_token_audience: \$\{\{ steps\.service\.outputs\.url \}\}/);
 assert.doesNotMatch(deploy, /gcloud auth print-identity-token/);
-assert.match(deploy, /h\.status!=='ok'/);
+assert.match(deploy, /health\.status !== 'ok'/);
+assert.match(deploy, /"\$SERVICE_URL\/api\/ready"/);
+assert.match(deploy, /test "\$READY_HTTP_STATUS" = 200/);
+assert.match(deploy, /ready\.ready !== true/);
+assert.match(deploy, /ready\.catalog\?\.status !== 'ready'/);
+assert.match(deploy, /cp health\.json ready\.json deploy-provenance\//);
+assert.match(deploy, /path: deploy-provenance/);
 
 assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
 assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:$/m);
@@ -152,9 +185,15 @@ assert.doesNotMatch(collectorWorkflow, /^\s{4}environment: gcp-staging$/m);
 assert.match(collectorJob, /id-token: write/);
 assert.match(collectorWorkflow, /ref: \$\{\{ github\.sha \}\}/);
 assert.match(collectorWorkflow, /--max-details 2000 --max-http 6000 --max-minutes 40 --discovery-pages 20/);
-assert.match(collectorWorkflow, /uses: actions\/cache\/restore@v4/);
-assert.match(collectorWorkflow, /uses: actions\/cache\/save@v4/);
+assert.match(collectorWorkflow, /uses: actions\/cache\/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4\.3\.0/);
+assert.match(collectorWorkflow, /uses: actions\/cache\/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4\.3\.0/);
 assert.match(collectorWorkflow, /path: collector\/state\/coverage\.json/);
+assert.equal(
+  collectorWorkflow.match(
+    /key: gcp-staging-collector-coverage-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/g,
+  )?.length,
+  2,
+);
 assert.match(collectorWorkflow, /restore-keys: gcp-staging-collector-coverage-/);
 assert.match(collectorWorkflow, /cancel-in-progress: false/);
 assert.doesNotMatch(collectorWorkflow, /INDEX_EMBEDDINGS|embeddings:index|TYPESAFE|VOYAGE/);

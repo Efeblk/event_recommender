@@ -19,6 +19,18 @@ import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
 import { visitorRateLimitEnabled } from '@/lib/rate-limit';
 import { publicEventRecord } from '@/lib/catalog';
 import { requestLogEnabled, requestLogEntry } from '@/lib/request-log';
+import {
+  readBoundedRequestText,
+  RequestBodyTooLargeError,
+} from '@/lib/request-body';
+import {
+  DeadlineExceededError,
+  fetchWithSignal,
+  withDeadline,
+} from '@/lib/deadline';
+const MAX_REQUEST_BYTES = 24_000;
+const REQUEST_BODY_TIMEOUT_MS = 5_000;
+const REQUEST_BUDGET_MS = 35_000;
 function limited(result: RateLimitResult) {
   const daily = result.scope === 'daily';
   const wait = daily
@@ -43,6 +55,28 @@ function limited(result: RateLimitResult) {
 }
 export async function POST(request: Request) {
   const started = performance.now();
+  try {
+    // Vinext's Node adapter does not currently surface incoming disconnects on
+    // this signal. The request-wide timer still bounds every provider fetch.
+    return await withDeadline(
+      REQUEST_BUDGET_MS,
+      'Recommendation request timed out.',
+      (signal) => postWithinBudget(request, signal, started),
+      request.signal,
+    );
+  } catch {
+    return Response.json(
+      { error: 'Arama tamamlanamadı. Lütfen yeniden dene.' },
+      { status: 503 },
+    );
+  }
+}
+
+async function postWithinBudget(
+  request: Request,
+  requestSignal: AbortSignal,
+  started: number,
+) {
   const timings: string[] = [];
   async function measured<T>(
     name: string,
@@ -50,20 +84,33 @@ export async function POST(request: Request) {
   ): Promise<T> {
     const before = performance.now();
     try {
-      return await operation();
+      requestSignal.throwIfAborted();
+      const value = await operation();
+      requestSignal.throwIfAborted();
+      return value;
     } finally {
       timings.push(`${name};dur=${(performance.now() - before).toFixed(1)}`);
     }
   }
   let input;
   try {
-    if (Number(request.headers.get('content-length') || 0) > 24000)
-      return Response.json({ error: 'Mesaj çok uzun.' }, { status: 413 });
-    const raw = await request.text();
-    if (raw.length > 24000)
-      return Response.json({ error: 'Mesaj çok uzun.' }, { status: 413 });
+    const raw = await withDeadline(
+      REQUEST_BODY_TIMEOUT_MS,
+      'Recommendation request body timed out.',
+      (bodySignal) =>
+        readBoundedRequestText(request, MAX_REQUEST_BYTES, bodySignal),
+      requestSignal,
+    );
     input = validateRequest(JSON.parse(raw));
-  } catch {
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError)
+      return Response.json({ error: 'Mesaj çok uzun.' }, { status: 413 });
+    if (requestSignal.aborted) throw error;
+    if (error instanceof DeadlineExceededError)
+      return Response.json(
+        { error: 'Mesaj zamanında alınamadı. Lütfen yeniden dene.' },
+        { status: 408 },
+      );
     return Response.json(
       {
         error:
@@ -73,9 +120,11 @@ export async function POST(request: Request) {
     );
   }
   try {
+    requestSignal.throwIfAborted();
     const config = jevConfigFrom(runtime());
     const inputInterpreter = inputInterpreterFrom(runtime(), Boolean(config));
     const embeddingConfig = voyageConfigFrom(runtime());
+    const providerFetch = fetchWithSignal(requestSignal);
     const paid = Boolean(config || embeddingConfig);
     if (visitorRateLimitEnabled(runtime())) {
       const requestLimit = await requestRateLimit(request, paid);
@@ -149,14 +198,20 @@ export async function POST(request: Request) {
       vectors: (events, config) =>
         measured('vectors', () => voyageVectorsFor(events, config)),
       interpret: (input, options) =>
-        measured('interpret', () => interpretInput(input, options)),
+        measured('interpret', () =>
+          interpretInput(input, { ...options, fetcher: providerFetch }),
+        ),
       embed: (config, texts, kind) =>
-        measured('query_embedding', () => embedWithVoyage(config, texts, kind)),
+        measured('query_embedding', () =>
+          embedWithVoyage(config, texts, kind, providerFetch),
+        ),
       rank: (config, input, events) =>
-        measured('rank', () => rankWithJev(config, input, events)),
+        measured('rank', () =>
+          rankWithJev(config, input, events, providerFetch),
+        ),
       spanInterpret: async (input, options) =>
         (parsed = await measured('interpret', () =>
-          interpretSpanInput(input, options),
+          interpretSpanInput(input, { ...options, fetcher: providerFetch }),
         )),
       inputInterpreter,
     });
@@ -175,6 +230,7 @@ export async function POST(request: Request) {
           }),
         ),
       ).catch(() => undefined);
+    requestSignal.throwIfAborted();
     return Response.json(
       {
         ...result,

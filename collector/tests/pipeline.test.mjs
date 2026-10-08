@@ -113,6 +113,141 @@ await test("Biletix embedded state groups ticket types and converts kurus to TRY
   assert.equal(events[0].availability, "available");
   assert.equal(events[0].startsAt, "2026-09-18T18:00:00.000Z");
 });
+await test("Biletix quarantines an explicit door clock with optional label punctuation", async () => {
+  const state = structuredClone(biletix);
+  const detail = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find((data) => data && !Array.isArray(data) && data.eventCode === "5JBD4");
+  const performances = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find(Array.isArray);
+  for (const performance of performances)
+    performance.performanceDate = Date.parse("2026-11-28T18:00:00.000Z");
+  detail.eventDescription =
+    "Kapı Açılış saati 21:00, etkinlik başlangıç: 22:00";
+  const extractState = () =>
+    extract(
+      load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
+      "biletix",
+      "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      null,
+      now,
+    );
+  await assert.rejects(extractState(), /session_time_conflict/);
+
+  detail.eventDescription = "Kapı açılış saati 20:30. Etkinlik saati 21:00.";
+  assert.equal((await extractState())[0].startsAt, "2026-11-28T18:00:00.000Z");
+  detail.eventDescription = "Etkinlik başlangıç: 22:00.";
+  assert.equal((await extractState())[0].startsAt, "2026-11-28T18:00:00.000Z");
+});
+await test("Biletinial quarantines the retained Tuz Biber door time as a start", async () => {
+  const exactRecord = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: "Tuz Biber 6'lı",
+    description:
+      "Tuz Biber 6'lı Stand Up Gösterisi TuzBiber’in en iyi komedyenlerinin 15’er dakika sahne aldığı TuzBiber 6’lı şovu; JJ Pub Kanyon’da! Kapı Açılış Saati: 20:00 Etkinlik Başlangıç Saati: 20:30",
+    startDate: "2026-10-05T20:00:00+03:00",
+    location: {
+      name: "JJ Pub Kanyon",
+      address: { addressLocality: "İstanbul", streetAddress: "Kanyon AVM" },
+    },
+    offers: {
+      price: 285,
+      priceCurrency: "TRY",
+      availability: "https://schema.org/InStock",
+    },
+  };
+  await assert.rejects(
+    () =>
+      extract(
+        load(`<script type="application/ld+json">${JSON.stringify(exactRecord)}</script>`),
+        "biletinial",
+        "https://biletinial.com/tr-tr/tiyatro/tuz-biber-6li-jj",
+        "Tiyatro",
+        now,
+      ),
+    /session_time_conflict/,
+  );
+});
+await test("Biletinial quarantines the retained Çilekeş availability contradiction", async () => {
+  const exactRecord = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: "Çilekeş",
+    description:
+      "Çilekeş Konseri ÇİLEKEŞ’TEN İZMİR VE ANKARA’YA İKİ YENİ KONSER Türkiye alternatif rock sahnesinin en özgün ve öncü gruplarından Çilekeş’in, ‘Y.O.K’ albümünün 21. yılına özel olarak yıllar sonra yeniden sahnelere döneceğini duyurmasının ardından 10 Ekim'de KüçükÇiftlik Park’ta gerçekleşecek İstanbul konserinin biletleri kısa sürede tükendi. Yoğun ilgi üzerine grup şimdi de İzmir ve Ankara konserlerini açıklıyor.",
+    startDate: "2026-10-10T22:00:00+03:00",
+    location: {
+      name: "KüçükÇiftlik Park",
+      address: { addressLocality: "İstanbul", streetAddress: "Harbiye" },
+    },
+    offers: {
+      price: 2950,
+      priceCurrency: "TRY",
+      availability: "https://schema.org/InStock",
+    },
+  };
+  const extractRecord = () =>
+    extract(
+      load(`<script type="application/ld+json">${JSON.stringify(exactRecord)}</script>`),
+      "biletinial",
+      "https://biletinial.com/tr-tr/muzik/cilekes",
+      "Konser",
+      now,
+    );
+  await assert.rejects(extractRecord, /session_availability_conflict/);
+  exactRecord.startDate = "2026-11-10T22:00:00+03:00";
+  assert.equal((await extractRecord()).length, 1);
+});
+await test("Biletix quarantines a same-title dated programme at a conflicting venue", async () => {
+  const state = structuredClone(biletix);
+  const detail = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find((data) => data && !Array.isArray(data) && data.eventCode === "5JBD4");
+  const performances = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find(Array.isArray);
+  detail.eventName = "JamZZ Sessions";
+  detail.eventDescription =
+    "Genç caz müzisyenlerini dinleyeceğimiz JAmZZ Sessions konseri, 4 Ekim Pazar günü Akatlar Kültür Merkezi’nde.";
+  for (const performance of performances) {
+    performance.eventName = detail.eventName;
+    performance.performanceDate = Date.parse("2026-10-04T12:00:00.000Z");
+    performance.venueName = "Saint Benoît Fransız Lisesi Silüet Salonu";
+  }
+  const extractState = () =>
+    extract(
+      load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
+      "biletix",
+      "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      null,
+      now,
+    );
+  await assert.rejects(extractState, /venue_conflict/);
+
+  for (const performance of performances)
+    performance.venueName = "Beşiktaş Belediyesi Akatlar Kültür Merkezi";
+  assert.equal((await extractState()).length, 1);
+
+  detail.eventName = "Sibel Köse “Vistula’dan Boğaz’a Uzanan Caz Köprüsü”";
+  detail.eventDescription =
+    "90’ların başından bu yana Polonya ile güçlü bağlar kuran Sibel Köse, caz müzisyenlerini bir araya getiriyor. Polonya Cumhuriyeti İstanbul Başkonsolosluğu katkılarıyla, 4 Ekim Pazar akşamı Akatlar Kültür Merkezi’nde gerçekleşecek bu buluşma; dinleyicileri davet ediyor.";
+  for (const performance of performances) {
+    performance.eventName = detail.eventName;
+    performance.venueName = "Saint Benoît Fransız Lisesi Silüet Salonu";
+  }
+  await assert.rejects(extractState, /venue_conflict/);
+
+  detail.eventName = "Bremen Mızıkacıları";
+  detail.eventDescription =
+    "Bremen Mızıkacıları, Akatlar Kültür Merkezi Sahnesi'nde sizlerle...";
+  for (const performance of performances) {
+    performance.eventName = detail.eventName;
+    performance.venueName = "Başka Salon";
+  }
+  assert.equal((await extractState()).length, 1);
+});
 await test("Biletix preserves high safe minor-unit prices and rejects unsafe values", async () => {
   const extractPrice = async (minorPrice) => {
     const state = structuredClone(biletix);

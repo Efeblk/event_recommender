@@ -33,7 +33,7 @@ jobs:
     env:
       EXPECTED_SHA: ${{ inputs.expected_sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.expected_sha }}
           persist-credentials: false
@@ -50,7 +50,7 @@ jobs:
           curl --fail-with-body --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_SHA/check-runs?per_page=100" > exact-sha-checks.json
           node scripts/deploy-gates.mjs checks exact-sha-checks.json
           node -e "const fs=require('node:fs');const runs=JSON.parse(fs.readFileSync('exact-sha-checks.json')).check_runs??[];for(const name of ['gcp','terraform']){const latest=runs.filter(x=>x.name===name&&x.app?.slug==='github-actions').sort((a,b)=>(Date.parse(b.started_at)||0)-(Date.parse(a.started_at)||0)||(BigInt(b.id??0)>BigInt(a.id??0)?1:BigInt(b.id??0)<BigInt(a.id??0)?-1:0))[0];if(latest?.status!=='completed'||latest?.conclusion!=='success')throw new Error('Missing latest successful exact-SHA check: '+name)}"
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: web/.nvmrc
           cache: npm
@@ -100,7 +100,7 @@ jobs:
           SOURCE_TREE="$SOURCE_TREE" WEB_LOCK="$WEB_LOCK" COLLECTOR_LOCK="$COLLECTOR_LOCK" IMAGE_ID="$IMAGE_ID" NPM_VERSION="$NPM_VERSION" node -e "const fs=require('node:fs');const p={schemaVersion:1,revision:process.env.EXPECTED_SHA,sourceTree:process.env.SOURCE_TREE,imageId:process.env.IMAGE_ID,platform:'linux/amd64',node:process.version,npm:process.env.NPM_VERSION,lockfiles:{web:process.env.WEB_LOCK,collector:process.env.COLLECTOR_LOCK},workflowRunId:process.env.GITHUB_RUN_ID,workflowRunAttempt:process.env.GITHUB_RUN_ATTEMPT};fs.writeFileSync('gcp-candidate/provenance.json',JSON.stringify(p,null,2)+'\n')"
           (cd gcp-candidate && sha256sum image.tar.gz > image.sha256 && sha256sum image.sha256 provenance.json > manifest.sha256)
       - name: Upload immutable candidate for review
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gcp-staging-image-${{ inputs.expected_sha }}
           path: web/gcp-candidate
@@ -108,7 +108,7 @@ jobs:
           include-hidden-files: true
           retention-days: 30
       - name: Download candidate for round-trip verification
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: gcp-staging-image-${{ inputs.expected_sha }}
           path: web/gcp-roundtrip
@@ -148,7 +148,7 @@ jobs:
       GCP_VOYAGE_API_KEY_SECRET_VERSION: ${{ vars.GCP_VOYAGE_API_KEY_SECRET_VERSION }}
     steps:
       - name: Checkout reviewed revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.expected_sha }}
           persist-credentials: false
@@ -169,7 +169,7 @@ jobs:
           for name in GCP_SYNC_TOKEN_SECRET GCP_TYPESAFE_API_KEY_SECRET GCP_VOYAGE_API_KEY_SECRET; do [[ "${!name}" =~ ^[A-Za-z][A-Za-z0-9_-]{0,254}$ ]] || exit 1; done
           for name in GCP_SYNC_TOKEN_SECRET_VERSION GCP_TYPESAFE_API_KEY_SECRET_VERSION GCP_VOYAGE_API_KEY_SECRET_VERSION; do [[ "${!name}" =~ ^[1-9][0-9]*$ ]] || exit 1; done
       - name: Download reviewed candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: gcp-staging-image-${{ inputs.expected_sha }}
           path: candidate
@@ -183,12 +183,12 @@ jobs:
           gunzip --stdout image.tar.gz | docker load
       - id: auth
         name: Authenticate deploy identity
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
           token_format: access_token
-      - uses: google-github-actions/setup-gcloud@v3
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
       - name: Refuse snapshot deployment over PostgreSQL runtime
         run: |
           set -euo pipefail
@@ -290,7 +290,7 @@ jobs:
           echo "url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
       - id: health_auth
         name: Mint service-account identity token
-        uses: google-github-actions/auth@v3
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
           workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
@@ -305,17 +305,34 @@ jobs:
           set -euo pipefail
           HTTP_STATUS="$(curl --silent --show-error --max-time 30 --output health.json --write-out '%{http_code}' --header "Authorization: Bearer $ID_TOKEN" "$SERVICE_URL/api/health")"
           test "$HTTP_STATUS" = 200
-          HEALTH_ENVIRONMENT=staging HEALTH_REVISION="$EXPECTED_SHA" node -e "const fs=require('node:fs');const h=JSON.parse(fs.readFileSync('health.json','utf8'));if(h.status!=='ok'||h.deployment?.environment!==process.env.HEALTH_ENVIRONMENT||h.deployment?.revision!==process.env.HEALTH_REVISION)process.exit(1)"
+          READY_HTTP_STATUS="$(curl --silent --show-error --max-time 30 --output ready.json --write-out '%{http_code}' --header "Authorization: Bearer $ID_TOKEN" "$SERVICE_URL/api/ready")"
+          test "$READY_HTTP_STATUS" = 200
+          HEALTH_ENVIRONMENT=staging HEALTH_REVISION="$EXPECTED_SHA" node - health.json ready.json <<'NODE'
+          const fs = require('node:fs');
+          const health = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+          const ready = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+          if (health.status !== 'ok' || health.deployment?.environment !== process.env.HEALTH_ENVIRONMENT || health.deployment?.revision !== process.env.HEALTH_REVISION)
+            throw new Error('Authenticated staging health response is invalid.');
+          if (ready.ready !== true || !Array.isArray(ready.reasons) || ready.reasons.length !== 0)
+            throw new Error('Authenticated staging readiness response is not ready.');
+          if (typeof ready.checkedAt !== 'string' || !Number.isFinite(Date.parse(ready.checkedAt)))
+            throw new Error('Authenticated staging readiness timestamp is invalid.');
+          if (ready.catalog?.status !== 'ready' || !Number.isSafeInteger(ready.catalog.stored) || !Number.isSafeInteger(ready.catalog.eligible) || ready.catalog.eligible < 1)
+            throw new Error('Authenticated staging readiness catalog is invalid.');
+          if (!ready.checkpoint || typeof ready.checkpoint.savedAt !== 'string' || typeof ready.checkpoint.finishedAt !== 'string' || !Number.isSafeInteger(ready.checkpoint.events) || !Number.isSafeInteger(ready.checkpoint.bytes) || !ready.checkpoint.summary || typeof ready.checkpoint.summary !== 'object' || Array.isArray(ready.checkpoint.summary))
+            throw new Error('Authenticated staging readiness checkpoint is invalid.');
+          NODE
       - name: Record deployment provenance
         env:
           IMAGE_REF: ${{ steps.image.outputs.ref }}
           CLOUD_RUN_REVISION: ${{ steps.revision.outputs.name }}
         run: |
           mkdir -p deploy-provenance
+          cp health.json ready.json deploy-provenance/
           node -e "const fs=require('node:fs');fs.writeFileSync('deploy-provenance/gcp-staging.json',JSON.stringify({schemaVersion:1,environment:'staging',revision:process.env.EXPECTED_SHA,image:process.env.IMAGE_REF,cloudRunRevision:process.env.CLOUD_RUN_REVISION,service:process.env.GCP_CLOUD_RUN_SERVICE,region:process.env.GCP_REGION,inputInterpreter:process.env.INPUT_INTERPRETER,runId:process.env.GITHUB_RUN_ID,runAttempt:process.env.GITHUB_RUN_ATTEMPT},null,2)+'\n')"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gcp-staging-deployment-${{ inputs.expected_sha }}
-          path: deploy-provenance/gcp-staging.json
+          path: deploy-provenance
           if-no-files-found: error
           retention-days: 30

@@ -434,6 +434,38 @@ await test('a newer complete provider listing supersedes the same session at an 
   }
 });
 
+await test('a newer URL alias without provider session IDs uses its validated start-time identity', async () => {
+  const f = fixture();
+  const lease = await syncLease(f.store);
+  const withoutSessions = (item: EventRecord) => {
+    const copy = structuredClone(item);
+    const listing = copy.providerListing!;
+    listing.providerSessionIds = [];
+    listing.listingId = expectedProviderListingId(listing);
+    copy.id = listing.listingId.slice(0, 24);
+    return copy;
+  };
+  const older = withoutSessions(
+    listedEvent('old-no-session', new Date(instant).toISOString(), {
+      title: 'Old title',
+      price: 400,
+    }),
+  );
+  const newer = withoutSessions(
+    listedEvent('new-no-session', new Date(instant + 1000).toISOString(), {
+      title: 'New title',
+      price: 650,
+    }),
+  );
+
+  await f.store.importPages([page(older), page(newer)], lease);
+  assert.equal((await f.store.publishCheckpoint(report(1000), lease)).events, 1);
+  const [result] = await f.store.candidates(emptyFilters);
+  assert.equal(result.title, newer.title);
+  assert.equal(result.url, newer.url);
+  assert.equal(result.checkedAt, newer.checkedAt);
+});
+
 await test('a newer unavailable listing suppresses an older available observation', async () => {
   for (const availability of ['sold_out', 'cancelled'] as const) {
     const f = fixture();
@@ -660,6 +692,49 @@ await test('another instance sees publication changes and caches only immutable 
   const state = await reader.currentPublished();
   assert.equal(state.catalog.stored, 2);
   assert.equal(state.checkpoint?.key, next.key);
+});
+
+await test('concurrent cold catalog reads share one immutable search projection load', async () => {
+  const f = fixture();
+  const lease = await syncLease(f.store);
+  await f.store.importPages([page(event())], lease);
+  await f.store.publishCheckpoint(report(), lease);
+  const head = f.control.documents.get('biplan/default/state/catalog')!;
+  const searchKey = (head.search as { key: string }).key;
+  let searchReads = 0;
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const blobs: BlobStore = {
+    get: async (key) => {
+      if (key === searchKey) {
+        searchReads++;
+        await blocked;
+      }
+      return f.blobs.get(key);
+    },
+    exists: f.blobs.exists.bind(f.blobs),
+    putImmutable: f.blobs.putImmutable.bind(f.blobs),
+  };
+  const reader = createGcpStore({
+    control: f.control,
+    blobs,
+    now: () => instant,
+  });
+
+  const reads = Promise.all([
+    reader.candidates(emptyFilters),
+    reader.catalogStatus(),
+    reader.candidates(emptyFilters),
+  ]);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(searchReads, 1);
+  release();
+  const [first, status, second] = await reads;
+  assert.deepEqual(second, first);
+  assert.equal(status.eligible, 1);
+  assert.equal(searchReads, 1);
 });
 
 await test('search projection is published atomically and corruption fails closed', async () => {

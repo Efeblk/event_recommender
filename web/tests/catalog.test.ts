@@ -220,9 +220,13 @@ await test('import retains an atomic 314-session page within bounded page and en
   });
   assert.throws(() => validateImport({ schemaVersion: 1, pages }, now), /Invalid event/);
 });
-await test('import accepts only fresh, exclusive session-time quarantines', () => {
+await test('import accepts only fresh, exclusive source-evidence quarantines', () => {
   const quarantine = { url: event.url, events: [], quarantinedAt: now.toISOString(), quarantineReason: 'session_time_conflict' };
   assert.deepEqual(validateImport({ schemaVersion: 1, pages: [quarantine] }, now), [quarantine]);
+  const availability = { ...quarantine, quarantineReason: 'session_availability_conflict' };
+  assert.deepEqual(validateImport({ schemaVersion: 1, pages: [availability] }, now), [availability]);
+  const venue = { ...quarantine, quarantineReason: 'venue_conflict' };
+  assert.deepEqual(validateImport({ schemaVersion: 1, pages: [venue] }, now), [venue]);
   for (const change of [
     { quarantineReason: 'other' },
     { quarantinedAt: undefined },

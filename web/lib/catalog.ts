@@ -2,6 +2,7 @@ import type { EventRecord } from './types.ts';
 import { CATEGORIES } from './types.ts';
 import { parseAttendanceTiming } from './event-timing.ts';
 import type { SourcePage } from './storage-contract.ts';
+import { isSourceQuarantineReason } from '../../contracts/source-evidence.ts';
 import {
   PROVIDER_LISTING_VERSION,
   validateProviderListing,
@@ -147,11 +148,11 @@ export function validateImport(
       if (page.retiredAt !== undefined && quarantined) throw new Error('Invalid empty source page');
       if (quarantined) {
         const stamp = typeof page.quarantinedAt === 'string' ? Date.parse(page.quarantinedAt) : NaN;
-        if (page.quarantineReason !== 'session_time_conflict' || !Number.isFinite(stamp) ||
+        if (!isSourceQuarantineReason(page.quarantineReason) || !Number.isFinite(stamp) ||
             new Date(stamp).toISOString() !== page.quarantinedAt || stamp > now.getTime() + 300000 ||
             stamp < now.getTime() - 72 * 3600000)
           throw new Error('Invalid source quarantine');
-        return { url, events: [], quarantinedAt: page.quarantinedAt as string, quarantineReason: 'session_time_conflict' };
+        return { url, events: [], quarantinedAt: page.quarantinedAt as string, quarantineReason: page.quarantineReason };
       }
       const retired = typeof page.retiredAt === 'string' ? Date.parse(page.retiredAt) : NaN;
       if (!Number.isFinite(retired) || new Date(retired).toISOString() !== page.retiredAt ||

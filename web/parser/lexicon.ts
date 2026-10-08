@@ -19,7 +19,7 @@ export function fold(text: string): string {
 }
 
 export const CATEGORY_TERMS: Record<Category, string[]> = {
-  concert: ['konser', 'concert', 'gig', 'canli muzik', 'live music', 'dinleti', 'resital', 'recital'],
+  concert: ['konser', 'concert', 'concerts', 'gig', 'canli muzik', 'live music', 'dinleti', 'resital', 'recital'],
   theatre: ['tiyatro', 'theatre', 'theater', 'theatrical', 'oyun', 'play', 'plays', 'piyes'],
   standup: ['stand-up', 'standup', 'stand up', 'stand-upci', 'standap', 'stendap', 'stand ap', 'komedyen', 'comedian'],
   workshop: ['atolye', 'workshop', 'workshops', 'uygulamali'],

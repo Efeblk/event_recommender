@@ -77,7 +77,6 @@ function duplicateListingIdentity(event: EventRecord) {
   const listing = validateProviderListing(event.providerListing);
   if (
     !listing.providerEventId ||
-    !listing.providerSessionIds.length ||
     listing.listingId.slice(0, 24) !== event.id ||
     listing.provider !== event.source ||
     listing.url !== event.url ||
@@ -172,6 +171,7 @@ export function createGcpStore(options: {
       }
     | undefined;
   const searchCache = new Map<string, SearchCatalog>();
+  const searchLoads = new Map<string, Promise<SearchCatalog>>();
   let vectorCache:
     | {
         key: string;
@@ -253,15 +253,25 @@ export function createGcpStore(options: {
     const cacheKey = `${pointer.key}:${pointer.hash}:${pointer.bytes}`;
     const cached = searchCache.get(cacheKey);
     if (cached) return cached;
-    const projection = await blobs.get(pointer.key);
-    if (!projection || projection.bytes !== pointer.bytes || bytes(projection.body) !== projection.bytes || await digest(projection.body) !== pointer.hash)
-      throw new Error('Published search catalog unavailable or damaged');
-    const search = JSON.parse(projection.body) as SearchCatalog;
-    if (search.schemaVersion !== 1 || !Number.isFinite(Date.parse(search.materializedAt)) || !Array.isArray(search.groups) || !Array.isArray(search.sourceStatus))
-      throw new Error('Invalid published search catalog');
-    if (searchCache.size >= 2) searchCache.clear();
-    searchCache.set(cacheKey, search);
-    return search;
+    const existing = searchLoads.get(cacheKey);
+    if (existing) return existing;
+    const load = (async () => {
+      const projection = await blobs.get(pointer.key);
+      if (!projection || projection.bytes !== pointer.bytes || bytes(projection.body) !== projection.bytes || await digest(projection.body) !== pointer.hash)
+        throw new Error('Published search catalog unavailable or damaged');
+      const search = JSON.parse(projection.body) as SearchCatalog;
+      if (search.schemaVersion !== 1 || !Number.isFinite(Date.parse(search.materializedAt)) || !Array.isArray(search.groups) || !Array.isArray(search.sourceStatus))
+        throw new Error('Invalid published search catalog');
+      if (searchCache.size >= 2) searchCache.clear();
+      searchCache.set(cacheKey, search);
+      return search;
+    })();
+    searchLoads.set(cacheKey, load);
+    try {
+      return await load;
+    } finally {
+      if (searchLoads.get(cacheKey) === load) searchLoads.delete(cacheKey);
+    }
   }
   async function activeSearch(head: CatalogHead | null) {
     if (!head) return null;

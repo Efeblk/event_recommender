@@ -30,7 +30,12 @@ import {
 } from '../lib/types.ts';
 import type { Plan } from '../parser/contract.ts';
 import { extract } from '../parser/extract.ts';
-import { main, documentEstimate, loadVectors } from '../scripts/golden-run.ts';
+import {
+  beginGoldenRow,
+  main,
+  documentEstimate,
+  loadVectors,
+} from '../scripts/golden-run.ts';
 
 const now = new Date('2026-10-04T06:50:27.793Z');
 const config = { apiKey: 'offline-test-key', model: 'jev-1.13.0' };
@@ -250,7 +255,7 @@ void test('40 reviewable requests retain language counts and independent hard pl
     ),
   );
   assert.equal(fixture.cases.length, 40);
-  assert.ok(fixture.cases.every(c => !('previousCaseId' in c)));
+  assert.ok(fixture.cases.every((c) => !('previousCaseId' in c)));
   const broken = structuredClone(fixture);
   Object.assign(broken.cases[0], { previousCaseId: 'en15' });
   assert.throws(() => validateGoldenFixture(broken), /independent/);
@@ -514,6 +519,216 @@ void test('failed calls retain reservations and never retry, including a new pro
   }
 });
 
+void test('transport failures retain only sanitized diagnostics and stop live row pacing', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-network-'));
+  try {
+    const providerSecret = 'provider response must not be retained';
+    const headerSecret = 'Bearer secret-key';
+    const error = new TypeError('fetch failed');
+    Object.assign(error, {
+      cause: {
+        code: 'ECONNRESET',
+        message: providerSecret,
+        headers: { authorization: headerSecret },
+        body: providerSecret,
+      },
+    });
+    const transport = new GoldenTransport({
+      directory,
+      catalogSha256: hash,
+      referenceTime: now.toISOString(),
+      live: true,
+      budget,
+      network: async () => {
+        throw error;
+      },
+    });
+    await assert.rejects(
+      transport.fetcher('concert')(
+        'https://api.typesafe.ai/v1/systemone',
+        { method: 'POST', body: '{}' },
+      ),
+      /no automatic retry/,
+    );
+    assert.equal(transport.paidCalls, 1);
+    const ledger = JSON.parse(
+      (await readFile(join(directory, 'budget-ledger.jsonl'), 'utf8')).trim(),
+    );
+    const failureRaw = await readFile(
+      join(directory, `${ledger.key}-failure.json`),
+      'utf8',
+    );
+    const failure = JSON.parse(failureRaw);
+    assert.deepEqual(Object.keys(failure).sort(), [
+      'at',
+      'cacheKey',
+      'errorName',
+      'key',
+      'networkCode',
+      'schemaVersion',
+    ]);
+    assert.equal(failure.errorName, 'TypeError');
+    assert.equal(failure.networkCode, 'ECONNRESET');
+    assert.equal(failure.key, ledger.key);
+    assert.equal(failure.cacheKey, ledger.cacheKey);
+    assert.ok(!failureRaw.includes(providerSecret));
+    assert.ok(!failureRaw.includes(headerSecret));
+    assert.ok(!failureRaw.includes('fetch failed'));
+
+    let waits = 0;
+    assert.equal(
+      await beginGoldenRow({
+        live: true,
+        lastStart: 1,
+        intervalMs: 13_000,
+        transportErrors: transport.errors.length,
+        now: () => 2,
+        wait: async () => {
+          waits++;
+        },
+      }),
+      null,
+    );
+    assert.equal(waits, 0);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+void test('Voyage reservations use the exact query UTF-8 byte envelope and settle before the next call', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-voyage-cap-'));
+  try {
+    const inputs = ['a'.repeat(100), 'é'.repeat(100)];
+    let calls = 0;
+    const transport = new GoldenTransport({
+      directory,
+      catalogSha256: hash,
+      referenceTime: now.toISOString(),
+      live: true,
+      budget: { ...budget, voyageCapUsd: 0.00003 },
+      network: async () => {
+        calls++;
+        return Response.json({
+          usage: { total_tokens: calls === 1 ? 25 : 40 },
+        });
+      },
+    });
+    for (const [index, input] of inputs.entries())
+      await transport.fetcher(`query-${index}`)(
+        'https://api.voyageai.com/v1/embeddings',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            input: [input],
+            model: 'voyage-4-large',
+            input_type: 'query',
+          }),
+        },
+      );
+
+    assert.equal(calls, 2);
+    const entries = (
+      await readFile(join(directory, 'budget-ledger.jsonl'), 'utf8')
+    )
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    assert.deepEqual(
+      entries.map((entry) => entry.reservedUsd),
+      inputs.map((input) => (Buffer.byteLength(input) * 0.12) / 1_000_000),
+    );
+    const usages = (await readFile(join(directory, 'usage.jsonl'), 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    assert.deepEqual(
+      usages.map((usage) => usage.estimatedUsd),
+      [25, 40].map((tokens) => (tokens * 0.12) / 1_000_000),
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+void test('golden document mode is explicit, bounded, cached and held to the $0.01 cap', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-documents-'));
+  try {
+    const documentRequest = (input: string[]) => ({
+      method: 'POST',
+      body: JSON.stringify({
+        input,
+        model: 'voyage-4-large',
+        input_type: 'document',
+      }),
+    });
+    let calls = 0;
+    const options = {
+      directory,
+      catalogSha256: hash,
+      referenceTime: now.toISOString(),
+      live: true,
+      budget: { ...budget, voyageCapUsd: 0.01 },
+      voyageDocumentLimit: 2,
+      network: async () => {
+        calls++;
+        return Response.json({ usage: { total_tokens: 12 } });
+      },
+    };
+    const first = new GoldenTransport(options);
+    await first.fetcher('documents-1')(
+      'https://api.voyageai.com/v1/embeddings',
+      documentRequest(['document one', 'document two']),
+    );
+    assert.equal(first.paidCalls, 1);
+    assert.equal(calls, 1);
+    await assert.rejects(
+      first.fetcher('documents-2')(
+        'https://api.voyageai.com/v1/embeddings',
+        documentRequest(['document three']),
+      ),
+      /document input limit reached/,
+    );
+    assert.equal(calls, 1);
+
+    const cached = new GoldenTransport({
+      ...options,
+      live: false,
+      network: undefined,
+    });
+    await cached.fetcher('documents-1')(
+      'https://api.voyageai.com/v1/embeddings',
+      documentRequest(['document one', 'document two']),
+    );
+    assert.equal(cached.hits, 1);
+    assert.equal(cached.paidCalls, 0);
+
+    await assert.rejects(
+      new GoldenTransport({
+        ...options,
+        voyageDocumentLimit: undefined,
+      }).fetcher('documents-default')(
+        'https://api.voyageai.com/v1/embeddings',
+        documentRequest(['document']),
+      ),
+      /only embeds query inputs/,
+    );
+    await assert.rejects(
+      new GoldenTransport({
+        ...options,
+        directory: join(directory, 'uncapped'),
+        budget: { ...budget, voyageCapUsd: null },
+      }).fetcher('documents-uncapped')(
+        'https://api.voyageai.com/v1/embeddings',
+        documentRequest(['document']),
+      ),
+      /budget cap of at most \$0\.01/,
+    );
+    assert.equal(calls, 1);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 void test('budget refusal and offline misses happen before any network attempt', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'biplan-golden-cap-'));
   try {
@@ -584,6 +799,36 @@ void test('card audit uses manually specified hard constraints and catches injec
   assert.notEqual(
     canonicalCondition(plan.hard),
     canonicalCondition({ type: 'not', child: plan.hard }),
+  );
+});
+
+void test('card audit checks hard constraints after the labelled top ten', () => {
+  const allowed = Array.from({ length: 10 }, (_, index) => ({
+    event: { ...event, id: `allowed-${index}` },
+  }));
+  const lateViolation = {
+    ...event,
+    id: 'late-theatre',
+    title: 'Late theatre violation',
+    category: 'Tiyatro' as const,
+  };
+  const result: SearchResult = {
+    recommendations: [...allowed, { event: lateViolation }],
+    status: 'results',
+    filters: emptyFilters,
+    mode: 'jev',
+    notice: null,
+    totalCandidates: 11,
+  };
+  const audit = auditGoldenResult(
+    item,
+    result,
+    [...allowed.map(({ event }) => event), lateViolation],
+    now,
+  );
+  assert.deepEqual(
+    audit.hardViolations.map(({ recordId }) => recordId),
+    ['late-theatre'],
   );
 });
 

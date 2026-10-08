@@ -15,6 +15,15 @@ import { createHash } from 'node:crypto';
 import { voyageDocumentText } from './voyage.ts';
 import { prepareLexicalDocumentTokens } from './hybrid.ts';
 import { prepareEventLocation } from './istanbul-location.ts';
+import { categoryForEvent } from './event-format.ts';
+import {
+  hasExplicitDoorTimeStartConflict,
+  sourceTimeIsDoorsOnly,
+} from '../../contracts/timing.ts';
+import {
+  hasExplicitSameEventSoldOutConflict,
+  hasExplicitSameEventVenueConflict,
+} from '../../contracts/source-evidence.ts';
 
 export interface SearchCatalog {
   schemaVersion: 1;
@@ -157,7 +166,10 @@ function attendanceOf(events: EventRecord[]): AttendanceTiming | undefined {
   const explicit = events
     .map(({ attendanceTiming }) => attendanceTiming)
     .filter((value): value is AttendanceTiming => value !== undefined);
-  if (!explicit.length) return undefined;
+  if (!explicit.length)
+    return events.some((event) => sourceTimeIsDoorsOnly(event.description))
+      ? { kind: 'unknown', evidence: 'insufficient_source_evidence' }
+      : undefined;
   const first = JSON.stringify(explicit[0]);
   return explicit.every((value) => JSON.stringify(value) === first)
     ? explicit[0]
@@ -183,6 +195,12 @@ function projectResolvedSession(
   );
   const offers = uniqueOffers(ordered);
   const offer = selectedOffer(offers, representative);
+  const selectedSource = ordered.find(
+    (event) =>
+      event.id === offer.id &&
+      event.source === offer.source &&
+      event.url === offer.url,
+  );
   const attendanceTiming = attendanceOf(ordered);
   const title = normalizeTitleKey(
     representative.title,
@@ -204,8 +222,14 @@ function projectResolvedSession(
     mergedIds.add(event.id);
     for (const id of event.mergedIds ?? []) mergedIds.add(id);
   }
-  const { providerListing: _providerListing, ...publicRepresentative } =
-    representative;
+  const {
+    providerListing: _providerListing,
+    sourceSessionIds: _representativeSessionIds,
+    sourceCategory: _representativeSourceCategory,
+    sourceVersion: _representativeSourceVersion,
+    extraction: _representativeExtraction,
+    ...publicRepresentative
+  } = representative;
   return {
     ...publicRepresentative,
     address:
@@ -221,6 +245,18 @@ function projectResolvedSession(
     currency: offer.currency,
     availability: offer.availability,
     checkedAt: offer.checkedAt,
+    ...(offer.sourceSessionIds
+      ? { sourceSessionIds: [...offer.sourceSessionIds] }
+      : {}),
+    ...(selectedSource?.sourceCategory !== undefined
+      ? { sourceCategory: selectedSource.sourceCategory }
+      : {}),
+    ...(selectedSource?.sourceVersion !== undefined
+      ? { sourceVersion: selectedSource.sourceVersion }
+      : {}),
+    ...(selectedSource?.extraction !== undefined
+      ? { extraction: selectedSource.extraction }
+      : {}),
     offers,
     mergedIds: [...mergedIds].sort(),
     ...(attendanceTiming ? { attendanceTiming } : {}),
@@ -266,6 +302,27 @@ function identityFamilies(events: EventRecord[]): EventRecord[][] {
   return [...groups.values()];
 }
 
+function ambiguousSourceEvidenceIds(events: EventRecord[]): Set<string> {
+  const explicitConflicts = new Set(
+    events
+      .filter((event) =>
+        hasExplicitDoorTimeStartConflict({
+          description: event.description,
+          startsAt: event.startsAt,
+        }) ||
+        hasExplicitSameEventSoldOutConflict(event) ||
+        hasExplicitSameEventVenueConflict(event),
+      )
+      .map((event) => event.id),
+  );
+  if (!explicitConflicts.size) return explicitConflicts;
+  const ambiguous = new Set(explicitConflicts);
+  for (const session of resolveEventRecordIdentity(events).sessions)
+    if (session.listingIds.some((id) => explicitConflicts.has(id)))
+      for (const id of session.listingIds) ambiguous.add(id);
+  return ambiguous;
+}
+
 /** Publication-time work only. Prepare every change in source eligibility so
  * requests never need to reconstruct identities or retain an expired offer. */
 export function buildSearchCatalog(
@@ -273,8 +330,24 @@ export function buildSearchCatalog(
   at: Date,
 ): SearchCatalog {
   const eligible: EventRecord[] = [];
+  const ambiguousEvidence = ambiguousSourceEvidenceIds(events);
   let projectionBytes = 0;
-  for (const event of events) {
+  for (const sourceEvent of events) {
+    // Retained checkpoints can predate collector quarantine. When one source
+    // proves a session time or availability conflict, sibling offers cannot
+    // resolve that contradiction. Preserve every raw source record.
+    if (ambiguousEvidence.has(sourceEvent.id)) continue;
+    const verifiedCategory = categoryForEvent(
+      sourceEvent.sourceCategory ?? sourceEvent.category,
+      sourceEvent.title,
+      sourceEvent.description,
+    );
+    // Correct retained records only when their own program evidence identifies
+    // one of the narrowly verified formats supported by event-format.
+    const event =
+      ['Stand-up', 'Gezi'].includes(verifiedCategory) && sourceEvent.category !== verifiedCategory
+        ? { ...sourceEvent, category: verifiedCategory }
+        : sourceEvent;
     const checked = Date.parse(event.checkedAt);
     const activation = Math.max(at.getTime(), checked - 300000);
     if (

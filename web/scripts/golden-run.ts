@@ -38,6 +38,29 @@ const voyage = {
   dimensions: 1024 as const,
 };
 
+export async function beginGoldenRow(options: {
+  live: boolean;
+  lastStart: number;
+  intervalMs: number;
+  transportErrors: number;
+  now?: () => number;
+  wait?: (milliseconds: number) => Promise<void>;
+}): Promise<number | null> {
+  if (options.live && options.transportErrors > 0) return null;
+  const now = options.now ?? Date.now;
+  if (options.live && options.lastStart) {
+    const milliseconds = Math.max(
+      0,
+      options.lastStart + options.intervalMs - now(),
+    );
+    await (options.wait ??
+      ((delay) => new Promise((resolve) => setTimeout(resolve, delay))))(
+      milliseconds,
+    );
+  }
+  return now();
+}
+
 function workPath(path: string): string {
   const full = resolve(root, path),
     child = relative(resolve(root, 'work'), full);
@@ -376,11 +399,14 @@ export async function main(args = process.argv.slice(2)) {
   let lastStart = 0;
   try {
     for (const item of fixture.cases) {
-      if (values.live && lastStart)
-        await new Promise((resolve) =>
-          setTimeout(resolve, Math.max(0, lastStart + intervalMs - Date.now())),
-        );
-      lastStart = Date.now();
+      const nextStart = await beginGoldenRow({
+        live: Boolean(values.live),
+        lastStart,
+        intervalMs,
+        transportErrors: transport.errors.length,
+      });
+      if (nextStart === null) break;
+      lastStart = nextStart;
       const start = performance.now(),
         hits = transport.hits,
         paid = transport.paidCalls,

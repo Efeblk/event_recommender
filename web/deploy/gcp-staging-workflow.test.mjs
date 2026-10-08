@@ -20,6 +20,7 @@ function inlineNode(command) {
 const revisionValidator = inlineNode('node - "$STATE_DIR/revision.json"');
 const configuredTags = inlineNode('node - "$STATE_DIR/service.json" > candidate-traffic-tags.json');
 const trafficValidator = inlineNode('node - service-after-traffic.json candidate-traffic-tags.json');
+const endpointValidator = inlineNode('node - health.json ready.json');
 
 function childNode(code, files, env = {}) {
   return spawnSync(process.execPath, ['-', ...files], {
@@ -108,4 +109,42 @@ await test('traffic validator requires the named candidate at 100 percent and pr
   const pinnedLatestTag = { ...service, spec: { traffic: configured.map(target => target.tag === 'preview' ? { tag: target.tag, revisionName: candidate, percent: target.percent } : target) } };
   await writeFile(serviceFile, JSON.stringify(pinnedLatestTag));
   rejected(childNode(trafficValidator, [serviceFile, tagsFile], { CANDIDATE_REVISION: candidate }), /tags changed/);
+});
+
+await test('authenticated deployment endpoint validator requires health and ready snapshot evidence', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-gcp-endpoints-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const healthFile = join(directory, 'health.json');
+  const readyFile = join(directory, 'ready.json');
+  const sha = 'b'.repeat(40);
+  const env = { HEALTH_ENVIRONMENT: 'staging', HEALTH_REVISION: sha };
+  const health = {
+    status: 'ok',
+    deployment: { environment: 'staging', revision: sha },
+  };
+  const ready = {
+    ready: true,
+    checkedAt: '2026-10-08T12:00:00.000Z',
+    reasons: [],
+    catalog: { status: 'ready', stored: 20, eligible: 10 },
+    checkpoint: {
+      savedAt: '2026-10-08T11:00:00.000Z',
+      finishedAt: '2026-10-08T10:59:00.000Z',
+      events: 20,
+      bytes: 1000,
+      summary: {},
+    },
+  };
+  const run = async (healthValue, readyValue) => {
+    await Promise.all([
+      writeFile(healthFile, JSON.stringify(healthValue)),
+      writeFile(readyFile, JSON.stringify(readyValue)),
+    ]);
+    return childNode(endpointValidator, [healthFile, readyFile], env);
+  };
+
+  accepted(await run(health, ready));
+  rejected(await run(health, { ...ready, ready: false, reasons: ['catalog_not_ready'] }), /not ready/);
+  rejected(await run(health, { ...ready, catalog: { ...ready.catalog, eligible: 0 } }), /catalog is invalid/);
+  rejected(await run(health, { ...ready, checkpoint: null }), /checkpoint is invalid/);
 });

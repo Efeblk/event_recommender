@@ -4,6 +4,7 @@ import { parseArgs } from "node:util";
 
 const MAX_COLLECTION_GAP_MS = 15 * 60 * 60 * 1000;
 const MAX_MONITOR_GAP_MS = 90 * 60 * 1000;
+const MINIMUM_SOAK_HOURS = 7 * 24;
 const EXPECTED_SOURCES = ["biletinial", "bubilet", "biletix"];
 
 function isoTime(value) {
@@ -82,7 +83,8 @@ export function verifySoakEvidence({ collections, monitors, environment, revisio
   const overlapStart = Math.max(collectionTimes[0] ?? Infinity, isoTime(monitoring.first) ?? Infinity);
   const overlapEnd = Math.min(collectionTimes.at(-1) ?? -Infinity, isoTime(monitoring.last) ?? -Infinity);
   const overlapHours = Number.isFinite(overlapStart) && Number.isFinite(overlapEnd) ? Math.max(0, overlapEnd - overlapStart) / 3_600_000 : 0;
-  if (overlapHours < 48) reasons.push("healthy_overlap_under_48h");
+  if (overlapHours < MINIMUM_SOAK_HOURS)
+    reasons.push("healthy_overlap_under_168h");
   if (collectionGaps.some((gap) => gap > MAX_COLLECTION_GAP_MS)) reasons.push("collection_interval_missed");
   const monitorTimes = monitors.map((record) => isoTime(record.recordedAt)).filter((time) => time !== null).sort((a, b) => a - b);
   if (monitorTimes.slice(1).some((time, index) => time - monitorTimes[index] > MAX_MONITOR_GAP_MS)) reasons.push("monitor_interval_missed");
@@ -92,7 +94,7 @@ export function verifySoakEvidence({ collections, monitors, environment, revisio
     status: reasons.length ? "fail" : "pass",
     environment,
     revision,
-    thresholds: { minimumSpanHours: 48, maximumCollectionGapHours: 15, maximumMonitorGapMinutes: 90 },
+    thresholds: { minimumSpanHours: MINIMUM_SOAK_HOURS, maximumCollectionGapHours: 15, maximumMonitorGapMinutes: 90 },
     collection,
     monitoring,
     overlap: { first: overlapHours ? new Date(overlapStart).toISOString() : null, last: overlapHours ? new Date(overlapEnd).toISOString() : null, spanHours: overlapHours },

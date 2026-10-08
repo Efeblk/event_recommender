@@ -6,6 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { parseArgs } from "node:util";
+import { isSourceQuarantineReason } from '../contracts/source-evidence.ts';
 import { sources, detailUrl, resolveListings } from "./adapters.mjs";
 import { extractListings, listingToEvent } from './extract/index.mjs';
 import { createFilesystemRawStore, DEFAULT_RAW_MAX_BYTES } from './raw/store.mjs';
@@ -400,8 +401,8 @@ const crawler = new BasicCrawler(
           .filter(([url]) => url !== request.url).map(([url, retained]) => ({ url,
             fetchedAt: retained.fetchedAt, rawObjectRef: retained.rawObjectRef }));
       } catch (error) {
-        if (error.message === 'session_time_conflict') {
-          // Source evidence disproves the cached session time. Keep this distinct
+        if (isSourceQuarantineReason(error.message)) {
+          // Source evidence contradicts a cached session fact. Keep this distinct
           // from a verified retirement and from ordinary fetch/parser failures.
           const checkedAt = raw.fetchedAt;
           const provenance = { contentHash: raw.rawObjectRef.sha256, rawObjectRef: raw.rawObjectRef, parserVersion: '5' };

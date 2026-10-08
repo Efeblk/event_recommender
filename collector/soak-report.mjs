@@ -21,7 +21,7 @@ export function buildSoakEvidence(report, events, recordedAt = new Date(), opera
     checkpoint: { events: events.length, sources: Object.fromEntries([...new Set(events.map((event) => event.source))].sort().map((source) => [source, events.filter((event) => event.source === source).length])) },
     sourceHealth: { refreshedPages: refreshedBySource, missingSources },
     collectionSummary: report.summary,
-    observation: "This file records one real collection run. It does not claim that a 48-hour soak has completed.",
+    observation: "This file records one real collection run. It does not claim that the seven-day unattended run has completed.",
   };
 }
 
