@@ -92,11 +92,17 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_restore\.outputs\.id_token \}\}/);
   assert.match(workflow, /SERVERLESS_ID_TOKEN: \$\{\{ steps\.auth_publish\.outputs\.id_token \}\}/);
   assert.doesNotMatch(workflow, /INDEX_EMBEDDINGS|index-embeddings/);
-  const replay = workflow.slice(workflow.indexOf("  replay_publication:"), workflow.indexOf("  index_only:"));
-  assert.match(replay, /if: needs\.dispatch_mode\.outputs\.mode == 'replay'/);
+  const replay = workflow.slice(workflow.indexOf("  replay_publication:"), workflow.indexOf("  diagnostics:"));
+  assert.match(replay, /if: needs\.dispatch_mode\.outputs\.mode == 'replay' \|\| needs\.dispatch_mode\.outputs\.mode == 'checkpoint'/);
   assert.match(replay, /actions: read/);
   assert.match(replay, /--validate-imports --exact-checkpoint/);
+  assert.match(replay, /--checkpoint-only --exact-checkpoint/);
+  assert.match(replay, /actions\/jobs\/\$FAILED_JOB_ID\/logs/);
   assert.doesNotMatch(replay, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
+  const diagnostics = workflow.slice(workflow.indexOf("  diagnostics:"), workflow.indexOf("  index_only:"));
+  assert.match(diagnostics, /mode == 'diagnostics'/);
+  assert.match(diagnostics, /diagnose-staging\.mjs/);
+  assert.doesNotMatch(diagnostics, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
 });
 
 void test("the scheduled GCP collector deadline fails closed", () => {

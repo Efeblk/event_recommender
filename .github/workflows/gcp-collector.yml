@@ -12,6 +12,11 @@ on:
         required: true
         type: boolean
         default: false
+      diagnostics_only:
+        description: Capture authenticated staging health and publication diagnostics only
+        required: true
+        type: boolean
+        default: false
       publish_existing_run:
         description: Failed collector run ID whose normalized artifact must be republished
         required: false
@@ -19,6 +24,16 @@ on:
         default: ''
       publish_existing_report_sha256:
         description: Exact SHA-256 of the preserved collector/output/report.json
+        required: false
+        type: string
+        default: ''
+      checkpoint_only_replay_run:
+        description: Failed publication replay run ID whose completed import loop is proved
+        required: false
+        type: string
+        default: ''
+      checkpoint_only_logs_sha256:
+        description: Exact SHA-256 of that failed replay run's immutable log archive
         required: false
         type: string
         default: ''
@@ -43,20 +58,34 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           VERIFY_ONLY: ${{ inputs.verify_only }}
+          DIAGNOSTICS_ONLY: ${{ inputs.diagnostics_only }}
           PUBLISH_EXISTING_RUN: ${{ inputs.publish_existing_run }}
           PUBLISH_EXISTING_REPORT_SHA256: ${{ inputs.publish_existing_report_sha256 }}
+          CHECKPOINT_ONLY_REPLAY_RUN: ${{ inputs.checkpoint_only_replay_run }}
+          CHECKPOINT_ONLY_LOGS_SHA256: ${{ inputs.checkpoint_only_logs_sha256 }}
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" != 'workflow_dispatch' ]]; then
             echo 'mode=schedule' >> "$GITHUB_OUTPUT"
           elif [[ "$VERIFY_ONLY" == 'true' ]]; then
-            test -z "$PUBLISH_EXISTING_RUN" && test -z "$PUBLISH_EXISTING_REPORT_SHA256"
+            [[ "$DIAGNOSTICS_ONLY" != 'true' ]]
+            test -z "$PUBLISH_EXISTING_RUN" && test -z "$PUBLISH_EXISTING_REPORT_SHA256" && test -z "$CHECKPOINT_ONLY_REPLAY_RUN" && test -z "$CHECKPOINT_ONLY_LOGS_SHA256"
             echo 'mode=verify' >> "$GITHUB_OUTPUT"
+          elif [[ "$DIAGNOSTICS_ONLY" == 'true' ]]; then
+            test -z "$PUBLISH_EXISTING_RUN" && test -z "$PUBLISH_EXISTING_REPORT_SHA256" && test -z "$CHECKPOINT_ONLY_REPLAY_RUN" && test -z "$CHECKPOINT_ONLY_LOGS_SHA256"
+            echo 'mode=diagnostics' >> "$GITHUB_OUTPUT"
           elif [[ -n "$PUBLISH_EXISTING_RUN" || -n "$PUBLISH_EXISTING_REPORT_SHA256" ]]; then
             [[ "$PUBLISH_EXISTING_RUN" =~ ^[1-9][0-9]*$ ]]
             [[ "$PUBLISH_EXISTING_REPORT_SHA256" =~ ^[0-9a-f]{64}$ ]]
-            echo 'mode=replay' >> "$GITHUB_OUTPUT"
+            if [[ -n "$CHECKPOINT_ONLY_REPLAY_RUN" || -n "$CHECKPOINT_ONLY_LOGS_SHA256" ]]; then
+              [[ "$CHECKPOINT_ONLY_REPLAY_RUN" =~ ^[1-9][0-9]*$ ]]
+              [[ "$CHECKPOINT_ONLY_LOGS_SHA256" =~ ^[0-9a-f]{64}$ ]]
+              echo 'mode=checkpoint' >> "$GITHUB_OUTPUT"
+            else
+              echo 'mode=replay' >> "$GITHUB_OUTPUT"
+            fi
           else
+            test -z "$CHECKPOINT_ONLY_REPLAY_RUN" && test -z "$CHECKPOINT_ONLY_LOGS_SHA256"
             echo 'mode=collect' >> "$GITHUB_OUTPUT"
           fi
 
@@ -247,7 +276,7 @@ jobs:
 
   replay_publication:
     needs: dispatch_mode
-    if: needs.dispatch_mode.outputs.mode == 'replay'
+    if: needs.dispatch_mode.outputs.mode == 'replay' || needs.dispatch_mode.outputs.mode == 'checkpoint'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -259,6 +288,8 @@ jobs:
       BIPLAN_URL: ${{ vars.BIPLAN_URL }}
       SOURCE_RUN_ID: ${{ inputs.publish_existing_run }}
       REPORT_SHA256: ${{ inputs.publish_existing_report_sha256 }}
+      FAILED_REPLAY_RUN_ID: ${{ inputs.checkpoint_only_replay_run }}
+      FAILED_REPLAY_LOGS_SHA256: ${{ inputs.checkpoint_only_logs_sha256 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -274,6 +305,7 @@ jobs:
           cp replay-evidence/source.json replay-evidence/plan.json
           cp replay-evidence/source.json replay-evidence/preflight.json
           cp replay-evidence/source.json replay-evidence/publication.json
+          cp replay-evidence/source.json replay-evidence/imports.json
           printf 'not-started\n' > replay-evidence/publish-status.txt
           printf '{}\n' > replay-evidence/ready.json
           printf 'not-requested\n' > replay-evidence/ready-status.txt
@@ -361,8 +393,56 @@ jobs:
             --plan replay-evidence/plan.json --expected-revision "$GITHUB_SHA" \
             --output replay-evidence/preflight.json --github-output "$GITHUB_OUTPUT"
 
+      - name: Validate immutable completed-import proof from the failed replay
+        if: needs.dispatch_mode.outputs.mode == 'checkpoint' && steps.preflight.outputs.publish_required == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          REPOSITORY_ID: ${{ github.repository_id }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/$REPOSITORY"
+          headers=(-H 'Accept: application/vnd.github+json' -H "Authorization: Bearer $GH_TOKEN" -H 'X-GitHub-Api-Version: 2022-11-28')
+          curl --fail --silent --show-error "${headers[@]}" "$api/actions/runs/$FAILED_REPLAY_RUN_ID" > replay-private/failed-run.json
+          curl --fail --silent --show-error "${headers[@]}" "$api/actions/workflows/gcp-collector.yml" > replay-private/failed-workflow.json
+          curl --fail --silent --show-error "${headers[@]}" "$api/actions/runs/$FAILED_REPLAY_RUN_ID/artifacts?per_page=100" > replay-private/failed-artifacts.json
+          curl --fail --silent --show-error "${headers[@]}" "$api/actions/runs/$FAILED_REPLAY_RUN_ID/jobs?per_page=100" > replay-private/failed-jobs.json
+          FAILED_SHA="$(node -e "const r=require('./replay-private/failed-run.json');if(!/^[0-9a-f]{40}$/.test(r.head_sha??''))process.exit(1);process.stdout.write(r.head_sha)")"
+          git merge-base --is-ancestor "$FAILED_SHA" "$GITHUB_SHA"
+          FAILED_ATTEMPT="$(node -e "const r=require('./replay-private/failed-run.json');if(!Number.isSafeInteger(r.run_attempt)||r.run_attempt<1)process.exit(1);process.stdout.write(String(r.run_attempt))")"
+          echo "FAILED_EVIDENCE_DIR=replay-private/failed-evidence/gcp-publication-replay-staging-$FAILED_REPLAY_RUN_ID-$FAILED_ATTEMPT" >> "$GITHUB_ENV"
+          FAILED_JOB_ID="$(node -e "const j=require('./replay-private/failed-jobs.json').jobs??[];const m=j.filter(x=>x.run_id===Number(process.argv[1])&&x.name==='replay_publication'&&x.head_sha===process.argv[2]&&x.status==='completed'&&x.conclusion==='failure');if(m.length!==1)process.exit(1);process.stdout.write(String(m[0].id))" "$FAILED_REPLAY_RUN_ID" "$FAILED_SHA")"
+          curl --fail --silent --show-error --location "${headers[@]}" "$api/actions/jobs/$FAILED_JOB_ID/logs" > replay-private/failed-job.log
+          test "$(sha256sum replay-private/failed-job.log | cut -d' ' -f1)" = "$FAILED_REPLAY_LOGS_SHA256"
+          grep -a -E 'publish\.mjs:146:[0-9]+' replay-private/failed-job.log > replay-private/checkpoint-stack.txt
+          git show "$FAILED_SHA:collector/publish.mjs" > replay-private/failed-publish.mjs
+
+      - name: Download exact failed replay evidence
+        if: needs.dispatch_mode.outputs.mode == 'checkpoint' && steps.preflight.outputs.publish_required == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: replay-private/failed-evidence
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.checkpoint_only_replay_run }}
+
+      - name: Derive explicit legacy checkpoint call-site proof
+        if: needs.dispatch_mode.outputs.mode == 'checkpoint' && steps.preflight.outputs.publish_required == 'true'
+        run: |
+          node --experimental-strip-types collector/replay-publication.mjs --mode legacy-proof \
+            --failed-run-id "$FAILED_REPLAY_RUN_ID" --repository "$GITHUB_REPOSITORY" --repository-id "$GITHUB_REPOSITORY_ID" \
+            --default-branch "${{ github.event.repository.default_branch }}" --workflow-path .github/workflows/gcp-collector.yml --run replay-private/failed-run.json \
+            --workflow replay-private/failed-workflow.json --artifacts replay-private/failed-artifacts.json --jobs replay-private/failed-jobs.json \
+            --plan replay-evidence/plan.json --failed-source "$FAILED_EVIDENCE_DIR/source.json" \
+            --failed-plan "$FAILED_EVIDENCE_DIR/plan.json" --failed-preflight "$FAILED_EVIDENCE_DIR/preflight.json" \
+            --failed-publication "$FAILED_EVIDENCE_DIR/publication.json" --failed-status "$FAILED_EVIDENCE_DIR/publish-status.txt" \
+            --logs-archive replay-private/failed-job.log --logs-text replay-private/checkpoint-stack.txt \
+            --logs-sha256 "$FAILED_REPLAY_LOGS_SHA256" --publish-source replay-private/failed-publish.mjs \
+            --output replay-evidence/imports.json
+
       - name: Publish the preserved report without collection or indexing
-        if: steps.preflight.outputs.publish_required == 'true'
+        if: needs.dispatch_mode.outputs.mode == 'replay' && steps.preflight.outputs.publish_required == 'true'
         timeout-minutes: 40
         env:
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
@@ -373,7 +453,26 @@ jobs:
           set +e
           node --experimental-strip-types collector/publish.mjs --checkpoint --validate-imports --exact-checkpoint \
             --report replay-artifact/collector/output/report.json --snapshot replay-evidence/recovered-events.json \
-            --receipt replay-evidence/publication.json
+            --imports-receipt replay-evidence/imports.json --receipt replay-evidence/publication.json
+          status=$?
+          set -e
+          if [[ "$status" == '0' ]]; then printf 'complete\n' > replay-evidence/publish-status.txt
+          else printf 'failed\n' > replay-evidence/publish-status.txt; fi
+          exit "$status"
+
+      - name: Publish only the checkpoint after proved completed imports
+        if: needs.dispatch_mode.outputs.mode == 'checkpoint' && steps.preflight.outputs.publish_required == 'true'
+        timeout-minutes: 6
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_replay.outputs.id_token }}
+        run: |
+          set -euo pipefail
+          printf 'running-checkpoint-only\n' > replay-evidence/publish-status.txt
+          set +e
+          node --experimental-strip-types collector/publish.mjs --checkpoint --checkpoint-only --exact-checkpoint \
+            --report replay-artifact/collector/output/report.json --imports-proof replay-evidence/imports.json \
+            --snapshot replay-evidence/recovered-events.json --receipt replay-evidence/publication.json
           status=$?
           set -e
           if [[ "$status" == '0' ]]; then printf 'complete\n' > replay-evidence/publish-status.txt
@@ -381,6 +480,7 @@ jobs:
           exit "$status"
 
       - name: Require exact canonical and ready publication evidence
+        if: always() && steps.preflight.outcome == 'success'
         env:
           SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
           SERVERLESS_ID_TOKEN: ${{ steps.auth_replay.outputs.id_token }}
@@ -400,10 +500,70 @@ jobs:
             replay-evidence/plan.json
             replay-evidence/preflight.json
             replay-evidence/publication.json
+            replay-evidence/imports.json
             replay-evidence/publish-status.txt
             replay-evidence/ready.json
             replay-evidence/ready-status.txt
             replay-evidence/validation.json
+          if-no-files-found: error
+          retention-days: 14
+
+  diagnostics:
+    needs: dispatch_mode
+    if: needs.dispatch_mode.outputs.mode == 'diagnostics'
+    environment: gcp-staging-collector
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      BIPLAN_URL: ${{ vars.BIPLAN_URL }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Initialize authenticated diagnostic evidence
+        if: always()
+        run: |
+          mkdir -p diagnostic-evidence
+          printf '{"schemaVersion":1,"completed":false,"problems":["diagnostics_not_completed"]}\n' > diagnostic-evidence/validation.json
+          printf '{}\n' > diagnostic-evidence/health.json
+          cp diagnostic-evidence/health.json diagnostic-evidence/ready.json
+          cp diagnostic-evidence/health.json diagnostic-evidence/canonical.json
+          cp diagnostic-evidence/health.json diagnostic-evidence/publication.json
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: web/.nvmrc
+      - name: Validate private diagnostic destination
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$SYNC_TOKEN"
+          case "$BIPLAN_URL" in https://*.run.app) ;; *) exit 1;; esac
+          node -e "const u=new URL(process.env.BIPLAN_URL);if(u.origin!==process.env.BIPLAN_URL)process.exit(1)"
+      - id: auth_diagnostics
+        name: Authenticate collector for read-only diagnostics
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ vars.BIPLAN_URL }}
+          id_token_include_email: true
+      - name: Capture authenticated health and publication state
+        env:
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_diagnostics.outputs.id_token }}
+        run: node collector/diagnose-staging.mjs --output diagnostic-evidence --expected-revision "$GITHUB_SHA"
+      - name: Preserve authenticated diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gcp-collector-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: diagnostic-evidence
           if-no-files-found: error
           retention-days: 14
 

@@ -294,8 +294,36 @@ checks still pass, and the per-request cost does not increase without approval.
   to the same saved time, event count and event-array SHA-256. Final local
   checks pass on Node 22.23.3: 857 web tests, 291 collector tests (one existing
   skip), typecheck, lint, 50 deployment tests, GCP checks, Node build and smoke.
-  Smoke made zero cloud or AI calls. Exact latest CI and live recovery remain
-  pending.
+  Smoke made zero cloud or AI calls. PR 82 merged as `fedb97f` after exact PR
+  CI [37852406946](https://github.com/Efeblk/event_recommender/actions/runs/37852406946)
+  passed all six jobs on `04b5f9b`. Exact merge CI
+  [37852954936](https://github.com/Efeblk/event_recommender/actions/runs/37852954936)
+  also passed all six jobs. Private staging deploy
+  [37853674195](https://github.com/Efeblk/event_recommender/actions/runs/37853674195)
+  passed on `fedb97f`. Revision `biplan-staging-00060-8kv` matches the reviewed
+  candidate tree, lockfile bytes and Linux image checksums. Authenticated health
+  and readiness passed against the old checkpoint. Anonymous health returned
+  403. Replay [37854227546](https://github.com/Efeblk/event_recommender/actions/runs/37854227546)
+  passed provenance, digest, all-batch validation and private deployment
+  preflight and completed import. The checkpoint POST timed out after 240 s.
+  Its result is unknown; no rollback is assumed. Collection and paid indexing
+  were skipped. Read-only verification
+  [37856886583](https://github.com/Efeblk/event_recommender/actions/runs/37856886583)
+  and [37857066750](https://github.com/Efeblk/event_recommender/actions/runs/37857066750)
+  failed with HTTP 429. Neither proves the active pointer. [PR 83](https://github.com/Efeblk/event_recommender/pull/83)
+  adds bounded publication-phase diagnostics, deadline checks before pointer
+  activation, read-only runtime inspection and checkpoint-only recovery.
+  Recovery uses a labelled proof from the exact failed job log and immutable
+  publisher call site. It does not fabricate an original import receipt.
+  A bounded cache reuses exact identity-normalization inputs. On the preserved
+  12,006-record catalog, CPU materialization fell from 96.34 s to 69.96 s.
+  Complete output is unchanged: 65,317,939 bytes, SHA-256
+  `a3a37fc0fac09be701976d2801499a14dedd52319e793d914dc5fb72c083fc92`.
+  This CPU result does not establish the live timeout cause. Local checks pass
+  on Node 22.23.3: 861 web tests, 296 collector tests and one existing skip,
+  52 deployment checks, typecheck, lint, GCP checks, Node build and smoke.
+  Smoke made zero cloud or AI calls. Exact PR CI and private recovery are pending.
+  Recovery evidence stays under `web/work/comprehensive-review/`.
   Deployment evidence stays in
   `web/work/comprehensive-review/staging-deploy/`.
 

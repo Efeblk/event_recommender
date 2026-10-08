@@ -107,6 +107,8 @@ export const readCheckpoint: HighLevelStore['readCheckpoint'] = async (
 export const publishCheckpoint: HighLevelStore['publishCheckpoint'] = async (
   ...args
 ) => (await store()).publishCheckpoint(...args);
+export const checkpointPublication = async () =>
+  (await store()).checkpointPublication?.() ?? null;
 export const checkpointExists: HighLevelStore['checkpointExists'] = async (
   ...args
 ) => (await store()).checkpointExists(...args);

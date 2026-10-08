@@ -15,6 +15,11 @@ on:
           - rules
           - jev-v1
           - span-v2
+      diagnostics_only:
+        description: Capture safe private staging runtime diagnostics without deploying
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -22,6 +27,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   prepare:
+    if: inputs.diagnostics_only != true
     permissions:
       contents: read
       checks: read
@@ -336,3 +342,71 @@ jobs:
           path: deploy-provenance
           if-no-files-found: error
           retention-days: 30
+
+  diagnostics:
+    if: inputs.diagnostics_only == true
+    permissions:
+      contents: read
+      id-token: write
+    environment: gcp-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      GCP_REGION: ${{ vars.GCP_REGION }}
+      GCP_CLOUD_RUN_SERVICE: ${{ vars.GCP_CLOUD_RUN_SERVICE }}
+    steps:
+      - name: Checkout diagnostic revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+      - name: Initialize diagnostic evidence
+        if: always()
+        run: |
+          mkdir -p diagnostic-evidence
+          printf '{"schemaVersion":1,"completed":false,"problems":["diagnostics_not_completed"]}\n' > diagnostic-evidence/runtime.json
+          printf 'not-started\n' > diagnostic-evidence/status.txt
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: web/.nvmrc
+      - name: Validate diagnostic target
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$EXPECTED_SHA" = "$GITHUB_SHA"
+          [[ "$GCP_PROJECT_ID" =~ ^[a-z][a-z0-9-]{4,28}[a-z0-9]$ ]]
+          [[ "$GCP_REGION" =~ ^[a-z]+-[a-z]+[0-9]+$ ]]
+          [[ "$GCP_CLOUD_RUN_SERVICE" =~ ^[a-z][a-z0-9-]{1,61}[a-z0-9]$ && "$GCP_CLOUD_RUN_SERVICE" == *staging* ]]
+      - name: Authenticate read-only diagnostic identity
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+      - name: Capture allowlisted service and revision state
+        run: |
+          set -euo pipefail
+          PRIVATE_DIR="$(mktemp -d)"
+          trap 'rm -rf "$PRIVATE_DIR"' EXIT
+          printf 'running\n' > diagnostic-evidence/status.txt
+          gcloud run services describe "$GCP_CLOUD_RUN_SERVICE" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > "$PRIVATE_DIR/service.json"
+          mapfile -t REVISIONS < <(node -e "const s=require(process.argv[1]);const names=new Set([s.status?.latestCreatedRevisionName,s.status?.latestReadyRevisionName,...(s.status?.traffic??[]).filter(x=>Number(x.percent??0)>0).map(x=>x.revisionName)].filter(Boolean));for(const n of names)console.log(n)" "$PRIVATE_DIR/service.json")
+          test "${#REVISIONS[@]}" -gt 0
+          FILES=()
+          for revision in "${REVISIONS[@]}"; do
+            file="$PRIVATE_DIR/$revision.json"
+            gcloud run revisions describe "$revision" --project "$GCP_PROJECT_ID" --region "$GCP_REGION" --platform managed --format=json > "$file"
+            FILES+=("$file")
+          done
+          node web/scripts/summarize-gcp-runtime.mjs "$PRIVATE_DIR/service.json" diagnostic-evidence/runtime.json "$EXPECTED_SHA" "${FILES[@]}"
+          printf 'complete\n' > diagnostic-evidence/status.txt
+      - name: Preserve safe runtime diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gcp-staging-diagnostics-${{ github.run_id }}-${{ github.run_attempt }}
+          path: diagnostic-evidence
+          if-no-files-found: error
+          retention-days: 14

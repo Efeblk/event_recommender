@@ -194,6 +194,24 @@ a potentially incompatible major transitive override just to suppress the audit.
 
 ## Recovery
 
+For a read-only runtime inspection, dispatch `gcp-staging.yml` with
+`diagnostics_only=true` and the exact current `master` SHA as `expected_sha`.
+Approve its existing `gcp-staging` gate after reviewing that revision.
+This mode describes the service and relevant revisions through the existing
+deployment identity. It does not build or deploy an image or change IAM.
+Its `gcp-staging-diagnostics-<run-id>-<attempt>` artifact contains only
+allowlisted conditions, traffic, resource limits and timeouts. Environment
+values and secret references are excluded. It does not read Cloud Logging.
+
+```powershell
+gh workflow run gcp-staging.yml --ref master -f expected_sha=<SHA> -f diagnostics_only=true
+```
+
+Use the collector's diagnostic mode for application publication state. See
+[private GCP collection](gcp-collector.md). Preserve an unknown checkpoint
+outcome before recovery. Do not infer rollback from a client timeout or import
+the same pages again when an exact completed-import proof exists.
+
 1. See the failure: the hourly `monitor` job in `Collect GCP staging event data`
    fails and GitHub sends an email. Open the run; the error line names the cause.
 2. Find the last good SHA: `gh run list --workflow gcp-staging.yml --status success --limit 1 --json headSha`.

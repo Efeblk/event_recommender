@@ -3,11 +3,14 @@ import {
   runtime,
   readCheckpoint,
   publishCheckpoint,
+  checkpointPublication,
   acquireLease,
   releaseLease,
   collectionStateConfigured,
 } from '@/lib/store';
 import { MAX_REPORT_BYTES, parseCollectionReport } from '@/lib/operations';
+
+const PUBLICATION_DEADLINE_MS = 260_000;
 
 async function authorized(request: Request) {
   const token = runtime().SYNC_TOKEN;
@@ -22,6 +25,15 @@ export async function GET(request: Request) {
   if (!(await authorized(request)))
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
+    const publication = new URL(request.url).searchParams.get('publication');
+    if (publication) {
+      if (publication !== 'latest')
+        return Response.json({ error: 'Invalid publication query' }, { status: 400 });
+      const latest = await checkpointPublication();
+      if (!latest)
+        return Response.json({ error: 'No checkpoint publication attempt' }, { status: 404 });
+      return Response.json(latest, { headers: { 'cache-control': 'no-store' } });
+    }
     const body = await readCheckpoint();
     if (!body)
       return Response.json(
@@ -43,6 +55,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const requestStartedAt = Date.now();
   if (!(await authorized(request)))
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   if (!collectionStateConfigured())
@@ -90,7 +103,11 @@ export async function POST(request: Request) {
     lease = await acquireLease('sync_lock');
     if (!lease)
       return Response.json({ error: 'Sync already running' }, { status: 409 });
-    const pointer = await publishCheckpoint(report, lease);
+    const pointer = await publishCheckpoint(report, lease, {
+      signal: request.signal,
+      deadline: requestStartedAt + PUBLICATION_DEADLINE_MS,
+      deploymentRevision: runtime().DEPLOYMENT_SHA,
+    });
     return Response.json({
       schemaVersion: 1,
       savedAt: pointer.savedAt,

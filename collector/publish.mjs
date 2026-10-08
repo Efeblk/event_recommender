@@ -13,9 +13,9 @@ export const MAX_IMPORT_EVENTS = 2000;
 export const MAX_IMPORT_BYTES = 3_500_000;
 export const MAX_SOURCE_PAGE_EVENTS = 1000;
 export const MAX_D1_QUERY_BUDGET = 50;
-// Full-catalog checkpoint assembly measured over 60 seconds; keep its budget
-// below the 300-second server timeout and sync lease without changing other requests.
-export const CHECKPOINT_SAVE_TIMEOUT_MS = 240_000;
+// The server stops publication at 260 seconds. Leave it time to return that
+// bounded result while keeping the client below the 300-second Cloud Run limit.
+export const CHECKPOINT_SAVE_TIMEOUT_MS = 280_000;
 
 function estimatedUpsertStatements(events, bytes) {
   // Cloudflare starts a new statement at either 100 rows or 500 kB. Adding
@@ -107,7 +107,58 @@ export function planImportBatches(report, now = new Date()) {
   return { batches, omittedExpiredIds: prepared.omittedExpiredIds, omittedStaleIds: prepared.omittedStaleIds };
 }
 
-export async function publish({ origin, token, report, checkpoint = false, snapshot, allowLoopbackHttp = false, now = () => new Date(), validateImportEnvelope, exactCheckpoint = false }) {
+function importProof({ report, reportSha256, plan, imported, sentBatches, omissions, completedAt }) {
+  return {
+    schemaVersion: 1,
+    proofKind: "imports_complete",
+    importsComplete: true,
+    reportSha256,
+    reportFinishedAt: report.finishedAt,
+    plannedBatches: plan.batches.length,
+    sentBatches,
+    imported,
+    omittedExpired: omissions.expired.count,
+    omittedStale: omissions.stale.count,
+    completedAt,
+  };
+}
+
+function requireImportsProof(proof, report, reportSha256) {
+  const validKind = proof?.proofKind === "imports_complete" || proof?.proofKind === "legacy_checkpoint_call_site";
+  if (proof?.schemaVersion !== 1 || proof?.importsComplete !== true || !validKind ||
+      proof.reportSha256 !== reportSha256 || proof.reportFinishedAt !== report.finishedAt)
+    throw new Error("Checkpoint-only publication requires matching completed-import proof.");
+}
+
+async function saveCheckpoint({ origin, token, report, snapshot, allowLoopbackHttp, exactCheckpoint, imported = 0, omissions = { expired: { count: 0, ids: [] }, stale: { count: 0, ids: [] } } }) {
+  const collectionEndpoint = endpointFor(origin, "/api/admin/collection", allowLoopbackHttp);
+  const expectedSources = Object.keys(report.summary.sources ?? {});
+  const refreshedBySource = Object.fromEntries(expectedSources.map((source) => [source, report.pages.filter((page) => page.source === source).length]));
+  const missingSources = expectedSources.filter((source) => refreshedBySource[source] === 0);
+  const summary = { ...report.summary, missingSources, sourceHealth: { refreshedPages: refreshedBySource } };
+  const saved = await requestJson(collectionEndpoint, { token, method: "POST", body: { schemaVersion: 1, report: { finishedAt: report.finishedAt, summary } }, timeout: CHECKPOINT_SAVE_TIMEOUT_MS });
+  if (!saved.response.ok) throw new Error(`Checkpoint save returned HTTP ${saved.response.status}.`);
+  if (saved.result?.schemaVersion !== 1 || typeof saved.result.savedAt !== "string" || !Number.isFinite(Date.parse(saved.result.savedAt)) || !Number.isInteger(saved.result.events) || saved.result.events < 0 || saved.result.events > 20_000)
+    throw new Error("Checkpoint save returned an invalid receipt.");
+  const readback = await requestJson(collectionEndpoint, { token, timeout: 30_000 });
+  if (!readback.response.ok) throw new Error(`Checkpoint readback returned HTTP ${readback.response.status}.`);
+  const canonical = validateCollection(readback.result);
+  if (canonical.savedAt !== saved.result.savedAt || canonical.events.length !== saved.result.events)
+    throw new Error("Checkpoint readback does not match the save receipt.");
+  if (exactCheckpoint && canonical.report.finishedAt !== report.finishedAt)
+    throw new Error("Checkpoint readback does not exactly match the submitted collection report.");
+  if (Date.parse(canonical.report.finishedAt) < Date.parse(report.finishedAt))
+    throw new Error("Checkpoint readback predates the submitted collection report.");
+  const health = await requestJson(endpointFor(origin, "/api/health", allowLoopbackHttp), { timeout: 15_000 });
+  const deployment = health.result?.deployment;
+  if (!health.response.ok || health.result?.status !== "ok" || !["local", "staging", "production"].includes(deployment?.environment) || (deployment.environment !== "local" && !/^[0-9a-f]{40}$/.test(deployment.revision ?? "")))
+    throw new Error("Post-checkpoint Worker identity is invalid.");
+  if (snapshot) await atomicJson(snapshot, canonical.events);
+  const eventsSha256 = createHash("sha256").update(JSON.stringify(canonical.events)).digest("hex");
+  return { imported, checkpointed: true, canonicalReadback: true, artifactOnly: false, savedAt: canonical.savedAt, reportFinishedAt: canonical.report.finishedAt, events: canonical.events.length, eventsSha256, environment: deployment.environment, revision: deployment.revision ?? null, omittedExpired: omissions.expired, omittedStale: omissions.stale };
+}
+
+export async function publish({ origin, token, report, reportSha256, checkpoint = false, snapshot, allowLoopbackHttp = false, now = () => new Date(), validateImportEnvelope, exactCheckpoint = false, onImportsComplete }) {
   const plan = planImportBatches(report, now());
   if (validateImportEnvelope)
     for (const pages of plan.batches) validateImportEnvelope({ schemaVersion: 1, pages }, now());
@@ -137,45 +188,31 @@ export async function publish({ origin, token, report, checkpoint = false, snaps
   if (!sentBatches)
     throw new Error("No future event sessions remain importable; checkpoint was not advanced.");
   if (!checkpoint) return { imported, checkpointed: false, omittedExpired: omissions.expired, omittedStale: omissions.stale };
+  if (onImportsComplete) await onImportsComplete(importProof({ report, reportSha256, plan, imported, sentBatches, omissions, completedAt: now().toISOString() }));
+  return saveCheckpoint({ origin, token, report, snapshot, allowLoopbackHttp, exactCheckpoint, imported, omissions });
+}
 
-  const collectionEndpoint = endpointFor(origin, "/api/admin/collection", allowLoopbackHttp);
-  const expectedSources = Object.keys(report.summary.sources ?? {});
-  const refreshedBySource = Object.fromEntries(expectedSources.map((source) => [source, report.pages.filter((page) => page.source === source).length]));
-  const missingSources = expectedSources.filter((source) => refreshedBySource[source] === 0);
-  const summary = { ...report.summary, missingSources, sourceHealth: { refreshedPages: refreshedBySource } };
-  const saved = await requestJson(collectionEndpoint, { token, method: "POST", body: { schemaVersion: 1, report: { finishedAt: report.finishedAt, summary } }, timeout: CHECKPOINT_SAVE_TIMEOUT_MS });
-  if (!saved.response.ok) throw new Error(`Checkpoint save returned HTTP ${saved.response.status}.`);
-  if (saved.result?.schemaVersion !== 1 || typeof saved.result.savedAt !== "string" || !Number.isFinite(Date.parse(saved.result.savedAt)) || !Number.isInteger(saved.result.events) || saved.result.events < 0 || saved.result.events > 20_000)
-    throw new Error("Checkpoint save returned an invalid receipt.");
-  const readback = await requestJson(collectionEndpoint, { token, timeout: 30_000 });
-  if (!readback.response.ok) throw new Error(`Checkpoint readback returned HTTP ${readback.response.status}.`);
-  const canonical = validateCollection(readback.result);
-  if (canonical.savedAt !== saved.result.savedAt || canonical.events.length !== saved.result.events)
-    throw new Error("Checkpoint readback does not match the save receipt.");
-  if (exactCheckpoint && canonical.report.finishedAt !== report.finishedAt)
-    throw new Error("Checkpoint readback does not exactly match the submitted collection report.");
-  if (Date.parse(canonical.report.finishedAt) < Date.parse(report.finishedAt))
-    throw new Error("Checkpoint readback predates the submitted collection report.");
-  const health = await requestJson(endpointFor(origin, "/api/health", allowLoopbackHttp), { timeout: 15_000 });
-  const deployment = health.result?.deployment;
-  if (!health.response.ok || health.result?.status !== "ok" || !["local", "staging", "production"].includes(deployment?.environment) || (deployment.environment !== "local" && !/^[0-9a-f]{40}$/.test(deployment.revision ?? "")))
-    throw new Error("Post-checkpoint Worker identity is invalid.");
-  if (snapshot) await atomicJson(snapshot, canonical.events);
-  const eventsSha256 = createHash("sha256").update(JSON.stringify(canonical.events)).digest("hex");
-  return { imported, checkpointed: true, canonicalReadback: true, artifactOnly: false, savedAt: canonical.savedAt, reportFinishedAt: canonical.report.finishedAt, events: canonical.events.length, eventsSha256, environment: deployment.environment, revision: deployment.revision ?? null, omittedExpired: omissions.expired, omittedStale: omissions.stale };
+export async function publishCheckpointOnly({ origin, token, report, reportSha256, importsProof, snapshot, allowLoopbackHttp = false, exactCheckpoint = true }) {
+  requireImportsProof(importsProof, report, reportSha256);
+  return saveCheckpoint({ origin, token, report, snapshot, allowLoopbackHttp, exactCheckpoint });
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { report: { type: "string" }, receipt: { type: "string" }, checkpoint: { type: "boolean", default: false }, snapshot: { type: "string", default: "state/events.json" }, "allow-loopback-http": { type: "boolean", default: false }, "validate-imports": { type: "boolean", default: false }, "exact-checkpoint": { type: "boolean", default: false } } });
+  const { values } = parseArgs({ options: { report: { type: "string" }, receipt: { type: "string" }, "imports-receipt": { type: "string" }, "imports-proof": { type: "string" }, checkpoint: { type: "boolean", default: false }, "checkpoint-only": { type: "boolean", default: false }, snapshot: { type: "string", default: "state/events.json" }, "allow-loopback-http": { type: "boolean", default: false }, "validate-imports": { type: "boolean", default: false }, "exact-checkpoint": { type: "boolean", default: false } } });
   const { BIPLAN_URL: origin, SYNC_TOKEN: token } = process.env;
   if (!origin || !token) throw new Error("Set BIPLAN_URL and SYNC_TOKEN in the runner secret store.");
   endpointFor(origin, "/api/admin/import", values["allow-loopback-http"]);
   const reportPath = values.report ? resolve(values.report) : new URL("./output/report.json", import.meta.url);
-  const report = JSON.parse(await readFile(reportPath, "utf8"));
+  const reportBytes = await readFile(reportPath);
+  const reportSha256 = createHash("sha256").update(reportBytes).digest("hex");
+  const report = JSON.parse(reportBytes);
   const validateImportEnvelope = values["validate-imports"]
     ? (await import("../web/lib/catalog.ts")).validateImport
     : undefined;
-  const result = await publish({ origin, token, report, checkpoint: values.checkpoint, snapshot: values.checkpoint ? resolve(values.snapshot) : undefined, allowLoopbackHttp: values["allow-loopback-http"], validateImportEnvelope, exactCheckpoint: values["exact-checkpoint"] });
+  if (values["checkpoint-only"] && (!values.checkpoint || !values["imports-proof"])) throw new Error("Checkpoint-only mode requires --checkpoint and --imports-proof.");
+  const result = values["checkpoint-only"]
+    ? await publishCheckpointOnly({ origin, token, report, reportSha256, importsProof: JSON.parse(await readFile(resolve(values["imports-proof"]), "utf8")), snapshot: resolve(values.snapshot), allowLoopbackHttp: values["allow-loopback-http"], exactCheckpoint: values["exact-checkpoint"] })
+    : await publish({ origin, token, report, reportSha256, checkpoint: values.checkpoint, snapshot: values.checkpoint ? resolve(values.snapshot) : undefined, allowLoopbackHttp: values["allow-loopback-http"], validateImportEnvelope, exactCheckpoint: values["exact-checkpoint"], onImportsComplete: values["imports-receipt"] ? (proof) => atomicJson(resolve(values["imports-receipt"]), proof) : undefined });
   if (values.receipt) await atomicJson(resolve(values.receipt), result);
   console.log(JSON.stringify(result));
 }
