@@ -156,13 +156,13 @@ assert.match(deploy, /cp health\.json ready\.json deploy-provenance\//);
 assert.match(deploy, /path: deploy-provenance/);
 
 assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
-assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:$/m);
+assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:\n\s{4}inputs:\n\s{6}verify_only:[\s\S]*?type: boolean\n\s{8}default: false$/m);
 assert.match(
   collectorWorkflow,
-  /^\s{2}schedule_gate:\n\s{4}if: github\.event_name == 'workflow_dispatch' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
+  /^\s{2}schedule_gate:\n\s{4}if: \(github\.event_name == 'workflow_dispatch' && inputs\.verify_only != true\) \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
 );
 // The hourly monitor checks readiness and catalog age with the collector identity.
-assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \* \* \* \*'/m);
+assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \* \* \* \*' \|\| \(github\.event_name == 'workflow_dispatch' && inputs\.verify_only == true\)/m);
 assert.match(collectorWorkflow, /\/api\/ready/);
 assert.match(collectorWorkflow, /MAX_AGE_HOURS: '14'/);
 // The hourly schedule runs only the indexing job; it never collects.
@@ -208,6 +208,29 @@ assert.doesNotMatch(collectorWorkflow, /continue-on-error/);
 assert.match(collectorWorkflow, /if: always\(\) && steps\.publish\.outcome == 'success'/);
 assert.match(collectorWorkflow, /collection-embedding-index\.jsonl\*/);
 assert.doesNotMatch(collectorWorkflow, /Prepare replacement PostgreSQL|GCP_STAGING_PIPELINE_ENABLED|BIPLAN_PIPELINE_PG/);
+const monitorJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  monitor:'));
+assert.match(monitorJob, /actions\/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4\.4\.0[\s\S]*node-version-file: web\/\.nvmrc/);
+const monitorCheckout = monitorJob.indexOf('uses: actions/checkout@');
+const monitorInitializer = monitorJob.indexOf('name: Initialize readiness evidence');
+const monitorSetupNode = monitorJob.indexOf('uses: actions/setup-node@');
+assert.ok(monitorCheckout >= 0 && monitorCheckout < monitorInitializer);
+assert.ok(monitorInitializer < monitorSetupNode);
+assert.match(monitorJob, /name: Initialize readiness evidence\n\s+if: always\(\)/);
+assert.doesNotMatch(monitorJob, /SYNC_TOKEN|TYPESAFE|VOYAGE/);
+for (const proof of [
+  "status !== '200'",
+  "body.ready !== true",
+  'body.reasons.length !== 0',
+  "pending === true",
+  'publication_proof_missing',
+  'publication_mismatch',
+]) assert.match(monitorJob, new RegExp(proof.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+assert.match(monitorJob, /name: Preserve readiness evidence\n\s+if: always\(\)/);
+for (const path of [
+  'monitor-evidence/ready.json',
+  'monitor-evidence/status.txt',
+  'monitor-evidence/validation.json',
+]) assert.match(monitorJob, new RegExp(path.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 const artifactPaths = collectorWorkflow.slice(collectorWorkflow.indexOf('name: Save normalized data'));
 assert.doesNotMatch(artifactPaths, /collector\/state\/raw(?:\/|\s)|collector\/output\/(?:html|raw)(?:\/|\s)/);
 const publicPaths = artifactPaths.split('path: |')[1]?.split('if-no-files-found:')[0]

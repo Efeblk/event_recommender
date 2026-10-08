@@ -58,6 +58,28 @@ monitor. Manual runs and skipped jobs do not prove that acceptance condition.
 The older 48-hour observation procedure above describes a bounded window.
 Use `open` for the product plan's seven-day check.
 
+To verify the active private publication without starting collection or indexing,
+run the workflow with `verify_only=true`:
+
+```powershell
+gh workflow run gcp-collector.yml -f verify_only=true
+```
+
+The verification-only run uses the collector's private identity and the same
+concurrency group as collection, so it waits for an active collection instead of
+interrupting it. Its `gcp-ready-staging-<run-id>-<attempt>` artifact contains only
+`ready.json`, `status.txt` and `validation.json`. The validator requires HTTP 200,
+`ready: true`, an empty `reasons` array, a catalog observation no more than 14
+hours old, no pending search publication, and matching canonical non-null
+`latestCollectedAt`, `activeCollectedAt` and checkpoint `finishedAt` values. It
+does not require the workflow commit to equal the deployed runtime commit.
+
+This probe proves that the active publication is healthy and converged. An older
+fresh publication can pass every check. To verify one target collection, compare
+the artifact's checkpoint `finishedAt` with that collection run's publication
+receipt and report, and verify the checkpoint hash in the collection evidence.
+The manual probe does not count as an hourly Phase 2 monitor run.
+
 GitHub schedules can be delayed or skipped. The catalog stays valid for 72 hours,
 so a few missed runs are harmless. Cloud Monitoring emails through channel
 `biplan-staging-uptime-email`, independently of GitHub:

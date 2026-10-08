@@ -6,6 +6,12 @@ on:
     # Hourly: index new documents only (no collection).
     - cron: '47 * * * *'
   workflow_dispatch:
+    inputs:
+      verify_only:
+        description: Verify the active staging publication without collecting or indexing
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -16,7 +22,7 @@ concurrency:
 
 jobs:
   schedule_gate:
-    if: github.event_name == 'workflow_dispatch' || (github.event.schedule == '17 */6 * * *' && vars.GCP_STAGING_COLLECTION_ENABLED == 'true')
+    if: (github.event_name == 'workflow_dispatch' && inputs.verify_only != true) || (github.event.schedule == '17 */6 * * *' && vars.GCP_STAGING_COLLECTION_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
@@ -265,7 +271,7 @@ jobs:
   monitor:
     # Hourly health check. A failed scheduled run makes GitHub send a failure
     # email. It lives here because the collector identity trusts only this file.
-    if: github.event.schedule == '47 * * * *'
+    if: github.event.schedule == '47 * * * *' || (github.event_name == 'workflow_dispatch' && inputs.verify_only == true)
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -273,6 +279,23 @@ jobs:
       contents: read
       id-token: write
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Initialize readiness evidence
+        if: always()
+        run: |
+          mkdir -p monitor-evidence
+          printf '{}\n' > monitor-evidence/ready.json
+          printf 'not-requested\n' > monitor-evidence/status.txt
+          printf '{"schemaVersion":1,"completed":false,"problems":["monitor_not_completed"]}\n' > monitor-evidence/validation.json
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: web/.nvmrc
+
       - id: auth_monitor
         name: Authenticate for the private readiness check
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
@@ -289,23 +312,72 @@ jobs:
           MAX_AGE_HOURS: '14'
         run: |
           set -euo pipefail
-          curl --silent --show-error --max-time 60 -o ready.json -w '%{http_code}' \
-            -H "Authorization: Bearer $ID_TOKEN" "$BIPLAN_URL/api/ready" > status.txt || true
-          node -e '
-            const fs = require("node:fs");
-            const status = fs.readFileSync("status.txt", "utf8").trim();
-            let body = {};
-            try { body = JSON.parse(fs.readFileSync("ready.json", "utf8")); } catch {}
-            const checked = Date.parse(body.catalog?.lastCheckedAt ?? "");
-            const ageHours = (Date.now() - checked) / 3600000;
-            console.log(JSON.stringify({ status, ready: body.ready, reasons: body.reasons,
-              eligible: body.catalog?.eligible, lastCheckedAt: body.catalog?.lastCheckedAt,
-              ageHours: Number.isFinite(ageHours) ? ageHours.toFixed(1) : null }));
-            const problems = [];
-            if (status !== "200" || body.ready !== true) problems.push(`not ready (HTTP ${status}, reasons ${JSON.stringify(body.reasons ?? null)})`);
-            if (!Number.isFinite(ageHours) || ageHours > Number(process.env.MAX_AGE_HOURS))
-              problems.push(`catalog is ${Number.isFinite(ageHours) ? ageHours.toFixed(1) : "unknown"} h old (limit ${process.env.MAX_AGE_HOURS} h)`);
-            if (problems.length) {
-              console.log(`::error title=Staging unhealthy::${problems.join("; ")}`);
-              process.exit(1);
-            }'
+          curl --silent --show-error --max-time 60 -o monitor-evidence/ready.json -w '%{http_code}' \
+            -H "Authorization: Bearer $ID_TOKEN" "$BIPLAN_URL/api/ready" > monitor-evidence/status.txt || true
+          node - monitor-evidence/status.txt monitor-evidence/ready.json monitor-evidence/validation.json <<'NODE'
+          const fs = require('node:fs');
+          const status = fs.readFileSync(process.argv[2], 'utf8').trim();
+          let body = {};
+          let validJson = true;
+          try {
+            const parsed = JSON.parse(fs.readFileSync(process.argv[3], 'utf8'));
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) validJson = false;
+            else body = parsed;
+          }
+          catch { validJson = false; }
+          const canonicalTimestamp = value => typeof value === 'string' && Number.isFinite(Date.parse(value)) && new Date(Date.parse(value)).toISOString() === value ? value : null;
+          const lastCheckedAt = canonicalTimestamp(body.catalog?.lastCheckedAt);
+          const checked = Date.parse(lastCheckedAt ?? '');
+          const ageHours = (Date.now() - checked) / 3600000;
+          const pending = typeof body.search?.pending === 'boolean' ? body.search.pending : null;
+          const latestCollectedAt = canonicalTimestamp(body.search?.latestCollectedAt);
+          const activeCollectedAt = canonicalTimestamp(body.search?.activeCollectedAt);
+          const checkpointFinishedAt = canonicalTimestamp(body.checkpoint?.finishedAt);
+          const reasonShapeValid = Array.isArray(body.reasons) && body.reasons.every(reason => typeof reason === 'string');
+          const reasons = reasonShapeValid
+            ? body.reasons.map(reason => /^[a-z0-9_]{1,64}$/.test(reason) ? reason : 'invalid_reason').slice(0, 20)
+            : null;
+          const problems = [];
+          if (status !== '200') problems.push('http_status');
+          if (!validJson) problems.push('invalid_json');
+          if (body.ready !== true) problems.push('not_ready');
+          if (!reasonShapeValid || body.reasons.length !== 0) problems.push('readiness_reasons');
+          if (!Number.isFinite(ageHours) || ageHours > Number(process.env.MAX_AGE_HOURS)) problems.push('catalog_freshness');
+          if (pending === true) problems.push('publication_pending');
+          if (pending === null || !latestCollectedAt || !activeCollectedAt || !checkpointFinishedAt)
+            problems.push('publication_proof_missing');
+          else if (latestCollectedAt !== activeCollectedAt || activeCollectedAt !== checkpointFinishedAt)
+            problems.push('publication_mismatch');
+          const summary = {
+            schemaVersion: 1,
+            completed: true,
+            validatedAt: new Date().toISOString(),
+            httpStatus: /^\d{3}$/.test(status) ? status : null,
+            validJson,
+            ready: typeof body.ready === 'boolean' ? body.ready : null,
+            reasons,
+            eligible: Number.isSafeInteger(body.catalog?.eligible) ? body.catalog.eligible : null,
+            lastCheckedAt,
+            ageHours: Number.isFinite(ageHours) ? Number(ageHours.toFixed(3)) : null,
+            publication: { pending, latestCollectedAt, activeCollectedAt, checkpointFinishedAt },
+            problems,
+          };
+          fs.writeFileSync(process.argv[4], `${JSON.stringify(summary, null, 2)}\n`);
+          console.log(JSON.stringify(summary));
+          if (problems.length) {
+            console.log(`::error title=Staging unhealthy::${problems.join(',')}`);
+            process.exit(1);
+          }
+          NODE
+
+      - name: Preserve readiness evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gcp-ready-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            monitor-evidence/ready.json
+            monitor-evidence/status.txt
+            monitor-evidence/validation.json
+          if-no-files-found: error
+          retention-days: 14

@@ -265,6 +265,22 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-09: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
+  merged as `8b933f4`. Final PR CI
+  [37843353597](https://github.com/Efeblk/event_recommender/actions/runs/37843353597)
+  passed on `6f8bb6a`. Exact merge CI
+  [37844642784](https://github.com/Efeblk/event_recommender/actions/runs/37844642784)
+  passed all six checks, including the Linux image. Private staging deploy
+  [37845446660](https://github.com/Efeblk/event_recommender/actions/runs/37845446660)
+  passed. Revision `biplan-staging-00059-66f` matches the reviewed Git tree,
+  lockfile bytes and image checksums. Authenticated health and readiness passed
+  with 8,675 eligible events. Anonymous health returned 403. This first readiness
+  response describes the existing active checkpoint. Manual collection
+  [37846165394](https://github.com/Efeblk/event_recommender/actions/runs/37846165394)
+  started from `8b933f4` to publish the corrected materialization. Its result
+  remains pending. Deployment evidence stays in
+  `web/work/comprehensive-review/staging-deploy/`.
+
 - 2026-10-08: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
   contains the comprehensive v1 fixes on `t3code/comprehensive-project-review`.
   The user delegated review of the two revised golden requests and approved

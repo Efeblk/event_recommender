@@ -6,9 +6,10 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 const workflow = (await readFile(new URL('../../.github/workflows/gcp-staging.yml', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
+const collectorWorkflow = (await readFile(new URL('../../.github/workflows/gcp-collector.yml', import.meta.url), 'utf8')).replaceAll('\r\n', '\n');
 
-function inlineNode(command) {
-  const lines = workflow.split('\n');
+function inlineNode(source, command) {
+  const lines = source.split('\n');
   const start = lines.findIndex(line => line.includes(command) && line.trimEnd().endsWith("<<'NODE'"));
   assert.notEqual(start, -1, `Missing inline validator: ${command}`);
   const indent = lines[start].match(/^\s*/)[0];
@@ -17,10 +18,11 @@ function inlineNode(command) {
   return `${lines.slice(start + 1, end).map(line => line.startsWith(indent) ? line.slice(indent.length) : line).join('\n')}\n`;
 }
 
-const revisionValidator = inlineNode('node - "$STATE_DIR/revision.json"');
-const configuredTags = inlineNode('node - "$STATE_DIR/service.json" > candidate-traffic-tags.json');
-const trafficValidator = inlineNode('node - service-after-traffic.json candidate-traffic-tags.json');
-const endpointValidator = inlineNode('node - health.json ready.json');
+const revisionValidator = inlineNode(workflow, 'node - "$STATE_DIR/revision.json"');
+const configuredTags = inlineNode(workflow, 'node - "$STATE_DIR/service.json" > candidate-traffic-tags.json');
+const trafficValidator = inlineNode(workflow, 'node - service-after-traffic.json candidate-traffic-tags.json');
+const endpointValidator = inlineNode(workflow, 'node - health.json ready.json');
+const monitorValidator = inlineNode(collectorWorkflow, 'node - monitor-evidence/status.txt monitor-evidence/ready.json monitor-evidence/validation.json');
 
 function childNode(code, files, env = {}) {
   return spawnSync(process.execPath, ['-', ...files], {
@@ -38,6 +40,16 @@ function rejected(result, message) {
   assert.notEqual(result.status, 0, 'Validator unexpectedly accepted an unsafe fixture');
   assert.match(`${result.stdout}${result.stderr}`, message);
 }
+
+await test('collector monitor initializes evidence after checkout on every outcome', () => {
+  const monitor = collectorWorkflow.slice(collectorWorkflow.indexOf('  monitor:'));
+  const checkout = monitor.indexOf('uses: actions/checkout@');
+  const initializer = monitor.indexOf('name: Initialize readiness evidence');
+  const setupNode = monitor.indexOf('uses: actions/setup-node@');
+  assert.ok(checkout >= 0 && checkout < initializer);
+  assert.ok(initializer < setupNode);
+  assert.match(monitor, /name: Initialize readiness evidence\n\s+if: always\(\)/);
+});
 
 await test('deployed revision validator enforces readiness, digest, SHA and snapshot runtime', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'biplan-gcp-revision-'));
@@ -147,4 +159,50 @@ await test('authenticated deployment endpoint validator requires health and read
   rejected(await run(health, { ...ready, ready: false, reasons: ['catalog_not_ready'] }), /not ready/);
   rejected(await run(health, { ...ready, catalog: { ...ready.catalog, eligible: 0 } }), /catalog is invalid/);
   rejected(await run(health, { ...ready, checkpoint: null }), /checkpoint is invalid/);
+});
+
+await test('collector monitor requires a fresh, active and converged publication', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'biplan-gcp-monitor-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const statusFile = join(directory, 'status.txt');
+  const readyFile = join(directory, 'ready.json');
+  const summaryFile = join(directory, 'validation.json');
+  const collectedAt = new Date(Date.now() - 3600000).toISOString();
+  const ready = {
+    ready: true,
+    reasons: [],
+    catalog: { eligible: 10, lastCheckedAt: collectedAt },
+    search: {
+      pending: false,
+      latestCollectedAt: collectedAt,
+      activeCollectedAt: collectedAt,
+    },
+    checkpoint: { finishedAt: collectedAt },
+  };
+  const run = async (body, status = '200') => {
+    await Promise.all([
+      writeFile(statusFile, `${status}\n`),
+      writeFile(readyFile, JSON.stringify(body)),
+    ]);
+    return childNode(monitorValidator, [statusFile, readyFile, summaryFile], { MAX_AGE_HOURS: '14' });
+  };
+
+  accepted(await run(ready));
+  const summary = JSON.parse(await readFile(summaryFile, 'utf8'));
+  assert.equal(summary.completed, true);
+  assert.deepEqual(summary.problems, []);
+  assert.deepEqual(summary.publication, {
+    pending: false,
+    latestCollectedAt: collectedAt,
+    activeCollectedAt: collectedAt,
+    checkpointFinishedAt: collectedAt,
+  });
+
+  rejected(await run({ ...ready, search: { ...ready.search, pending: true } }), /publication_pending/);
+  rejected(await run({ ...ready, search: { ...ready.search, latestCollectedAt: new Date(Date.now() - 7200000).toISOString() } }), /publication_mismatch/);
+  rejected(await run({ ...ready, search: undefined }), /publication_proof_missing/);
+  rejected(await run({ ...ready, checkpoint: { finishedAt: '2026-10-09 12:00:00Z' } }), /publication_proof_missing/);
+  rejected(await run({ ...ready, reasons: ['catalog_not_ready'] }), /readiness_reasons/);
+  rejected(await run({ ...ready, catalog: { ...ready.catalog, lastCheckedAt: new Date(Date.now() - 15 * 3600000).toISOString() } }), /catalog_freshness/);
+  rejected(await run(ready, '503'), /http_status/);
 });
