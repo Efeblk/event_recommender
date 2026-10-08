@@ -113,7 +113,7 @@ await test("Biletix embedded state groups ticket types and converts kurus to TRY
   assert.equal(events[0].availability, "available");
   assert.equal(events[0].startsAt, "2026-09-18T18:00:00.000Z");
 });
-await test("Biletix quarantines an explicit door time exported as the event start", async () => {
+await test("Biletix quarantines an explicit door clock with optional label punctuation", async () => {
   const state = structuredClone(biletix);
   const detail = Object.values(state)
     .map((entry) => entry?.b?.data)
@@ -122,9 +122,9 @@ await test("Biletix quarantines an explicit door time exported as the event star
     .map((entry) => entry?.b?.data)
     .find(Array.isArray);
   for (const performance of performances)
-    performance.performanceDate = Date.parse("2026-10-05T17:00:00.000Z");
+    performance.performanceDate = Date.parse("2026-11-28T18:00:00.000Z");
   detail.eventDescription =
-    "Kapı Açılış Saati: 20:00 Etkinlik Başlangıç Saati: 20:30";
+    "Kapı Açılış saati 21:00, etkinlik başlangıç: 22:00";
   const extractState = () =>
     extract(
       load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
@@ -135,10 +135,10 @@ await test("Biletix quarantines an explicit door time exported as the event star
     );
   await assert.rejects(extractState(), /session_time_conflict/);
 
-  detail.eventDescription = "Kapı açılış saati: 19:30. Etkinlik saati: 20:00.";
-  assert.equal((await extractState())[0].startsAt, "2026-10-05T17:00:00.000Z");
-  detail.eventDescription = "Etkinlik saati: 20:30.";
-  assert.equal((await extractState())[0].startsAt, "2026-10-05T17:00:00.000Z");
+  detail.eventDescription = "Kapı açılış saati 20:30. Etkinlik saati 21:00.";
+  assert.equal((await extractState())[0].startsAt, "2026-11-28T18:00:00.000Z");
+  detail.eventDescription = "Etkinlik başlangıç: 22:00.";
+  assert.equal((await extractState())[0].startsAt, "2026-11-28T18:00:00.000Z");
 });
 await test("Biletinial quarantines the retained Tuz Biber door time as a start", async () => {
   const exactRecord = {
@@ -169,6 +169,36 @@ await test("Biletinial quarantines the retained Tuz Biber door time as a start",
       ),
     /session_time_conflict/,
   );
+});
+await test("Biletinial quarantines the retained Çilekeş availability contradiction", async () => {
+  const exactRecord = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: "Çilekeş",
+    description:
+      "Çilekeş Konseri ÇİLEKEŞ’TEN İZMİR VE ANKARA’YA İKİ YENİ KONSER Türkiye alternatif rock sahnesinin en özgün ve öncü gruplarından Çilekeş’in, ‘Y.O.K’ albümünün 21. yılına özel olarak yıllar sonra yeniden sahnelere döneceğini duyurmasının ardından 10 Ekim'de KüçükÇiftlik Park’ta gerçekleşecek İstanbul konserinin biletleri kısa sürede tükendi. Yoğun ilgi üzerine grup şimdi de İzmir ve Ankara konserlerini açıklıyor.",
+    startDate: "2026-10-10T22:00:00+03:00",
+    location: {
+      name: "KüçükÇiftlik Park",
+      address: { addressLocality: "İstanbul", streetAddress: "Harbiye" },
+    },
+    offers: {
+      price: 2950,
+      priceCurrency: "TRY",
+      availability: "https://schema.org/InStock",
+    },
+  };
+  const extractRecord = () =>
+    extract(
+      load(`<script type="application/ld+json">${JSON.stringify(exactRecord)}</script>`),
+      "biletinial",
+      "https://biletinial.com/tr-tr/muzik/cilekes",
+      "Konser",
+      now,
+    );
+  await assert.rejects(extractRecord, /session_availability_conflict/);
+  exactRecord.startDate = "2026-11-10T22:00:00+03:00";
+  assert.equal((await extractRecord()).length, 1);
 });
 await test("Biletix preserves high safe minor-unit prices and rejects unsafe values", async () => {
   const extractPrice = async (minorPrice) => {

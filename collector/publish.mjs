@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { atomicJson, endpointFor, requestJson, validateCollection } from "./remote.mjs";
+import { isSourceQuarantineReason } from "../contracts/source-evidence.ts";
 
 // Keep source-page work below the Free D1 per-invocation query budget while
 // reserving room for lock handling and current-seed database initialization.
@@ -45,7 +46,7 @@ export function prepareImportPages(pages, now = new Date()) {
   for (const page of pages) {
     if ((page.retiredAt !== undefined && page.quarantinedAt !== undefined) ||
         (page.events.length && (page.retiredAt !== undefined || page.quarantinedAt !== undefined || page.quarantineReason !== undefined)) ||
-        (page.quarantinedAt !== undefined && page.quarantineReason !== 'session_time_conflict') ||
+        (page.quarantinedAt !== undefined && !isSourceQuarantineReason(page.quarantineReason)) ||
         (page.quarantineReason !== undefined && page.quarantinedAt === undefined))
       throw new Error('Invalid empty source state');
     const inactiveAt = page.events.length === 0 ? Date.parse(page.retiredAt ?? page.quarantinedAt) : NaN;

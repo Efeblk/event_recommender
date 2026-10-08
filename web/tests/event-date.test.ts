@@ -31,3 +31,18 @@ await test('unknown admission time stays unknown while explicit and legacy sessi
     assert.match(eventDateLabel(timed), /17:00/);
   }
 });
+
+await test('a provider-labelled door clock is displayed as doors and never filtered as event start', () => {
+  const door = {
+    ...event,
+    category: 'Konser' as const,
+    description: 'Belirtilen saat, kapı açılış saatidir.',
+    startsAt: '2026-10-10T17:00:00.000Z',
+    attendanceTiming: undefined,
+  };
+  assert.equal(isEligible(door, { ...emptyFilters, startTimeFrom: '19:00' }, now), false);
+  const label = eventDateLabel(door);
+  assert.match(label, /20:00/);
+  assert.match(label, /Kapı açılışı/);
+  assert.match(label, /Etkinlik başlangıcını kontrol edin/);
+});

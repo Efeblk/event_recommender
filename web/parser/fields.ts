@@ -11,7 +11,7 @@
  */
 import { placeOf } from '../../contracts/location.ts';
 import type { Atom, Category, Condition, Interpretation, Operation, Order, ParserInput, Plan } from './contract.ts';
-import { DISTRICTS, fold, NEIGHBORHOODS, NUMBER_WORDS, TOPIC_TERMS } from './lexicon.ts';
+import { CATEGORY_TERMS, DISTRICTS, fold, MOOD_TERMS, NEIGHBORHOODS, NUMBER_WORDS, TOPIC_TERMS } from './lexicon.ts';
 import type { ChoiceAnswer, Debug, JevResponse, NoulAnswer, ParseResult, Question } from './parse-core.ts';
 import { applyOperations } from './state.ts';
 
@@ -65,6 +65,67 @@ const choice = (instructions: unknown, criteria: Record<string, string>): Questi
 const noulQ = (instructions: unknown): Question => ({ type: 'noul', instructions });
 const range = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => String(from + i));
 const opts = (keys: string[], describe: (key: string) => string = (key) => key) => Object.fromEntries(keys.map((key) => [key, describe(key)]));
+
+const termPattern = (term: string) => new RegExp(`(?:^|[^\\p{L}\\p{N}])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}\\p{N}])`, 'u');
+const targetsIn = (text: string, terms: Record<string, string[]>) => {
+  const value = fold(text);
+  return Object.keys(terms).filter((target) => terms[target].some((term) => termPattern(term).test(value)));
+};
+
+/**
+ * Return a clause only when punctuation or contrast makes the target's scope
+ * explicit. Ambiguous lists keep the full message for the model to resolve.
+ */
+function scopedTargetEvidence(message: string, terms: Record<string, string[]>): Record<string, string> {
+  const folded = fold(message);
+  const boundary = /[,;.!?]+|\b(?:ama|fakat|ancak|lakin|but|however|yet)\b/gu;
+  const clauses: Array<{ text: string; targets: string[]; role: boolean; coordinated: boolean }> = [];
+  const separators: string[] = [];
+  let start = 0;
+  for (const match of folded.matchAll(boundary)) {
+    const text = message.slice(start, match.index).trim();
+    const targets = targetsIn(text, terms);
+    clauses.push({
+      text,
+      targets,
+      role: /(?:^|[^\p{L}\p{N}])(?:olmasin|olsun|istemiyorum|istiyorum|isterim|tercihen|tercih|haric|disinda|olmayan|degil|no|not|without|except|want|wanted|prefer|preferred|ideally)(?=$|[^\p{L}\p{N}])/u.test(fold(text)),
+      coordinated: targets.length > 1 && /(?:^|[^\p{L}\p{N}])(?:veya|yahut|or|ya\s+da)(?=$|[^\p{L}\p{N}])/u.test(fold(text)),
+    });
+    separators.push(match[0]);
+    start = match.index + match[0].length;
+  }
+  const text = message.slice(start).trim();
+  const targets = targetsIn(text, terms);
+  clauses.push({
+    text,
+    targets,
+    role: /(?:^|[^\p{L}\p{N}])(?:olmasin|olsun|istemiyorum|istiyorum|isterim|tercihen|tercih|haric|disinda|olmayan|degil|no|not|without|except|want|wanted|prefer|preferred|ideally)(?=$|[^\p{L}\p{N}])/u.test(fold(text)),
+    coordinated: targets.length > 1 && /(?:^|[^\p{L}\p{N}])(?:veya|yahut|or|ya\s+da)(?=$|[^\p{L}\p{N}])/u.test(fold(text)),
+  });
+
+  // Pronouns and paired negatives can make a later predicate govern the list.
+  if (/(?:^|[^\p{L}\p{N}])(?:ikisi|ikisini|bunlar|bunlari|hepsi|hicbiri|both|either|neither|them|these|those)(?=$|[^\p{L}\p{N}])/u.test(folded)) return {};
+  const populated = clauses.map((clause, index) => ({ clause, index })).filter(({ clause }) => clause.targets.length);
+  if (populated.length < 2) return {};
+  const seen = new Set<string>();
+  for (const { clause } of populated) {
+    if (clause.targets.some((target) => seen.has(target))) return {};
+    clause.targets.forEach((target) => seen.add(target));
+  }
+  for (let index = 1; index < populated.length; index++) {
+    const left = populated[index - 1], right = populated[index];
+    const between = separators.slice(left.index, right.index).join(' ');
+    const strongBoundary = /[;.!?]|\b(?:ama|fakat|ancak|lakin|but|however|yet)\b/u.test(fold(between));
+    const commaBoundary = between.includes(',');
+    const safelyBound = strongBoundary
+      ? left.clause.role || right.clause.role
+      : commaBoundary && (left.clause.role && right.clause.role
+        || left.clause.coordinated && right.clause.role
+        || left.clause.role && right.clause.coordinated);
+    if (!safelyBound) return {};
+  }
+  return Object.fromEntries(populated.flatMap(({ clause }) => clause.targets.map((target) => [target, clause.text])));
+}
 
 /** Number candidates in the message: digits ("1.500", "2,5k") and number words ("iki yüz"). */
 export function numberCandidates(text: string): Array<{ text: string; value: number }> {
@@ -336,9 +397,14 @@ export function buildFieldRequest(input: ParserInput) {
   }
 
   // Event types, topics, experiences, content and moods: one judgment per item.
-  const item = (kind: Kind, value: string, text: string, opposite = false, note = '') => {
+  const item = (kind: Kind, value: string, text: string, opposite = false, note = '', evidence?: string) => {
     const was = previousValues(previous, kind).has(value);
-    return choice(`${context} Does the message itself name ${text}? Judge only the local clause or coordinated phrase that names this exact item. Negation in a later comma-separated or contrasting clause about a different item does not reach backward. A trailing negation does apply to every item in the same coordinated phrase (for example, "A veya B olmasın" excludes both A and B). A related item, the companion or the occasion does not count.${note}`, {
+    const question = `Does the message itself name ${text}? Judge only the local clause or coordinated phrase that names this exact item. Negation in a later comma-separated or contrasting clause about a different item does not reach backward. A trailing negation does apply to every item in the same coordinated phrase (for example, "A veya B olmasın" excludes both A and B). A related item, the companion or the occasion does not count.${note}`;
+    const instructions = evidence === undefined ? `${context} ${question}` : {
+      evidence,
+      question: `Classify ${text} using only \`evidence\`. The evidence is the complete clause for this event type. ${question}`,
+    };
+    return choice(instructions, {
       no: `The message does not name ${text}.`,
       want: opposite ? `The local clause requires ${text}, or rules out its opposite ("kalabalık olmasın" requires uncrowded).` : `The local clause asks for ${text}, or accepts it as one of its positive options.`,
       optional: `The local clause names ${text} only as a preference: "olsa iyi olur", "tercihen", "tercih ederim", "ideally", "I prefer".`,
@@ -346,7 +412,8 @@ export function buildFieldRequest(input: ParserInput) {
       ...(was ? { removed: 'The user drops it from the current search: "konser koşulunu kaldır", "remove the concert condition", "artık şart değil".' } : {}),
     });
   };
-  for (const [value, text] of Object.entries(CATEGORIES)) questions[`category_${value}`] = item('category', value, `the event type ${text}`, false, ' A topic or genre alone ("caz", "jazz", "fotoğrafçılık") does not name an event type.');
+  const categoryEvidence = scopedTargetEvidence(input.utterance, CATEGORY_TERMS);
+  for (const [value, text] of Object.entries(CATEGORIES)) questions[`category_${value}`] = item('category', value, `the event type ${text}`, false, ' A topic or genre alone ("caz", "jazz", "fotoğrafçılık") does not name an event type.', categoryEvidence[value]);
   questions.dance_activity = noulQ(`${context} Does the user want to dance themselves, rather than watch a dance or ballet performance?`);
   const topics = Object.keys(TOPIC_TERMS);
   const topicOptions = { ...opts(topics, (t) => `${t} (${TOPIC_TERMS[t].slice(0, 3).join(', ')})`), other: 'Another topic or genre not in this list.', none: 'No topic or genre.' };
@@ -705,7 +772,7 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
       const dancing = { type: 'atom' as const, atom: { kind: 'topic' as const, value: 'dancing' } };
       const topic = pick('category_dance') === 'exclude'
         ? { condition: { type: 'not' as const, child: dancing }, preferred: false }
-        : { condition: dancing, preferred: pick('category_dance') === 'optional' };
+        : { condition: dancing, preferred: true };
       fields.set('topic', [...(fields.get('topic') ?? []), topic]);
     }
     const topicRole = (id: 'topic_role' | 'topic_role_2', topic: string) => {
@@ -740,7 +807,12 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
     itemField('companion', Object.keys(COMPANIONS), (v) => ({ no: 'no', yes: 'want', removed: 'removed' } as Record<string, string>)[pick(`companion_${v}`)], (v) => ({ kind: 'companion', value: v as 'partner' }));
     itemField('experience', Object.keys(EXPERIENCES), (v) => pick(`experience_${v}`), (v) => ({ kind: 'experience', value: v as 'quiet' }));
     itemField('content', Object.keys(CONTENT), (v) => pick(`content_${v}`), (v) => ({ kind: 'content', value: v as 'profanity' }));
-    itemField('mood', Object.keys(MOODS), (v) => pick(`mood_${v}`), (v) => ({ kind: 'mood', value: v as 'calm' }));
+    const literalMoods = new Set(fold(input.utterance)
+      .split(/[,;.!?]+|\b(?:ama|fakat|ancak|lakin|but|however|yet)\b/gu)
+      .flatMap((clause) => /(?:^|[^\p{L}\p{N}])(?:olmasin|istemiyorum|degil|olmayan|no|not|without)(?=$|[^\p{L}\p{N}])/u.test(clause)
+        ? []
+        : targetsIn(clause, MOOD_TERMS)));
+    itemField('mood', Object.keys(MOODS), (v) => pick(`mood_${v}`) === 'no' && literalMoods.has(v) ? 'optional' : pick(`mood_${v}`), (v) => ({ kind: 'mood', value: v as 'calm' }));
     // Product policy: providers never state subjective qualities, so these rank instead of filter.
     for (const kind of ['experience', 'mood'] as const) {
       const list = fields.get(kind);
@@ -748,6 +820,7 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
       fields.set(kind, list.flatMap((x) => {
         if (x.condition.type !== 'atom' || x.preferred) return [x];
         const atom = x.condition.atom;
+        if (atom.kind === 'experience' && atom.value === 'quiet' && noul('quiet_required') < 0.5) return [{ ...x, preferred: true }];
         if (atom.kind === 'experience' && atom.value === 'romantic') return [{ ...x, preferred: true }];
         if (atom.kind === 'experience' && atom.value === 'beginner_friendly' && noul('beginner_guarantee') < 0.5) return [{ ...x, preferred: true }];
         if (atom.kind === 'mood') {

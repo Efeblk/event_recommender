@@ -9,6 +9,7 @@ import { emptyFilters, type Category, type EventRecord } from './types.ts';
 import { isEligible, normalize } from './search.ts';
 import { eventLocation, sideNamed } from './istanbul-location.ts';
 import { checkAgeEvidence } from './age-evidence.ts';
+import { sourceTimeIsDoorsOnly } from '../../contracts/timing.ts';
 
 const istanbulDay = new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -76,11 +77,14 @@ const genreTopics = new Set([
 ]);
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 const topicPatterns = new Map<string, RegExp>();
+const specialTopicTerms: Record<string, string[]> = {
+  dancing: ['dans gecesi', 'dans partisi', 'dance night', 'dance party'],
+};
 /** Source text naming the topic; absence is unknown, never a contradiction. */
 function topicPattern(value: string): RegExp {
   let pattern = topicPatterns.get(value);
   if (!pattern) {
-    const surfaces = [...(TOPIC_TERMS[value] ?? []), value]
+    const surfaces = [...(TOPIC_TERMS[value] ?? []), ...(specialTopicTerms[value] ?? []), value]
       .map((term) => normalize(term).trim())
       .filter(Boolean);
     pattern = new RegExp(
@@ -146,8 +150,8 @@ function atomResult(
     }
     case 'time': {
       if (
-        event.attendanceTiming &&
-        event.attendanceTiming.kind !== 'timed_session'
+        sourceTimeIsDoorsOnly(event.description) ||
+        (event.attendanceTiming && event.attendanceTiming.kind !== 'timed_session')
       )
         return result('unknown');
       const time = istanbulClock.format(new Date(event.startsAt));
@@ -211,11 +215,13 @@ function atomResult(
             .join('. '),
         );
         const pattern = topicPattern(atom.value);
-        const evidence = text
+        const dancingCue = atom.value !== 'dancing'
+          || /(?<![\p{L}\p{N}])(?:dj|eglence|parti|party)(?![\p{L}\p{N}])/u.test(text);
+        const evidence = (dancingCue ? text
           .split(/(?<=[.!?])\s+/u)
           .filter((part) => pattern.test(part))
           .slice(0, 3)
-          .map((part) => part.slice(0, 240));
+          .map((part) => part.slice(0, 240)) : []);
         return result(evidence.length ? 'supported' : 'unknown', evidence);
       }
       const check = checkPredicateEvidence(event, 'genre', atom.value);

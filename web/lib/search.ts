@@ -8,6 +8,7 @@ import {
 import { hasSupportedEventFormat } from './event-format.ts';
 import { categoryIntent, isFullPreferenceReset } from './intent.ts';
 import { addressDistrict, isIstanbulDistrict, ISTANBUL_DISTRICTS, normalize } from '../../contracts/district.ts';
+import { sourceTimeIsDoorsOnly } from '../../contracts/timing.ts';
 export { addressDistrict, isIstanbulDistrict, normalize } from '../../contracts/district.ts';
 
 const istanbulDayFormatter = new Intl.DateTimeFormat('en-CA', {
@@ -1001,7 +1002,7 @@ export function isEligible(
     // A validity-window boundary or unresolved admission timestamp is not
     // evidence of a booked start time. Preserve legacy session behavior when
     // the source has not supplied timing semantics yet.
-    if (e.attendanceTiming && e.attendanceTiming.kind !== 'timed_session')
+    if (sourceTimeIsDoorsOnly(e.description) || (e.attendanceTiming && e.attendanceTiming.kind !== 'timed_session'))
       return false;
     const localTime = istanbulTimeFormatter.format(new Date(start));
     if (

@@ -31,9 +31,17 @@ function exactInstant(value: unknown): string | null {
 
 function labelledClock(description: string, label: string): string | null {
   const match = description.match(
-    new RegExp(`${label}\\s*:\\s*([01]?\\d|2[0-3])[.:]([0-5]\\d)(?=$|[^\\d])`, 'iu'),
+    new RegExp(
+      `${label}(?:\\s*:\\s*|\\s+)([01]?\\d|2[0-3])[.:]([0-5]\\d)(?=$|[^\\d])`,
+      'iu',
+    ),
   );
   return match ? `${match[1].padStart(2, '0')}:${match[2]}` : null;
+}
+
+/** The provider explicitly says the listed clock is doors, not event start. */
+export function sourceTimeIsDoorsOnly(description: string): boolean {
+  return /belirtilen\s+saat\s*,?\s*kap(?:ı|i)\s+a(?:ç|c)ıl(?:ı|i)ş\s+saatidir/iu.test(description);
 }
 
 /** Detects the narrow case where a provider session uses an explicit door time
@@ -44,7 +52,7 @@ export function hasExplicitDoorTimeStartConflict(input: {
 }): boolean {
   const eventTime = labelledClock(
     input.description,
-    'etkinlik\\s+(?:başlangıç\\s+)?saati',
+    '(?:etkinlik\\s+saati|etkinlik\\s+başlangıç(?:\\s+saati)?)',
   );
   const doorTime = labelledClock(
     input.description,

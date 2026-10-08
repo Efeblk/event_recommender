@@ -1,3 +1,5 @@
+import { isSourceQuarantineReason } from '../contracts/source-evidence.ts';
+
 export const COVERAGE_SCHEMA_VERSION = 1;
 
 export function serializedCheckpointWriter(write) {
@@ -77,7 +79,7 @@ export function fairCoverageOrder(state, selectedSources, now = new Date().toISO
 export function recordCoverageAttempt(state, url, { success, failure = null, retired = false, quarantined = false }, now = new Date().toISOString()) {
   const entry = state.entries.find((candidate) => candidate.url === url);
   if (!entry) return;
-  if (quarantined && (success || retired || failure !== 'session_time_conflict')) throw new Error('Invalid source quarantine');
+  if (quarantined && (success || retired || !isSourceQuarantineReason(failure))) throw new Error('Invalid source quarantine');
   entry.attempts += 1; entry.lastAttemptAt = now;
   if (success) { entry.lastSuccessAt = now; entry.failure = null; entry.retiredAt = null; entry.quarantinedAt = null; entry.quarantineReason = null; }
   else if (retired) { entry.lastFailureAt = now; entry.failure = null; entry.retiredAt = now; entry.quarantinedAt = null; entry.quarantineReason = null; }
@@ -198,7 +200,7 @@ function recoverableCoverageEntries(snapshot, state, validate, now) {
       checkpointAt === retiredAt;
     const quarantined = entry.eventsCheckpointStatus === 'quarantined' && entry.events.length === 0 &&
       Number.isFinite(Date.parse(entry.quarantinedAt)) && checkpointAt === Date.parse(entry.quarantinedAt) &&
-      entry.quarantineReason === 'session_time_conflict';
+      isSourceQuarantineReason(entry.quarantineReason);
     if (!active && !retired && !quarantined) continue;
     const recoverableEvents = entry.events.filter((event) => {
       const startsAt = Date.parse(event?.startsAt);

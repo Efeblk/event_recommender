@@ -5,6 +5,7 @@ import {
   biletixAttendanceTiming,
   hasExplicitDoorTimeStartConflict,
 } from "../contracts/timing.ts";
+import { hasExplicitSameEventSoldOutConflict } from "../contracts/source-evidence.ts";
 import { discoverBiletinialCategories, extractBiletinial } from './biletinial.mjs';
 import { verifiedBubiletDetailInventory } from './bubilet.mjs';
 
@@ -86,23 +87,20 @@ function categoryOf(text) {
 export function categorySupportedByEvent(category, title, description) {
   return categoryForEvent(category ?? '', clean(title), clean(description));
 }
-function checkedSourceTimes(events) {
-  if (
-    events.some((event) =>
-      hasExplicitDoorTimeStartConflict({
-        description: event.description,
-        startsAt: event.startsAt,
-      }),
-    )
-  )
-    throw new Error("session_time_conflict");
+function checkedSourceEvidence(events) {
+  for (const event of events) {
+    if (hasExplicitDoorTimeStartConflict(event))
+      throw new Error("session_time_conflict");
+    if (hasExplicitSameEventSoldOutConflict(event))
+      throw new Error("session_availability_conflict");
+  }
   return events;
 }
 export async function extract($, source, url, fallbackCategory, now = new Date(), options = {}) {
   const html = $.html();
-  if (source === "biletix") return checkedSourceTimes(extractBiletix($, url, now));
+  if (source === "biletix") return checkedSourceEvidence(extractBiletix($, url, now));
   if (source === "biletinial")
-    return checkedSourceTimes(
+    return checkedSourceEvidence(
       await extractBiletinial($, url, fallbackCategory, now, {
         ...options,
         categoryForEvent,
@@ -152,7 +150,7 @@ export async function extract($, source, url, fallbackCategory, now = new Date()
   }
   category ??= 'Diğer';
   if (source === "bubilet")
-    return checkedSourceTimes(
+    return checkedSourceEvidence(
       await extractBubilet(
         $,
         url,
@@ -167,7 +165,7 @@ export async function extract($, source, url, fallbackCategory, now = new Date()
   // An Event schema alone is insufficient evidence that a page is now empty.
   // Preserve old rows when a redesign drops essential fields or all rows are rejected.
   if (!events.length) throw new Error("no_verified_sessions");
-  return checkedSourceTimes(events.map((event) => ({ ...event,
+  return checkedSourceEvidence(events.map((event) => ({ ...event,
     category: categorySupportedByEvent(event.category, event.title, event.description),
     source, sourceCategory: category, sourceVersion: "4", extraction: "json-ld" })));
 }

@@ -1,5 +1,6 @@
 import type { CheckpointPointer, CollectionReport } from './operations.ts';
 import type { EventRecord, Filters } from './types.ts';
+import type { SourceQuarantineReason } from '../../contracts/source-evidence.ts';
 
 /** Transport operations deliberately expose documents and objects, never SQL. */
 export interface ControlTransaction {
@@ -29,7 +30,7 @@ export interface SourcePage {
   retiredAt?: string;
   /** A source page withheld because its sessions conflict with authoritative source evidence. */
   quarantinedAt?: string;
-  quarantineReason?: 'session_time_conflict';
+  quarantineReason?: SourceQuarantineReason;
 }
 export interface VectorEntry {
   hash: string;

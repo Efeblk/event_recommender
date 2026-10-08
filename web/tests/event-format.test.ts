@@ -92,3 +92,27 @@ await test('an explicitly described stand-up programme overrides provider theatr
       'Stand-up',
     );
 });
+
+await test('an unmistakable guided multi-stop programme overrides a provider exhibition label', () => {
+  const tour = {
+    title: "Katedralde Noel Şarkıları ile İstanbul'da Noel",
+    description: "Program boyunca farklı cemaatlere ait kiliseleri ziyaret edecek, yapıların tarihini Antonina'nın uzman rehberlerinden dinleyeceğiz. Tur boyunca özel araçla ulaşım sağlanır. Günün sonunda özel Noel Şarkıları Konseri'ne katılacağız.",
+  };
+  for (const classify of [categoryForEvent, contractCategoryForEvent])
+    assert.equal(classify('Sergi', tour.title, tour.description), 'Gezi');
+  assert.equal(hasSupportedEventFormat({ ...tour, category: 'Gezi' }), true);
+  assert.equal(hasSupportedEventFormat({ ...tour, category: 'Sergi' }), false);
+
+  const exhibition = {
+    title: 'Kiliseler Fotoğraf Sergisi',
+    description: 'Sergi, uzman rehber eşliğinde ziyaret edilebilir. Fotoğraflar farklı kiliseleri anlatır.',
+  };
+  for (const classify of [categoryForEvent, contractCategoryForEvent])
+    assert.equal(classify('Sergi', exhibition.title, exhibition.description), 'Sergi');
+  const concert = {
+    title: 'Katedralde Noel Konseri',
+    description: 'Profesyonel rehber Ayşe, farklı kiliseleri ziyaret ettiği çalışmalarından önce canlı konser verir.',
+  };
+  for (const classify of [categoryForEvent, contractCategoryForEvent])
+    assert.equal(classify('Konser', concert.title, concert.description), 'Konser');
+});

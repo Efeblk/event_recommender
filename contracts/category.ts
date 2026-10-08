@@ -31,6 +31,7 @@ export function categoryFromSource(label: string): Category | null {
 function explicitProgramFormat(event: {title: string; description: string}): Category | null {
   const title = normalizeEvidence(event.title);
   const leading = normalizeEvidence(event.description.slice(0, 512)).slice(0, 240);
+  const programme = normalizeEvidence(event.description.slice(0, 4096));
   const standaloneStandup = Boolean(title) && (
     leading.startsWith(`${title} stand up gosterisi`) ||
     leading.startsWith(`${title} stand up show`)
@@ -42,10 +43,14 @@ function explicitProgramFormat(event: {title: string; description: string}): Cat
   const workshop = workshopMatch && participation.test(leading.slice(Math.max(0, workshopMatch.index - 80), workshopMatch.index + workshopMatch[0].length + 120)) ? workshopMatch.index : -1;
   const talk = leading.search(/\b(?:soylesi(?:si|de)?|panel(?:ist(?:ler)?)?|moderator|seminer)\b/);
   const instruction = leading.search(/\b(?:kurs|egitim programi)\b/);
+  const guidedProgramme = /\b(?:uzman|profesyonel) rehber\w*\b|\bguided (?:tour|visit|walk)\b/.test(programme);
+  const multiStopVisit = /\b(?:kiliseler\w*|yapilar\w*|mekanlar\w*|duraklar\w*|churches|sites|venues)\b.{0,80}\b(?:ziyaret|visit)\w*\b|\b(?:ziyaret edilecek|visiting)\b.{0,80}\b(?:kiliseler\w*|yapilar\w*|mekanlar\w*|duraklar\w*|churches|sites|venues)\b/.test(programme);
+  const itinerary = /\b(?:program|tur) boyunca\b|\b(?:ozel aracla ulasim|meeting point)\b/.test(programme);
   const first = ([[workshop, 'Workshop'], [talk, 'Söyleşi'], [instruction, 'Eğitim']] as [number, Category][])
     .filter(([index]) => index >= 0 && (performance < 0 || index < performance)).sort((a, b) => a[0] - b[0])[0];
   if (first) return first[1];
   if (standaloneStandup) return 'Stand-up';
+  if (guidedProgramme && multiStopVisit && itinerary) return 'Gezi';
   if (/\b(?:konser(?:i)?|concert)\b/.test(title)) return 'Konser';
   if (/\b(?:tiyatro oyunu|cocuk oyunu|muzikal(?:i)?|theatre play|theater play)\b/.test(title)) return 'Tiyatro';
   if (/\b(?:stand up|standup)\b/.test(title)) return 'Stand-up';

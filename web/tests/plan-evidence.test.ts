@@ -133,6 +133,36 @@ void test('an unrecognized source category remains unknown under NOT', () => {
   );
 });
 
+void test('participant dance evidence needs a dance-night and party cue', () => {
+  const dancing = plan({
+    type: 'all',
+    children: [{ type: 'atom', atom: { kind: 'topic', value: 'dancing' } }],
+  });
+  assert.equal(evaluatePlan({
+    ...event,
+    title: '90lar Dans Gecesi',
+    description: 'DJ eşliğinde eğlence.',
+  }, dancing).status, 'supported');
+  assert.equal(evaluatePlan({
+    ...event,
+    title: 'Modern Dans Gecesi',
+    description: 'Bir çağdaş dans gösterisi.',
+  }, dancing).status, 'unknown');
+});
+
+void test('a provider-labelled door clock is unknown as an event start', () => {
+  const atEight = plan({
+    type: 'all',
+    children: [{ type: 'atom', atom: { kind: 'time', from: '20:00', to: '20:00' } }],
+  });
+  assert.equal(evaluatePlan({
+    ...event,
+    startsAt: '2026-10-10T17:00:00.000Z',
+    description: 'Belirtilen saat kapı açılış saatidir.',
+    attendanceTiming: undefined,
+  }, atEight).status, 'unknown');
+});
+
 void test('group totals require exactly one unconditional party count', () => {
   const budget = {
     type: 'atom' as const,

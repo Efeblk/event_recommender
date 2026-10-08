@@ -17,6 +17,7 @@ import { prepareLexicalDocumentTokens } from './hybrid.ts';
 import { prepareEventLocation } from './istanbul-location.ts';
 import { categoryForEvent } from './event-format.ts';
 import { hasExplicitDoorTimeStartConflict } from '../../contracts/timing.ts';
+import { hasExplicitSameEventSoldOutConflict } from '../../contracts/source-evidence.ts';
 
 export interface SearchCatalog {
   schemaVersion: 1;
@@ -292,6 +293,25 @@ function identityFamilies(events: EventRecord[]): EventRecord[][] {
   return [...groups.values()];
 }
 
+function ambiguousSourceEvidenceIds(events: EventRecord[]): Set<string> {
+  const explicitConflicts = new Set(
+    events
+      .filter((event) =>
+        hasExplicitDoorTimeStartConflict({
+          description: event.description,
+          startsAt: event.startsAt,
+        }) || hasExplicitSameEventSoldOutConflict(event),
+      )
+      .map((event) => event.id),
+  );
+  if (!explicitConflicts.size) return explicitConflicts;
+  const ambiguous = new Set(explicitConflicts);
+  for (const session of resolveEventRecordIdentity(events).sessions)
+    if (session.listingIds.some((id) => explicitConflicts.has(id)))
+      for (const id of session.listingIds) ambiguous.add(id);
+  return ambiguous;
+}
+
 /** Publication-time work only. Prepare every change in source eligibility so
  * requests never need to reconstruct identities or retain an expired offer. */
 export function buildSearchCatalog(
@@ -299,26 +319,22 @@ export function buildSearchCatalog(
   at: Date,
 ): SearchCatalog {
   const eligible: EventRecord[] = [];
+  const ambiguousEvidence = ambiguousSourceEvidenceIds(events);
   let projectionBytes = 0;
   for (const sourceEvent of events) {
-    // Retained checkpoints can predate collector quarantine. Exclude only the
-    // explicit door-as-start contradiction and preserve the raw source record.
-    if (
-      hasExplicitDoorTimeStartConflict({
-        description: sourceEvent.description,
-        startsAt: sourceEvent.startsAt,
-      })
-    )
-      continue;
+    // Retained checkpoints can predate collector quarantine. When one source
+    // proves a session time or availability conflict, sibling offers cannot
+    // resolve that contradiction. Preserve every raw source record.
+    if (ambiguousEvidence.has(sourceEvent.id)) continue;
     const verifiedCategory = categoryForEvent(
       sourceEvent.sourceCategory ?? sourceEvent.category,
       sourceEvent.title,
       sourceEvent.description,
     );
-    // Correct retained provider-theatre records only when their own program
-    // evidence identifies stand-up. Other format repairs wait for refresh.
+    // Correct retained records only when their own program evidence identifies
+    // one of the narrowly verified formats supported by event-format.
     const event =
-      verifiedCategory === 'Stand-up' && sourceEvent.category !== 'Stand-up'
+      ['Stand-up', 'Gezi'].includes(verifiedCategory) && sourceEvent.category !== verifiedCategory
         ? { ...sourceEvent, category: verifiedCategory }
         : sourceEvent;
     const checked = Date.parse(event.checkedAt);

@@ -269,13 +269,39 @@ void test('event-type judgments bind negation to the named local clause', () => 
     { type: 'not', child: atom({ kind: 'category', value: 'festival' }) },
   ]));
 
-  const question = buildFieldRequest(input('tiyatro veya stand-up, konser olmasın'))
-    .questions.category_theatre;
-  assert.equal(question.type, 'choice');
-  if (question.type === 'choice') {
-    assert.match(String(question.instructions), /local clause or coordinated phrase/);
-    assert.match(String(question.criteria.exclude), /separate clause.*different item/);
+  const evidence = (utterance: string, id: string) => {
+    const question = buildFieldRequest(input(utterance)).questions[id];
+    assert.equal(question.type, 'choice');
+    return question.type === 'choice' && typeof question.instructions === 'object' && question.instructions !== null
+      ? String((question.instructions as Record<string, unknown>).evidence)
+      : utterance;
+  };
+  const turkish = 'tiyatro veya stand-up, konser olmasın';
+  assert.equal(evidence(turkish, 'category_theatre'), 'tiyatro veya stand-up');
+  assert.equal(evidence(turkish, 'category_standup'), 'tiyatro veya stand-up');
+  assert.equal(evidence(turkish, 'category_concert'), 'konser olmasın');
+
+  const reversed = 'konser olmasın ama tiyatro veya stand-up olsun';
+  assert.equal(evidence(reversed, 'category_concert'), 'konser olmasın');
+  assert.equal(evidence(reversed, 'category_theatre'), 'tiyatro veya stand-up olsun');
+  assert.equal(evidence(reversed, 'category_standup'), 'tiyatro veya stand-up olsun');
+
+  const english = 'theatre or stand-up; no concerts';
+  assert.equal(evidence(english, 'category_theatre'), 'theatre or stand-up');
+  assert.equal(evidence(english, 'category_standup'), 'theatre or stand-up');
+  assert.equal(evidence(english, 'category_concert'), 'no concerts');
+
+  for (const ambiguous of ['tiyatro veya stand-up olmasın', 'konser, tiyatro, ikisi de olmasın', 'concerts, theatre, neither please']) {
+    assert.equal(evidence(ambiguous, 'category_theatre'), ambiguous);
   }
+  const typo = 'tiyatroo veya stand-up; no concerts';
+  assert.equal(evidence(typo, 'category_theatre'), typo);
+  assert.equal(evidence(typo, 'category_standup'), 'tiyatroo veya stand-up');
+  assert.equal(evidence(typo, 'category_concert'), 'no concerts');
+
+  const unicode = '🎭 e\u0301 tiyatro veya stand-up, konser olmasın';
+  assert.equal(evidence(unicode, 'category_theatre'), '🎭 e\u0301 tiyatro veya stand-up');
+  assert.equal(evidence(unicode, 'category_concert'), 'konser olmasın');
 });
 
 void test('topic roles stay independent and dancing keeps exclusion polarity', () => {
@@ -328,6 +354,32 @@ void test('topic roles stay independent and dancing keeps exclusion polarity', (
   assert.deepEqual(accepted(noDancing), plan([
     { type: 'not', child: atom({ kind: 'topic', value: 'dancing' }) },
   ]));
+  const dancing = read('dans etmek istiyorum', { category_dance: 'want', dance_activity: 1 });
+  assert.deepEqual(accepted(dancing), plan([], [atom({ kind: 'topic', value: 'dancing' })]));
+});
+
+void test('calm wording cannot become a hard quiet guarantee without firm evidence', () => {
+  const calm = read('sevgilimle sakin samimi bir akşam geçirmek istiyorum', {
+    companion_partner: 'yes', experience_quiet: 'want', mood_calm: 'want', mood_intimate: 'want', quiet_required: 0.16,
+  });
+  assert.deepEqual(accepted(calm), plan(
+    [atom({ kind: 'companion', value: 'partner' })],
+    [
+      atom({ kind: 'mood', value: 'calm' }),
+      atom({ kind: 'mood', value: 'intimate' }),
+      atom({ kind: 'experience', value: 'quiet' }),
+    ],
+  ));
+  const firm = read('kesinlikle sessiz olsun', { experience_quiet: 'want', quiet_required: 1 });
+  assert.deepEqual(accepted(firm), plan([atom({ kind: 'experience', value: 'quiet' })]));
+
+  const english = read('a calm intimate evening', { mood_calm: 'no', mood_intimate: 'no' });
+  assert.deepEqual(accepted(english), plan([], [
+    atom({ kind: 'mood', value: 'calm' }),
+    atom({ kind: 'mood', value: 'intimate' }),
+  ]));
+  const negated = read('not calm but intimate', { mood_calm: 'no', mood_intimate: 'no' });
+  assert.deepEqual(accepted(negated), plan([], [atom({ kind: 'mood', value: 'intimate' })]));
 });
 
 void test('every separately named attendee age becomes a hard condition', () => {

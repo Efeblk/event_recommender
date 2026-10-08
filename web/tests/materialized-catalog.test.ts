@@ -470,6 +470,21 @@ await test('preparation repairs an explicit standalone stand-up programme retain
   );
 });
 
+await test('preparation repairs an explicitly guided multi-stop programme retained under provider exhibition', () => {
+  const raw = event({
+    id: 'ca408fe5e6629129c4e70c2b',
+    title: "Katedralde Noel Şarkıları ile İstanbul'da Noel",
+    description: "Program boyunca farklı cemaatlere ait kiliseleri ziyaret edecek, yapıların tarihini Antonina'nın uzman rehberlerinden dinleyeceğiz. Tur boyunca özel araçla ulaşım sağlanır. Günün sonunda özel Noel Şarkıları Konseri'ne katılacağız.",
+    sourceCategory: 'Sergi',
+    category: 'Sergi',
+  });
+  const snapshot = buildSearchCatalog([raw], publishedAt);
+  const tours = searchCatalogCandidates(snapshot, { ...emptyFilters, category: 'Gezi' }, publishedAt);
+  assert.equal(tours.length, 1);
+  assert.equal(tours[0].category, 'Gezi');
+  assert.deepEqual(searchCatalogCandidates(snapshot, { ...emptyFilters, category: 'Sergi' }, publishedAt), []);
+});
+
 await test('preparation excludes the retained Tuz Biber session that uses its explicit door time', () => {
   const raw = event({
     id: '05228453b7825732516d760d',
@@ -477,7 +492,7 @@ await test('preparation excludes the retained Tuz Biber session that uses its ex
     description:
       "Tuz Biber 6'lı Stand Up Gösterisi; JJ Pub Kanyon'da! Kapı Açılış Saati: 20:00 Etkinlik Başlangıç Saati: 20:30",
     startsAt: '2026-10-05T17:00:00.000Z',
-    source: 'biletix',
+    source: 'biletinial',
     sourceCategory: 'tiyatro',
     category: 'Tiyatro',
   });
@@ -493,6 +508,94 @@ await test('preparation excludes the retained Tuz Biber session that uses its ex
       availability: raw.availability,
     },
   ]);
+});
+
+await test('preparation excludes every proven Duman session source when one identifies the shared clock as doors', () => {
+  const startsAt = '2026-11-28T18:00:00.000Z';
+  const biletix = event({
+    id: '0358b5ae3f20c887fe482616',
+    title: 'Duman',
+    description:
+      'Duman, 28 Kasım akşamı JJ Arena Ataşehir sahnesinde sizlerle! Kapı Açılış saati 21:00, etkinlik başlangıç: 22:00',
+    startsAt,
+    venue: 'JJ Arena Ataşehir',
+    source: 'biletix',
+    url: 'https://www.biletix.com/etkinlik/5TX82/ISTANBUL/tr',
+    sourceCategory: 'Rock',
+    category: 'Konser',
+  });
+  const biletinial = event({
+    id: '0430d73663a0e9bdb2268b9f',
+    title: 'Duman Konseri',
+    description:
+      'Duman Konseri Etkinlik genelinde geçerli olan kurallara ek olarak, seanslara özgü ek düzenlemeler de yapılmıştır.',
+    startsAt,
+    venue: 'JJ Arena Ataşehir',
+    source: 'biletinial',
+    url: 'https://biletinial.com/tr-tr/muzik/duman-jj',
+    sourceCategory: 'muzik',
+    category: 'Konser',
+  });
+  const bubilet = event({
+    id: '889c16ac85fc66eb3968cb05',
+    title: 'Duman',
+    description: 'Duman',
+    startsAt,
+    venue: 'JJ Arena',
+    source: 'bubilet',
+    url: 'https://www.bubilet.com.tr/istanbul/etkinlik/duman--',
+    sourceCategory: 'Konser',
+    category: 'Konser',
+  });
+  const unrelated = event({ id: 'unrelated-session' });
+  const snapshot = buildSearchCatalog(
+    [biletix, biletinial, bubilet, unrelated],
+    publishedAt,
+  );
+  assert.deepEqual(
+    searchCatalogCandidates(snapshot, emptyFilters, publishedAt).map(
+      ({id}) => id,
+    ),
+    [unrelated.id],
+  );
+  assert.equal(snapshot.sourceStatus.length, 4);
+});
+
+await test('preparation excludes the retained Çilekeş offer whose same-date venue text says sold out', () => {
+  const description =
+    "Çilekeş Konseri ÇİLEKEŞ’TEN İZMİR VE ANKARA’YA İKİ YENİ KONSER Türkiye alternatif rock sahnesinin en özgün ve öncü gruplarından Çilekeş’in, ‘Y.O.K’ albümünün 21. yılına özel olarak yıllar sonra yeniden sahnelere döneceğini duyurmasının ardından 10 Ekim'de KüçükÇiftlik Park’ta gerçekleşecek İstanbul konserinin biletleri kısa sürede tükendi. Yoğun ilgi üzerine grup şimdi de İzmir ve Ankara konserlerini açıklıyor.";
+  const raw = event({
+    id: 'ab93fbf448a3d369d94bd3b3',
+    title: 'Çilekeş',
+    description,
+    startsAt: '2026-10-10T19:00:00.000Z',
+    venue: 'KüçükÇiftlik Park',
+    city: 'İstanbul',
+    district: 'İstanbul Avrupa',
+    price: 2950,
+    source: 'biletinial',
+    url: 'https://biletinial.com/tr-tr/muzik/cilekes',
+    sourceCategory: 'muzik',
+    category: 'Konser',
+  });
+  const unrelated = event({id: 'unrelated-after-sold-out-conflict'});
+  const snapshot = buildSearchCatalog([raw, unrelated], publishedAt);
+  assert.deepEqual(
+    searchCatalogCandidates(snapshot, emptyFilters, publishedAt).map(({id}) => id),
+    [unrelated.id],
+  );
+  assert.equal(snapshot.sourceStatus.length, 2);
+
+  const otherDate = buildSearchCatalog(
+    [{...raw, id: 'later-cilekes', startsAt: '2026-11-10T19:00:00.000Z'}],
+    publishedAt,
+  );
+  assert.equal(searchCatalogCandidates(otherDate, emptyFilters, publishedAt).length, 1);
+  const otherVenue = buildSearchCatalog(
+    [{...raw, id: 'other-venue-cilekes', venue: 'Başka Sahne'}],
+    publishedAt,
+  );
+  assert.equal(searchCatalogCandidates(otherVenue, emptyFilters, publishedAt).length, 1);
 });
 
 await test('future clock-skewed source activates when it enters the five-minute allowance', () => {
