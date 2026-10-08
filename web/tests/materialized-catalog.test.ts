@@ -561,6 +561,112 @@ await test('preparation excludes every proven Duman session source when one iden
   assert.equal(snapshot.sourceStatus.length, 4);
 });
 
+await test('preparation carries Yüksek Sadakat door-only timing across its resolved source siblings', () => {
+  const startsAt = '2026-11-07T19:00:00.000Z';
+  const biletinial = event({
+    id: 'aafbdc5ce52ee35b20b331bd',
+    title: 'Yüksek Sadakat',
+    description:
+      'Yüksek Sadakat Konseri "Belki Üstümüzden Bir Kuş Geçer", "Kafile", "Haydi Gel İçelim", "Aşk Durdukça", "Ben Seni Arayamam" gibi hitleriyle tanınan, ülkenin en iyi rock gruplarından Yüksek Sadakat, en özel bir performanslarından biriyle rockseverlerle buluşuyor. Yaşama dair birçok konuyu daha önce kimsenin söylemediği gibi söyleyen, vurucu şarkı sözleri ve besteleri ile bir anda geniş bir hayran kitlesi edinen grup; müziğinde rock\'ın farklı dönem ve alt türlerine ait unsurları, Türk coğrafy',
+    startsAt,
+    checkedAt: '2026-10-04T06:09:15.612Z',
+    venue: 'Dorock XL Kadıköy',
+    district: 'İstanbul Anadolu',
+    address: '',
+    price: 800,
+    source: 'biletinial',
+    url: 'https://biletinial.com/tr-tr/muzik/yuksek-sadakat',
+    sourceCategory: 'muzik',
+    category: 'Konser',
+  });
+  const biletix = event({
+    id: 'e0ec990b8adf7ab9c5c9cc41',
+    title: 'Yüksek Sadakat',
+    description:
+      'Yüksek Sadakat, Dorock XL Kadıköy sahnesinde! - 18 yaş sınırı vardır. - Belirtilen saat kapı açılış saatidir. - Organizasyon şirketi etkinlik için uygun görmediği kişileri bilet ücretini iade etmek kaydı ile içeri almama hakkına sahiptir.',
+    startsAt,
+    checkedAt: '2026-10-04T06:03:01.819Z',
+    venue: 'Dorock XL',
+    district: 'KADIKÖY',
+    address: '',
+    price: 800,
+    source: 'biletix',
+    url: 'https://www.biletix.com/etkinlik/5ERK5/ISTANBUL/tr',
+    sourceCategory: 'Rock',
+    sourceSessionIds: ['001'],
+    category: 'Konser',
+  });
+  const bubilet = event({
+    id: 'e2efc23959259f826ae4f0fa',
+    title: 'Yüksek Sadakat Konseri',
+    description:
+      'Yüksek Sadakat Grubu kendine has tarz müzikleriyle konser vermeye devam ediyor.',
+    startsAt,
+    checkedAt: '2026-10-04T06:01:42.724Z',
+    venue: 'Dorock XL Kadıköy',
+    district: 'İstanbul',
+    address:
+      'Dorock XL Kadıköy, Caferağa, Namlı Market Yanı, Neşet Ömer Sk. 3C, 34710 Kadıköy/İstanbul',
+    price: 800,
+    source: 'bubilet',
+    url: 'https://www.bubilet.com.tr/istanbul/etkinlik/yuksek-sadakat-konseri',
+    sourceCategory: 'Konser',
+    category: 'Konser',
+  });
+  const at = new Date('2026-10-04T06:50:27.793Z');
+  const snapshot = buildSearchCatalog([biletinial, biletix, bubilet], at);
+  const [projected] = searchCatalogCandidates(snapshot, emptyFilters, at);
+  assert.equal(projected.id, 'session-9b67cddec63a6e411b90ed9f6ada6555');
+  assert.equal(projected.source, 'biletinial');
+  assert.equal(projected.url, biletinial.url);
+  assert.equal(projected.description, biletinial.description);
+  assert.equal(projected.sourceCategory, biletinial.sourceCategory);
+  assert.deepEqual(projected.attendanceTiming, {
+    kind: 'unknown',
+    evidence: 'insufficient_source_evidence',
+  });
+  assert.deepEqual(projected.offers?.map(({id}) => id), [
+    biletinial.id,
+    biletix.id,
+    bubilet.id,
+  ]);
+  assert.equal(
+    isEligible(
+      projected,
+      {...emptyFilters, dateFrom: '2026-11-07', dateTo: '2026-11-07'},
+      at,
+    ),
+    true,
+  );
+  assert.equal(
+    isEligible(projected, {...emptyFilters, startTimeFrom: '00:00'}, at),
+    false,
+  );
+
+  const [authoritative] = searchCatalogCandidates(
+    buildSearchCatalog(
+      [
+        biletinial,
+        {
+          ...biletix,
+          attendanceTiming: {
+            kind: 'timed_session',
+            evidence: 'provider_sessions_and_source_text',
+          },
+        },
+        bubilet,
+      ],
+      at,
+    ),
+    emptyFilters,
+    at,
+  );
+  assert.deepEqual(authoritative.attendanceTiming, {
+    kind: 'timed_session',
+    evidence: 'provider_sessions_and_source_text',
+  });
+});
+
 await test('preparation excludes the retained Çilekeş offer whose same-date venue text says sold out', () => {
   const description =
     "Çilekeş Konseri ÇİLEKEŞ’TEN İZMİR VE ANKARA’YA İKİ YENİ KONSER Türkiye alternatif rock sahnesinin en özgün ve öncü gruplarından Çilekeş’in, ‘Y.O.K’ albümünün 21. yılına özel olarak yıllar sonra yeniden sahnelere döneceğini duyurmasının ardından 10 Ekim'de KüçükÇiftlik Park’ta gerçekleşecek İstanbul konserinin biletleri kısa sürede tükendi. Yoğun ilgi üzerine grup şimdi de İzmir ve Ankara konserlerini açıklıyor.";
@@ -596,6 +702,78 @@ await test('preparation excludes the retained Çilekeş offer whose same-date ve
     publishedAt,
   );
   assert.equal(searchCatalogCandidates(otherVenue, emptyFilters, publishedAt).length, 1);
+});
+
+await test('preparation excludes the retained JamZZ listing whose dated programme names another venue', () => {
+  const description =
+    'Genç caz müzisyenlerinin gelişimine alan açan program. Geçen yılın Masterclass programında yolları kesişen yedi genç müzisyeni dinleyeceğimiz JAmZZ Sessions konseri, 4 Ekim Pazar günü Akatlar Kültür Merkezi’nde.';
+  const conflict = event({
+    id: 'c1893173ff183143d6bbcd19',
+    title: 'JamZZ Sessions',
+    description,
+    startsAt: '2026-10-04T12:00:00.000Z',
+    venue: 'Saint Benoît Fransız Lisesi Silüet Salonu',
+    district: 'BEYOĞLU',
+    source: 'biletix',
+    url: 'https://www.biletix.com/etkinlik/5ACB1/ISTANBUL/tr',
+    sourceCategory: 'Caz',
+    category: 'Konser',
+  });
+  const correctVenue = event({
+    ...conflict,
+    id: 'ac41fcf958f5d9ee259add6a',
+    title: 'JAmZZ Sessions',
+    venue: 'Beşiktaş Belediyesi Akatlar Kültür Merkezi',
+    district: 'AKATLAR',
+    url: 'https://www.biletix.com/etkinlik/5ACA8/ISTANBUL/tr',
+  });
+  const snapshot = buildSearchCatalog([conflict, correctVenue], publishedAt);
+  const candidates = searchCatalogCandidates(snapshot, emptyFilters, publishedAt);
+  assert.equal(candidates.length, 1);
+  assert.equal(candidates[0].mergedIds?.includes(conflict.id), false);
+  assert.equal(candidates[0].mergedIds?.includes(correctVenue.id), true);
+  assert.equal(candidates[0].venue, correctVenue.venue);
+
+  const sibel = event({
+    id: 'ac1f2bfc3af886c87023b832',
+    title: 'Sibel Köse “Vistula’dan Boğaz’a Uzanan Caz Köprüsü”',
+    description:
+      '90’ların başından bu yana Polonya ile güçlü bağlar kuran Sibel Köse, caz müzisyenlerini bir araya getiriyor. Polonya Cumhuriyeti İstanbul Başkonsolosluğu katkılarıyla, 4 Ekim Pazar akşamı Akatlar Kültür Merkezi’nde gerçekleşecek bu buluşma; dinleyicileri davet ediyor.',
+    startsAt: '2026-10-04T17:30:00.000Z',
+    venue: 'Saint Benoît Fransız Lisesi Silüet Salonu',
+    district: 'BEYOĞLU',
+    source: 'biletix',
+    url: 'https://www.biletix.com/etkinlik/5ACB0/ISTANBUL/tr',
+    sourceCategory: 'Caz',
+    category: 'Konser',
+  });
+  assert.equal(
+    searchCatalogCandidates(
+      buildSearchCatalog([sibel], publishedAt),
+      emptyFilters,
+      publishedAt,
+    ).length,
+    0,
+  );
+
+  const undatedBremen = event({
+    id: '04dba84c7ca450afdde03cde',
+    title: 'Bremen Mızıkacıları',
+    description:
+      "Bremen Mızıkacıları, Akatlar Kültür Merkezi Sahnesi'nde sizlerle...",
+    startsAt: '2026-11-07T10:00:00.000Z',
+    venue: 'Başka Salon',
+    source: 'biletix',
+    url: 'https://www.biletix.com/etkinlik/5ASEI/ISTANBUL/tr',
+  });
+  assert.equal(
+    searchCatalogCandidates(
+      buildSearchCatalog([undatedBremen], publishedAt),
+      emptyFilters,
+      publishedAt,
+    ).length,
+    1,
+  );
 });
 
 await test('future clock-skewed source activates when it enters the five-minute allowance', () => {

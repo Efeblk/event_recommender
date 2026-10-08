@@ -225,6 +225,8 @@ await test('import accepts only fresh, exclusive source-evidence quarantines', (
   assert.deepEqual(validateImport({ schemaVersion: 1, pages: [quarantine] }, now), [quarantine]);
   const availability = { ...quarantine, quarantineReason: 'session_availability_conflict' };
   assert.deepEqual(validateImport({ schemaVersion: 1, pages: [availability] }, now), [availability]);
+  const venue = { ...quarantine, quarantineReason: 'venue_conflict' };
+  assert.deepEqual(validateImport({ schemaVersion: 1, pages: [venue] }, now), [venue]);
   for (const change of [
     { quarantineReason: 'other' },
     { quarantinedAt: undefined },

@@ -46,3 +46,20 @@ await test('a provider-labelled door clock is displayed as doors and never filte
   assert.match(label, /Kapı açılışı/);
   assert.match(label, /Etkinlik başlangıcını kontrol edin/);
 });
+
+await test('an unknown concert start uses event wording without displaying the unverified clock', () => {
+  const concert = {
+    ...event,
+    title: 'Yüksek Sadakat',
+    category: 'Konser' as const,
+    startsAt: '2026-11-07T19:00:00.000Z',
+    attendanceTiming: {
+      kind: 'unknown' as const,
+      evidence: 'insufficient_source_evidence' as const,
+    },
+  };
+  const label = eventDateLabel(concert);
+  assert.doesNotMatch(label, /22:00/);
+  assert.match(label, /Etkinlik saatini kontrol edin/);
+  assert.doesNotMatch(label, /Ziyaret saatini/);
+});

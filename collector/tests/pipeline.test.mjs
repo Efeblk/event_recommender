@@ -200,6 +200,54 @@ await test("Biletinial quarantines the retained Çilekeş availability contradic
   exactRecord.startDate = "2026-11-10T22:00:00+03:00";
   assert.equal((await extractRecord()).length, 1);
 });
+await test("Biletix quarantines a same-title dated programme at a conflicting venue", async () => {
+  const state = structuredClone(biletix);
+  const detail = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find((data) => data && !Array.isArray(data) && data.eventCode === "5JBD4");
+  const performances = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find(Array.isArray);
+  detail.eventName = "JamZZ Sessions";
+  detail.eventDescription =
+    "Genç caz müzisyenlerini dinleyeceğimiz JAmZZ Sessions konseri, 4 Ekim Pazar günü Akatlar Kültür Merkezi’nde.";
+  for (const performance of performances) {
+    performance.eventName = detail.eventName;
+    performance.performanceDate = Date.parse("2026-10-04T12:00:00.000Z");
+    performance.venueName = "Saint Benoît Fransız Lisesi Silüet Salonu";
+  }
+  const extractState = () =>
+    extract(
+      load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
+      "biletix",
+      "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      null,
+      now,
+    );
+  await assert.rejects(extractState, /venue_conflict/);
+
+  for (const performance of performances)
+    performance.venueName = "Beşiktaş Belediyesi Akatlar Kültür Merkezi";
+  assert.equal((await extractState()).length, 1);
+
+  detail.eventName = "Sibel Köse “Vistula’dan Boğaz’a Uzanan Caz Köprüsü”";
+  detail.eventDescription =
+    "90’ların başından bu yana Polonya ile güçlü bağlar kuran Sibel Köse, caz müzisyenlerini bir araya getiriyor. Polonya Cumhuriyeti İstanbul Başkonsolosluğu katkılarıyla, 4 Ekim Pazar akşamı Akatlar Kültür Merkezi’nde gerçekleşecek bu buluşma; dinleyicileri davet ediyor.";
+  for (const performance of performances) {
+    performance.eventName = detail.eventName;
+    performance.venueName = "Saint Benoît Fransız Lisesi Silüet Salonu";
+  }
+  await assert.rejects(extractState, /venue_conflict/);
+
+  detail.eventName = "Bremen Mızıkacıları";
+  detail.eventDescription =
+    "Bremen Mızıkacıları, Akatlar Kültür Merkezi Sahnesi'nde sizlerle...";
+  for (const performance of performances) {
+    performance.eventName = detail.eventName;
+    performance.venueName = "Başka Salon";
+  }
+  assert.equal((await extractState()).length, 1);
+});
 await test("Biletix preserves high safe minor-unit prices and rejects unsafe values", async () => {
   const extractPrice = async (minorPrice) => {
     const state = structuredClone(biletix);

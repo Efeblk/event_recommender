@@ -16,8 +16,14 @@ import { voyageDocumentText } from './voyage.ts';
 import { prepareLexicalDocumentTokens } from './hybrid.ts';
 import { prepareEventLocation } from './istanbul-location.ts';
 import { categoryForEvent } from './event-format.ts';
-import { hasExplicitDoorTimeStartConflict } from '../../contracts/timing.ts';
-import { hasExplicitSameEventSoldOutConflict } from '../../contracts/source-evidence.ts';
+import {
+  hasExplicitDoorTimeStartConflict,
+  sourceTimeIsDoorsOnly,
+} from '../../contracts/timing.ts';
+import {
+  hasExplicitSameEventSoldOutConflict,
+  hasExplicitSameEventVenueConflict,
+} from '../../contracts/source-evidence.ts';
 
 export interface SearchCatalog {
   schemaVersion: 1;
@@ -160,7 +166,10 @@ function attendanceOf(events: EventRecord[]): AttendanceTiming | undefined {
   const explicit = events
     .map(({ attendanceTiming }) => attendanceTiming)
     .filter((value): value is AttendanceTiming => value !== undefined);
-  if (!explicit.length) return undefined;
+  if (!explicit.length)
+    return events.some((event) => sourceTimeIsDoorsOnly(event.description))
+      ? { kind: 'unknown', evidence: 'insufficient_source_evidence' }
+      : undefined;
   const first = JSON.stringify(explicit[0]);
   return explicit.every((value) => JSON.stringify(value) === first)
     ? explicit[0]
@@ -300,7 +309,9 @@ function ambiguousSourceEvidenceIds(events: EventRecord[]): Set<string> {
         hasExplicitDoorTimeStartConflict({
           description: event.description,
           startsAt: event.startsAt,
-        }) || hasExplicitSameEventSoldOutConflict(event),
+        }) ||
+        hasExplicitSameEventSoldOutConflict(event) ||
+        hasExplicitSameEventVenueConflict(event),
       )
       .map((event) => event.id),
   );

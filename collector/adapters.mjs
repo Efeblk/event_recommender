@@ -5,7 +5,10 @@ import {
   biletixAttendanceTiming,
   hasExplicitDoorTimeStartConflict,
 } from "../contracts/timing.ts";
-import { hasExplicitSameEventSoldOutConflict } from "../contracts/source-evidence.ts";
+import {
+  hasExplicitSameEventSoldOutConflict,
+  hasExplicitSameEventVenueConflict,
+} from "../contracts/source-evidence.ts";
 import { discoverBiletinialCategories, extractBiletinial } from './biletinial.mjs';
 import { verifiedBubiletDetailInventory } from './bubilet.mjs';
 
@@ -93,6 +96,8 @@ function checkedSourceEvidence(events) {
       throw new Error("session_time_conflict");
     if (hasExplicitSameEventSoldOutConflict(event))
       throw new Error("session_availability_conflict");
+    if (hasExplicitSameEventVenueConflict(event))
+      throw new Error("venue_conflict");
   }
   return events;
 }

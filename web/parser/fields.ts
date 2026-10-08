@@ -127,6 +127,66 @@ function scopedTargetEvidence(message: string, terms: Record<string, string[]>):
   return Object.fromEntries(populated.flatMap(({ clause }) => clause.targets.map((target) => [target, clause.text])));
 }
 
+type LiteralItemRole = 'want' | 'optional' | 'exclude';
+
+/** Resolve polarity only inside a clause whose target scope was proven above. */
+function scopedCategoryRole(value: Category, evidence: string): LiteralItemRole | null {
+  const text = fold(evidence);
+  const escapedTerms = (CATEGORY_TERMS[value] ?? []).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!escapedTerms.length) return null;
+  const target = `(?:${escapedTerms.join('|')})`;
+  const boundedTarget = `(?<![\\p{L}\\p{N}])${target}(?![\\p{L}\\p{N}])`;
+  if (/(?:^|[^\p{L}\p{N}])(?:kaldir|sil|cikar|remove|delete|drop)(?=$|[^\p{L}\p{N}])/u.test(text)) return null;
+  if (/\b(?:olmasa da olur|fark etmez|does not matter)\b/u.test(text)) return null;
+  if (/["“”]/u.test(evidence) || /(?:^|[^\p{L}\p{N}])(?:demiyorum|demedim|dedim|dedi|soyledi|said|mentioned|quoted|ornegin|example)(?=$|[^\p{L}\p{N}])/u.test(text)) return null;
+  if (/(?:^|[^\p{L}\p{N}])(?:dun|yesterday|formerly|previously)(?=$|[^\p{L}\p{N}])|\b(?:last|gecen)\s+(?:week|month|year|hafta|ay|yil)\b|\bused to\b/u.test(text)) return null;
+
+  const targets = targetsIn(text, CATEGORY_TERMS);
+  const coordinated = targets.length > 1
+    && /(?:^|[^\p{L}\p{N}])(?:veya|yahut|or|ya\s+da)(?=$|[^\p{L}\p{N}])/u.test(text);
+  const beforeTargetNegative = new RegExp(
+    `(?:^|[^\\p{L}\\p{N}])(?:no|not|without|except|don'?t|do not)\\s+(?:want\\s+|a\\s+|an\\s+|any\\s+)?${boundedTarget}`,
+    'u',
+  ).test(text);
+  let lastTargetEnd = -1;
+  for (const terms of Object.values(CATEGORY_TERMS)) for (const term of terms) {
+    const pattern = new RegExp(`(?:^|[^\\p{L}\\p{N}])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=$|[^\\p{L}\\p{N}])`, 'gu');
+    for (const match of text.matchAll(pattern)) lastTargetEnd = Math.max(lastTargetEnd, match.index + match[0].length);
+  }
+  const tail = lastTargetEnd >= 0 ? text.slice(lastTargetEnd).trim() : '';
+  const trailingNegative = /^(?:(?:lutfen|please|hic)\s+)?(?:olmasin|istemiyorum|istemem|haric|disinda|disi|olmayan|excluded|unwanted|(?:should\s+)?not\b)/u.test(tail);
+  let remainder = text;
+  const allTerms = targets.flatMap((name) => CATEGORY_TERMS[name as Category] ?? []).sort((a, b) => b.length - a.length);
+  for (const term of allTerms) remainder = remainder.replace(
+    new RegExp(`(?<![\\p{L}\\p{N}])${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\p{N}])`, 'gu'),
+    ' ',
+  );
+  remainder = remainder.replace(/(?:^|[^\p{L}\p{N}])(?:veya|yahut|or|ya\s+da)(?=$|[^\p{L}\p{N}])/gu, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+  if (targets.length > 1) {
+    if (!coordinated) return null;
+    if (!remainder) return 'want';
+    if (/^(?:(?:lutfen|please)\s+)?(?:no|not|without|except|olmasin|istemiyorum|istemem|haric|disinda|disi|olmayan|excluded|unwanted|should not be included)$/u.test(remainder)) return 'exclude';
+    if (/^(?:tercihen|ideally|prefer|preferred|olsa iyi olur)$/u.test(remainder)) return 'optional';
+    if (/^(?:olsun|istiyorum|isterim|want|lutfen|please)$/u.test(remainder)) return 'want';
+    return null;
+  }
+
+  if (beforeTargetNegative || trailingNegative) return 'exclude';
+  const beforeTargetOptional = new RegExp(
+    `(?:^|[^\\p{L}\\p{N}])(?:tercihen|ideally|prefer|preferred)\\s+(?:a\\s+|an\\s+)?${boundedTarget}`,
+    'u',
+  ).test(text);
+  const beforeTargetWant = new RegExp(
+    `(?:^|[^\\p{L}\\p{N}])(?:want|lutfen|please)\\s+(?:a\\s+|an\\s+)?${boundedTarget}`,
+    'u',
+  ).test(text);
+  if (beforeTargetOptional || /^(?:olsa iyi olur|tercihen|ideally)$/u.test(tail)) return 'optional';
+  if (beforeTargetWant || /^(?:olsun|istiyorum|isterim|lutfen|please)$/u.test(tail)) return 'want';
+  return null;
+}
+
 /** Number candidates in the message: digits ("1.500", "2,5k") and number words ("iki yüz"). */
 export function numberCandidates(text: string): Array<{ text: string; value: number }> {
   const folded = fold(text);
@@ -766,8 +826,17 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
       if (excluded.length) out.push({ condition: { type: 'not', child: any(excluded) }, preferred: false });
       fields.set(kind, out);
     };
-    const specific = ['concert', 'theatre', 'standup', 'dance'].some((v) => ['want', 'optional'].includes(pick(`category_${v}`)));
-    itemField('category', Object.keys(CATEGORIES), (v) => v === 'show' && specific && pick('category_show') !== 'exclude' ? 'no' : pick(`category_${v}`), (v) => v === 'dance' && noul('dance_activity') > 0.5 ? null : { kind: 'category', value: v as Category });
+    const scopedCategoryEvidence = scopedTargetEvidence(input.utterance, CATEGORY_TERMS);
+    const literalCategoryAnswer = (value: string) => {
+      const answer = pick(`category_${value}`);
+      const evidence = scopedCategoryEvidence[value];
+      return evidence ? scopedCategoryRole(value as Category, evidence) ?? answer : answer;
+    };
+    const specific = ['concert', 'theatre', 'standup', 'dance'].some((value) => ['want', 'optional'].includes(literalCategoryAnswer(value)));
+    const categoryAnswer = (value: string) => value === 'show' && specific && literalCategoryAnswer(value) !== 'exclude'
+      ? 'no'
+      : literalCategoryAnswer(value);
+    itemField('category', Object.keys(CATEGORIES), categoryAnswer, (v) => v === 'dance' && noul('dance_activity') > 0.5 ? null : { kind: 'category', value: v as Category });
     if (pick('category_dance') !== 'no' && pick('category_dance') !== 'removed' && noul('dance_activity') > 0.5) {
       const dancing = { type: 'atom' as const, atom: { kind: 'topic' as const, value: 'dancing' } };
       const topic = pick('category_dance') === 'exclude'

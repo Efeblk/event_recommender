@@ -236,6 +236,30 @@ void test('event-type judgments bind negation to the named local clause', () => 
     { type: 'not', child: atom({ kind: 'category', value: 'concert' }) },
   ]));
 
+  // Replay the live failure: global negation leaked into both positive options.
+  const leaked = read('tiyatro veya stand-up, konser olmasın', {
+    category_theatre: 'exclude',
+    category_standup: 'exclude',
+    category_concert: 'exclude',
+  });
+  assert.deepEqual(accepted(leaked), accepted(scoped));
+
+  const reversedPlan = read('konser olmasın ama tiyatro veya stand-up', {
+    category_concert: 'exclude', category_theatre: 'exclude', category_standup: 'exclude',
+  });
+  assert.deepEqual(accepted(reversedPlan), accepted(scoped));
+
+  const optional = read('prefer theatre or stand-up; no concerts', {
+    category_theatre: 'exclude', category_standup: 'exclude', category_concert: 'exclude',
+  });
+  assert.deepEqual(accepted(optional), plan(
+    [{ type: 'not', child: atom({ kind: 'category', value: 'concert' }) }],
+    [{ type: 'any', children: [
+      atom({ kind: 'category', value: 'theatre' }),
+      atom({ kind: 'category', value: 'standup' }),
+    ] }],
+  ));
+
   const shared = read('tiyatro veya stand-up olmasın', {
     category_theatre: 'exclude',
     category_standup: 'exclude',
@@ -251,6 +275,66 @@ void test('event-type judgments bind negation to the named local clause', () => 
         ],
       },
     },
+  ]));
+
+  const anaphora = read('konser, tiyatro, ikisi de olmasın', {
+    category_concert: 'exclude', category_theatre: 'exclude',
+  });
+  assert.deepEqual(accepted(anaphora), plan([{
+    type: 'not', child: { type: 'any', children: [
+      atom({ kind: 'category', value: 'concert' }),
+      atom({ kind: 'category', value: 'theatre' }),
+    ] },
+  }]));
+
+  for (const message of [
+    'tiyatro veya stand-up demiyorum, konser olmasın',
+    'tiyatro veya stand-up olmasa da olur, konser olmasın',
+    '"tiyatro veya stand-up" hakkında konuştuk, konser olmasın',
+  ]) {
+    const guarded = read(message, {
+      category_theatre: 'no', category_standup: 'no', category_concert: 'exclude',
+    });
+    assert.deepEqual(accepted(guarded), plan([
+      { type: 'not', child: atom({ kind: 'category', value: 'concert' }) },
+    ]), message);
+  }
+
+  const mixedRoles = read('tiyatro istemiyorum veya stand-up istiyorum; konser olmasın', {
+    category_theatre: 'exclude', category_standup: 'want', category_concert: 'exclude',
+  });
+  assert.deepEqual(accepted(mixedRoles), plan([
+    atom({ kind: 'category', value: 'standup' }),
+    { type: 'not', child: { type: 'any', children: [
+      atom({ kind: 'category', value: 'concert' }),
+      atom({ kind: 'category', value: 'theatre' }),
+    ] } },
+  ]));
+
+  const reversedMixedRoles = read('tiyatro istiyorum veya stand-up olmasın; konser istemiyorum', {
+    category_theatre: 'want', category_standup: 'exclude', category_concert: 'exclude',
+  });
+  assert.deepEqual(accepted(reversedMixedRoles), plan([
+    atom({ kind: 'category', value: 'theatre' }),
+    { type: 'not', child: { type: 'any', children: [
+      atom({ kind: 'category', value: 'concert' }),
+      atom({ kind: 'category', value: 'standup' }),
+    ] } },
+  ]));
+
+  const historical = read('I wanted theatre yesterday; now I want concerts', {
+    category_theatre: 'no', category_concert: 'want',
+  });
+  assert.deepEqual(accepted(historical), plan([
+    atom({ kind: 'category', value: 'concert' }),
+  ]));
+
+  const unrelatedNegation = read('theatre and not expensive; no concerts', {
+    category_theatre: 'want', category_concert: 'exclude',
+  });
+  assert.deepEqual(accepted(unrelatedNegation), plan([
+    atom({ kind: 'category', value: 'theatre' }),
+    { type: 'not', child: atom({ kind: 'category', value: 'concert' }) },
   ]));
 
   const varied = read('workshop or exhibition; no festivals', {
@@ -298,6 +382,8 @@ void test('event-type judgments bind negation to the named local clause', () => 
   assert.equal(evidence(typo, 'category_theatre'), typo);
   assert.equal(evidence(typo, 'category_standup'), 'tiyatroo veya stand-up');
   assert.equal(evidence(typo, 'category_concert'), 'no concerts');
+  const repeated = 'theatre olsun, theatre olmasın; no concerts';
+  assert.equal(evidence(repeated, 'category_theatre'), repeated);
 
   const unicode = '🎭 e\u0301 tiyatro veya stand-up, konser olmasın';
   assert.equal(evidence(unicode, 'category_theatre'), '🎭 e\u0301 tiyatro veya stand-up');
