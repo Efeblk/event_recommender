@@ -5,6 +5,7 @@ import test from "node:test";
 
 import {
   preflightReplay,
+  validateLegacyCheckpointProof,
   validateReplayArtifact,
   validateReplayProvenance,
   verifyReplay,
@@ -81,6 +82,34 @@ test("replay artifact pins exact bytes, source revision and production import va
   assert.throws(() => validateReplayArtifact({ source, reportBytes: invalid, rawManifest: { collectorRevision: sourceSha }, expectedReportSha256: createHash("sha256").update(invalid).digest("hex"), now }), /Invalid source page/);
 });
 
+test("legacy checkpoint proof binds the failed run, evidence, log digest, and exact old call site", () => {
+  const reportSha256 = "c".repeat(64), finishedAt = "2026-10-08T22:02:16.173Z";
+  const failedRunId = "37854227546", failedHead = "fedb97fbe9075f698d702ae7e6e464338669eb71";
+  const logs = Buffer.from("immutable zip bytes");
+  const input = {
+    failedRunId, repository: "owner/repository", repositoryId: "42", defaultBranch: "master", workflowPath: ".github/workflows/gcp-collector.yml",
+    run: { id: Number(failedRunId), repository: { id: 42, full_name: "owner/repository" }, head_repository: { id: 42 }, head_branch: "master", path: ".github/workflows/gcp-collector.yml", workflow_id: 1234, event: "workflow_dispatch", status: "completed", conclusion: "failure", head_sha: failedHead, run_attempt: 1 },
+    workflow: { id: 1234, path: ".github/workflows/gcp-collector.yml" },
+    artifacts: { total_count: 1, artifacts: [{ name: `gcp-publication-replay-staging-${failedRunId}-1`, expired: false }] },
+    jobs: { total_count: 1, jobs: [{ id: 113574473315, run_id: Number(failedRunId), name: "replay_publication", head_sha: failedHead, status: "completed", conclusion: "failure" }] },
+    originalPlan: { schemaVersion: 1, sourceRunId: runId, sourceHeadSha: sourceSha, reportSha256, report: { finishedAt } },
+    failedSource: { sourceRunId: runId, sourceHeadSha: sourceSha },
+    failedPlan: { sourceRunId: runId, sourceHeadSha: sourceSha, reportSha256, report: { finishedAt } },
+    failedPreflight: { deploymentRevision: failedHead, targetFinishedAt: finishedAt, publishRequired: true },
+    failedPublication: { schemaVersion: 1, completed: false }, failedStatus: "failed\n",
+    logsArchiveBytes: logs, logsText: "Error at file:///home/runner/work/repo/collector/publish.mjs:146:17",
+    expectedLogsSha256: createHash("sha256").update(logs).digest("hex"),
+    publishSource: `${Array(145).fill("// line").join("\n")}\n  const saved = await requestJson(collectionEndpoint, {});\n`,
+  };
+  const proof = validateLegacyCheckpointProof(input);
+  assert.equal(proof.proofKind, "legacy_checkpoint_call_site");
+  assert.equal(proof.importsComplete, true);
+  assert.equal(proof.failedReplayHeadSha, failedHead);
+  assert.throws(() => validateLegacyCheckpointProof({ ...input, failedStatus: "complete\n" }), /status/);
+  assert.throws(() => validateLegacyCheckpointProof({ ...input, expectedLogsSha256: "0".repeat(64) }), /SHA-256/);
+  assert.throws(() => validateLegacyCheckpointProof({ ...input, logsText: "checkpoint timeout" }), /call-site/);
+});
+
 async function fixture(handler) {
   const server = createServer(handler);
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -113,11 +142,12 @@ test("replay verification requires exact checkpoint and readiness timestamps", a
   const finishedAt = "2026-10-09T10:00:00.000Z";
   const deploymentRevision = "d".repeat(40);
   let readyFinishedAt = finishedAt;
-  let readyStatus = 200, readyReasons = [];
+  let readyStatus = 200, readyReasons = [], readyPlain = false;
   const remote = await fixture((request, response) => {
     if (request.url === "/api/admin/collection") return send(response, 200, {
       schemaVersion: 1, savedAt: "2026-10-09T10:01:00.000Z", events: [{ id: "one" }], report: { finishedAt, summary: {} },
     });
+    if (readyPlain) { response.writeHead(readyStatus, { "content-type": "text/plain" }); response.end("Rate exceeded"); return; }
     return send(response, readyStatus, { ready: readyStatus === 200, reasons: readyReasons, search: { pending: false, latestCollectedAt: readyFinishedAt, activeCollectedAt: readyFinishedAt }, checkpoint: { finishedAt: readyFinishedAt } });
   });
   t.after(remote.close);
@@ -141,6 +171,29 @@ test("replay verification requires exact checkpoint and readiness timestamps", a
   readyReasons = ["catalog_not_ready"];
   const unavailable = await verifyReplay({ origin: remote.origin, token: "secret", plan, preflight, publication, allowLoopbackHttp: true });
   assert.equal(unavailable.readyStatus, "503");
-  assert.deepEqual(unavailable.ready.reasons, ["catalog_not_ready"]);
+  assert.deepEqual(unavailable.ready.value.reasons, ["catalog_not_ready"]);
   assert.deepEqual(unavailable.summary.problems, ["ready_http", "ready_state"]);
+  readyPlain = true;
+  readyStatus = 429;
+  const limited = await verifyReplay({ origin: remote.origin, token: "secret", plan, preflight, publication, allowLoopbackHttp: true });
+  assert.equal(limited.ready.httpStatus, 429);
+  assert.equal(limited.ready.validJson, false);
+  assert.equal(limited.ready.bytes, Buffer.byteLength("Rate exceeded"));
+  assert.doesNotMatch(JSON.stringify(limited.ready), /Rate exceeded/);
+});
+
+test("replay verification preserves successful readiness when canonical transport fails", async (t) => {
+  const finishedAt = "2026-10-09T10:00:00.000Z", deploymentRevision = "d".repeat(40);
+  const remote = await fixture((request, response) => {
+    if (request.url === "/api/admin/collection") { request.socket.destroy(); return; }
+    return send(response, 200, { ready: true, reasons: [], search: { pending: false, latestCollectedAt: finishedAt, activeCollectedAt: finishedAt }, checkpoint: { finishedAt } });
+  });
+  t.after(remote.close);
+  const plan = { schemaVersion: 1, sourceRunId: runId, sourceHeadSha: sourceSha, reportSha256: "c".repeat(64), report: { finishedAt } };
+  const preflight = { schemaVersion: 1, deploymentRevision, targetFinishedAt: finishedAt, publishRequired: false };
+  const result = await verifyReplay({ origin: remote.origin, token: "secret", plan, preflight, publication: null, allowLoopbackHttp: true });
+  assert.deepEqual(result.summary.problems, ["checkpoint_http"]);
+  assert.equal(result.ready.httpStatus, 200);
+  assert.equal(result.ready.value.ready, true);
+  assert.equal(result.readyStatus, "200");
 });

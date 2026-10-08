@@ -4,6 +4,7 @@ import test from "node:test";
 
 import { auditIdentityPairs } from "../identity/audit.ts";
 import { resolveEventRecordIdentity, resolveIdentity } from "../identity/index.ts";
+import { normalizeIdentityText } from "../normalize/identity.ts";
 
 const fixture = JSON.parse(
   await readFile(new URL("./fixtures/identity-pairs.v1.json", import.meta.url), "utf8"),
@@ -27,6 +28,23 @@ function listing(overrides = {}) {
     ...overrides,
   };
 }
+
+test("identity text normalization stays exact for repeated mixed and oversized input", () => {
+  const examples = [
+    ["İSTANBUL’da MIXED English-Türkçe  ÇAĞRI!", "istanbul da mixed english turkce cagri"],
+    ["  Stand-Up / WORKSHOP: Özel Gece  ", "stand up workshop ozel gece"],
+    [null, ""],
+    [undefined, ""],
+  ];
+  for (const [input, expected] of examples) {
+    assert.equal(normalizeIdentityText(input), expected);
+    assert.equal(normalizeIdentityText(input), expected);
+  }
+  const oversized = `${"İŞĞÜÖÇ English ".repeat(300)}SON`;
+  const normalized = normalizeIdentityText(oversized);
+  assert.equal(normalized.endsWith("son"), true);
+  assert.equal(normalizeIdentityText(oversized), normalized);
+});
 
 test('Phase 1 reviewed aliases merge only under the existing session and venue guards', () => {
   const pairs = [

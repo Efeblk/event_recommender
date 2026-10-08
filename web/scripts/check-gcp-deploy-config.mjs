@@ -45,6 +45,7 @@ assert.doesNotMatch(workflow, /^\s{2}(push|pull_request|schedule):/m);
 assert.match(workflow, /^permissions:\n\s{2}contents: read$/m);
 assert.match(workflow, /^\s{2}prepare:\n/m);
 assert.match(workflow, /^\s{2}deploy:\n/m);
+assert.match(workflow, /diagnostics_only:[\s\S]*?type: boolean\n\s+default: false/);
 
 const prepare = workflow.slice(
   workflow.indexOf('  prepare:'),
@@ -154,11 +155,21 @@ assert.match(deploy, /ready\.ready !== true/);
 assert.match(deploy, /ready\.catalog\?\.status !== 'ready'/);
 assert.match(deploy, /cp health\.json ready\.json deploy-provenance\//);
 assert.match(deploy, /path: deploy-provenance/);
+const runtimeDiagnostics = workflow.slice(workflow.indexOf('  diagnostics:'));
+assert.match(runtimeDiagnostics, /if: inputs\.diagnostics_only == true/);
+assert.match(runtimeDiagnostics, /environment: gcp-staging/);
+assert.match(runtimeDiagnostics, /node-version-file: web\/\.nvmrc/);
+assert.match(runtimeDiagnostics, /summarize-gcp-runtime\.mjs/);
+assert.doesNotMatch(runtimeDiagnostics, /gcloud run deploy|services update-traffic|set-iam-policy|add-iam-policy-binding/);
+assert.ok(runtimeDiagnostics.indexOf('actions/checkout@') < runtimeDiagnostics.indexOf('name: Initialize diagnostic evidence'));
+assert.match(runtimeDiagnostics, /name: Initialize diagnostic evidence\n\s+if: always\(\)/);
 
 assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
 assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:\n\s{4}inputs:\n\s{6}verify_only:[\s\S]*?type: boolean\n\s{8}default: false$/m);
 assert.match(collectorWorkflow, /publish_existing_run:[\s\S]*?type: string\n\s+default: ''/);
 assert.match(collectorWorkflow, /publish_existing_report_sha256:[\s\S]*?type: string\n\s+default: ''/);
+assert.match(collectorWorkflow, /diagnostics_only:[\s\S]*?type: boolean\n\s+default: false/);
+assert.match(collectorWorkflow, /checkpoint_only_replay_run:[\s\S]*?type: string\n\s+default: ''/);
 assert.match(
   collectorWorkflow,
   /^\s{2}schedule_gate:\n\s{4}needs: dispatch_mode\n\s{4}if: needs\.dispatch_mode\.outputs\.mode == 'collect' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
@@ -210,16 +221,24 @@ assert.doesNotMatch(collectorWorkflow, /continue-on-error/);
 assert.match(collectorWorkflow, /if: always\(\) && steps\.publish\.outcome == 'success'/);
 assert.match(collectorWorkflow, /collection-embedding-index\.jsonl\*/);
 assert.doesNotMatch(collectorWorkflow, /Prepare replacement PostgreSQL|GCP_STAGING_PIPELINE_ENABLED|BIPLAN_PIPELINE_PG/);
-const replayJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  replay_publication:'), collectorWorkflow.indexOf('  index_only:'));
-assert.match(replayJob, /if: needs\.dispatch_mode\.outputs\.mode == 'replay'/);
+const replayJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  replay_publication:'), collectorWorkflow.indexOf('  diagnostics:'));
+assert.match(replayJob, /if: needs\.dispatch_mode\.outputs\.mode == 'replay' \|\| needs\.dispatch_mode\.outputs\.mode == 'checkpoint'/);
 assert.match(replayJob, /permissions:\n\s+actions: read\n\s+contents: read\n\s+id-token: write/);
 assert.match(replayJob, /actions\/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4\.3\.0/);
 assert.match(replayJob, /github-token: \$\{\{ secrets\.GITHUB_TOKEN \}\}[\s\S]*run-id: \$\{\{ inputs\.publish_existing_run \}\}/);
 assert.match(replayJob, /--validate-imports --exact-checkpoint/);
+assert.match(replayJob, /--checkpoint-only --exact-checkpoint/);
+assert.match(replayJob, /--mode legacy-proof/);
+assert.match(replayJob, /--imports-receipt replay-evidence\/imports\.json/);
 assert.match(replayJob, /timeout-minutes: 40[\s\S]*replay-evidence\/publish-status\.txt/);
 assert.match(replayJob, /--status replay-evidence\/ready-status\.txt/);
 assert.match(replayJob, /reportSha256|REPORT_SHA256|--report-sha256/);
 assert.doesNotMatch(replayJob, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE/);
+const diagnosticJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  diagnostics:'), collectorWorkflow.indexOf('  index_only:'));
+assert.match(diagnosticJob, /if: needs\.dispatch_mode\.outputs\.mode == 'diagnostics'/);
+assert.match(diagnosticJob, /diagnose-staging\.mjs/);
+assert.match(diagnosticJob, /canonical\.json/);
+assert.doesNotMatch(diagnosticJob, /npm run collect|checkpoint:restore|index-collected-embeddings|TYPESAFE|VOYAGE|method: POST/);
 const monitorJob = collectorWorkflow.slice(collectorWorkflow.indexOf('  monitor:'));
 assert.match(monitorJob, /actions\/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4\.4\.0[\s\S]*node-version-file: web\/\.nvmrc/);
 const monitorCheckout = monitorJob.indexOf('uses: actions/checkout@');

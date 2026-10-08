@@ -53,6 +53,40 @@ export interface PublishedState {
     sourceCatalog: CatalogStatus;
   };
 }
+export type CheckpointPublicationPhase =
+  | 'source_heads'
+  | 'source_reads'
+  | 'materialize'
+  | 'write_search'
+  | 'write_checkpoint'
+  | 'activate'
+  | 'complete';
+export type CheckpointPublicationFailureCode =
+  | 'request_aborted'
+  | 'deadline_exceeded'
+  | 'publication_failed';
+export interface CheckpointPublicationAttempt {
+  schemaVersion: 1;
+  attemptId: string;
+  deploymentRevision: string | null;
+  reportFinishedAt: string;
+  startedAt: string;
+  phase: CheckpointPublicationPhase;
+  sourcesTotal: number;
+  sourcesRead: number;
+  events: number;
+  searchBytes: number | null;
+  checkpointBytes: number | null;
+  elapsedMs: number;
+  outcome: 'running' | 'succeeded' | 'failed';
+  failureCode: CheckpointPublicationFailureCode | null;
+}
+export interface CheckpointPublicationOptions {
+  signal?: AbortSignal;
+  /** Absolute epoch millisecond deadline. */
+  deadline?: number;
+  deploymentRevision?: string;
+}
 export interface HighLevelStore {
   health(): Promise<void>;
   /** Canonical sessions with provider offers; recommendation must not re-merge. */
@@ -74,7 +108,9 @@ export interface HighLevelStore {
   publishCheckpoint(
     report: CollectionReport,
     lease: Lease,
+    options?: CheckpointPublicationOptions,
   ): Promise<CheckpointPointer>;
+  checkpointPublication?(): Promise<CheckpointPublicationAttempt | null>;
   checkpointExists(pointer: CheckpointPointer): Promise<boolean>;
   currentPublished(now?: Date): Promise<PublishedState>;
   voyageVectorsByHash(

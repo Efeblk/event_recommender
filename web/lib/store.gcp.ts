@@ -15,6 +15,9 @@ import { validateProviderListing } from '../../contracts/listing.ts';
 import type {
   BlobStore,
   CatalogStatus,
+  CheckpointPublicationAttempt,
+  CheckpointPublicationFailureCode,
+  CheckpointPublicationPhase,
   ControlStore,
   ControlTransaction,
   HighLevelStore,
@@ -86,6 +89,87 @@ function duplicateListingIdentity(event: EventRecord) {
   return listing;
 }
 const hashPattern = /^[a-f0-9]{64}$/;
+const revisionPattern = /^[a-f0-9]{40}$/;
+const attemptIdPattern = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
+const MAX_DIAGNOSTIC_COUNT = 100_000;
+const MAX_DIAGNOSTIC_BYTES = 512 * 1024 * 1024;
+const MAX_DIAGNOSTIC_ELAPSED_MS = 24 * 3600 * 1000;
+const publicationPhases = new Set<CheckpointPublicationPhase>([
+  'source_heads',
+  'source_reads',
+  'materialize',
+  'write_search',
+  'write_checkpoint',
+  'activate',
+  'complete',
+]);
+const publicationFailures = new Set<CheckpointPublicationFailureCode>([
+  'request_aborted',
+  'deadline_exceeded',
+  'publication_failed',
+]);
+function publicationAttempt(value: unknown): CheckpointPublicationAttempt | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const attempt = value as Partial<CheckpointPublicationAttempt>;
+  const timestamp = (input: unknown) => {
+    if (typeof input !== 'string') return false;
+    const parsed = Date.parse(input);
+    return Number.isFinite(parsed) && new Date(parsed).toISOString() === input;
+  };
+  const count = (input: unknown, maximum: number) =>
+    Number.isSafeInteger(input) && (input as number) >= 0 && (input as number) <= maximum;
+  if (
+    attempt.schemaVersion !== 1 ||
+    typeof attempt.attemptId !== 'string' ||
+    !attemptIdPattern.test(attempt.attemptId) ||
+    (attempt.deploymentRevision !== null &&
+      (typeof attempt.deploymentRevision !== 'string' ||
+        !revisionPattern.test(attempt.deploymentRevision))) ||
+    !timestamp(attempt.reportFinishedAt) ||
+    !timestamp(attempt.startedAt) ||
+    !publicationPhases.has(attempt.phase as CheckpointPublicationPhase) ||
+    !count(attempt.sourcesTotal, MAX_DIAGNOSTIC_COUNT) ||
+    !count(attempt.sourcesRead, MAX_DIAGNOSTIC_COUNT) ||
+    (attempt.sourcesRead as number) > (attempt.sourcesTotal as number) ||
+    !count(attempt.events, MAX_DIAGNOSTIC_COUNT) ||
+    (attempt.searchBytes !== null && !count(attempt.searchBytes, MAX_DIAGNOSTIC_BYTES)) ||
+    (attempt.checkpointBytes !== null && !count(attempt.checkpointBytes, MAX_DIAGNOSTIC_BYTES)) ||
+    !count(attempt.elapsedMs, MAX_DIAGNOSTIC_ELAPSED_MS) ||
+    !['running', 'succeeded', 'failed'].includes(attempt.outcome ?? '') ||
+    (attempt.failureCode !== null &&
+      !publicationFailures.has(attempt.failureCode as CheckpointPublicationFailureCode))
+  )
+    return null;
+  if (
+    (attempt.outcome === 'running' && (attempt.failureCode !== null || attempt.phase === 'complete')) ||
+    (attempt.outcome === 'succeeded' && (attempt.failureCode !== null || attempt.phase !== 'complete')) ||
+    (attempt.outcome === 'failed' && attempt.failureCode === null)
+  )
+    return null;
+  return {
+    schemaVersion: 1,
+    attemptId: attempt.attemptId,
+    deploymentRevision: attempt.deploymentRevision,
+    reportFinishedAt: attempt.reportFinishedAt,
+    startedAt: attempt.startedAt,
+    phase: attempt.phase,
+    sourcesTotal: attempt.sourcesTotal,
+    sourcesRead: attempt.sourcesRead,
+    events: attempt.events,
+    searchBytes: attempt.searchBytes,
+    checkpointBytes: attempt.checkpointBytes,
+    elapsedMs: attempt.elapsedMs,
+    outcome: attempt.outcome,
+    failureCode: attempt.failureCode,
+  } as CheckpointPublicationAttempt;
+}
+class CheckpointPublicationStopped extends Error {
+  readonly failureCode: CheckpointPublicationFailureCode;
+  constructor(failureCode: CheckpointPublicationFailureCode) {
+    super(`Checkpoint publication stopped: ${failureCode}`);
+    this.failureCode = failureCode;
+  }
+}
 async function digest(body: string) {
   const hash = await crypto.subtle.digest('SHA-256', encoder.encode(body));
   return Array.from(new Uint8Array(hash), (n) =>
@@ -161,6 +245,7 @@ export function createGcpStore(options: {
     throw new Error('Invalid storage namespace');
   const base = `biplan/${namespace}`;
   const catalogPath = `${base}/state/catalog`;
+  const publicationPath = `${base}/state/checkpoint-publication`;
   // One catalog and one vector profile per instance; pointers are re-read on
   // every operation so another instance's publication is immediately visible.
   let catalogCache:
@@ -526,169 +611,288 @@ export function createGcpStore(options: {
     async readCheckpoint() {
       return (await readCatalog(await catalogHead()))?.body ?? null;
     },
+    async checkpointPublication() {
+      return publicationAttempt(
+        await control.get<CheckpointPublicationAttempt>(publicationPath),
+      );
+    },
     async checkpointExists(pointer) {
       return blobs.exists(pointer.key);
     },
-    async publishCheckpoint(rawReport, lease) {
+    async publishCheckpoint(rawReport, lease, options = {}) {
       requireLeaseKind(lease, ['sync_lock']);
       const report = parseCollectionReport(
         { schemaVersion: 1, report: rawReport },
         now(),
       );
       const lockPath = await leasePath(lease.key);
-      const previous = await control.transaction(async (tx) => {
-        await liveLease(tx, lease, lockPath);
-        return tx.get<CatalogHead>(catalogPath);
-      });
-      if (previous && (report.finishedAt < previous.pointer.finishedAt || (report.finishedAt === previous.pointer.finishedAt && (matchesProfile(previous.pendingSearch) || matchesProfile(previous.search)))))
-        return previous.pointer;
-      const sources = await control.list<SourceHead>(`${base}/sources`);
-      if (sources.length > MAX_CHECKPOINT_EVENTS)
-        throw new Error('Checkpoint source limit exceeded');
-      for (const { data: source } of sources) {
-        const checkedAt = Date.parse(source.checkedAt);
+      if (
+        options.deadline !== undefined &&
+        (!Number.isSafeInteger(options.deadline) || options.deadline <= 0)
+      )
+        throw new Error('Invalid checkpoint publication deadline');
+      if (
+        options.deploymentRevision !== undefined &&
+        !revisionPattern.test(options.deploymentRevision)
+      )
+        throw new Error('Invalid deployment revision');
+      const started = now();
+      const attempt: CheckpointPublicationAttempt = {
+        schemaVersion: 1,
+        attemptId: crypto.randomUUID(),
+        deploymentRevision: options.deploymentRevision ?? null,
+        reportFinishedAt: report.finishedAt,
+        startedAt: new Date(started).toISOString(),
+        phase: 'source_heads',
+        sourcesTotal: 0,
+        sourcesRead: 0,
+        events: 0,
+        searchBytes: null,
+        checkpointBytes: null,
+        elapsedMs: 0,
+        outcome: 'running',
+        failureCode: null,
+      };
+      const elapsed = () => Math.max(0, Math.round(now() - started));
+      const guard = () => {
+        if (options.signal?.aborted)
+          throw new CheckpointPublicationStopped('request_aborted');
+        const time = now();
+        if (options.deadline !== undefined && time >= options.deadline)
+          throw new CheckpointPublicationStopped('deadline_exceeded');
+      };
+      const updateAttempt = async (requireLiveLease = true) => {
+        attempt.elapsedMs = elapsed();
+        await control.transaction(async (tx) => {
+          if (requireLiveLease) await liveLease(tx, lease, lockPath);
+          const current = await tx.get<CheckpointPublicationAttempt>(publicationPath);
+          if (current?.attemptId !== attempt.attemptId)
+            throw new CheckpointPublicationStopped('publication_failed');
+          tx.set(publicationPath, { ...attempt });
+        });
+      };
+      const enter = async (phase: CheckpointPublicationPhase) => {
+        guard();
+        attempt.phase = phase;
+        await updateAttempt();
+        guard();
+      };
+      let previous: CatalogHead | null = null;
+      try {
+        previous = await control.transaction(async (tx) => {
+          await liveLease(tx, lease, lockPath);
+          const head = await tx.get<CatalogHead>(catalogPath);
+          tx.set(publicationPath, { ...attempt });
+          return head;
+        });
+        guard();
         if (
-          !source.url ||
-          !source.key ||
-          !hashPattern.test(source.hash) ||
-          !Number.isFinite(checkedAt) ||
-          new Date(checkedAt).toISOString() !== source.checkedAt ||
-          !Number.isSafeInteger(source.events) ||
-          source.events < 0
-        )
-          throw new Error('Invalid staged source head');
-        if (source.checkedAt > report.finishedAt)
-          throw new Error('Staged source is newer than collection report');
-      }
-      const selected = new Map<
-        string,
-        { event: EventRecord; checkpointBytes: number }
-      >();
-      let approximateBytes = 2;
-      for (
-        let offset = 0;
-        offset < sources.length;
-        offset += SOURCE_READ_CONCURRENCY
-      ) {
-        // A bounded group avoids one network round trip per source in sequence
-        // while keeping page bodies within a predictable memory envelope.
-        const group = await Promise.all(
-          sources
-            .slice(offset, offset + SOURCE_READ_CONCURRENCY)
-            .map(async ({ data: source }) => ({
-              source,
-              object: await blobs.get(source.key),
-            })),
-        );
-        for (const { source, object } of group) {
-          if (
-            !object ||
-            object.bytes > MAX_SOURCE_BYTES ||
-            bytes(object.body) !== object.bytes ||
-            (await digest(object.body)) !== source.hash
-          )
-            throw new Error('Source page unavailable or damaged');
-          const page = JSON.parse(object.body) as SourcePage;
-          if (
-            page.url !== source.url ||
-            !Array.isArray(page.events) ||
-            page.events.length !== source.events
-          )
-            throw new Error('Invalid source page object');
-          const times = sourcePageTimes(page);
-          if (times.latest !== source.checkedAt) throw new Error('Source page timestamp mismatch');
-          if (source.kind && times.kind !== source.kind) throw new Error('Source page kind mismatch');
-          const pageIds = new Set<string>();
-          for (const event of page.events) {
-            if (event.url !== source.url || pageIds.has(event.id))
-              throw new Error('Conflicting source event identity');
-            pageIds.add(event.id);
-            const checkpointBytes = bytes(JSON.stringify(checkpointEvent(event))) + 1;
-            const prior = selected.get(event.id);
-            if (prior) {
-              const priorListing = duplicateListingIdentity(prior.event);
-              const listing = duplicateListingIdentity(event);
-              if (
-                listing.listingId !== priorListing.listingId ||
-                event.checkedAt === prior.event.checkedAt
-              )
-                throw new Error('Conflicting source event identity');
-              if (event.checkedAt > prior.event.checkedAt) {
-                if (
-                  approximateBytes + checkpointBytes - prior.checkpointBytes >
-                  MAX_CHECKPOINT_BYTES
-                )
-                  throw new Error('Checkpoint exceeds limit');
-                approximateBytes += checkpointBytes - prior.checkpointBytes;
-                selected.set(event.id, { event, checkpointBytes });
-              }
-              continue;
-            }
-            if (
-              selected.size >= MAX_CHECKPOINT_EVENTS ||
-              approximateBytes + checkpointBytes > MAX_CHECKPOINT_BYTES
-            )
-              throw new Error('Checkpoint exceeds limit');
-            approximateBytes += checkpointBytes;
-            selected.set(event.id, { event, checkpointBytes });
-          }
+          previous &&
+          (report.finishedAt < previous.pointer.finishedAt ||
+            (report.finishedAt === previous.pointer.finishedAt &&
+              (matchesProfile(previous.pendingSearch) || matchesProfile(previous.search))))
+        ) {
+          attempt.phase = 'complete';
+          attempt.events = previous.pointer.events;
+          attempt.checkpointBytes = previous.pointer.bytes;
+          attempt.outcome = 'succeeded';
+          await updateAttempt();
+          return previous.pointer;
         }
+        const sources = await control.list<SourceHead>(`${base}/sources`);
+        attempt.sourcesTotal = sources.length;
+        await enter('source_reads');
+        if (sources.length > MAX_CHECKPOINT_EVENTS)
+          throw new Error('Checkpoint source limit exceeded');
+        for (const { data: source } of sources) {
+          const checkedAt = Date.parse(source.checkedAt);
+          if (
+            !source.url ||
+            !source.key ||
+            !hashPattern.test(source.hash) ||
+            !Number.isFinite(checkedAt) ||
+            new Date(checkedAt).toISOString() !== source.checkedAt ||
+            !Number.isSafeInteger(source.events) ||
+            source.events < 0
+          )
+            throw new Error('Invalid staged source head');
+          if (source.checkedAt > report.finishedAt)
+            throw new Error('Staged source is newer than collection report');
+        }
+        const selected = new Map<
+          string,
+          { event: EventRecord; checkpointBytes: number }
+        >();
+        let approximateBytes = 2;
+        for (
+          let offset = 0;
+          offset < sources.length;
+          offset += SOURCE_READ_CONCURRENCY
+        ) {
+          guard();
+          // A bounded group avoids one network round trip per source in sequence
+          // while keeping page bodies within a predictable memory envelope.
+          const group = await Promise.all(
+            sources
+              .slice(offset, offset + SOURCE_READ_CONCURRENCY)
+              .map(async ({ data: source }) => ({
+                source,
+                object: await blobs.get(source.key),
+              })),
+          );
+          guard();
+          for (const { source, object } of group) {
+            if (
+              !object ||
+              object.bytes > MAX_SOURCE_BYTES ||
+              bytes(object.body) !== object.bytes ||
+              (await digest(object.body)) !== source.hash
+            )
+              throw new Error('Source page unavailable or damaged');
+            const page = JSON.parse(object.body) as SourcePage;
+            if (
+              page.url !== source.url ||
+              !Array.isArray(page.events) ||
+              page.events.length !== source.events
+            )
+              throw new Error('Invalid source page object');
+            const times = sourcePageTimes(page);
+            if (times.latest !== source.checkedAt) throw new Error('Source page timestamp mismatch');
+            if (source.kind && times.kind !== source.kind) throw new Error('Source page kind mismatch');
+            const pageIds = new Set<string>();
+            for (const event of page.events) {
+              if (event.url !== source.url || pageIds.has(event.id))
+                throw new Error('Conflicting source event identity');
+              pageIds.add(event.id);
+              const checkpointBytes = bytes(JSON.stringify(checkpointEvent(event))) + 1;
+              const prior = selected.get(event.id);
+              if (prior) {
+                const priorListing = duplicateListingIdentity(prior.event);
+                const listing = duplicateListingIdentity(event);
+                if (
+                  listing.listingId !== priorListing.listingId ||
+                  event.checkedAt === prior.event.checkedAt
+                )
+                  throw new Error('Conflicting source event identity');
+                if (event.checkedAt > prior.event.checkedAt) {
+                  if (
+                    approximateBytes + checkpointBytes - prior.checkpointBytes >
+                    MAX_CHECKPOINT_BYTES
+                  )
+                    throw new Error('Checkpoint exceeds limit');
+                  approximateBytes += checkpointBytes - prior.checkpointBytes;
+                  selected.set(event.id, { event, checkpointBytes });
+                }
+                continue;
+              }
+              if (
+                selected.size >= MAX_CHECKPOINT_EVENTS ||
+                approximateBytes + checkpointBytes > MAX_CHECKPOINT_BYTES
+              )
+                throw new Error('Checkpoint exceeds limit');
+              approximateBytes += checkpointBytes;
+              selected.set(event.id, { event, checkpointBytes });
+            }
+          }
+          attempt.sourcesRead += group.length;
+          attempt.events = selected.size;
+        }
+        const events = [...selected.values()].map(({ event }) => event);
+        if (!events.length)
+          throw new Error('Cannot publish an empty staged catalog');
+        events.sort((a, b) => a.id.localeCompare(b.id));
+        attempt.events = events.length;
+        await enter('materialize');
+        const savedAt = new Date(now()).toISOString();
+        // Materialization is synchronous. The guards around it prevent writes
+        // after an abort or deadline, but cannot interrupt work already running.
+        const searchBody = JSON.stringify(buildSearchCatalog(events, new Date(savedAt)));
+        guard();
+        const searchBytes = bytes(searchBody);
+        attempt.searchBytes = searchBytes;
+        await enter('write_search');
+        if (searchBytes > 128 * 1024 * 1024) throw new Error('Search catalog exceeds limit');
+        const searchKey = `search-catalog/${savedAt.replace(/[:.]/g, '-')}-${crypto.randomUUID()}.json`;
+        await blobs.putImmutable(searchKey, searchBody);
+        guard();
+        // Identity used the full provider listings above; the durable checkpoint
+        // omits those duplicated copies so it stays within transfer limits.
+        const checkpoint: CollectionCheckpoint = {
+          schemaVersion: 1,
+          savedAt,
+          events: events.map(checkpointEvent),
+          report,
+        };
+        const body = JSON.stringify(checkpoint);
+        const size = bytes(body);
+        attempt.checkpointBytes = size;
+        await enter('write_checkpoint');
+        if (size > MAX_CHECKPOINT_BYTES)
+          throw new Error('Checkpoint exceeds limit');
+        const key = `collection/${savedAt.replace(/[:.]/g, '-')}-${crypto.randomUUID()}.json`;
+        await blobs.putImmutable(key, body);
+        guard();
+        const pointer: CheckpointPointer = {
+          schemaVersion: 1,
+          key,
+          savedAt,
+          finishedAt: report.finishedAt,
+          events: events.length,
+          bytes: size,
+          summary: report.summary,
+        };
+        const prepared: SearchPointer = {
+          key: searchKey, hash: await digest(searchBody), bytes: searchBytes,
+          checkpoint: pointer,
+          ...(embeddingProfile ? { profile: embeddingProfile.profile, dimensions: embeddingProfile.dimensions } : {}),
+        };
+        // A validated catalog goes live at once. Embeddings are optional
+        // enrichment: documents without a vector keep lexical retrieval, and
+        // cancellations or time changes never wait behind paid indexing.
+        const next: CatalogHead = {
+          revision: crypto.randomUUID(),
+          hash: await digest(body),
+          pointer,
+          search: prepared,
+        };
+        await enter('activate');
+        guard();
+        attempt.phase = 'complete';
+        attempt.elapsedMs = elapsed();
+        attempt.outcome = 'succeeded';
+        await control.transaction(async (tx) => {
+          await liveLease(tx, lease, lockPath);
+          const current = await tx.get<CatalogHead>(catalogPath);
+          const currentAttempt = await tx.get<CheckpointPublicationAttempt>(publicationPath);
+          if (!sameRevision(current, previous))
+            throw new Error('Catalog publication changed');
+          if (currentAttempt?.attemptId !== attempt.attemptId)
+            throw new CheckpointPublicationStopped('publication_failed');
+          guard();
+          attempt.elapsedMs = elapsed();
+          tx.set(catalogPath, { ...next });
+          tx.set(publicationPath, { ...attempt });
+        });
+        return pointer;
+      } catch (error) {
+        const failureCode =
+          error instanceof CheckpointPublicationStopped
+            ? error.failureCode
+            : options.signal?.aborted
+              ? 'request_aborted'
+              : options.deadline !== undefined && now() >= options.deadline
+                ? 'deadline_exceeded'
+                : 'publication_failed';
+        attempt.elapsedMs = elapsed();
+        attempt.outcome = 'failed';
+        attempt.failureCode = failureCode;
+        try {
+          await updateAttempt(false);
+        } catch {
+          // A newer attempt owns the single diagnostic record, or storage failed.
+        }
+        throw error;
       }
-      const events = [...selected.values()].map(({ event }) => event);
-      if (!events.length)
-        throw new Error('Cannot publish an empty staged catalog');
-      events.sort((a, b) => a.id.localeCompare(b.id));
-      const savedAt = new Date(now()).toISOString();
-      const searchBody = JSON.stringify(buildSearchCatalog(events, new Date(savedAt)));
-      const searchBytes = bytes(searchBody);
-      if (searchBytes > 128 * 1024 * 1024) throw new Error('Search catalog exceeds limit');
-      const searchKey = `search-catalog/${savedAt.replace(/[:.]/g, '-')}-${crypto.randomUUID()}.json`;
-      await blobs.putImmutable(searchKey, searchBody);
-      // Identity used the full provider listings above; the durable checkpoint
-      // omits those duplicated copies so it stays within transfer limits.
-      const checkpoint: CollectionCheckpoint = {
-        schemaVersion: 1,
-        savedAt,
-        events: events.map(checkpointEvent),
-        report,
-      };
-      const body = JSON.stringify(checkpoint);
-      const size = bytes(body);
-      if (size > MAX_CHECKPOINT_BYTES)
-        throw new Error('Checkpoint exceeds limit');
-      const key = `collection/${savedAt.replace(/[:.]/g, '-')}-${crypto.randomUUID()}.json`;
-      await blobs.putImmutable(key, body);
-      const pointer: CheckpointPointer = {
-        schemaVersion: 1,
-        key,
-        savedAt,
-        finishedAt: report.finishedAt,
-        events: events.length,
-        bytes: size,
-        summary: report.summary,
-      };
-      const prepared: SearchPointer = {
-        key: searchKey, hash: await digest(searchBody), bytes: searchBytes,
-        checkpoint: pointer,
-        ...(embeddingProfile ? { profile: embeddingProfile.profile, dimensions: embeddingProfile.dimensions } : {}),
-      };
-      // A validated catalog goes live at once. Embeddings are optional
-      // enrichment: documents without a vector keep lexical retrieval, and
-      // cancellations or time changes never wait behind paid indexing.
-      const next: CatalogHead = {
-        revision: crypto.randomUUID(),
-        hash: await digest(body),
-        pointer,
-        search: prepared,
-      };
-      await control.transaction(async (tx) => {
-        await liveLease(tx, lease, lockPath);
-        const current = await tx.get<CatalogHead>(catalogPath);
-        if (!sameRevision(current, previous))
-          throw new Error('Catalog publication changed');
-        tx.set(catalogPath, { ...next });
-      });
-      return pointer;
     },
     async voyageVectorsByHash(profile, hashes, dimensions) {
       const head = await control.get<VectorHead>(await profilePath(profile));

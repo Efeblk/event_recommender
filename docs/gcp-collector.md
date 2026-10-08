@@ -101,11 +101,49 @@ The replay job is bounded to 45 minutes and never retries publication
 automatically. Its publish status remains in the evidence if a step fails or is
 cancelled before the final readiness check.
 
+Before the checkpoint POST, the publisher saves an `imports_complete` receipt.
+It binds completed batches and time-based omissions to the exact report bytes.
+Final verification also runs after a failed checkpoint POST. A client timeout
+does not prove that the server rolled back. Read the canonical checkpoint and
+readiness before another publication.
+
 The replay passes only when the canonical checkpoint and `/api/ready` report the
 artifact's exact `finishedAt`. Its evidence artifact contains safe source,
 digest, preflight, publication and readiness summaries. A source page that is
 newer than the preserved report still stops checkpoint publication. Never alter
 the report timestamp to bypass that guard.
+
+Use `diagnostics_only=true` to inspect health, readiness, canonical checkpoint
+counts and the latest publication attempt. This mode makes bounded GET requests.
+It does not collect, import, publish or index. The deployed revision must match
+the workflow revision. Artifacts contain allowlisted summaries and response
+hashes. They exclude tokens, raw event records and raw error bodies.
+
+```powershell
+gh workflow run gcp-collector.yml --ref master -f diagnostics_only=true
+```
+
+Publication records source-read, materialization, object-write and activation
+phases in the existing control namespace. A 260 s deadline and request-abort
+checks guard phase boundaries and final pointer activation. Synchronous
+materialization can finish before its next check. The checkpoint client waits
+up to 280 s. Cloud Run and the writer lease retain their 300 s limits.
+
+For the preserved failed replay `37854227546`, checkpoint-only recovery can use
+a labelled proof derived from its immutable job log and exact Git call site.
+This proves that the import loop completed. It does not claim that every old
+observation was imported or invent an original success receipt. Supply both
+the failed replay ID and the exact raw job-log SHA-256:
+
+```powershell
+gh workflow run gcp-collector.yml --ref master -f publish_existing_run=37846165394 -f publish_existing_report_sha256=e9a2f3211b809bd0e152581ae2a8a8f1b27ff2a0a925a000fa2c2386b8186ad3 -f checkpoint_only_replay_run=37854227546 -f checkpoint_only_logs_sha256=3ebf89ff2f87bdd736ae22063ae9a3b8304c9117533c3454e126fcbc92282598
+```
+
+Checkpoint-only recovery checks the active pointer first. It skips all writes
+if the exact target checkpoint is already active. Otherwise it validates the
+derived proof and sends only the original checkpoint report. It does not repeat
+the source imports. Newer source heads or a newer active checkpoint still stop
+publication. Keep all failed evidence beside the new recovery evidence.
 
 GitHub schedules can be delayed or skipped. The catalog stays valid for 72 hours,
 so a few missed runs are harmless. Cloud Monitoring emails through channel

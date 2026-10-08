@@ -21,7 +21,9 @@ class MemoryControl implements ControlStore {
   documents = new Map<string, Record<string, unknown>>();
   private queue: Promise<unknown> = Promise.resolve();
   failCatalogCommit = false;
+  onGet?: (path: string) => void;
   get<T>(path: string): Promise<T | null> {
+    this.onGet?.(path);
     return Promise.resolve(
       structuredClone(this.documents.get(path) ?? null) as T | null,
     );
@@ -78,9 +80,11 @@ class MemoryBlobs implements BlobStore {
   reads = 0;
   writes: string[] = [];
   onPut?: (key: string) => void;
+  onGet?: (key: string) => Promise<void>;
   failGet?: string;
   async get(key: string) {
     this.reads++;
+    await this.onGet?.(key);
     if (this.failGet === key) throw new Error('Injected object outage');
     const body = this.objects.get(key);
     return body === undefined ? null : { body, bytes: Buffer.byteLength(body) };
@@ -195,6 +199,11 @@ async function syncLease(store: ReturnType<typeof createGcpStore>) {
   assert.ok(lease);
   return lease;
 }
+async function latestPublication(store: ReturnType<typeof createGcpStore>) {
+  const result = store.checkpointPublication?.();
+  assert.ok(result);
+  return result;
+}
 const hashA = 'a'.repeat(64),
   hashB = 'b'.repeat(64);
 const profileA =
@@ -246,6 +255,132 @@ await test('publication activates immediately; vectors are optional enrichment',
   assert.equal(afterExpiry.length, 1);
   assert.equal(documentHash(afterExpiry[0]), documentHash(fresh));
   assert.deepEqual(afterExpiry[0].offers?.map(({ id }) => id), [fresh.id]);
+});
+
+await test('checkpoint publication exposes only bounded phase and size diagnostics', async () => {
+  const f = fixture();
+  const sync = await syncLease(f.store);
+  await f.store.importPages([page(event())], sync);
+  assert.equal(await latestPublication(f.store), null);
+  const pointer = await f.store.publishCheckpoint(report(), sync, {
+    deadline: instant + 260_000,
+    deploymentRevision: 'f'.repeat(40),
+  });
+  const attempt = await latestPublication(f.store);
+  assert.ok(attempt);
+  assert.equal(attempt.deploymentRevision, 'f'.repeat(40));
+  assert.equal(attempt.reportFinishedAt, report().finishedAt);
+  assert.equal(attempt.phase, 'complete');
+  assert.equal(attempt.sourcesTotal, 1);
+  assert.equal(attempt.sourcesRead, 1);
+  assert.equal(attempt.events, 1);
+  assert.ok((attempt.searchBytes ?? 0) > 0);
+  assert.equal(attempt.checkpointBytes, pointer.bytes);
+  assert.equal(attempt.outcome, 'succeeded');
+  assert.equal(attempt.failureCode, null);
+  assert.deepEqual(
+    Object.keys(attempt).sort(),
+    [
+      'attemptId', 'checkpointBytes', 'deploymentRevision', 'elapsedMs', 'events',
+      'failureCode', 'outcome', 'phase', 'reportFinishedAt', 'schemaVersion',
+      'searchBytes', 'sourcesRead', 'sourcesTotal', 'startedAt',
+    ].sort(),
+  );
+  const stored = f.control.documents.get('biplan/default/state/checkpoint-publication')!;
+  stored.privateDetail = 'must not escape';
+  assert.equal(
+    Object.hasOwn(await latestPublication(f.store) as object, 'privateDetail'),
+    false,
+  );
+  stored.sourcesRead = 2;
+  assert.equal(await latestPublication(f.store), null);
+});
+
+await test('checkpoint publication stops before durable writes after abort or deadline', async () => {
+  {
+    const f = fixture();
+    const sync = await syncLease(f.store);
+    await f.store.importPages([page(event())], sync);
+    const controller = new AbortController();
+    controller.abort();
+    await assert.rejects(
+      f.store.publishCheckpoint(report(), sync, { signal: controller.signal }),
+      /request_aborted/,
+    );
+    assert.equal((await latestPublication(f.store))?.failureCode, 'request_aborted');
+    assert.equal(await f.store.checkpointPointer(), null);
+    assert.equal(f.blobs.writes.some((key) => key.startsWith('search-catalog/')), false);
+  }
+  {
+    const f = fixture();
+    const sync = await syncLease(f.store);
+    await f.store.importPages([page(event())], sync);
+    f.blobs.onPut = (key) => {
+      if (key.startsWith('search-catalog/')) f.advance(2);
+    };
+    await assert.rejects(
+      f.store.publishCheckpoint(report(), sync, { deadline: instant + 1 }),
+      /deadline_exceeded/,
+    );
+    const attempt = await latestPublication(f.store);
+    assert.equal(attempt?.phase, 'write_search');
+    assert.equal(attempt?.failureCode, 'deadline_exceeded');
+    assert.ok((attempt?.searchBytes ?? 0) > 0);
+    assert.equal(attempt?.checkpointBytes, null);
+    assert.equal(await f.store.checkpointPointer(), null);
+    assert.equal(f.blobs.writes.some((key) => key.startsWith('collection/')), false);
+  }
+});
+
+await test('checkpoint publication rechecks its deadline inside the activation transaction', async () => {
+  const f = fixture();
+  const sync = await syncLease(f.store);
+  await f.store.importPages([page(event())], sync);
+  let activationReady = false;
+  f.blobs.onPut = (key) => {
+    if (key.startsWith('collection/')) activationReady = true;
+  };
+  f.control.onGet = (path) => {
+    if (!activationReady || !path.endsWith('/state/catalog')) return;
+    activationReady = false;
+    f.advance(11);
+  };
+  await assert.rejects(
+    f.store.publishCheckpoint(report(), sync, { deadline: instant + 10 }),
+    /deadline_exceeded/,
+  );
+  const attempt = await latestPublication(f.store);
+  assert.equal(attempt?.phase, 'complete');
+  assert.equal(attempt?.outcome, 'failed');
+  assert.equal(attempt?.failureCode, 'deadline_exceeded');
+  assert.equal(await f.store.checkpointPointer(), null);
+});
+
+await test('an expired background publication cannot overwrite a newer attempt diagnostic', async () => {
+  const f = fixture();
+  const firstLease = await syncLease(f.store);
+  await f.store.importPages([page(event())], firstLease);
+  let release!: () => void;
+  let entered!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const reading = new Promise<void>((resolve) => { entered = resolve; });
+  let blockFirst = true;
+  f.blobs.onGet = async () => {
+    if (!blockFirst) return;
+    blockFirst = false;
+    entered();
+    await gate;
+  };
+  const oldPublication = f.store.publishCheckpoint(report(), firstLease);
+  await reading;
+  f.advance(300_001);
+  const nextLease = await syncLease(f.store);
+  await f.store.publishCheckpoint(report(), nextLease);
+  const latest = await latestPublication(f.store);
+  assert.equal(latest?.outcome, 'succeeded');
+  release();
+  await assert.rejects(oldPublication, /lease expired/);
+  assert.deepEqual(await latestPublication(f.store), latest);
 });
 
 await test('a newer publication replaces the active search at once', async () => {

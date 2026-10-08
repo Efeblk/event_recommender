@@ -1,8 +1,10 @@
 export const IDENTITY_NORMALIZATION_VERSION = "identity-normalization.v1" as const;
 
-/** Locale-stable text used only for deterministic identity comparisons. */
-export function normalizeIdentityText(value: string | null | undefined): string {
-  return (value ?? "")
+const NORMALIZATION_CACHE_LIMIT = 4096;
+const normalizationCache = new Map<string, string>();
+
+function normalizeIdentityTextUncached(value: string): string {
+  return value
     .toLocaleLowerCase("tr-TR")
     .replace(/ı/g, "i")
     .normalize("NFD")
@@ -10,6 +12,22 @@ export function normalizeIdentityText(value: string | null | undefined): string 
     .replace(/[^a-z0-9]+/g, " ")
     .trim()
     .replace(/\s+/g, " ");
+}
+
+/** Locale-stable text used only for deterministic identity comparisons. */
+export function normalizeIdentityText(value: string | null | undefined): string {
+  const key = value ?? "";
+  const hit = normalizationCache.get(key);
+  if (hit !== undefined) return hit;
+  const result = normalizeIdentityTextUncached(key);
+  if (key.length <= NORMALIZATION_CACHE_LIMIT) {
+    if (normalizationCache.size >= NORMALIZATION_CACHE_LIMIT) {
+      const oldest = normalizationCache.keys().next().value;
+      if (oldest !== undefined) normalizationCache.delete(oldest);
+    }
+    normalizationCache.set(key, result);
+  }
+  return result;
 }
 
 export function compactIdentityKey(value: string | null | undefined): string {
