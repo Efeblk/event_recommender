@@ -29,6 +29,44 @@ function exactInstant(value: unknown): string | null {
   return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : null;
 }
 
+function labelledClock(description: string, label: string): string | null {
+  const match = description.match(
+    new RegExp(`${label}\\s*:\\s*([01]?\\d|2[0-3])[.:]([0-5]\\d)(?=$|[^\\d])`, 'iu'),
+  );
+  return match ? `${match[1].padStart(2, '0')}:${match[2]}` : null;
+}
+
+/** Detects the narrow case where a provider session uses an explicit door time
+ * even though the same source text gives a different explicit event time. */
+export function hasExplicitDoorTimeStartConflict(input: {
+  description: string;
+  startsAt: string;
+}): boolean {
+  const eventTime = labelledClock(
+    input.description,
+    'etkinlik\\s+(?:başlangıç\\s+)?saati',
+  );
+  const doorTime = labelledClock(
+    input.description,
+    'kap(?:ı|i)\\s+a(?:ç|c)(?:ı|i)l(?:ı|i)(?:ş|s)(?:\\s+saati)?',
+  );
+  if (!eventTime || !doorTime || eventTime === doorTime) return false;
+  const instant = new Date(input.startsAt);
+  if (!Number.isFinite(instant.getTime())) return false;
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Istanbul',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    })
+      .formatToParts(instant)
+      .map(({type, value}) => [type, value]),
+  );
+  const extractedTime = `${parts.hour}:${parts.minute}`;
+  return extractedTime === doorTime && extractedTime !== eventTime;
+}
+
 /** Classifies only timing semantics explicitly supported by Biletix. */
 export function biletixAttendanceTiming(input: {
   category: string; description: string; flexibleTimeEventCheck?: unknown;

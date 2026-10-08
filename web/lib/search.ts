@@ -986,9 +986,16 @@ export function isEligible(
   )
     return false;
   if (f.dateFrom || f.dateTo) {
-    const day = todayInIstanbul(new Date(start));
-    if ((f.dateFrom && day < f.dateFrom) || (f.dateTo && day > f.dateTo))
-      return false;
+    if (e.attendanceTiming?.kind === 'admission_window') {
+      const from = todayInIstanbul(new Date(e.attendanceTiming.validFrom));
+      const to = todayInIstanbul(new Date(e.attendanceTiming.validThrough));
+      if ((f.dateFrom && to < f.dateFrom) || (f.dateTo && from > f.dateTo))
+        return false;
+    } else {
+      const day = todayInIstanbul(new Date(start));
+      if ((f.dateFrom && day < f.dateFrom) || (f.dateTo && day > f.dateTo))
+        return false;
+    }
   }
   if (f.startTimeFrom || f.startTimeTo) {
     // A validity-window boundary or unresolved admission timestamp is not

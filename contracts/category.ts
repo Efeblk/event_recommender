@@ -31,6 +31,10 @@ export function categoryFromSource(label: string): Category | null {
 function explicitProgramFormat(event: {title: string; description: string}): Category | null {
   const title = normalizeEvidence(event.title);
   const leading = normalizeEvidence(event.description.slice(0, 512)).slice(0, 240);
+  const standaloneStandup = Boolean(title) && (
+    leading.startsWith(`${title} stand up gosterisi`) ||
+    leading.startsWith(`${title} stand up show`)
+  );
   const performance = leading.search(/\b(?:tiyatro oyunu|stand up gosterisi|canli konser)\b/);
   const workshopTerm = /\b(?:atolye(?:si|de|den|ye|nin|miz(?:de)?)?|workshop)\b/;
   const participation = /\b(?:katilimci|katilimcilar|egitmen|ogren|uretir|uretecek|yapacak|tasarla|uygulama|malzeme|kontenjan|kayit)\w*\b/;
@@ -41,8 +45,10 @@ function explicitProgramFormat(event: {title: string; description: string}): Cat
   const first = ([[workshop, 'Workshop'], [talk, 'Söyleşi'], [instruction, 'Eğitim']] as [number, Category][])
     .filter(([index]) => index >= 0 && (performance < 0 || index < performance)).sort((a, b) => a[0] - b[0])[0];
   if (first) return first[1];
+  if (standaloneStandup) return 'Stand-up';
   if (/\b(?:konser(?:i)?|concert)\b/.test(title)) return 'Konser';
   if (/\b(?:tiyatro oyunu|cocuk oyunu|muzikal(?:i)?|theatre play|theater play)\b/.test(title)) return 'Tiyatro';
+  if (/\b(?:stand up|standup)\b/.test(title)) return 'Stand-up';
   if (performance >= 0) return null;
   if (/\b(?:atolye(?:si|leri)?|workshop)\b/.test(title)) return 'Workshop';
   if (/\b(?:soylesi(?:si)?|seminer|konferans)\b/.test(title)) return 'Söyleşi';

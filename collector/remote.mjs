@@ -39,7 +39,6 @@ export async function requestJson(endpoint, { token, serverlessToken = process.e
   // the application's independent sync-token check.
   if (serverlessToken) headers["X-Serverless-Authorization"] = `Bearer ${serverlessToken}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (process.env.SITES_ACCESS_TOKEN) headers["OAI-Sites-Authorization"] = `Bearer ${process.env.SITES_ACCESS_TOKEN}`;
   const response = await fetch(endpoint, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), redirect: "error", signal: AbortSignal.timeout(timeout) });
   return { response, result: await readJson(response) };
 }

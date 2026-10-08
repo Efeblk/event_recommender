@@ -130,6 +130,14 @@ function atomResult(
         [event.category],
       );
     case 'date': {
+      if (event.attendanceTiming?.kind === 'admission_window') {
+        const from = istanbulDay.format(new Date(event.attendanceTiming.validFrom));
+        const to = istanbulDay.format(new Date(event.attendanceTiming.validThrough));
+        return result(
+          to >= atom.from && from <= atom.to ? 'supported' : 'contradicted',
+          [`${from}–${to}`],
+        );
+      }
       const day = istanbulDay.format(new Date(event.startsAt));
       return result(
         day >= atom.from && day <= atom.to ? 'supported' : 'contradicted',
@@ -256,28 +264,26 @@ function evaluate(
   condition: Condition,
   now: Date,
   partyCount: number | null,
+  negated = false,
 ): PlanEvidence {
-  if (condition.type === 'atom')
+  if (condition.type === 'atom') {
+    const atom = atomResult(event, condition.atom, now, partyCount);
+    const status = negated && condition.atom.kind === 'topic' && atom.status === 'unknown' && atom.evidence.length === 0
+      ? 'contradicted'
+      : atom.status;
     return {
       type: 'atom',
       atom: condition.atom,
       id: condition.id,
-      ...atomResult(event, condition.atom, now, partyCount),
+      ...atom,
+      status,
     };
+  }
   if (condition.type === 'not') {
-    const child = evaluate(event, condition.child, now, partyCount);
-    // What an event is about is published by its source: an excluded genre
-    // or topic that the source never mentions is absent, as in legacy search.
-    // Properties needing a guarantee (content, experience) still need evidence,
-    // and a source that both mentions and denies a topic stays unknown.
-    const absentTopic =
-      child.type === 'atom' &&
-      child.atom.kind === 'topic' &&
-      child.status === 'unknown' &&
-      child.evidence.length === 0;
-    const status = absentTopic
-      ? 'supported'
-      : child.status === 'unknown'
+    // Topic absence is meaningful anywhere under negative polarity. Each NOT
+    // toggles that polarity, so double negation keeps positive-topic semantics.
+    const child = evaluate(event, condition.child, now, partyCount, !negated);
+    const status = child.status === 'unknown'
         ? 'unknown'
         : child.status === 'supported'
           ? 'contradicted'
@@ -285,7 +291,7 @@ function evaluate(
     return { type: 'not', child, id: condition.id, status };
   }
   const children = condition.children.map((child) =>
-    evaluate(event, child, now, partyCount),
+    evaluate(event, child, now, partyCount, negated),
   );
   const status =
     condition.type === 'all'

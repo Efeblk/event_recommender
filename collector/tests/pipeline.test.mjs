@@ -113,6 +113,63 @@ await test("Biletix embedded state groups ticket types and converts kurus to TRY
   assert.equal(events[0].availability, "available");
   assert.equal(events[0].startsAt, "2026-09-18T18:00:00.000Z");
 });
+await test("Biletix quarantines an explicit door time exported as the event start", async () => {
+  const state = structuredClone(biletix);
+  const detail = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find((data) => data && !Array.isArray(data) && data.eventCode === "5JBD4");
+  const performances = Object.values(state)
+    .map((entry) => entry?.b?.data)
+    .find(Array.isArray);
+  for (const performance of performances)
+    performance.performanceDate = Date.parse("2026-10-05T17:00:00.000Z");
+  detail.eventDescription =
+    "Kapı Açılış Saati: 20:00 Etkinlik Başlangıç Saati: 20:30";
+  const extractState = () =>
+    extract(
+      load(`<script id="ng-state">${JSON.stringify(state)}</script>`),
+      "biletix",
+      "https://www.biletix.com/etkinlik/5JBD4/ISTANBUL/tr",
+      null,
+      now,
+    );
+  await assert.rejects(extractState(), /session_time_conflict/);
+
+  detail.eventDescription = "Kapı açılış saati: 19:30. Etkinlik saati: 20:00.";
+  assert.equal((await extractState())[0].startsAt, "2026-10-05T17:00:00.000Z");
+  detail.eventDescription = "Etkinlik saati: 20:30.";
+  assert.equal((await extractState())[0].startsAt, "2026-10-05T17:00:00.000Z");
+});
+await test("Biletinial quarantines the retained Tuz Biber door time as a start", async () => {
+  const exactRecord = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: "Tuz Biber 6'lı",
+    description:
+      "Tuz Biber 6'lı Stand Up Gösterisi TuzBiber’in en iyi komedyenlerinin 15’er dakika sahne aldığı TuzBiber 6’lı şovu; JJ Pub Kanyon’da! Kapı Açılış Saati: 20:00 Etkinlik Başlangıç Saati: 20:30",
+    startDate: "2026-10-05T20:00:00+03:00",
+    location: {
+      name: "JJ Pub Kanyon",
+      address: { addressLocality: "İstanbul", streetAddress: "Kanyon AVM" },
+    },
+    offers: {
+      price: 285,
+      priceCurrency: "TRY",
+      availability: "https://schema.org/InStock",
+    },
+  };
+  await assert.rejects(
+    () =>
+      extract(
+        load(`<script type="application/ld+json">${JSON.stringify(exactRecord)}</script>`),
+        "biletinial",
+        "https://biletinial.com/tr-tr/tiyatro/tuz-biber-6li-jj",
+        "Tiyatro",
+        now,
+      ),
+    /session_time_conflict/,
+  );
+});
 await test("Biletix preserves high safe minor-unit prices and rejects unsafe values", async () => {
   const extractPrice = async (minorPrice) => {
     const state = structuredClone(biletix);

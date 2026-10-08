@@ -246,8 +246,41 @@ checks still pass, and the per-request cost does not increase without approval.
   types ("quiet concerts and theatre").
 - Remove unused conversational helpers and their historical tests. The v1 API
   and golden runner use `recommendRequest`, which reads only the current message.
+- Replace the vulnerable Vinext build dependency chain when an upstream fix is
+  available. Six high npm advisories remain in the current build tools. The
+  suggested automatic fix downgrades Vinext and is not a safe runtime update.
+- Map Node client disconnects to the request AbortSignal in the Vinext adapter.
+  Measure cancellation of Cloud Storage and Firestore work. The application
+  deadline already stops later paid calls.
+- Define whether online-only listings belong in the Istanbul catalog. Keep the
+  decision explicit before changing the current eligibility policy.
+- Choose private durable storage and a retention period for raw source evidence.
+  Keep public workflow uploads off. This needs a storage and cost decision.
 
 ## Status log
+
+- 2026-10-08: Comprehensive v1 review on `t3code/comprehensive-project-review`.
+  The user delegated review of the two revised golden requests and approved
+  $0.25 for TypeSafe/Jev plus $0.01 for Voyage. The first live frozen run
+  (`web/work/comprehensive-review/golden-live.json`, SHA-256
+  `f872f7b58fc246a3683d92e2a581093ebd45de0f6a270d9a386e406d2def551a`)
+  stopped paid calls after a provider failure in `tr14`. Source review covered
+  all 144 returned cards and 225 offers. It found nine category violations,
+  false clarification in `tr04`, false empty in `tr13`, one source time
+  conflict and inconsistent top-level source metadata. Later guard rows are
+  not live tests. The failed run remains preserved. Fixes and fresh validation
+  are in progress. Phase 1 is not revalidated by this failed run.
+  Codex Security scan `b3de800a-3974-4a49-abd4-fef9d6286542` reported one low
+  request-body resource issue at `dd59bbb`. Byte and time limits are applied
+  in the working patch. Security coverage is partial; archived and frozen
+  paths were not assessed as active v1 code.
+  Local checks passed on Node 22.23.3: 845 web tests, 281 collector tests
+  (one existing skip), typecheck, lint, 46 deployment tests, GCP configuration,
+  Node build and smoke. Browser checks passed: 39 tests and one viewport skip.
+  The T3 browser checked the compiled error state and independent messages
+  with mocked local APIs. No live staging latency is claimed. Evidence stays
+  under `web/work/comprehensive-review/`. CI, fresh golden review and merge
+  remain pending.
 
 - 2026-10-03: Plan written. `master` = `bad42d0`. Staging deployed
   (37148883212). Scheduled collection is on. Collection 37149121969 succeeded.

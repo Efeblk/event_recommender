@@ -247,6 +247,7 @@ export function buildFieldRequest(input: ParserInput) {
   });
   questions.date_day = choice(`${context} If the message names a calendar date or the first day of a date range, which day of the month (1-31)?`, { ...opts(range(1, 31)), none: 'No day of the month is named.' });
   questions.date_month = choice(`${context} If the message names a calendar date, a month, or the first day of a date range, which month?`, { ...opts(MONTHS), none: 'No month is named.' });
+  questions.date_year = choice(`${context} If the message explicitly gives a numeric year for its calendar date or date range, which number in \`numbersInMessage\` is that year?`, numberOptions('No year is named.'));
   questions.date_day_end = choice(`${context} If the message names a range of calendar days, which day of the month ends it?`, { ...opts(range(1, 31)), none: 'No range end is named.' });
   questions.date_month_end = choice(`${context} If the message names a range of calendar days that ends in a different month, which month ends it?`, { ...opts(MONTHS), none: 'The range ends in the same month, or there is no range.' });
   questions.date_month_part = choice(`${context} If the message names a month, which part of it?`, {
@@ -269,10 +270,11 @@ export function buildFieldRequest(input: ParserInput) {
     evening: 'In the evening or at night: "akşam", "gece", "evening", "tonight".',
   });
   const hours = opts(range(0, 23));
+  const minutes = opts(range(0, 59).map((minute) => minute.padStart(2, '0')), (minute) => minute === '00' ? 'On the hour or not stated.' : `:${minute}`);
   questions.time_hour = choice(`${context} If the message names a clock time (the first one of a range), which hour is it on a 24-hour clock? Evening wording makes small hours afternoon/evening hours: "akşam 8" and "8 pm" are 20.`, { ...hours, none: 'No clock time is named.' });
-  questions.time_minute = choice(`${context} If the message names a clock time (the first one of a range), which minute?`, { '00': 'On the hour or not stated.', '15': ':15', '30': ':30 or "buçuk"/"half past"', '45': ':45' });
+  questions.time_minute = choice(`${context} If the message names a clock time (the first one of a range), which minute? "Buçuk" and "half past" mean 30.`, minutes);
   questions.time_hour_end = choice(`${context} If the message names a range of clock times, which hour ends it on a 24-hour clock? Evening wording makes small hours evening hours: "between 6 and 10 PM" ends at 22.`, { ...hours, none: 'No range of clock times.' });
-  questions.time_minute_end = choice(`${context} If the message names a range of clock times, which minute ends it?`, { '00': 'On the hour or not stated.', '15': ':15', '30': ':30', '45': ':45' });
+  questions.time_minute_end = choice(`${context} If the message names a range of clock times, which minute ends it?`, minutes);
   questions.time_optional = optional('start time');
 
   // Place: the district is read by meaning, so unlisted neighbourhoods still resolve.
@@ -321,7 +323,9 @@ export function buildFieldRequest(input: ParserInput) {
     fewer: 'Some of the current group drop out, given as how many: "bir kişi gelemiyor", "one cannot come".',
   });
   questions.party_count = choice(`${context} If the message states a number of attendees, what is it? If it says how many people join or drop out, how many?`, { ...opts(range(1, 20)), none: 'No number of people.' });
-  questions.age = choice(`${context} Which number in \`numbersInMessage\` is the age of someone attending ("7 yaşında", "12-year-old")?`, numberOptions('No age is given.'));
+  numbers.forEach((number, index) => {
+    questions[`age_${index}`] = noulQ(`${context} Does \`numbersInMessage[${index}]\` ("${number.text}") state the age of someone attending ("7 yaşında", "12-year-old")? Count every separately named attendee age.`);
+  });
   for (const [value, text] of Object.entries(COMPANIONS)) {
     const was = previousValues(previous, 'companion').has(value);
     questions[`companion_${value}`] = choice(`${context} Does the user say they will attend with ${text}?`, {
@@ -334,11 +338,11 @@ export function buildFieldRequest(input: ParserInput) {
   // Event types, topics, experiences, content and moods: one judgment per item.
   const item = (kind: Kind, value: string, text: string, opposite = false, note = '') => {
     const was = previousValues(previous, kind).has(value);
-    return choice(`${context} Does the message itself name ${text}? Judge only its words: a related item, the companion or the occasion does not count, and excluding something else does not exclude this.${note}`, {
-      no: 'The message does not name it.',
-      want: opposite ? 'The user requires it, or rules out its opposite ("kalabalık olmasın" requires uncrowded).' : 'The user asks for it, or accepts it as one of the options.',
-      optional: 'The user would only like it: "olsa iyi olur", "tercihen", "tercih ederim", "ideally", "I prefer", "as a preference".',
-      exclude: 'The user rules it out: "olmasın", "hariç", "dışında", "istemiyorum", "olmayan", "no", "not", "except".',
+    return choice(`${context} Does the message itself name ${text}? Judge only the local clause or coordinated phrase that names this exact item. Negation in a later comma-separated or contrasting clause about a different item does not reach backward. A trailing negation does apply to every item in the same coordinated phrase (for example, "A veya B olmasın" excludes both A and B). A related item, the companion or the occasion does not count.${note}`, {
+      no: `The message does not name ${text}.`,
+      want: opposite ? `The local clause requires ${text}, or rules out its opposite ("kalabalık olmasın" requires uncrowded).` : `The local clause asks for ${text}, or accepts it as one of its positive options.`,
+      optional: `The local clause names ${text} only as a preference: "olsa iyi olur", "tercihen", "tercih ederim", "ideally", "I prefer".`,
+      exclude: `The local clause or coordinated phrase that names ${text} rules out ${text}: "olmasın", "hariç", "dışında", "istemiyorum", "olmayan", "no", "not", "except". Negation in a separate clause that names a different item does not exclude ${text}.`,
       ...(was ? { removed: 'The user drops it from the current search: "konser koşulunu kaldır", "remove the concert condition", "artık şart değil".' } : {}),
     });
   };
@@ -350,10 +354,14 @@ export function buildFieldRequest(input: ParserInput) {
   questions.topic = choice(`${context} Which topic or genre does the message name for the events (the first one)? ${topicNote}`, topicOptions);
   questions.topic_2 = choice(`${context} If the message names a second topic or genre, which one? ${topicNote}`, topicOptions);
   questions.topics_both = noulQ(`${context} If the message names two topics or genres, must one event have both ("hem caz hem fotoğrafçılık", "both jazz and photography") rather than either one?`);
-  questions.topic_role = choice(`${context} How does the message treat the topic or genre it names? ${topicNote}`, {
-    want: 'The user asks for it.', optional: 'The user would only like it: "tercihen", "olsa iyi olur", "as a preference", "I prefer".', exclude: 'The user rules it out.',
+  questions.topic_role = choice(`${context} How does the message treat the first topic or genre selected by the topic question? Judge only the local clause or coordinated phrase that names that first topic. Negation in a contrasting clause that names the second topic does not reach backward. A trailing negation shared by one coordinated phrase applies to every topic in that phrase. ${topicNote}`, {
+    want: 'The local clause asks for the first topic.', optional: 'The local clause names the first topic only as a preference: "tercihen", "olsa iyi olur", "as a preference", "I prefer".', exclude: 'The local clause or coordinated phrase that names the first topic rules out that first topic. Negation in a separate clause naming the second topic does not count.',
     ...(has('topic') ? { removed: 'The user drops the current topic.' } : {}),
     none: 'No topic or genre is named.',
+  });
+  questions.topic_role_2 = choice(`${context} How does the message treat the second topic or genre selected by the topic_2 question? Judge only the local clause or coordinated phrase that names that second topic. Negation in a different clause naming the first topic does not apply. A trailing negation shared by one coordinated phrase applies to every topic in that phrase. ${topicNote}`, {
+    want: 'The local clause asks for the second topic.', optional: 'The local clause names the second topic only as a preference.', exclude: 'The local clause or coordinated phrase that names the second topic rules out that second topic. Negation in a separate clause naming the first topic does not count.',
+    none: 'No second topic or genre is named.',
   });
   for (const [value, text] of Object.entries(EXPERIENCES)) questions[`experience_${value}`] = item('experience', value, text, true);
   for (const [value, text] of Object.entries(CONTENT)) questions[`content_${value}`] = item('content', value, text);
@@ -450,9 +458,13 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
 
     // --- Date.
     const nextWeekday = (day: number, skip: boolean) => addDays(today, (day - today.getUTCDay() + 7) % 7 + (skip ? 7 : 0));
+    const weekdayInFollowingWeek = (day: number) => {
+      const monday = addDays(today, -((today.getUTCDay() + 6) % 7));
+      return addDays(monday, 7 + ((day + 6) % 7));
+    };
     const weekdayIndex = (name: string) => WEEKDAYS.indexOf(name);
     const weekdayDate = (day: number, week: string): Date => {
-      if (week === 'following_week') return nextWeekday(day, true);
+      if (week === 'following_week') return weekdayInFollowingWeek(day);
       if (week === 'next') {
         const near = nextWeekday(day, false), far = addDays(near, 7);
         const inThisWeek = (near.getTime() - today.getTime()) / 86400000 < 7 - ((today.getUTCDay() + 6) % 7);
@@ -461,9 +473,15 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
       }
       return nextWeekday(day, false);
     };
+    const explicitYear = numberAt('date_year');
+    if (explicitYear !== null && (!Number.isInteger(explicitYear) || explicitYear < 1 || explicitYear > 9999))
+      throw new Unreadable('date');
     const resolveYear = (month: number, day: number) => {
-      const d = new Date(Date.UTC(today.getUTCFullYear(), month - 1, day, 12));
+      const year = explicitYear ?? today.getUTCFullYear();
+      const d = new Date(Date.UTC(year, month - 1, day, 12));
+      d.setUTCFullYear(year);
       if (d.getUTCMonth() !== month - 1) throw new Unreadable('date');
+      if (explicitYear !== null) return d;
       return iso(d) < ref && today.getTime() - d.getTime() > 60 * 86400000 ? new Date(Date.UTC(today.getUTCFullYear() + 1, month - 1, day, 12)) : d;
     };
     const dateKind = fieldPick('date');
@@ -486,7 +504,7 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
       case 'weekend': {
         const week = pick('date_week');
         const saturday = week === 'this' && today.getUTCDay() === 0 ? addDays(today, -1) : weekdayDate(6, week);
-        dates = [{ from: saturday < today ? today : saturday, to: addDays(saturday, 1) }];
+        dates = [{ from: saturday, to: addDays(saturday, 1) }];
         break;
       }
       case 'this_week': dates = [{ from: today, to: nextWeekday(0, false) }]; break;
@@ -515,7 +533,12 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
         if (!month || !day || !endDay) throw new Unreadable('date');
         const from = resolveYear(month, day);
         let to = new Date(Date.UTC(from.getUTCFullYear(), endMonth - 1, endDay, 12));
-        if (to < from) to = new Date(Date.UTC(from.getUTCFullYear() + 1, endMonth - 1, endDay, 12));
+        if (to.getUTCMonth() !== endMonth - 1 || to.getUTCDate() !== endDay) throw new Unreadable('date');
+        if (to < from && explicitYear === null) {
+          to = new Date(Date.UTC(from.getUTCFullYear() + 1, endMonth - 1, endDay, 12));
+          if (to.getUTCMonth() !== endMonth - 1 || to.getUTCDate() !== endDay) throw new Unreadable('date');
+        }
+        if (to < from) throw new Unreadable('date');
         dates = [{ from, to }];
         break;
       }
@@ -568,18 +591,40 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
 
     // --- Place. Neighbourhoods map to their district through the shared place table.
     let placeKind = fieldPick('place');
+    const namedNeighborhood = pick('neighborhood');
+    const excludedNeighborhood = pick('excluded_neighborhood'), excludedDistrict = pick('excluded_district');
+    const namedPlace = namedNeighborhood !== 'none' && namedNeighborhood !== 'other'
+      ? placeOf(fold(namedNeighborhood).trim())
+      : null;
+    const namedDistrict = namedPlace?.district
+      ? DISTRICTS.find((district) => fold(district) === namedPlace.district) ?? null
+      : null;
+    const namedNeighborhoodAllowed = namedNeighborhood !== excludedNeighborhood
+      && (!namedDistrict || fold(namedDistrict) !== fold(excludedDistrict));
+    const escapedNeighborhood = fold(namedNeighborhood).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const directlyNamedNeighborhood = Boolean(
+      namedPlace?.district &&
+      escapedNeighborhood &&
+      new RegExp(`(?:^|[^a-z0-9])${escapedNeighborhood}(?:'?(?:de|da|te|ta|den|dan|ten|tan))?(?=$|[^a-z0-9])`, 'u').test(fold(input.utterance)),
+    );
     // Confident place parts outweigh a missed presence answer when nothing is being edited.
     if (placeKind === 'none' && !previous.some((x) => x.kind === 'location')
-      && ((dist('district')[pick('district')] ?? 0) >= 0.8 && pick('district') !== 'none' || (pick('neighborhood') !== 'none' && pick('neighborhood') !== 'other' && (dist('neighborhood')[pick('neighborhood')] ?? 0) >= 0.6)))
+      && ((dist('district')[pick('district')] ?? 0) >= 0.8 && pick('district') !== 'none' && pick('district') !== excludedDistrict
+        || (namedNeighborhood !== 'none' && namedNeighborhood !== 'other' && namedNeighborhoodAllowed
+          && (dist('neighborhood')[namedNeighborhood] ?? 0) >= 0.6)))
+      placeKind = 'in';
+    if (placeKind === 'unknown' && !previous.some((x) => x.kind === 'location')
+      && (dist('neighborhood')[namedNeighborhood] ?? 0) >= 0.8
+      && namedNeighborhoodAllowed
+      && directlyNamedNeighborhood)
       placeKind = 'in';
     const placeEntries = (negated: boolean) => previous.filter((x) => x.kind === 'location' && (x.condition.type === 'not') === negated)
       .map((x) => ({ condition: x.condition, preferred: x.preferred }));
     let wantedPlaces = placeEntries(false), excludedPlaces = placeEntries(true), placeChanged = false;
-    const excludedNeighborhood = pick('excluded_neighborhood'), excludedDistrict = pick('excluded_district');
     if (placeKind === 'in' || placeKind === 'either') {
       const preferred = strength('place_optional');
       const out: Array<{ condition: Condition; preferred: boolean }> = [];
-      const neighborhood = pick('neighborhood');
+      const neighborhood = namedNeighborhood;
       const listed = neighborhood !== 'none' && neighborhood !== 'other' && neighborhood !== excludedNeighborhood ? neighborhood : null;
       const listedPlace = listed ? placeOf(fold(listed).trim()) : null;
       const districtOf = (name: string) => name === 'none' ? null : name;
@@ -621,9 +666,9 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
       if (!total || total < 1) throw new Unreadable('party');
       fields.set('party', [{ condition: { type: 'atom', atom: { kind: 'party', count: total } }, preferred: false }]);
     } else if (partyKind === 'remove') fields.set('party', []);
-    const age = numberAt('age');
-    if (age !== null && Number.isInteger(age) && age >= 0 && age <= 120)
-      fields.set('age', [{ condition: { type: 'atom', atom: { kind: 'age', years: age } }, preferred: false }]);
+    const ages = [...new Set(built.numbers.flatMap((number, index) => noul(`age_${index}`) > 0.5 ? [number.value] : []))];
+    if (ages.some((age) => !Number.isInteger(age) || age < 0 || age > 120)) throw new Unreadable('age');
+    if (ages.length) fields.set('age', ages.map((years) => ({ condition: { type: 'atom', atom: { kind: 'age', years } }, preferred: false })));
 
     // --- Per-item fields.
     type Role = 'want' | 'optional' | 'exclude';
@@ -657,21 +702,40 @@ export function composeFields(input: ParserInput, built: FieldRequest, response:
     const specific = ['concert', 'theatre', 'standup', 'dance'].some((v) => ['want', 'optional'].includes(pick(`category_${v}`)));
     itemField('category', Object.keys(CATEGORIES), (v) => v === 'show' && specific && pick('category_show') !== 'exclude' ? 'no' : pick(`category_${v}`), (v) => v === 'dance' && noul('dance_activity') > 0.5 ? null : { kind: 'category', value: v as Category });
     if (pick('category_dance') !== 'no' && pick('category_dance') !== 'removed' && noul('dance_activity') > 0.5) {
-      const topic = { condition: { type: 'atom' as const, atom: { kind: 'topic' as const, value: 'dancing' } }, preferred: pick('category_dance') === 'optional' };
+      const dancing = { type: 'atom' as const, atom: { kind: 'topic' as const, value: 'dancing' } };
+      const topic = pick('category_dance') === 'exclude'
+        ? { condition: { type: 'not' as const, child: dancing }, preferred: false }
+        : { condition: dancing, preferred: pick('category_dance') === 'optional' };
       fields.set('topic', [...(fields.get('topic') ?? []), topic]);
     }
-    const roleDist = dist('topic_role');
-    let topicRole = vague && pick('topic_role') === 'removed' ? 'none' : pick('topic_role');
-    if (topicRole === 'none' && pick('topic') !== 'none' && pick('topic') !== 'other')
-      topicRole = (['want', 'optional', 'exclude'] as const).reduce((a, b) => (roleDist[b] ?? 0) > (roleDist[a] ?? 0) ? b : a);
-    const named = [pick('topic'), pick('topic_2')].filter((t) => t !== 'none' && t !== 'other');
-    if (topicRole === 'removed') fields.set('topic', []);
-    else if (topicRole !== 'none' && named.length) {
-      const children = [...new Set(named)].map((value) => ({ type: 'atom' as const, atom: { kind: 'topic' as const, value } }));
-      const both = children.length > 1 && topicRole !== 'exclude' && noul('topics_both') > 0.5;
-      const condition: Condition = children.length > 1 ? { type: 'any', children } : children[0];
-      if (both) fields.set('topic', [...(fields.get('topic') ?? []), ...children.map((child) => ({ condition: child as Condition, preferred: topicRole === 'optional' }))]);
-      else fields.set('topic', [...(fields.get('topic') ?? []), topicRole === 'exclude' ? { condition: { type: 'not', child: condition }, preferred: false } : { condition, preferred: topicRole === 'optional' }]);
+    const topicRole = (id: 'topic_role' | 'topic_role_2', topic: string) => {
+      let role = vague && id === 'topic_role' && pick(id) === 'removed' ? 'none' : pick(id);
+      if (role === 'none' && topic !== 'none' && topic !== 'other') {
+        const probabilities = dist(id);
+        role = (['want', 'optional', 'exclude'] as const).reduce((a, b) => (probabilities[b] ?? 0) > (probabilities[a] ?? 0) ? b : a);
+      }
+      return role;
+    };
+    const firstTopic = pick('topic'), secondTopic = pick('topic_2');
+    const firstRole = topicRole('topic_role', firstTopic);
+    if (firstRole === 'removed') fields.set('topic', []);
+    else {
+      const entries = [[firstTopic, firstRole], [secondTopic, topicRole('topic_role_2', secondTopic)]]
+        .filter(([value, role]) => value !== 'none' && value !== 'other' && ['want', 'optional', 'exclude'].includes(role));
+      const byRole = (role: string) => [...new Set(entries.filter((entry) => entry[1] === role).map((entry) => entry[0]))]
+        .map((value) => ({ type: 'atom' as const, atom: { kind: 'topic' as const, value } }));
+      const any = (children: Condition[]): Condition => children.length > 1 ? { type: 'any', children } : children[0];
+      const additions: Array<{ condition: Condition; preferred: boolean }> = [];
+      const wanted = byRole('want');
+      if (wanted.length) {
+        if (wanted.length > 1 && noul('topics_both') > 0.5) additions.push(...wanted.map((condition) => ({ condition, preferred: false })));
+        else additions.push({ condition: any(wanted), preferred: false });
+      }
+      const optional = byRole('optional');
+      if (optional.length) additions.push({ condition: any(optional), preferred: true });
+      const excluded = byRole('exclude');
+      if (excluded.length) additions.push({ condition: { type: 'not', child: any(excluded) }, preferred: false });
+      if (additions.length) fields.set('topic', [...(fields.get('topic') ?? []), ...additions]);
     }
     itemField('companion', Object.keys(COMPANIONS), (v) => ({ no: 'no', yes: 'want', removed: 'removed' } as Record<string, string>)[pick(`companion_${v}`)], (v) => ({ kind: 'companion', value: v as 'partner' }));
     itemField('experience', Object.keys(EXPERIENCES), (v) => pick(`experience_${v}`), (v) => ({ kind: 'experience', value: v as 'quiet' }));

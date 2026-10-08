@@ -359,3 +359,54 @@ void test('an excluded topic is absent unless the source mentions it', () => {
   });
   assert.equal(evaluatePlan(event, notOutdoors).status, 'unknown');
 });
+
+void test('topic absence follows negation through groups and double NOT', () => {
+  const neitherRockNorRap = plan({
+    type: 'not',
+    child: {
+      type: 'any',
+      children: [
+        { type: 'atom', atom: { kind: 'topic', value: 'rock' } },
+        { type: 'atom', atom: { kind: 'topic', value: 'rap' } },
+      ],
+    },
+  });
+  assert.equal(evaluatePlan({ ...event, title: 'Classical night', description: '' }, neitherRockNorRap).status, 'supported');
+  const doubleNotRock = plan({
+    type: 'not',
+    child: {
+      type: 'not',
+      child: { type: 'atom', atom: { kind: 'topic', value: 'rock' } },
+    },
+  });
+  assert.equal(evaluatePlan({ ...event, title: 'Classical night', description: '' }, doubleNotRock).status, 'unknown');
+  assert.equal(evaluatePlan({ ...event, title: 'Rock night', description: '' }, doubleNotRock).status, 'supported');
+});
+
+void test('admission-window date evidence uses the verified validity interval', () => {
+  const september29 = plan({
+    type: 'atom',
+    atom: { kind: 'date', from: '2026-09-29', to: '2026-09-29' },
+  });
+  const admission: EventRecord = {
+    ...event,
+    startsAt: '2026-09-30T14:00:00.000Z',
+    attendanceTiming: {
+      kind: 'admission_window',
+      evidence: 'provider_flexible_window',
+      validFrom: '2026-09-01T07:00:00.000Z',
+      validThrough: '2026-09-30T14:00:00.000Z',
+    },
+  };
+  assert.equal(evaluatePlan(admission, september29).status, 'supported');
+  const august = plan({
+    type: 'atom',
+    atom: { kind: 'date', from: '2026-08-29', to: '2026-08-29' },
+  });
+  assert.equal(evaluatePlan(admission, august).status, 'contradicted');
+  const clock = plan({
+    type: 'atom',
+    atom: { kind: 'time', from: '17:00' },
+  });
+  assert.equal(evaluatePlan(admission, clock).status, 'unknown');
+});

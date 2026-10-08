@@ -192,6 +192,10 @@ test.describe('browser contracts', () => {
     await page.getByText('Veriler nasıl kullanılıyor?').click();
     await expect(page.getByText(/Voyage AI ve TypeSafe AI/)).toBeVisible();
     await expect(
+      page.getByText(/Önceki isteklerin yeni aramaya eklenmez/),
+    ).toBeVisible();
+    await expect(page.getByText(/önceki isteklerinden tutulan/)).toHaveCount(0);
+    await expect(
       page.getByText(/ham IP adresi yerine türetilmiş/),
     ).toBeVisible();
     await expect(
@@ -401,6 +405,162 @@ test.describe('browser contracts', () => {
     await expect(
       page.getByRole('button', { name: 'Yeniden dene' }),
     ).toHaveCount(0);
+    expect(unhandled).toEqual([]);
+  });
+
+  test('catalog load timeout shows only its retry state and retry restores cards', async ({
+    page,
+  }) => {
+    await page.clock.install();
+    const unhandled = await mockShell(page);
+    let calls = 0;
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route('**/api/events', async (route) => {
+      calls++;
+      if (calls === 1) {
+        await pending;
+        await route.fulfill({ json: eventsResponse }).catch(() => undefined);
+        return;
+      }
+      await route.fulfill({ json: eventsResponse });
+    });
+
+    await page.goto('/');
+    const eventsSection = page.locator('#etkinlikler');
+    await expect(eventsSection).toHaveAttribute('aria-busy', 'true');
+    await expect(
+      page.getByRole('status', { name: 'Etkinlikler yükleniyor' }),
+    ).toBeVisible();
+    await page.clock.fastForward(15_001);
+    await expect(page.getByRole('alert')).toContainText(
+      'Etkinlikler şu an yüklenemedi.',
+    );
+    await expect(
+      page.getByText('Koşullarına uyan seçenekleri doğrulayamadık.'),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: 'Filtreleri kaldır' }),
+    ).toHaveCount(0);
+
+    release();
+    await page.getByRole('button', { name: 'Yeniden dene' }).click();
+    await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
+    await expect(eventsSection).toHaveAttribute('aria-busy', 'false');
+    expect(unhandled).toEqual([]);
+  });
+
+  test('late catalog success does not erase a newer search failure', async ({
+    page,
+  }) => {
+    const unhandled = await mockShell(page);
+    let releaseEvents!: () => void;
+    const pendingEvents = new Promise<void>((resolve) => {
+      releaseEvents = resolve;
+    });
+    let markEventsStarted!: () => void;
+    const eventsStarted = new Promise<void>((resolve) => {
+      markEventsStarted = resolve;
+    });
+    await page.route('**/api/events', async (route) => {
+      markEventsStarted();
+      await pendingEvents;
+      await route.fulfill({ json: eventsResponse });
+    });
+    await page.route('**/api/recommend', (route) =>
+      route.fulfill({
+        status: 503,
+        json: { error: 'Arama geçici olarak kullanılamıyor.' },
+      }),
+    );
+
+    await page.goto('/');
+    await eventsStarted;
+    const textarea = page.getByLabel('Planını anlat');
+    await textarea.fill('Bu hafta sonu konser');
+    await textarea.press('Enter');
+    const alert = page.getByRole('alert');
+    await expect(alert).toContainText('Arama geçici olarak kullanılamıyor.');
+    releaseEvents();
+    await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
+    await expect(alert).toContainText('Arama geçici olarak kullanılamıyor.');
+    await expect(
+      page.getByRole('button', { name: 'Yeniden dene' }),
+    ).toBeVisible();
+    expect(unhandled).toEqual([]);
+  });
+
+  test('late catalog failure does not replace a successful search', async ({
+    page,
+  }) => {
+    const unhandled = await mockShell(page);
+    let releaseEvents!: () => void;
+    const pendingEvents = new Promise<void>((resolve) => {
+      releaseEvents = resolve;
+    });
+    let markEventsStarted!: () => void;
+    const eventsStarted = new Promise<void>((resolve) => {
+      markEventsStarted = resolve;
+    });
+    await page.route('**/api/events', async (route) => {
+      markEventsStarted();
+      await pendingEvents;
+      await route.fulfill({ status: 503, json: { error: 'catalog failed' } });
+    });
+    let recommendationCalls = 0;
+    await page.route('**/api/recommend', (route) => {
+      recommendationCalls++;
+      return route.fulfill({ json: result() });
+    });
+
+    await page.goto('/');
+    await eventsStarted;
+    const textarea = page.getByLabel('Planını anlat');
+    await textarea.fill('Bu hafta sonu konser');
+    await textarea.press('Enter');
+    await expect.poll(() => recommendationCalls).toBe(1);
+    releaseEvents();
+    await expect(page.locator('#etkinlikler')).toHaveAttribute(
+      'aria-busy',
+      'false',
+    );
+    await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0);
+    expect(unhandled).toEqual([]);
+  });
+
+  test('non-JSON recommendation errors use a safe localized message and remain retryable', async ({
+    page,
+  }) => {
+    const unhandled = await mockShell(page);
+    const bodies: string[] = [];
+    await page.route('**/api/recommend', async (route) => {
+      bodies.push(route.request().postData() || '');
+      if (bodies.length === 1) {
+        await route.fulfill({
+          status: 502,
+          contentType: 'text/html',
+          body: '<h1>upstream unavailable</h1>',
+        });
+        return;
+      }
+      await route.fulfill({ json: result() });
+    });
+
+    await page.goto('/');
+    const textarea = page.getByLabel('Planını anlat');
+    await expect(textarea).toBeEnabled();
+    await textarea.fill('Bu hafta sonu konser');
+    await page.getByRole('button', { name: 'Planımı bul' }).click();
+    await expect(page.getByRole('alert')).toContainText(
+      'Arama tamamlanamadı.',
+    );
+    await expect(page.getByRole('alert')).not.toContainText('Unexpected token');
+    await page.getByRole('button', { name: 'Yeniden dene' }).click();
+    await expect(page.getByRole('heading', { name: 'Gece Cazı' })).toBeVisible();
+    expect(bodies[1]).toBe(bodies[0]);
     expect(unhandled).toEqual([]);
   });
 

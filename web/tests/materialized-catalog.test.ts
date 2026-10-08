@@ -140,7 +140,7 @@ await test('expiry recombines previously conflicting policy groups within the fu
   const child = later({ description: 'Sadece çocuklar için.' });
   const unspecified = later({
     id: 'biletix:3',
-    source: 'biletix',
+    source: 'biletinial',
     url: 'https://biletix.example/3',
   });
   const raw = [adult, child, unspecified];
@@ -286,6 +286,37 @@ await test('publication merges basic venue spelling without a venue alias', () =
   );
 });
 
+await test('selected offer provenance follows the source used for public price and URL', () => {
+  const representative = event({
+    id: 'representative',
+    price: 500,
+    sourceSessionIds: ['representative-session'],
+    sourceCategory: 'provider-theatre',
+    sourceVersion: 'representative-version',
+    extraction: 'representative-extractor',
+  });
+  const cheapest = later({
+    id: 'cheapest',
+    price: 200,
+    sourceSessionIds: ['cheapest-session'],
+    sourceCategory: 'provider-stage',
+    sourceVersion: 'cheapest-version',
+    extraction: 'cheapest-extractor',
+  });
+  const [card] = searchCatalogCandidates(
+    buildSearchCatalog([representative, cheapest], publishedAt),
+    emptyFilters,
+    publishedAt,
+  );
+  assert.equal(card.source, cheapest.source);
+  assert.equal(card.url, cheapest.url);
+  assert.equal(card.price, cheapest.price);
+  assert.deepEqual(card.sourceSessionIds, cheapest.sourceSessionIds);
+  assert.equal(card.sourceCategory, cheapest.sourceCategory);
+  assert.equal(card.sourceVersion, cheapest.sourceVersion);
+  assert.equal(card.extraction, cheapest.extraction);
+});
+
 await test('provider listing evidence maps full listing IDs back to compatibility event IDs', () => {
   const fullA = 'a'.repeat(64);
   const fullB = 'b'.repeat(64);
@@ -410,6 +441,58 @@ await test('stand-up evidence still selects the stand-up representative', () => 
   );
   assert.equal(card.category, 'Stand-up');
   assert.equal(card.id.startsWith('session-'), true);
+});
+
+await test('preparation repairs an explicit standalone stand-up programme retained under provider theatre', () => {
+  const raw = event({
+    id: '05228453b7825732516d760d',
+    title: "Tuz Biber 6'lı",
+    description:
+      "Tuz Biber 6'lı Stand Up Gösterisi TuzBiber’in en iyi komedyenlerinin 15’er dakika sahne aldığı TuzBiber 6’lı şovu; JJ Pub Kanyon’da!",
+    sourceCategory: 'tiyatro',
+    category: 'Tiyatro',
+  });
+  const snapshot = buildSearchCatalog([raw], publishedAt);
+  const standup = searchCatalogCandidates(
+    snapshot,
+    { ...emptyFilters, category: 'Stand-up' },
+    publishedAt,
+  );
+  assert.equal(standup.length, 1);
+  assert.equal(standup[0].category, 'Stand-up');
+  assert.deepEqual(
+    searchCatalogCandidates(
+      snapshot,
+      { ...emptyFilters, category: 'Tiyatro' },
+      publishedAt,
+    ),
+    [],
+  );
+});
+
+await test('preparation excludes the retained Tuz Biber session that uses its explicit door time', () => {
+  const raw = event({
+    id: '05228453b7825732516d760d',
+    title: "Tuz Biber 6'lı",
+    description:
+      "Tuz Biber 6'lı Stand Up Gösterisi; JJ Pub Kanyon'da! Kapı Açılış Saati: 20:00 Etkinlik Başlangıç Saati: 20:30",
+    startsAt: '2026-10-05T17:00:00.000Z',
+    source: 'biletix',
+    sourceCategory: 'tiyatro',
+    category: 'Tiyatro',
+  });
+  const snapshot = buildSearchCatalog([raw], publishedAt);
+  assert.deepEqual(
+    searchCatalogCandidates(snapshot, emptyFilters, publishedAt),
+    [],
+  );
+  assert.deepEqual(snapshot.sourceStatus, [
+    {
+      startsAt: raw.startsAt,
+      checkedAt: raw.checkedAt,
+      availability: raw.availability,
+    },
+  ]);
 });
 
 await test('future clock-skewed source activates when it enters the five-minute allowance', () => {

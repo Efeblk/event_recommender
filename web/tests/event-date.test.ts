@@ -13,6 +13,8 @@ const event: EventRecord = { id: 'admission', title: 'Müze Girişi', descriptio
 
 await test('validity end is neither displayed nor filtered as an appointment time', () => {
   assert.equal(isEligible(event, emptyFilters, now), true);
+  assert.equal(isEligible(event, { ...emptyFilters, dateFrom: '2026-09-29', dateTo: '2026-09-29' }, now), true);
+  assert.equal(isEligible(event, { ...emptyFilters, dateFrom: '2026-08-29', dateTo: '2026-08-29' }, now), false);
   assert.equal(isEligible(event, { ...emptyFilters, startTimeFrom: '17:00' }, now), false);
   const label = eventDateLabel(event);
   assert.match(label, /1 Eylül 2026.*30 Eylül 2026/);

@@ -15,7 +15,7 @@
     "soak:verify": "node soak-verify.mjs"
   },
   "dependencies": {
-    "@crawlee/basic": "3.18.1",
+    "@crawlee/basic": "3.18.2",
     "cheerio": "1.2.0",
     "pg": "8.23.0",
     "robots-parser": "3.0.1"

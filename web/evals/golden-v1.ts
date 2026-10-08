@@ -197,7 +197,10 @@ export function auditGoldenResult(
   catalog: EventRecord[],
   now: Date,
 ) {
-  const cards = result.recommendations.slice(0, 10).map((r) => r.event);
+  // The public contract returns every supported card, up to 16. The labelled
+  // relevance review remains top-ten, but hard, grounding and duplicate audits
+  // must cover the complete response.
+  const cards = result.recommendations.map((r) => r.event);
   const hardViolations = cards.flatMap((event) => {
     const check = evaluatePlan(event, item.expected, now);
     return check.status === 'supported'

@@ -15,6 +15,8 @@ import { createHash } from 'node:crypto';
 import { voyageDocumentText } from './voyage.ts';
 import { prepareLexicalDocumentTokens } from './hybrid.ts';
 import { prepareEventLocation } from './istanbul-location.ts';
+import { categoryForEvent } from './event-format.ts';
+import { hasExplicitDoorTimeStartConflict } from '../../contracts/timing.ts';
 
 export interface SearchCatalog {
   schemaVersion: 1;
@@ -183,6 +185,12 @@ function projectResolvedSession(
   );
   const offers = uniqueOffers(ordered);
   const offer = selectedOffer(offers, representative);
+  const selectedSource = ordered.find(
+    (event) =>
+      event.id === offer.id &&
+      event.source === offer.source &&
+      event.url === offer.url,
+  );
   const attendanceTiming = attendanceOf(ordered);
   const title = normalizeTitleKey(
     representative.title,
@@ -204,8 +212,14 @@ function projectResolvedSession(
     mergedIds.add(event.id);
     for (const id of event.mergedIds ?? []) mergedIds.add(id);
   }
-  const { providerListing: _providerListing, ...publicRepresentative } =
-    representative;
+  const {
+    providerListing: _providerListing,
+    sourceSessionIds: _representativeSessionIds,
+    sourceCategory: _representativeSourceCategory,
+    sourceVersion: _representativeSourceVersion,
+    extraction: _representativeExtraction,
+    ...publicRepresentative
+  } = representative;
   return {
     ...publicRepresentative,
     address:
@@ -221,6 +235,18 @@ function projectResolvedSession(
     currency: offer.currency,
     availability: offer.availability,
     checkedAt: offer.checkedAt,
+    ...(offer.sourceSessionIds
+      ? { sourceSessionIds: [...offer.sourceSessionIds] }
+      : {}),
+    ...(selectedSource?.sourceCategory !== undefined
+      ? { sourceCategory: selectedSource.sourceCategory }
+      : {}),
+    ...(selectedSource?.sourceVersion !== undefined
+      ? { sourceVersion: selectedSource.sourceVersion }
+      : {}),
+    ...(selectedSource?.extraction !== undefined
+      ? { extraction: selectedSource.extraction }
+      : {}),
     offers,
     mergedIds: [...mergedIds].sort(),
     ...(attendanceTiming ? { attendanceTiming } : {}),
@@ -274,7 +300,27 @@ export function buildSearchCatalog(
 ): SearchCatalog {
   const eligible: EventRecord[] = [];
   let projectionBytes = 0;
-  for (const event of events) {
+  for (const sourceEvent of events) {
+    // Retained checkpoints can predate collector quarantine. Exclude only the
+    // explicit door-as-start contradiction and preserve the raw source record.
+    if (
+      hasExplicitDoorTimeStartConflict({
+        description: sourceEvent.description,
+        startsAt: sourceEvent.startsAt,
+      })
+    )
+      continue;
+    const verifiedCategory = categoryForEvent(
+      sourceEvent.sourceCategory ?? sourceEvent.category,
+      sourceEvent.title,
+      sourceEvent.description,
+    );
+    // Correct retained provider-theatre records only when their own program
+    // evidence identifies stand-up. Other format repairs wait for refresh.
+    const event =
+      verifiedCategory === 'Stand-up' && sourceEvent.category !== 'Stand-up'
+        ? { ...sourceEvent, category: verifiedCategory }
+        : sourceEvent;
     const checked = Date.parse(event.checkedAt);
     const activation = Math.max(at.getTime(), checked - 300000);
     if (

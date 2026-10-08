@@ -1,7 +1,10 @@
 import { createHash } from "node:crypto";
 import { jsonLd, parseEvents } from "../contracts/source.ts";
 import { categoryFromSource, categoryForEvent } from "../contracts/category.ts";
-import { biletixAttendanceTiming } from "../contracts/timing.ts";
+import {
+  biletixAttendanceTiming,
+  hasExplicitDoorTimeStartConflict,
+} from "../contracts/timing.ts";
 import { discoverBiletinialCategories, extractBiletinial } from './biletinial.mjs';
 import { verifiedBubiletDetailInventory } from './bubilet.mjs';
 
@@ -76,16 +79,35 @@ const clean = (value) =>
         .replace(/\s+/g, " ")
         .trim()
     : "";
+
 function categoryOf(text) {
   return categoryFromSource(text);
 }
 export function categorySupportedByEvent(category, title, description) {
   return categoryForEvent(category ?? '', clean(title), clean(description));
 }
+function checkedSourceTimes(events) {
+  if (
+    events.some((event) =>
+      hasExplicitDoorTimeStartConflict({
+        description: event.description,
+        startsAt: event.startsAt,
+      }),
+    )
+  )
+    throw new Error("session_time_conflict");
+  return events;
+}
 export async function extract($, source, url, fallbackCategory, now = new Date(), options = {}) {
   const html = $.html();
-  if (source === "biletix") return extractBiletix($, url, now);
-  if (source === "biletinial") return extractBiletinial($, url, fallbackCategory, now, { ...options, categoryForEvent });
+  if (source === "biletix") return checkedSourceTimes(extractBiletix($, url, now));
+  if (source === "biletinial")
+    return checkedSourceTimes(
+      await extractBiletinial($, url, fallbackCategory, now, {
+        ...options,
+        categoryForEvent,
+      }),
+    );
   const nodes = jsonLd(html);
   const eventNodes = nodes.filter((node) =>
     [node["@type"]].flat().some((t) => typeof t === "string" && t.endsWith("Event")),
@@ -129,14 +151,25 @@ export async function extract($, source, url, fallbackCategory, now = new Date()
     sourceCategory = matched?.raw ?? sourceCategory;
   }
   category ??= 'Diğer';
-  if (source === "bubilet") return extractBubilet($, url, category, sourceCategory, nodes, now, options);
+  if (source === "bubilet")
+    return checkedSourceTimes(
+      await extractBubilet(
+        $,
+        url,
+        category,
+        sourceCategory,
+        nodes,
+        now,
+        options,
+      ),
+    );
   const events = await parseEvents(html, url, category, now);
   // An Event schema alone is insufficient evidence that a page is now empty.
   // Preserve old rows when a redesign drops essential fields or all rows are rejected.
   if (!events.length) throw new Error("no_verified_sessions");
-  return events.map((event) => ({ ...event,
+  return checkedSourceTimes(events.map((event) => ({ ...event,
     category: categorySupportedByEvent(event.category, event.title, event.description),
-    source, sourceCategory: category, sourceVersion: "4", extraction: "json-ld" }));
+    source, sourceCategory: category, sourceVersion: "4", extraction: "json-ld" })));
 }
 function extractBiletix($, url, now) {
   let state;
