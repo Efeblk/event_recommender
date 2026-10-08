@@ -320,7 +320,7 @@ checks still pass, and the per-request cost does not increase without approval.
   Complete output is unchanged: 65,317,939 bytes, SHA-256
   `a3a37fc0fac09be701976d2801499a14dedd52319e793d914dc5fb72c083fc92`.
   This CPU result does not establish the live timeout cause. Local checks pass
-  on Node 22.23.3: 861 web tests, 296 collector tests and one existing skip,
+  on Node 22.23.3: 861 web tests, 298 collector tests and one existing skip,
   52 deployment checks, typecheck, lint, GCP checks, Node build and smoke.
   Smoke made zero cloud or AI calls. Exact PR CI and private recovery are pending.
   Recovery evidence stays under `web/work/comprehensive-review/`.
