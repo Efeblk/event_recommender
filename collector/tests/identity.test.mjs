@@ -174,6 +174,105 @@ test("geo proximity with a meaningful name token resolves one venue", () => {
   assert.equal(result.sessions.length, 1);
 });
 
+test("venue components retain non-first provider and geo conflict signatures", () => {
+  const providerRecords = [
+    listing({
+      listingId: "provider-a-1",
+      providerSessionIds: ["provider-a-1"],
+      venue: { name: "Ortak Sahne", district: "Kadıköy", providerVenueId: "venue-a" },
+    }),
+    listing({
+      listingId: "neutral",
+      provider: "bubilet",
+      providerSessionIds: ["neutral"],
+      venue: { name: "Ortak Sahne", district: "Kadıköy" },
+    }),
+    listing({
+      listingId: "provider-a-2",
+      providerSessionIds: ["provider-a-2"],
+      venue: { name: "Ortak Sahne", district: "Kadıköy", providerVenueId: "venue-a" },
+    }),
+    listing({
+      listingId: "provider-b",
+      providerSessionIds: ["provider-b"],
+      venue: { name: "Ortak Sahne", district: "Kadıköy", providerVenueId: "venue-b" },
+    }),
+  ];
+  assert.equal(resolveIdentity(providerRecords).venues.length, 2);
+  assert.equal(resolveIdentity([...providerRecords].reverse()).venues.length, 2);
+
+  const near = { lat: 41.001, lon: 29.001 };
+  const geoRecords = [
+    listing({
+      listingId: "geo-near-1",
+      providerSessionIds: ["geo-near-1"],
+      venue: { name: "Ortak Sahne", district: "Kadıköy", geo: near },
+    }),
+    listing({
+      listingId: "geo-neutral",
+      provider: "bubilet",
+      providerSessionIds: ["geo-neutral"],
+      venue: { name: "Ortak Sahne", district: "Kadıköy" },
+    }),
+    listing({
+      listingId: "geo-near-2",
+      provider: "bubilet",
+      providerSessionIds: ["geo-near-2"],
+      venue: { name: "Ortak Sahne", district: "Kadıköy", geo: near },
+    }),
+    listing({
+      listingId: "geo-far",
+      provider: "bubilet",
+      providerSessionIds: ["geo-far"],
+      venue: {
+        name: "Ortak Sahne",
+        district: "Kadıköy",
+        geo: { lat: 41.101, lon: 29.101 },
+      },
+    }),
+  ];
+  assert.equal(resolveIdentity(geoRecords).venues.length, 2);
+  assert.equal(resolveIdentity([...geoRecords].reverse()).venues.length, 2);
+});
+
+test("non-finite coordinates are removed before venue conflict comparisons", () => {
+  const records = [
+    listing({
+      listingId: "geo-nan",
+      venue: { name: "Ortak Sahne", providerVenueId: "shared", geo: { lat: 41, lon: NaN } },
+    }),
+    listing({
+      listingId: "geo-infinity",
+      venue: {
+        name: "Ortak Sahne",
+        providerVenueId: "shared",
+        geo: { lat: 41, lon: Infinity },
+      },
+    }),
+    listing({
+      listingId: "geo-finite",
+      venue: {
+        name: "Ortak Sahne",
+        providerVenueId: "shared",
+        geo: { lat: 41, lon: 29 },
+      },
+    }),
+  ];
+  const result = resolveIdentity(records);
+  const reversed = resolveIdentity([...records].reverse());
+  const sanitized = resolveIdentity(
+    records.map((record) =>
+      Number.isFinite(record.venue.geo?.lat) && Number.isFinite(record.venue.geo?.lon)
+        ? record
+        : { ...record, venue: { ...record.venue, geo: undefined } },
+    ),
+  );
+
+  assert.equal(result.venues.length, 1);
+  assert.deepEqual(result, reversed);
+  assert.deepEqual(result, sanitized);
+});
+
 test("identical names join unless their stated locations conflict", () => {
   const venues = (...entries) =>
     resolveIdentity(

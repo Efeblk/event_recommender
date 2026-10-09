@@ -135,6 +135,9 @@ function publicationAttempt(value: unknown): CheckpointPublicationAttempt | null
     (attempt.searchBytes !== null && !count(attempt.searchBytes, MAX_DIAGNOSTIC_BYTES)) ||
     (attempt.checkpointBytes !== null && !count(attempt.checkpointBytes, MAX_DIAGNOSTIC_BYTES)) ||
     !count(attempt.elapsedMs, MAX_DIAGNOSTIC_ELAPSED_MS) ||
+    (attempt.phaseStartedElapsedMs !== undefined &&
+      (!count(attempt.phaseStartedElapsedMs, MAX_DIAGNOSTIC_ELAPSED_MS) ||
+        (attempt.phaseStartedElapsedMs as number) > (attempt.elapsedMs as number))) ||
     !['running', 'succeeded', 'failed'].includes(attempt.outcome ?? '') ||
     (attempt.failureCode !== null &&
       !publicationFailures.has(attempt.failureCode as CheckpointPublicationFailureCode))
@@ -159,6 +162,9 @@ function publicationAttempt(value: unknown): CheckpointPublicationAttempt | null
     searchBytes: attempt.searchBytes,
     checkpointBytes: attempt.checkpointBytes,
     elapsedMs: attempt.elapsedMs,
+    ...(attempt.phaseStartedElapsedMs !== undefined
+      ? { phaseStartedElapsedMs: attempt.phaseStartedElapsedMs }
+      : {}),
     outcome: attempt.outcome,
     failureCode: attempt.failureCode,
   } as CheckpointPublicationAttempt;
@@ -650,6 +656,7 @@ export function createGcpStore(options: {
         searchBytes: null,
         checkpointBytes: null,
         elapsedMs: 0,
+        phaseStartedElapsedMs: 0,
         outcome: 'running',
         failureCode: null,
       };
@@ -674,6 +681,7 @@ export function createGcpStore(options: {
       const enter = async (phase: CheckpointPublicationPhase) => {
         guard();
         attempt.phase = phase;
+        attempt.phaseStartedElapsedMs = elapsed();
         await updateAttempt();
         guard();
       };
@@ -693,6 +701,7 @@ export function createGcpStore(options: {
               (matchesProfile(previous.pendingSearch) || matchesProfile(previous.search))))
         ) {
           attempt.phase = 'complete';
+          attempt.phaseStartedElapsedMs = elapsed();
           attempt.events = previous.pointer.events;
           attempt.checkpointBytes = previous.pointer.bytes;
           attempt.outcome = 'succeeded';
@@ -857,8 +866,6 @@ export function createGcpStore(options: {
         };
         await enter('activate');
         guard();
-        attempt.phase = 'complete';
-        attempt.elapsedMs = elapsed();
         attempt.outcome = 'succeeded';
         await control.transaction(async (tx) => {
           await liveLease(tx, lease, lockPath);
@@ -869,7 +876,10 @@ export function createGcpStore(options: {
           if (currentAttempt?.attemptId !== attempt.attemptId)
             throw new CheckpointPublicationStopped('publication_failed');
           guard();
-          attempt.elapsedMs = elapsed();
+          const completedAt = elapsed();
+          attempt.phase = 'complete';
+          attempt.phaseStartedElapsedMs = completedAt;
+          attempt.elapsedMs = completedAt;
           tx.set(catalogPath, { ...next });
           tx.set(publicationPath, { ...attempt });
         });

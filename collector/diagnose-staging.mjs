@@ -72,6 +72,7 @@ function summarize(kind, body) {
     searchBytes: Number.isSafeInteger(body.searchBytes) ? body.searchBytes : null,
     checkpointBytes: Number.isSafeInteger(body.checkpointBytes) ? body.checkpointBytes : null,
     elapsedMs: Number.isSafeInteger(body.elapsedMs) ? body.elapsedMs : null,
+    phaseStartedElapsedMs: Number.isSafeInteger(body.phaseStartedElapsedMs) && body.phaseStartedElapsedMs >= 0 && body.phaseStartedElapsedMs <= body.elapsedMs ? body.phaseStartedElapsedMs : null,
     outcome: typeof body.outcome === "string" ? body.outcome : null,
     failureCode: typeof body.failureCode === "string" ? body.failureCode : null,
   };
