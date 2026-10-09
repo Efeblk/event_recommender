@@ -1,15 +1,59 @@
 # Cross-provider event matching
 
-Source listings remain separate in D1 and collection checkpoints. The public catalog and recommendation pipeline build a merged view at read time, so refreshing or withdrawing one provider never deletes another provider's offer. No AI calls or database migration are required.
+The v1 catalog resolves event identity before it publishes a search snapshot.
+Search requests read the prepared sessions. They do not merge source listings.
+The collector checkpoint keeps the separate source records.
 
-A session match requires the same normalized title (or a reviewed literal title alias), city, exact start instant, and venue. Turkish accents, punctuation and spacing are normalized; a small reviewed alias list handles names such as `Cafe Theatre` / `Cafe Theatre Koşuyolu`. Category and price disagreements do not prevent a match. Missing or generic venue names cannot establish cross-provider identity. Different days, times, venues and stages remain separate sessions. Similar titles or the same performer alone are not enough.
+[`collector/identity/resolve.ts`](../../collector/identity/resolve.ts) is the
+identity authority. It resolves venues first. It then resolves sessions.
+[`web/lib/materialized-catalog.ts`](../lib/materialized-catalog.ts) converts each
+resolved session into one search record with its provider offers.
 
-Each merged session retains its source IDs and currently available ticket offers, including each provider’s category and raw venue name. Sold-out, cancelled, unknown and stale listings remain in raw storage but are not offered as purchasable links. The displayed price and purchase URL refer to the same offer; the card lists every provider's own price and link. Freshness and availability are checked on source rows first. Category and budget filtering then operate on the merged session, preventing a category disagreement from creating duplicate cards. Where an original listing explicitly identifies stand-up and classifies it that way, it is preferred as the representative; otherwise a fixed provider priority (Biletinial, Bubilet, Biletix) keeps the representative consistent across sessions. This fallback does not establish which provider’s category is objectively correct. Original source fields remain available in the raw database for future reconciliation.
+## Session rules
 
-The existing recommendation diversity rule shows one session per production/venue. A canonical production identity now lets that rule work across recognized provider aliases. Session identity still preserves dates and offer boundaries. Previously displayed merged IDs and underlying listing IDs both work when requesting alternatives, including after one provider's offer disappears.
+Listings must have the same city and exact start instant. They must also have
+the same resolved venue and a supported title match. A title match can use the
+normalized title, a narrow containment rule, or a reviewed title seed.
 
-Reviewed literal title aliases include: `Gökhan Ünver Stand Up` / `Gökhan Ünver Çok Tanıdık` (three matching September/October 2026 sessions), and `Operadaki Hayalet` / `Operadaki Hayalet Tiyatro Oyunu` (five matching sessions). The Ada Bar Kadıköy catalog also corroborates the general `Kadıköy Stand-up Gecesi` title and provider variants `Kadıköy Stand Up Gecesi Çarşamba 20:30` / `Kadıköy Stand up Gecesi Cumartesi 21:45`, with `Ada Bar` as its venue alias. Exact date/time equality is still required; open-microphone titles remain separate. These do not enable general performer matching or suffix removal.
+The resolver blocks a merge when source evidence conflicts. Examples include
+different audience limits, workshop and performance formats, or incompatible
+adaptations. A resolved session cannot contain two listings from one provider.
+Every pair in a multi-listing session must be compatible. Different dates,
+times, venues, or supported program identities stay separate.
 
-Matching is intentionally conservative. Unrecognized venue aliases, renamed shows and different titles for the same performer can remain separate. Resolve these with corroborating source evidence and positive/negative fixtures; do not broaden matching to title-only or performer-only comparisons. The reviewed aliases and regression fixtures live in `lib/event-merge.ts` and `tests/event-merge.test.ts`.
+Reviewed venue and title seeds are in
+[`collector/identity/seed-overrides.ts`](../../collector/identity/seed-overrides.ts).
+They never bypass the city, time, venue, provider, or policy checks. Examples
+include `Cafe Theatre` / `Cafe Theatre Koşuyolu`, `Gökhan Ünver Stand Up` /
+`Gökhan Ünver 'Çok Tanıdık'`, and `Operadaki Hayalet` /
+`Operadaki Hayalet Tiyatro Oyunu`.
 
-A missing representative address is filled only when the other matching session records supply one consistent normalized address. Conflicting addresses remain unresolved. This preserves district evidence without changing the text used for embedding-cache identity.
+The Ada Bar seeds join reviewed `Kadıköy Stand-up Gecesi` schedule titles only
+at the same start instant and resolved venue. The open-microphone titles use a
+separate seed. The İnfiniti Sahne open-microphone seed also stays separate from
+`Bi Şaka`. These rules do not enable general performer matching or general
+suffix removal.
+
+## Published record
+
+The materializer keeps each provider offer with its source ID, URL, price,
+currency, category, venue, availability, and check time. It removes duplicate
+offer IDs. If an available offer exists, the card uses an available offer. It
+selects the lowest comparable known price for the card. The other offers remain
+on the session record.
+
+Eligibility runs before the session enters the published catalog. A stale,
+cancelled, sold-out, or ambiguous source record cannot make an event bookable.
+The source checkpoint still preserves its evidence.
+
+The session ID includes the city, exact start instant, resolved venue, and
+title identity. Canonical production and show keys support later shortlist
+deduplication. If the representative has no address, the materializer fills it
+only when all nonempty session addresses agree after normalization.
+
+Matching is conservative. An unreviewed alias can remain as a separate event.
+Add source evidence and positive and negative fixtures before you widen a rule.
+The current regression coverage is in
+[`collector/tests/identity.test.mjs`](../../collector/tests/identity.test.mjs)
+and
+[`web/tests/materialized-catalog.test.ts`](../tests/materialized-catalog.test.ts).
