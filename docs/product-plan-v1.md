@@ -265,6 +265,41 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-09: [PR 84](https://github.com/Efeblk/event_recommender/pull/84)
+  merged as `17e15eb`. Exact PR CI
+  [37862431716](https://github.com/Efeblk/event_recommender/actions/runs/37862431716)
+  passed on `316d19b`. Exact merge CI
+  [37862907450](https://github.com/Efeblk/event_recommender/actions/runs/37862907450)
+  passed all six jobs. The PR 84 branch is deleted. Final local checks passed
+  on Node 22.23.3: 861 web tests, 301 collector tests and one existing skip,
+  52 deployment checks, typecheck, lint, GCP checks, Node build and smoke.
+  Smoke made zero cloud or AI calls. Private staging deployment
+  [37863391094](https://github.com/Efeblk/event_recommender/actions/runs/37863391094)
+  passed. Revision `biplan-staging-00062-8tg` matches the verified Git tree,
+  lockfiles and Linux image checksums. Anonymous health returned 403.
+  Checkpoint-only recovery
+  [37863854725](https://github.com/Efeblk/event_recommender/actions/runs/37863854725)
+  passed with zero imports and zero paid AI calls. The original report time
+  remains `2026-10-08T22:02:16.173Z`. Canonical content and readiness agree:
+  14,644 records, event-array SHA-256
+  `72940d6749ede7aa3a1dac3bee9a4c785dcf27e3240fc217c6eef6e2eb84d3e9`,
+  HTTP 200, 8,695 eligible events and no pending publication. Diagnostic
+  [37864051747](https://github.com/Efeblk/event_recommender/actions/runs/37864051747)
+  confirms a successful complete attempt in 159,551 ms. It read all 5,578
+  source pages. The previous failed attempt took 362,620 ms. These times
+  include source reads and materialization. CPU, memory, deadlines, leases
+  and reader concurrency did not increase. Scheduled fetching was paused
+  from `2026-10-09T00:00:15Z` to `2026-10-09T00:20:24Z` for this maintenance.
+  `GCP_STAGING_COLLECTION_ENABLED=true` and `UNTIL=open` are restored.
+  Failed runs, exact output proofs and validation logs are backed up under
+  `web/work/comprehensive-review/`. All copied hashes match.
+  [PR 85](https://github.com/Efeblk/event_recommender/pull/85) records these
+  results. It changes documentation only. The frozen 40-request review has
+  zero audited hard violations and 90% relevant top-three coverage. Estimated
+  validation cost is $0.11168577 within the approved $0.26 cap. Human sample
+  review, new staging latency and seven-day collection qualification remain
+  open. The six upstream Vinext build-chain advisories remain in Later.
+
 - 2026-10-09: [PR 81](https://github.com/Efeblk/event_recommender/pull/81)
   merged as `8b933f4`. Final PR CI
   [37843353597](https://github.com/Efeblk/event_recommender/actions/runs/37843353597)
