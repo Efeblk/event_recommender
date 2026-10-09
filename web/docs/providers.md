@@ -1,4 +1,10 @@
-> Legacy reference: the active recommendation route now uses TypeSafe Jev only. These chat/embedding adapters remain for migration reference and optional admin tooling; setting their keys does not enable recommendations. See [Jev setup](jev-evaluation.md).
+> Historical and retired integration reference. The current Node recommendation
+> path uses [TypeSafe Jev](jev-evaluation.md) and optional [Voyage
+> retrieval](voyage-retrieval.md). It does not use the chat and embedding
+> adapters below. Setting their keys does not enable recommendations. After
+> authorization, the retained `POST /api/admin/sync` compatibility route returns
+> HTTP 410. Use the [GCP deployment guide](../../docs/gcp-deployment.md) for the
+> current runtime and operations.
 
 # AI sağlayıcı bağlantısı
 

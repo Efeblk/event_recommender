@@ -59,7 +59,7 @@ Failed providers or missing vectors retain an explicit word-matching fallback.
 Unknown prices and policies do not satisfy hard constraints.
 Provider starting prices do not prove checkout totals or remaining stock.
 
-The request state stays in the open browser tab.
+Each search uses only the current message. Earlier requests do not affect it.
 The interface has event cards, a support placeholder and reserved advertising areas.
 There are no user accounts, payments or permanent user profiles.
 

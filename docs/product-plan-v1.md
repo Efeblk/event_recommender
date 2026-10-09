@@ -265,6 +265,15 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-09: [PR 86](https://github.com/Efeblk/event_recommender/pull/86)
+  removes two unused UI components and the unused `web/scripts/sync.mjs`.
+  Six guides now describe the current v1 flow. Historical evidence remains.
+  Local checks passed on Node 22.23.1: 861 web tests, typecheck and lint.
+  All 24 checked local documentation links resolve. No deleted helper has a
+  tracked consumer. The diff check and independent review passed. Logs stay
+  under `web/work/cleanup/`. No cloud or AI calls. Runtime logic, dependencies
+  and deployment configuration stay the same.
+
 - 2026-10-09: [PR 84](https://github.com/Efeblk/event_recommender/pull/84)
   merged as `17e15eb`. Exact PR CI
   [37862431716](https://github.com/Efeblk/event_recommender/actions/runs/37862431716)
