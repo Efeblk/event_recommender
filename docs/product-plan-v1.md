@@ -265,6 +265,19 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-20: Staging restart for Phase 2. On 2026-10-10, the staging project
+  `biplan-staging-efeblk` was set to `DELETE_REQUESTED`.
+  `GCP_STAGING_COLLECTION_ENABLED` and `GCP_STAGING_INDEXING_ENABLED` were set
+  to `false`. After that, the hourly monitor failed at the GCP login step. The
+  user approved a restart. The project is restored with billing linked again.
+  The Cloud Run services and the data bucket are still there. Deploy run
+  [39436365824](https://github.com/Efeblk/event_recommender/actions/runs/39436365824)
+  failed at its CI gate: 681 check runs were on `fce2541`, and the gate read
+  only the first 100.
+  [PR 87](https://github.com/Efeblk/event_recommender/pull/87) makes the gate
+  read all pages. The deploy, the collection, the re-enabled schedules and the
+  new 7-day Phase 2 window are pending.
+
 - 2026-10-09: [PR 86](https://github.com/Efeblk/event_recommender/pull/86)
   removes two unused UI components and the unused `web/scripts/sync.mjs`.
   Six guides now describe the current v1 flow. Historical evidence remains.
