@@ -53,7 +53,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          curl --fail-with-body --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/commits/$EXPECTED_SHA/check-runs?per_page=100" > exact-sha-checks.json
+          # Read every page. Hourly collector runs add many check runs to the same commit.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/commits/$EXPECTED_SHA/check-runs?per_page=100" --jq '.check_runs[]' | jq -s '{check_runs: .}' > exact-sha-checks.json
           node scripts/deploy-gates.mjs checks exact-sha-checks.json
           node -e "const fs=require('node:fs');const runs=JSON.parse(fs.readFileSync('exact-sha-checks.json')).check_runs??[];for(const name of ['gcp','terraform']){const latest=runs.filter(x=>x.name===name&&x.app?.slug==='github-actions').sort((a,b)=>(Date.parse(b.started_at)||0)-(Date.parse(a.started_at)||0)||(BigInt(b.id??0)>BigInt(a.id??0)?1:BigInt(b.id??0)<BigInt(a.id??0)?-1:0))[0];if(latest?.status!=='completed'||latest?.conclusion!=='success')throw new Error('Missing latest successful exact-SHA check: '+name)}"
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
