@@ -265,6 +265,8 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-22: Staging deploy [run 39683193231](https://github.com/Efeblk/event_recommender/actions/runs/39683193231) passed the exact-master checks and built the image. Google rejected the push: `Project #244737996182 has been deleted.` The project API reports `ACTIVE`. Billing is enabled. The repository exists. The deploy identity has Artifact Registry writer access. These results conflict. No revision was deployed. Monitor [run 39674247228](https://github.com/Efeblk/event_recommender/actions/runs/39674247228) got HTTP 404. Runs [39599532171](https://github.com/Efeblk/event_recommender/actions/runs/39599532171) and [39556248471](https://github.com/Efeblk/event_recommender/actions/runs/39556248471) failed to exchange the collector token. Google returned `invalid_target`. Collection and indexing remain disabled. Manual collection did not run. The 7-day Phase 2 window has not started.
+
 - 2026-10-20: Staging restart for Phase 2. On 2026-10-10, the staging project
   `biplan-staging-efeblk` was set to `DELETE_REQUESTED`.
   `GCP_STAGING_COLLECTION_ENABLED` and `GCP_STAGING_INDEXING_ENABLED` were set
