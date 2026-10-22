@@ -19,7 +19,7 @@
     "runUrl": "https://github.com/Efeblk/event_recommender/actions/runs/37181072133",
     "collectionFinishedAt": "2026-10-04T06:32:35.334Z",
     "artifactExpiresAt": "2026-10-18T06:51:50Z",
-    "privateArchive": "gs://biplan-staging-efeblk-biplan-staging-data/evals/golden-v1/20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6/events.json"
+    "privateArchive": "gs://biplan-stg-efeblk-biplan-staging-data/evals/golden-v1/20ad813f83491e2014396bc628b2193058c51ef92b620d1f2cac04918ac7efe6/events.json"
   },
   "seeds": [
     "tests/span-parser-human-cases.test.ts",

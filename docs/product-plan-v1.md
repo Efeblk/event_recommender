@@ -35,8 +35,8 @@ What works:
   (`web/lib/hybrid.ts`). Then up to 16 candidates go to the Jev AI judge
   (`web/lib/recommend.ts`, `web/lib/jev.ts`).
 - Staging: the private Cloud Run service `biplan-staging` (GCP project
-  `biplan-staging-efeblk`, region `us-central1`). You deploy it with
-  `gcp-staging.yml` and an approval gate.
+  `biplan-stg-efeblk` since 2026-10-22, region `us-central1`). You deploy it
+  with `gcp-staging.yml` and an approval gate.
 
 What does not work or is missing:
 
@@ -259,11 +259,34 @@ checks still pass, and the per-request cost does not increase without approval.
 - Review the captured `tr19` audience-fit miss before changing Jev judgments.
   A child-directed concert is weak support for friends who want to dance.
   Do not infer a hard adult-age condition from that request.
+- The archived PostgreSQL scripts, tests and plan in `web/deploy/` and
+  `web/scripts/` still name the deleted project `biplan-staging-efeblk`.
+  Update or remove them with the PostgreSQL work.
 - Corroborate the Canbay / Canbay & Wolker and Ada Bar identity pairs in
   `web/work/comprehensive-review/golden-labels-agent-verified.json`.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-10-22: Staging moved to the new project `biplan-stg-efeblk`. In the
+  restored project `biplan-staging-efeblk`, Cloud Run, Artifact Registry and
+  Firestore still reported the project as deleted. Firestore returned
+  `Cannot serve requests because the database was deleted.` The user approved a
+  new project. Terraform created the same 41 staging resources there. The three
+  secret values were copied without display, and their hashes match. The old
+  bucket was copied to `gs://biplan-stg-efeblk-biplan-staging-data`, including
+  the golden archive and preserved evidence. The deploy workflow needs an
+  existing service, so a private placeholder service was created first.
+  Deploy [39690834109](https://github.com/Efeblk/event_recommender/actions/runs/39690834109)
+  promoted `biplan-staging-00002-nlm` (`e2f28c0`). It failed only at readiness,
+  because the new catalog was still empty. Manual collection
+  [39691847980](https://github.com/Efeblk/event_recommender/actions/runs/39691847980)
+  passed. `/api/ready` then returned ready with 3,420 stored and 3,399
+  eligible events. More collection runs will grow the catalog. Anonymous
+  requests return 403. Collection and indexing schedules were enabled at
+  10:46 UTC. The new 7-day Phase 2 window starts now. The old project is
+  `DELETE_REQUESTED`. Its Firestore pointers were lost, so scheduled indexing
+  rebuilds the vector index under the approved Voyage budget.
 
 - 2026-10-22: Staging deploy [run 39683193231](https://github.com/Efeblk/event_recommender/actions/runs/39683193231) passed the exact-master checks and built the image. Google rejected the push: `Project #244737996182 has been deleted.` The project API reports `ACTIVE`. Billing is enabled. The repository exists. The deploy identity has Artifact Registry writer access. These results conflict. No revision was deployed. Monitor [run 39674247228](https://github.com/Efeblk/event_recommender/actions/runs/39674247228) got HTTP 404. Runs [39599532171](https://github.com/Efeblk/event_recommender/actions/runs/39599532171) and [39556248471](https://github.com/Efeblk/event_recommender/actions/runs/39556248471) failed to exchange the collector token. Google returned `invalid_target`. Collection and indexing remain disabled. Manual collection did not run. The 7-day Phase 2 window has not started.
 
