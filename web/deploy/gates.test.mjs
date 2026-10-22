@@ -6,9 +6,7 @@ import {
 
 const names = [
   'collector (ubuntu-latest)',
-  'collector (windows-latest)',
   'verify (ubuntu-latest)',
-  'verify (windows-latest)',
 ];
 
 await test('requires every successful core CI check', () => {
@@ -21,7 +19,7 @@ await test('requires every successful core CI check', () => {
     app: { slug: 'github-actions' },
   }));
   assert.equal(successfulCoreChecks({ check_runs }), true);
-  check_runs[2].conclusion = 'failure';
+  check_runs[1].conclusion = 'failure';
   assert.equal(successfulCoreChecks({ check_runs }), false);
   assert.equal(successfulCoreChecks({ check_runs: check_runs.slice(1) }), false);
 });

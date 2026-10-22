@@ -164,7 +164,7 @@ assert.doesNotMatch(runtimeDiagnostics, /gcloud run deploy|services update-traff
 assert.ok(runtimeDiagnostics.indexOf('actions/checkout@') < runtimeDiagnostics.indexOf('name: Initialize diagnostic evidence'));
 assert.match(runtimeDiagnostics, /name: Initialize diagnostic evidence\n\s+if: always\(\)/);
 
-assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/6 \* \* \*'$/m);
+assert.match(collectorWorkflow, /^\s{2}schedule:\n\s{4}- cron: '17 \*\/12 \* \* \*'$/m);
 assert.match(collectorWorkflow, /^\s{2}workflow_dispatch:\n\s{4}inputs:\n\s{6}verify_only:[\s\S]*?type: boolean\n\s{8}default: false$/m);
 assert.match(collectorWorkflow, /publish_existing_run:[\s\S]*?type: string\n\s+default: ''/);
 assert.match(collectorWorkflow, /publish_existing_report_sha256:[\s\S]*?type: string\n\s+default: ''/);
@@ -172,16 +172,16 @@ assert.match(collectorWorkflow, /diagnostics_only:[\s\S]*?type: boolean\n\s+defa
 assert.match(collectorWorkflow, /checkpoint_only_replay_run:[\s\S]*?type: string\n\s+default: ''/);
 assert.match(
   collectorWorkflow,
-  /^\s{2}schedule_gate:\n\s{4}needs: dispatch_mode\n\s{4}if: needs\.dispatch_mode\.outputs\.mode == 'collect' \|\| \(github\.event\.schedule == '17 \*\/6 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
+  /^\s{2}schedule_gate:\n\s{4}needs: dispatch_mode\n\s{4}if: needs\.dispatch_mode\.outputs\.mode == 'collect' \|\| \(github\.event\.schedule == '17 \*\/12 \* \* \*' && vars\.GCP_STAGING_COLLECTION_ENABLED == 'true'\)$/m,
 );
-// The hourly monitor checks readiness and catalog age with the collector identity.
-assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \* \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'verify'/m);
+// The 3-hourly monitor checks readiness and catalog age with the collector identity.
+assert.match(collectorWorkflow, /^\s{2}monitor:\r?\n[\s\S]*?if: github\.event\.schedule == '47 \*\/3 \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'verify'/m);
 assert.match(collectorWorkflow, /\/api\/ready/);
-assert.match(collectorWorkflow, /MAX_AGE_HOURS: '14'/);
-// The hourly schedule runs only the indexing job; it never collects.
+assert.match(collectorWorkflow, /MAX_AGE_HOURS: '20'/);
+// The 3-hourly schedule runs only the indexing and monitor jobs; it never collects.
 assert.match(
   collectorWorkflow,
-  /^\s{2}index_only:\n[\s\S]*?\n\s{4}if: github\.event\.schedule == '47 \* \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'$/m,
+  /^\s{2}index_only:\n[\s\S]*?\n\s{4}if: github\.event\.schedule == '47 \*\/3 \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'$/m,
 );
 const collectorGate = collectorWorkflow.slice(
   collectorWorkflow.indexOf('  schedule_gate:'),

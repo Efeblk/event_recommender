@@ -148,11 +148,11 @@ Acceptance (the v1 quality bar):
 
 Tasks:
 
-0. Keep vectors current: indexing runs hourly with a daily call window
+0. Keep vectors current: indexing runs every 3 hours with a daily call window
    (`GCP_STAGING_INDEXING_UNTIL=open`). Done in PR 56.
-1. Add one scheduled monitor workflow. Every hour, it calls `/api/ready` on
+1. Add one scheduled monitor workflow. Every 3 hours, it calls `/api/ready` on
    staging. If the result is not ready, or if `lastCheckedAt` is more than
-   14 h old, the workflow fails. GitHub then sends a failure email.
+   20 h old, the workflow fails. (Hourly and 14 h until 2026-10-22.) GitHub then sends a failure email.
    Done in PR 57 (job `monitor` in `gcp-collector.yml`; the collector identity
    trusts only that file).
 2. Let scheduled collection run for 7 days. Do not deploy during that time,
@@ -267,6 +267,14 @@ checks still pass, and the per-request cost does not increase without approval.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-10-22: The user asked for fewer GitHub Actions runs. Scheduled
+  collection now runs every 12 h (was 6 h). The monitor and indexing run every
+  3 h (was hourly). The monitor stale limit is 20 h (was 14 h). CI runs on
+  Ubuntu only. A manual run of `web.yml` also tests Windows. The deploy gate
+  requires only the Ubuntu checks. The old Cloud Monitoring alerts are not
+  recreated in the new project. Initial indexing of the new catalog is slower:
+  about 8 runs with up to 4 calls each per day.
 
 - 2026-10-22: Staging moved to the new project `biplan-stg-efeblk`. In the
   restored project `biplan-staging-efeblk`, Cloud Run, Artifact Registry and

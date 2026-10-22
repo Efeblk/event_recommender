@@ -65,7 +65,7 @@ HTTPS is required for remote destinations.
 
 Optional Voyage indexing has its own approved budget and bounded window.
 Collection alone does not prove complete vector coverage.
-Phase 2 of the product plan adds an hourly readiness monitor and seven days of observation.
+Phase 2 of the product plan adds a readiness monitor every 3 hours and seven days of observation.
 
 ## Tests
 
