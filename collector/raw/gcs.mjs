@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { validateRawRef } from './store.mjs';
 
-export const STAGING_RAW_BUCKET = 'biplan-staging-efeblk-biplan-staging-data';
+export const STAGING_RAW_BUCKET = 'biplan-stg-efeblk-biplan-staging-data';
 export const STAGING_RAW_PREFIX = 'staging/pipeline/raw/v1/';
 
 /** REST adapter accepts a short-lived OAuth credential provider; it never logs
