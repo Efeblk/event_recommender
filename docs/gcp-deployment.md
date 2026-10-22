@@ -123,7 +123,7 @@ explicit `/api/admin/collection` publication. See [private GCP collection](gcp-c
 collector workflow. Cloud Run IAM uses `X-Serverless-Authorization`; the separate
 application sync token uses `Authorization`.
 
-The six-hour collector schedule remains disabled unless the repository variable
+The 12-hour collector schedule remains disabled unless the repository variable
 `GCP_STAGING_COLLECTION_ENABLED` is exactly `true` and
 `GCP_STAGING_COLLECTION_UNTIL` is a valid future canonical UTC timestamp no more
 than 60 hours away, or the literal `open` (scheduled collection without an
@@ -131,8 +131,8 @@ expiry; collection makes no paid calls, and indexing keeps its own window).
 Missing, malformed, expired, and overly distant deadlines fail closed; manual dispatch remains available without these variables. After a
 successful manual run, IAM verification, and cost review, set the deadline first
 and enable the schedule deliberately. See [private GCP collection](gcp-collector.md)
-for activation and the stop procedure. Phase 2 requires an hourly readiness
-monitor and seven days of scheduled collection. Historical monitoring checks
+for activation and the stop procedure. Phase 2 requires a readiness monitor every
+3 hours and seven days of scheduled collection. Historical monitoring checks
 do not prove that acceptance condition. Keep the schedule active unless a
 specific maintenance task requires a pause. Record and restore any pause.
 
@@ -212,7 +212,7 @@ Use the collector's diagnostic mode for application publication state. See
 outcome before recovery. Do not infer rollback from a client timeout or import
 the same pages again when an exact completed-import proof exists.
 
-1. See the failure: the hourly `monitor` job in `Collect GCP staging event data`
+1. See the failure: the 3-hourly `monitor` job in `Collect GCP staging event data`
    fails and GitHub sends an email. Open the run; the error line names the cause.
 2. Find the last good SHA: `gh run list --workflow gcp-staging.yml --status success --limit 1 --json headSha`.
 3. Deploy it: `gh workflow run gcp-staging.yml -f expected_sha=<SHA> -f input_interpreter=span-v2`, then approve the `gcp-staging` gate.

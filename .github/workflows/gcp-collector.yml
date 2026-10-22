@@ -2,9 +2,9 @@ name: Collect GCP staging event data
 
 on:
   schedule:
-    - cron: '17 */6 * * *'
-    # Hourly: index new documents only (no collection).
-    - cron: '47 * * * *'
+    - cron: '17 */12 * * *'
+    # Every 3 hours: monitor readiness and index new documents (no collection).
+    - cron: '47 */3 * * *'
   workflow_dispatch:
     inputs:
       verify_only:
@@ -91,7 +91,7 @@ jobs:
 
   schedule_gate:
     needs: dispatch_mode
-    if: needs.dispatch_mode.outputs.mode == 'collect' || (github.event.schedule == '17 */6 * * *' && vars.GCP_STAGING_COLLECTION_ENABLED == 'true')
+    if: needs.dispatch_mode.outputs.mode == 'collect' || (github.event.schedule == '17 */12 * * *' && vars.GCP_STAGING_COLLECTION_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     outputs:
@@ -571,7 +571,7 @@ jobs:
     # Hourly vector refresh between collections. The per-run and daily call
     # caps in web/lib/audited-index.ts still apply.
     needs: dispatch_mode
-    if: github.event.schedule == '47 * * * *' && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
+    if: github.event.schedule == '47 */3 * * *' && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -632,10 +632,10 @@ jobs:
           retention-days: 7
 
   monitor:
-    # Hourly health check. A failed scheduled run makes GitHub send a failure
+    # Health check every 3 hours. A failed scheduled run makes GitHub send a failure
     # email. It lives here because the collector identity trusts only this file.
     needs: dispatch_mode
-    if: github.event.schedule == '47 * * * *' || needs.dispatch_mode.outputs.mode == 'verify'
+    if: github.event.schedule == '47 */3 * * *' || needs.dispatch_mode.outputs.mode == 'verify'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -673,7 +673,7 @@ jobs:
         env:
           BIPLAN_URL: ${{ vars.BIPLAN_URL }}
           ID_TOKEN: ${{ steps.auth_monitor.outputs.id_token }}
-          MAX_AGE_HOURS: '14'
+          MAX_AGE_HOURS: '20'
         run: |
           set -euo pipefail
           curl --silent --show-error --max-time 60 -o monitor-evidence/ready.json -w '%{http_code}' \

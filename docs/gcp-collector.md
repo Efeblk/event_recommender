@@ -3,7 +3,7 @@
 The [product plan](product-plan-v1.md) defines current scope and acceptance checks.
 Use [the v1 architecture](architecture.md) for the current data flow.
 
-`Collect GCP staging event data` supports manual runs and a six-hour schedule.
+`Collect GCP staging event data` supports manual runs and a 12-hour schedule.
 The service is private. A scheduled run requires
 `GCP_STAGING_COLLECTION_ENABLED=true`. `GCP_STAGING_COLLECTION_UNTIL` must be
 the literal `open` or a future canonical UTC timestamp
@@ -53,8 +53,8 @@ Leave `GCP_STAGING_COLLECTION_ENABLED` absent or set to any other value to keep 
 gh variable set GCP_STAGING_COLLECTION_ENABLED --body false
 ```
 
-Phase 2 requires seven days of scheduled collection and an hourly readiness
-monitor. Manual runs and skipped jobs do not prove that acceptance condition.
+Phase 2 requires seven days of scheduled collection and a readiness monitor
+every 3 hours. Manual runs and skipped jobs do not prove that acceptance condition.
 The older 48-hour observation procedure above describes a bounded window.
 Use `open` for the product plan's seven-day check.
 
@@ -78,7 +78,7 @@ This probe proves that the active publication is healthy and converged. An older
 fresh publication can pass every check. To verify one target collection, compare
 the artifact's checkpoint `finishedAt` with that collection run's publication
 receipt and report, and verify the checkpoint hash in the collection evidence.
-The manual probe does not count as an hourly Phase 2 monitor run.
+The manual probe does not count as a scheduled Phase 2 monitor run.
 
 If collection completes but publication fails, preserve the failed run before
 recovery. Do not rerun its 40-minute fetch. Record the exact SHA-256 of
@@ -149,13 +149,16 @@ the source imports. Newer source heads or a newer active checkpoint still stop
 publication. Keep all failed evidence beside the new recovery evidence.
 
 GitHub schedules can be delayed or skipped. The catalog stays valid for 72 hours,
-so a few missed runs are harmless. Cloud Monitoring emails through channel
-`biplan-staging-uptime-email`, independently of GitHub:
+so a few missed runs are harmless. Cloud Monitoring emailed through channel
+`biplan-staging-uptime-email`, independently of GitHub. These alerts were in
+the deleted project `biplan-staging-efeblk`. They are not recreated in
+`biplan-stg-efeblk`:
 
 - `biplan-staging-ready-failure`: the authenticated uptime check of `/api/ready`
   fails in two locations for 10 minutes.
 - `biplan-staging-catalog-not-refreshed`: no `POST /api/admin/collection` with
-  HTTP 200 (log metric `biplan_collection_published`) for 14 hours.
+  HTTP 200 (log metric `biplan_collection_published`) for 14 hours. With the
+  12-hour schedule, use 20 hours if you recreate it.
 
 ## Optional bounded embedding follow-up
 
@@ -172,7 +175,7 @@ repository variables:
 | `GCP_STAGING_INDEXING_UNTIL` | Canonical UTC expiry, at most 60 hours after the start, or `open` for a daily window renewed at 00:00 UTC (`FROM` is then ignored) |
 | `GCP_STAGING_INDEXING_MAX_CALLS` | Integer 1–96 for the entire window (per UTC day when `open`), across all runs |
 
-An hourly schedule (`47 * * * *`) in the same workflow runs only the `index_only` job when indexing is enabled. It does not collect. Each run makes at most 4 calls.
+A 3-hour schedule (`47 */3 * * *`) in the same workflow runs the `monitor` job, and the `index_only` job when indexing is enabled. It does not collect. Each indexing run makes at most 4 calls.
 
 Align expiry with the collection observation window. The CLI and server reject
 expired, future-starting, malformed or overlong windows. The server will not
