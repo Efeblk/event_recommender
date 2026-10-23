@@ -268,6 +268,21 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-23: The friends test is closed. It opened at about 15:08 UTC on
+  2026-10-22 with `allUsers` invoker and `BIPLAN_PREVIEW_TESTING=true` on
+  `biplan-staging-00003-7jt`. It closed at 15:10 UTC on 2026-10-23: `allUsers`
+  removed, and `biplan-staging-00006-qhb` (`561e125`, preview off) has
+  100 % traffic. Anonymous `/api/health` returns 403. `/api/ready` is ready
+  with 7,739 eligible events. No friend used the service. Cloud Run logs show
+  one page load and 31 `/api/recommend` requests, all on `00003-7jt`. One was
+  the opening smoke test. The other 30 came 08:39–08:54 UTC at fixed 16 s
+  intervals with repeated prompts: a scripted agent test, not friends. Result:
+  18 `results`, 9 `empty`, 4 `needs_input`. Most empty results say the hard
+  conditions could not be verified (child ages, a free exhibition, a total
+  budget for two). The returned cards were not reviewed against source
+  evidence. The deploy at 10:48 UTC moved traffic to `00004-tpl`, which had
+  logging off. No `/api/recommend` request reached it.
+
 - 2026-10-23: Indexing did not converge. 155 of 4,208 documents had vectors.
   Calls embedded about 8 documents each. The last scheduled run
   [39905785045](https://github.com/Efeblk/event_recommender/actions/runs/39905785045)
