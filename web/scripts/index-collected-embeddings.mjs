@@ -100,12 +100,14 @@ const note = async (value) => {
   );
   await journal.sync();
 };
-let requests = 0,
+let stoppedBefore = false,
+  requests = 0,
   attempts = 0,
   totalTokens = 0,
   lastStart = 0;
 async function request(method) {
-  if (++requests > 5) throw new Error('HTTP request cap reached');
+  if (++requests > auditIndexLimits.callsPerRun + 1)
+    throw new Error('HTTP request cap reached');
   await note({
     type: 'http-attempt',
     method,
@@ -242,7 +244,15 @@ try {
     totalTokens += next.usage.totalTokens;
     status = next;
     await note({ type: 'batch', attempts, totalTokens, status });
-    if (status.outcome === 'bounded-stop') break;
+    // A run queued directly after another run can meet the provider pacing
+    // limit once. Wait one interval and try again; stop on a second stop.
+    if (status.outcome === 'bounded-stop') {
+      if (stoppedBefore || status.reason !== 'Provider pacing limit reached')
+        break;
+      stoppedBefore = true;
+      continue;
+    }
+    stoppedBefore = false;
     if (
       (!status.embedded && status.pending) ||
       totalTokens > auditIndexLimits.observedTokensPerRun

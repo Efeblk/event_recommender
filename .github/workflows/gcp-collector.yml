@@ -17,6 +17,11 @@ on:
         required: true
         type: boolean
         default: false
+      index_now:
+        description: Index pending embeddings now without collecting
+        required: false
+        type: boolean
+        default: false
       publish_existing_run:
         description: Failed collector run ID whose normalized artifact must be republished
         required: false
@@ -59,6 +64,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           VERIFY_ONLY: ${{ inputs.verify_only }}
           DIAGNOSTICS_ONLY: ${{ inputs.diagnostics_only }}
+          INDEX_NOW: ${{ inputs.index_now }}
           PUBLISH_EXISTING_RUN: ${{ inputs.publish_existing_run }}
           PUBLISH_EXISTING_REPORT_SHA256: ${{ inputs.publish_existing_report_sha256 }}
           CHECKPOINT_ONLY_REPLAY_RUN: ${{ inputs.checkpoint_only_replay_run }}
@@ -74,6 +80,9 @@ jobs:
           elif [[ "$DIAGNOSTICS_ONLY" == 'true' ]]; then
             test -z "$PUBLISH_EXISTING_RUN" && test -z "$PUBLISH_EXISTING_REPORT_SHA256" && test -z "$CHECKPOINT_ONLY_REPLAY_RUN" && test -z "$CHECKPOINT_ONLY_LOGS_SHA256"
             echo 'mode=diagnostics' >> "$GITHUB_OUTPUT"
+          elif [[ "$INDEX_NOW" == 'true' ]]; then
+            test -z "$PUBLISH_EXISTING_RUN" && test -z "$PUBLISH_EXISTING_REPORT_SHA256" && test -z "$CHECKPOINT_ONLY_REPLAY_RUN" && test -z "$CHECKPOINT_ONLY_LOGS_SHA256"
+            echo 'mode=index' >> "$GITHUB_OUTPUT"
           elif [[ -n "$PUBLISH_EXISTING_RUN" || -n "$PUBLISH_EXISTING_REPORT_SHA256" ]]; then
             [[ "$PUBLISH_EXISTING_RUN" =~ ^[1-9][0-9]*$ ]]
             [[ "$PUBLISH_EXISTING_REPORT_SHA256" =~ ^[0-9a-f]{64}$ ]]
@@ -118,7 +127,7 @@ jobs:
     if: needs.schedule_gate.outputs.run == 'true'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     permissions:
       contents: read
       id-token: write
@@ -219,7 +228,7 @@ jobs:
 
       - id: index
         name: Index changed documents within the reviewed window
-        timeout-minutes: 8
+        timeout-minutes: 55
         env:
           GCP_STAGING_INDEXING_ENABLED: ${{ vars.GCP_STAGING_INDEXING_ENABLED }}
           GCP_STAGING_INDEXING_FROM: ${{ vars.GCP_STAGING_INDEXING_FROM }}
@@ -568,13 +577,13 @@ jobs:
           retention-days: 14
 
   index_only:
-    # Hourly vector refresh between collections. The per-run and daily call
+    # 3-hourly (or manual) vector refresh between collections. The per-run and daily call
     # caps in web/lib/audited-index.ts still apply.
     needs: dispatch_mode
-    if: github.event.schedule == '47 */3 * * *' && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
+    if: (github.event.schedule == '47 */3 * * *' || needs.dispatch_mode.outputs.mode == 'index') && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 60
     permissions:
       contents: read
       id-token: write
@@ -601,7 +610,7 @@ jobs:
           id_token_include_email: true
 
       - name: Index changed documents
-        timeout-minutes: 8
+        timeout-minutes: 55
         env:
           GCP_STAGING_INDEXING_ENABLED: ${{ vars.GCP_STAGING_INDEXING_ENABLED }}
           GCP_STAGING_INDEXING_FROM: ${{ vars.GCP_STAGING_INDEXING_FROM }}

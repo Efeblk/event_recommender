@@ -181,7 +181,7 @@ assert.match(collectorWorkflow, /MAX_AGE_HOURS: '20'/);
 // The 3-hourly schedule runs only the indexing and monitor jobs; it never collects.
 assert.match(
   collectorWorkflow,
-  /^\s{2}index_only:\n[\s\S]*?\n\s{4}if: github\.event\.schedule == '47 \*\/3 \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'$/m,
+  /^\s{2}index_only:\n[\s\S]*?\n\s{4}if: \(github\.event\.schedule == '47 \*\/3 \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'index'\) && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'$/m,
 );
 const collectorGate = collectorWorkflow.slice(
   collectorWorkflow.indexOf('  schedule_gate:'),

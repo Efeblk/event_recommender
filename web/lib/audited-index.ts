@@ -11,15 +11,18 @@ import type {
   Lease,
 } from './storage-contract.ts';
 
+// Voyage free plan: 3 requests and 10K tokens per minute. Observed event
+// documents use about 3.4 input bytes per token, so 20000 bytes per minute
+// stays near 6K tokens. Runs stop at a call cap, not at a backlog size.
 export const auditIndexLimits = Object.freeze({
-  callsPerRun: 4,
-  inputBytesPerCall: 8000,
-  inputBytesPerRun: 32000,
-  observedTokensPerRun: 32000,
-  callsPerWindow: 96,
+  callsPerRun: 45,
+  inputBytesPerCall: 20000,
+  inputBytesPerRun: 45 * 20000,
+  observedTokensPerRun: 45 * 20000,
+  callsPerWindow: 400,
   windowHours: 60,
   intervalMs: 21000,
-  rollingTokens: 9000,
+  rollingInputBytes: 24000,
   responseBytes: 4 * 1024 * 1024,
 });
 export interface AuditedIndexInput {
@@ -146,8 +149,8 @@ function validateRun(value: RunState | null) {
         'tokens',
         'accountedAttempt',
       ]) ||
-      value.calls > 4 ||
-      value.inputBytes > 32000 ||
+      value.calls > auditIndexLimits.callsPerRun ||
+      value.inputBytes > auditIndexLimits.inputBytesPerRun ||
       value.accountedAttempt > value.calls)
   )
     throw new Error('Invalid durable indexing run');
@@ -308,17 +311,15 @@ export async function indexAuditedBatch(
         'Audited indexing halted; review durable evidence before resuming',
       );
     if (
-      previous &&
-      previous.id !== windowId &&
-      Date.parse(previous.until) > now()
-    )
-      throw new Error('A different indexing window is active');
-    if (
       previous?.id === windowId &&
       (previous.until !== input.window.until ||
         previous.maxCalls !== input.window.maxCalls)
     )
       throw new Error('Durable window identity mismatch');
+    // A changed window (for example a new call cap) replaces an active one.
+    // It keeps the spent calls, tokens and provider pacing.
+    const active =
+      previous && Date.parse(previous.until) > now() ? previous : null;
     const window: WindowState =
       previous?.id === windowId
         ? previous
@@ -326,12 +327,12 @@ export async function indexAuditedBatch(
             id: windowId,
             until: input.window.until,
             maxCalls: input.window.maxCalls,
-            calls: 0,
-            tokens: 0,
+            calls: Math.min(active?.calls ?? 0, input.window.maxCalls),
+            tokens: active?.tokens ?? 0,
             halted: false,
             inFlight: '',
-            lastStartAt: 0,
-            recent: [],
+            lastStartAt: active?.lastStartAt ?? 0,
+            recent: active?.recent ?? [],
           };
     const run: RunState = previousRun ?? {
       windowId,
@@ -360,15 +361,15 @@ export async function indexAuditedBatch(
       window.tokens + inputBytes >
         input.window.maxCalls * auditIndexLimits.inputBytesPerCall
     )
-      return null;
+      return 'budget' as const;
     const recent = window.recent.filter((r) => r.at > now() - 60000);
     if (
       (window.lastStartAt &&
         now() - window.lastStartAt < auditIndexLimits.intervalMs) ||
       recent.reduce((n, r) => n + r.tokens, 0) + inputBytes >
-        auditIndexLimits.rollingTokens
+        auditIndexLimits.rollingInputBytes
     )
-      return null;
+      return 'pacing' as const;
     const attempt = run.calls + 1,
       flight = `${input.runId}:${attempt}`;
     tx.set(windowPath, {
@@ -385,7 +386,8 @@ export async function indexAuditedBatch(
     });
     return { attempt, flight };
   });
-  if (!reservation) return stop('Run/window budget or pacing limit reached');
+  if (reservation === 'budget') return stop('Run/window budget reached');
+  if (reservation === 'pacing') return stop('Provider pacing limit reached');
   const prefix = `embedding-audit/staging/${windowId}/${input.runId}/${reservation.attempt}`,
     keys: string[] = [];
   let tokens = 0,

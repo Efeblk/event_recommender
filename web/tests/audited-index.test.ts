@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   auditDigest,
+  auditIndexLimits,
   indexAuditedBatch,
   parseAuditedIndexInput,
   type AuditedIndexInput,
@@ -325,22 +326,40 @@ await test('non2xx original bytes survive while app failure stays generic and la
   assert.equal(f.calls, 1);
 });
 await test('byte and run call caps persist across instances and cannot be reset with repeated calls', async () => {
-  const f = await fixture(10, 'x'.repeat(3000));
-  for (let i = 0; i < 4; i++) {
+  const { callsPerRun, callsPerWindow, inputBytesPerCall } = auditIndexLimits;
+  const f = await fixture(callsPerRun * 2 + 2, 'x'.repeat(inputBytesPerCall * 0.4));
+  f.input.window.maxCalls = callsPerWindow;
+  for (let i = 0; i < callsPerRun; i++) {
     const result = await f.run();
     assert.equal(result.embedded, 2);
     f.advance();
   }
   const limited = await f.run();
   assert.equal(limited.outcome, 'bounded-stop');
-  assert.equal(f.calls, 4);
+  assert.equal(f.calls, callsPerRun);
   assert.equal(limited.pending, 2);
   for (const [key, body] of f.blobs.rows)
     if (key.endsWith('-request.json'))
-      assert.ok(JSON.parse(body).inputBytes <= 8000);
+      assert.ok(JSON.parse(body).inputBytes <= inputBytesPerCall);
+});
+await test('a changed window replaces the active one and keeps its spent calls and pacing', async () => {
+  const f = await fixture(5, 'x'.repeat(9000));
+  f.input.window.maxCalls = 1;
+  await f.run();
+  const raised = structuredClone(f.input);
+  raised.window.maxCalls = 2;
+  const paced = await f.run({ ...raised, runId: '456' });
+  assert.equal(paced.outcome, 'bounded-stop');
+  assert.equal(f.calls, 1);
+  f.advance();
+  assert.ok((await f.run({ ...raised, runId: '457' })).embedded > 0);
+  f.advance();
+  const capped = await f.run({ ...raised, runId: '458' });
+  assert.equal(capped.outcome, 'bounded-stop');
+  assert.equal(f.calls, 2);
 });
 await test('window call limit spans different collection run IDs', async () => {
-  const f = await fixture(5, 'x'.repeat(3000));
+  const f = await fixture(5, 'x'.repeat(9000));
   f.input.window.maxCalls = 1;
   await f.run();
   f.advance();
@@ -450,7 +469,7 @@ await test('observed-token overshoot is retained and halts after its one bounded
       new Response(
         JSON.stringify({
           data: [{ index: 0, embedding: vector() }],
-          usage: { total_tokens: 32001 },
+          usage: { total_tokens: auditIndexLimits.observedTokensPerRun + 1 },
         }),
       ),
   );
@@ -459,7 +478,7 @@ await test('observed-token overshoot is retained and halts after its one bounded
   const state = await f.control.get<{ tokens: number; halted: boolean }>(
     'biplan/staging/embeddingIndex/window',
   );
-  assert.equal(state?.tokens, 32001);
+  assert.equal(state?.tokens, auditIndexLimits.observedTokensPerRun + 1);
   assert.equal(state?.halted, true);
 });
 await test('a later price-only collection reuses every existing vector', async () => {
@@ -549,7 +568,8 @@ await test('oversized provider output retains bounded partial bytes and stops', 
   );
 });
 await test('an oversized single document stays pending without a paid request', async () => {
-  const f = await fixture(1, 'x'.repeat(10000));
+  // Documents keep at most 10000 characters; 3-byte characters exceed the byte cap.
+  const f = await fixture(1, '€'.repeat(10000));
   const result = await f.run();
   assert.equal(result.outcome, 'bounded-stop');
   assert.equal(result.pending, 1);
