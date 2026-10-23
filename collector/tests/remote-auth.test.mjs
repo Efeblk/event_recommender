@@ -72,9 +72,9 @@ void test("the GCP collector schedule is opt-in and uses a dedicated identity", 
     workflow,
     /if: github\.event\.schedule == '47 \*\/3 \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'verify'/,
   );
-  // Indexing runs every 3 hours. Verification-only dispatch does not select it.
+  // Indexing runs every 3 hours or on index_now. Verification-only dispatch does not select it.
   assert.match(workflow, /cron: '47 \*\/3 \* \* \*'/);
-  assert.match(workflow, /if: github\.event\.schedule == '47 \*\/3 \* \* \*' && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
+  assert.match(workflow, /if: \(github\.event\.schedule == '47 \*\/3 \* \* \*' \|\| needs\.dispatch_mode\.outputs\.mode == 'index'\) && vars\.GCP_STAGING_INDEXING_ENABLED == 'true'/);
   assert.match(workflow, /GCP_STAGING_COLLECTION_UNTIL/);
   assert.match(workflow, /needs\.schedule_gate\.outputs\.run == 'true'/);
   assert.match(workflow, /environment: gcp-staging-collector/);
