@@ -289,7 +289,17 @@ checks still pass, and the per-request cost does not increase without approval.
   embedded none: it started directly after another run and met the pacing
   limit. The user asked to index at the Voyage free-plan rate. Limits are now
   45 calls per run, 20000 input bytes per call and 400 calls per window.
-  A manual `index_now` run indexes without collection. PR and runs: pending.
+  A manual `index_now` run indexes without collection.
+  [PR #91](https://github.com/Efeblk/event_recommender/pull/91) deployed by
+  [39941643342](https://github.com/Efeblk/event_recommender/actions/runs/39941643342). Manual runs [39942127212](https://github.com/Efeblk/event_recommender/actions/runs/39942127212),
+  [39947817161](https://github.com/Efeblk/event_recommender/actions/runs/39947817161), [39953882064](https://github.com/Efeblk/event_recommender/actions/runs/39953882064),
+  [39966289943](https://github.com/Efeblk/event_recommender/actions/runs/39966289943) and [39972944753](https://github.com/Efeblk/event_recommender/actions/runs/39972944753)
+  embedded about 890 documents each. All 4,205 documents now have vectors;
+  0 are pending. They used 1,234,034 observed tokens. Scheduled run
+  [39951548281](https://github.com/Efeblk/event_recommender/actions/runs/39951548281) lost its runner and has no
+  logs; it embedded 36 documents and did not halt the window. Authenticated
+  `/api/ready` returned ready with 7,737 eligible events and no pending search
+  activation. No Jev calls.
 
 - 2026-10-22: The user asked for fewer GitHub Actions runs. Scheduled
   collection now runs every 12 h (was 6 h). The monitor and indexing run every
