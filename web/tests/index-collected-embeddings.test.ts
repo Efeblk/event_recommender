@@ -112,7 +112,7 @@ await test('unattended indexing defaults off and validates enabled windows befor
   assert.equal(JSON.parse(await readFile(report, 'utf8')).outcome, 'disabled');
   const bad = await cli(['--live'], {
     BIPLAN_URL: 'https://fixture.run.app',
-    GCP_STAGING_INDEXING_MAX_CALLS: '97',
+    GCP_STAGING_INDEXING_MAX_CALLS: '401',
   });
   assert.notEqual(bad.code, 0);
   assert.match(bad.stderr, /Invalid or expired indexing window/);

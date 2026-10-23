@@ -268,6 +268,14 @@ checks still pass, and the per-request cost does not increase without approval.
 
 ## Status log
 
+- 2026-10-23: Indexing did not converge. 155 of 4,208 documents had vectors.
+  Calls embedded about 8 documents each. The last scheduled run
+  [39905785045](https://github.com/Efeblk/event_recommender/actions/runs/39905785045)
+  embedded none: it started directly after another run and met the pacing
+  limit. The user asked to index at the Voyage free-plan rate. Limits are now
+  45 calls per run, 20000 input bytes per call and 400 calls per window.
+  A manual `index_now` run indexes without collection. PR and runs: pending.
+
 - 2026-10-22: The user asked for fewer GitHub Actions runs. Scheduled
   collection now runs every 12 h (was 6 h). The monitor and indexing run every
   3 h (was hourly). The monitor stale limit is 20 h (was 14 h). CI runs on

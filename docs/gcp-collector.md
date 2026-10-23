@@ -173,14 +173,14 @@ repository variables:
 | `GCP_STAGING_INDEXING_ENABLED` | Exactly `true` |
 | `GCP_STAGING_INDEXING_FROM` | Canonical UTC timestamp when the reviewed window starts |
 | `GCP_STAGING_INDEXING_UNTIL` | Canonical UTC expiry, at most 60 hours after the start, or `open` for a daily window renewed at 00:00 UTC (`FROM` is then ignored) |
-| `GCP_STAGING_INDEXING_MAX_CALLS` | Integer 1–96 for the entire window (per UTC day when `open`), across all runs |
+| `GCP_STAGING_INDEXING_MAX_CALLS` | Integer 1–400 for the entire window (per UTC day when `open`), across all runs |
 
-A 3-hour schedule (`47 */3 * * *`) in the same workflow runs the `monitor` job, and the `index_only` job when indexing is enabled. It does not collect. Each indexing run makes at most 4 calls.
+A 3-hour schedule (`47 */3 * * *`) in the same workflow runs the `monitor` job, and the `index_only` job when indexing is enabled. It does not collect. Each indexing run makes at most 45 calls. A manual run with `index_now` runs only `index_only`.
 
 Align expiry with the collection observation window. The CLI and server reject
-expired, future-starting, malformed or overlong windows. The server will not
-replace an active window with a different start/expiry/budget; changing variables
-cannot silently refill an active budget. Unset the enable variable to stop future
+expired, future-starting, malformed or overlong windows. A changed
+start/expiry/budget replaces the active window. The new window keeps the spent
+calls, tokens and pacing, so changing variables cannot refill a spent budget. Unset the enable variable to stop future
 follow-up steps. No cloud variable, IAM grant or provider key is added by the PR.
 
 After successful publication the workflow refreshes the collector's existing
@@ -195,16 +195,19 @@ An older endpoint without audited metadata is rejected after that GET, before
 its legacy POST can be called. Disabled indexing writes a zero-request artifact
 without requesting an indexing identity token or reading application credentials.
 
-Each run admits at most 4 provider attempts, at most 32 documents and 8000 UTF-8
-input-text bytes per call, and at most 32000 input-text bytes per run. Failed
+Each run admits at most 45 provider attempts, at most 32 documents and 20000 UTF-8
+input-text bytes per call, and at most 900000 input-text bytes per run. These
+limits stay under the Voyage free plan (3 requests and 10K tokens per minute).
+Event documents use about 3.4 bytes per token. Failed
 admissions still consume the reserved call allowance. The run identity is GitHub
 `run_id`, never `run_attempt`, so rerunning the workflow cannot reset its budget.
 The CLI spaces batches 61 seconds apart; the server additionally enforces a 21s
-minimum and 9000-token rolling reservations. Fetch is outside Firestore transaction
+minimum and 24000 input bytes per rolling minute. After one pacing stop, the CLI
+waits one interval and tries again. Fetch is outside Firestore transaction
 callbacks, so transaction retries cannot repeat a provider request. There are no
 automatic HTTP or provider retries.
 
-The 32000-token run threshold and window threshold (`maxCalls × 8000`) use observed
+The 900000-token run threshold and window threshold (`maxCalls × 20000`) use observed
 Voyage usage plus conservative input-byte reservations. They are **not exact
 pre-call billing caps**: one bounded charged response can report usage above its
 reservation. Such an overshoot is retained and halts indexing immediately.
