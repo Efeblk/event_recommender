@@ -154,13 +154,15 @@ hybrid retrieval, the Jev support check and the cards stay.
 
 Tasks, in this order. Each task is one PR.
 
-1. **Evaluation set (R1).** Add the 60 hard-test requests to a second fixture
-   with expected plans: hard atoms, exclusions, preferences, or the expected
-   refusal or clarification. Score the plan and the results separately:
-   plan accuracy per atom type, hard-constraint violations, wrong empty
-   results and wrong clarifications. Replay offline from cached provider
-   responses, as the golden runner does. Record the baseline of the current
-   parser. Each later PR must improve this score and keep the Phase 1 checks.
+1. **Evaluation set (R1).** `web/fixtures/hard-v1.json` holds the 60
+   hard-test requests with expected plans (hard atoms, exclusions,
+   preferences) or the expected refusal or clarification.
+   `npm run eval:plan` in `web/` scores the parser: passed cases, discarded
+   clear requests, wrong searches, preferences made hard, and precision and
+   recall per atom type. Order is reported separately. It replays offline
+   from cached Jev responses; `--live --budget <file>` fills the cache within
+   an approved budget. Each later PR must improve this score and keep the
+   Phase 1 checks. Results are scored by the live acceptance test below.
 2. **Hard and soft contract (R2).** Only these can be hard: date and time,
    place, price, category, audience and age, and exclusions of these. Moods,
    vibes, topics and formats are preferences. They affect ranking only.
@@ -324,6 +326,14 @@ checks still pass, and the per-request cost does not increase without approval.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-10-26: R1 plan evaluation baseline, current field reader (`jev-1.13.0`):
+  21 of 60 cases pass; 11 clear requests discarded; 0 wrong searches;
+  7 preferences made hard; recall: excluded topics 1/16, dates 21/33,
+  categories 16/27, budgets 15/23, places 18/26. 60 paid parser calls
+  (about $0.04). The offline replay reproduces the result with no calls.
+  Private cache and run: `gs://biplan-stg-efeblk-biplan-staging-data/evals/
+  plan-eval/2026-10-26-baseline/`.
 
 - 2026-10-26: Hard live test on staging (`561e125`, revision
   `biplan-staging-00006-qhb`, full vector coverage). Codex and Argon each wrote
