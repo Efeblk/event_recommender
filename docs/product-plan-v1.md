@@ -144,6 +144,61 @@ Acceptance (the v1 quality bar):
 - Every empty result is correct: the frozen catalog has no matching event.
 - p95 end-to-end time below 8 s on staging, one request at a time.
 
+## Phase 1R: Rebuild request understanding (decided 2026-10-26)
+
+Goal: every hard condition is understood correctly and can be checked against
+event data. The hard test on 2026-10-26 (see the status log) found 21 of 60
+requests bad and 51 of 230 cards wrong. The causes are in the design, so this
+phase replaces parts instead of patching them. Collection, identity, vectors,
+hybrid retrieval, the Jev support check and the cards stay.
+
+Tasks, in this order. Each task is one PR.
+
+1. **Evaluation set (R1).** Add the 60 hard-test requests to a second fixture
+   with expected plans: hard atoms, exclusions, preferences, or the expected
+   refusal or clarification. Score the plan and the results separately:
+   plan accuracy per atom type, hard-constraint violations, wrong empty
+   results and wrong clarifications. Replay offline from cached provider
+   responses, as the golden runner does. Record the baseline of the current
+   parser. Each later PR must improve this score and keep the Phase 1 checks.
+2. **Hard and soft contract (R2).** Only these can be hard: date and time,
+   place, price, category, audience and age, and exclusions of these. Moods,
+   vibes, topics and formats are preferences. They affect ranking only.
+   A hard atom needs explicit text and a clear confidence margin. Below the
+   margin it becomes a preference. A request is never discarded as a whole:
+   search with the confident atoms and ask only about the unclear one.
+3. **New request reader (R3).** Code proposes candidates and Jev selects
+   (TypeSafe cookbook pattern). Dates: code lists the concrete dates of the
+   next 90 days with readable labels; Jev selects the dates the message
+   means. Categories and topics: Jev judges want, exclude or not mentioned for
+   each candidate, so negation lists keep each item and its polarity. Numbers:
+   Jev assigns each number a role (person's age, group size, per-person
+   price, total price, year, time). Code still does the calendar math, the
+   place hierarchy and the plan composition. Replace the fixed date and
+   negation fields of `web/parser/fields.ts`. Remove the span-first parser
+   when R3 passes (see Later).
+4. **Event enrichment (R4).** At collection time, one bounded Jev pass per
+   event document labels: audience (children, family, adult), minimum and
+   maximum age, the city and district where the activity happens, format
+   (hands-on, outdoor, seated) and a normalized category. Cache by document
+   hash like the vectors, so unchanged events cost nothing. Keep the source
+   text that supports each label. `plan-evidence.ts` checks audience, age and
+   place against these labels. "With children" is no longer always supported.
+   This moves v2 step 4 into v1 because v1 correctness needs it.
+5. **Query embedding capacity (R5).** The Voyage free plan allows 3 requests a
+   minute. Searches above that rate fall back to word matching. Add a payment
+   method (the free token allowance stays) or cache query vectors. This needs
+   the user's decision.
+
+Acceptance:
+
+- On the hard set: 0 hard-constraint violations in returned cards, 0 discarded
+  plans for clear requests, every refusal and clarification correct, and at
+  least 85% of the requests with a relevant card in the top 3.
+- The Phase 1 golden checks still pass.
+- A new 60-request live test with new requests, reviewed against source
+  evidence, has no BAD result caused by parsing or missing event data.
+
 ## Phase 2: Run unattended (target: 3–4 days, mostly waiting)
 
 Tasks:
@@ -223,6 +278,8 @@ checks still pass, and the per-request cost does not increase without approval.
 - Review the golden requests and label a sample (Phase 1).
 - Select the beta access method and URL (Phase 3).
 - Approve any AI enrichment budget (v2, step 4).
+- Approve the Phase 1R budget for enrichment and evaluation runs, and decide
+  the query embedding capacity (Phase 1R, R5).
 
 ## Later (not in v1)
 
@@ -267,6 +324,25 @@ checks still pass, and the per-request cost does not increase without approval.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-10-26: Hard live test on staging (`561e125`, revision
+  `biplan-staging-00006-qhb`, full vector coverage). Codex and Argon each wrote
+  30 requests; Codex and Argon reviewed the results against the card source
+  fields. Result: 23 GOOD, 16 PARTIAL, 21 BAD; 51 of 230 cards violate a
+  condition. 29 results, 16 empty, 15 clarifications. p50 1.9 s, p95 9 s.
+  Causes: clear requests discarded as a whole ("family-friendly exhibition in
+  Üsküdar, Sat 31 Oct, ≤400 TL"); "with children" always supported (adult plays
+  for "çocuk etkinliği"); one age of two kept (a 7+ show for a 3-year-old);
+  negation lists flipped ("except pop, rap, electronic" became pop required);
+  wrong relative dates ("Kasım'ın ilk cuma" became 30 Oct); moods as hard
+  topics; day tours outside Istanbul; 6 searches fell back to word matching at
+  about 4 searches a minute (Voyage free plan: 3 a minute). Staging allows 20
+  paid searches per IP per hour, so the test ran in three batches. The first 40
+  reviews saw card weekdays without dates. About 60 paid searches, under the
+  approved $1 cap. Private evidence: `gs://biplan-stg-efeblk-biplan-staging-data/
+  evals/hardtest-2026-10-26/` (inputs, 60 raw responses, review files and
+  verdicts). The user decided to rebuild request
+  understanding: Phase 1R.
 
 - 2026-10-23: The friends test is closed. It opened at about 15:08 UTC on
   2026-10-22 with `allUsers` invoker and `BIPLAN_PREVIEW_TESTING=true` on
