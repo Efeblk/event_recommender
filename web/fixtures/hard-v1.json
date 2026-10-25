@@ -1,0 +1,3270 @@
+{
+  "schemaVersion": 1,
+  "name": "hard-v1",
+  "referenceTime": "2026-10-25T21:10:00.000Z",
+  "timezone": "Europe/Istanbul",
+  "contract": "phase-1r",
+  "source": "gs://biplan-stg-efeblk-biplan-staging-data/evals/hardtest-2026-10-26/",
+  "cases": [
+    {
+      "id": "c01",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Kafam çok dolu; bu akşam İstanbul'da sakin sakin dolaşıp biraz nefes alabileceğim, kalabalık ve yüksek ses gerektirmeyen bir şey arıyorum.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-26",
+                "to": "2026-10-26"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "calm"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "quiet"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "uncrowded"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Evening and calm low-noise qualities are explicit; no district is named."
+    },
+    {
+      "id": "c02",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Sevgilimle romantik ama fazla resmi olmayan, sohbet edebileceğimiz bir akşam planı istiyorum.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "intimate"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "partner"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "conversation"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Evening is explicit; romance and partner attendance guide preference only."
+    },
+    {
+      "id": "c03",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Canım biraz cozy, küçük bir caz barı vibe'ı istiyor ama illa caz konseri olmasın; oturup keyif yapabileceğimiz ne var?",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": []
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "intimate"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "seated"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "jazz"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "cozy"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Jazz-bar atmosphere and sitting are preferences; a jazz concert is not required."
+    },
+    {
+      "id": "c04",
+      "language": "en",
+      "kind": "mood",
+      "message": "I need something that helps me clear my head after a stressful week, preferably hands-on or outdoors, not a lecture.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "lecture"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "outdoors"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "hands-on"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "calm"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "The lecture exclusion is hard; restorative, hands-on and outdoor qualities are preferences."
+    },
+    {
+      "id": "c05",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Kadıköy tarafında yeni insanlarla tanışabileceğim, tek başıma gitmesi de garip olmayacak sosyal bir etkinlik arıyorum.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "friends"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "social"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "meet new people"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "solo-friendly"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Kadıköy is hard; social and solo-friendly qualities are preferences."
+    },
+    {
+      "id": "c06",
+      "language": "en",
+      "kind": "mood",
+      "message": "Something playful and a little unusual for a date, where we can do or discover something together instead of just sitting through a show.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": []
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "partner"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "playful"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "shared activity"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "discovery"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "unusual"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "A date and shared discovery are preferences; shows are not excluded."
+    },
+    {
+      "id": "c07",
+      "language": "tr",
+      "kind": "mood",
+      "message": "İçim daraldı; deniz havası alıp şehirden kısa süreliğine kopabileceğim, çok yorucu olmayan bir etkinlik olsun.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": []
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "seaside"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "outdoors"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "low effort"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "short escape"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Sea air and an easy break are preferences; no date or district is specified."
+    },
+    {
+      "id": "c08",
+      "language": "en",
+      "kind": "mood",
+      "message": "Looking for a curious, artsy afternoon that might inspire me, ideally somewhere I can wander at my own pace.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "12:00",
+                "to": "18:00"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "art"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "curious"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "inspiring"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "self-paced"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Afternoon is hard; artsy, curious and self-paced are preferences."
+    },
+    {
+      "id": "c09",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Bu hafta sonu (31 Ekim-1 Kasım) Beşiktaş'ta, kişi başı en fazla 700 TL olan tiyatro etkinliği bul.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Beşiktaş",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 700,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Weekend dates, district, theatre and per-person cap are explicit."
+    },
+    {
+      "id": "c10",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Önümüzdeki perşembe akşamı, 29 Ekim'de, Kadıköy'de 2 kişi toplam 1200 TL'yi aşmadan canlı müzik dışı bir sergi ya da atölye istiyoruz.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-29",
+                "to": "2026-10-29"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 2
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 1200,
+                "currency": "TRY",
+                "basis": "group_total"
+              }
+            },
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "exhibition"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "workshop"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "concert"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Explicit date, evening, district, group total, category choice and live-music exclusion."
+    },
+    {
+      "id": "c11",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Ayın sonuna kadar Şişli'de stand-up etkinliği olsun; bilet 500 TL'den ucuz ve tarihi henüz geçmemiş olsun.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-26",
+                "to": "2026-10-31"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Şişli",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "standup"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lt",
+                "amount": 500,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "The remaining dates through month end, district, stand-up and strict ticket cap are explicit."
+    },
+    {
+      "id": "c12",
+      "language": "en",
+      "kind": "combined",
+      "message": "Find a family-friendly exhibition in Üsküdar next Saturday, October 31, for no more than 400 TL per person.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-10-31"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Üsküdar",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "exhibition"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "family"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 400,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Explicit calendar date wins; family attendance and per-person cap are hard."
+    },
+    {
+      "id": "c13",
+      "language": "en",
+      "kind": "combined",
+      "message": "Next Friday night, 30 October, I want a bookable dance or music event in Beyoğlu for under 900 TL per ticket.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-30",
+                "to": "2026-10-30"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Beyoğlu",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "dance"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "concert"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lt",
+                "amount": 900,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Explicit date wins; evening, district, category alternatives and strict ticket cap are explicit."
+    },
+    {
+      "id": "c14",
+      "language": "tr",
+      "kind": "combined",
+      "message": "30 Ekim Cuma günü Bakırköy'de çocuk etkinliği ara; 3 kişiyiz ve toplam bütçemiz 1500 TL, bilet ücreti bunu geçmesin.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-30",
+                "to": "2026-10-30"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Bakırköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "children"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 3
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 1500,
+                "currency": "TRY",
+                "basis": "group_total"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Child event intent, three people and a group-total cap are explicit."
+    },
+    {
+      "id": "c15",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Tiyatro olsun ama çocuk oyunu olmasın; bu akşam için İstanbul'da yetişkinlere uygun bir oyun arıyorum.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-26",
+                "to": "2026-10-26"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "kids"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Tonight is 26 October; adult suitability is represented by excluding children's plays."
+    },
+    {
+      "id": "c16",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Bu hafta sonu İstanbul'da konser olabilir ama stand-up kesinlikle istemiyorum.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "standup"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "category",
+              "value": "concert"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "The weekend and stand-up exclusion are hard; concert is permissive wording."
+    },
+    {
+      "id": "c17",
+      "language": "tr",
+      "kind": "negation",
+      "message": "İstanbul'da bir sergi veya müze turu arıyorum, fakat korku temalı ya da ürkütücü içerik olmasın.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "exhibition"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "museum"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "horror"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "The three requested formats are alternatives; horror and scary content are excluded."
+    },
+    {
+      "id": "c18",
+      "language": "en",
+      "kind": "negation",
+      "message": "I'd like a workshop in Istanbul, but please exclude food and drink tastings and anything marketed as a cooking class.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "workshop"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "tasting"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "cooking"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Workshop is required; tastings and cooking-class format are excluded."
+    },
+    {
+      "id": "c19",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Çocuğumla gideceğim; İstanbul'da müzikli bir etkinlik olabilir ama gece kulübü, bar ya da 18+ mekan olmasın.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "children"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "nightclub"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "bar"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "music"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Child attendance and venue/content exclusions are hard; music is optional."
+    },
+    {
+      "id": "c20",
+      "language": "tr",
+      "kind": "typo",
+      "message": "kadikoyde bu cuma akSam kafa dagitmalik bi etkinlik var mi ya 🎭",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-30",
+                "to": "2026-10-30"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "calm"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Friday evening and Kadıköy are explicit; mood-lifting is a preference."
+    },
+    {
+      "id": "c21",
+      "language": "tr",
+      "kind": "typo",
+      "message": "Yarın akşam Beşiktaş'ta standup gibi komik bişi, ama 600 tl civarı olsun 🙏",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-27",
+                "to": "2026-10-27"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Beşiktaş",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "standup"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "budget",
+              "comparison": "approx",
+              "amount": 600,
+              "currency": "TRY",
+              "basis": "per_ticket"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Tomorrow is 27 October; colloquial stand-up intent is clear and the price is approximate."
+    },
+    {
+      "id": "c22",
+      "language": "tr",
+      "kind": "typo",
+      "message": "Bu haftasonu istanbulda cocukla gidilecek workshop varmi? 10 yasinda, pls ucuz olsun",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "workshop"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "children"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 10
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "cheapest"
+      },
+      "notes": "Child attendance and age 10 are hard; ?cheap? sets cheapest ordering without a price cap."
+    },
+    {
+      "id": "c23",
+      "language": "en",
+      "kind": "typo",
+      "message": "I’m in Istanbul and want a chill sergi this Sunday, preferably not too pricey 🙂",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-11-01",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "exhibition"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "calm"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "This Sunday is 1 November; chill is a preference and the vague price preference has no numeric amount."
+    },
+    {
+      "id": "c24",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "8 ve 13 yaşındaki çocuklarımla gidebileceğim, ikisinin de yaşına uygun bir etkinlik var mı?",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "children"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 8
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 13
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Both stated child ages must be supported; no date or event category is specified."
+    },
+    {
+      "id": "c25",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "İki kişi için toplam 1500 TL bütçem var; bu hafta sonu İstanbul'da atölye öner, fiyat kişi başıysa toplamı hesapla.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 2
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 1500,
+                "currency": "TRY",
+                "basis": "group_total"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "workshop"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Weekend workshop and two-person total budget are explicit."
+    },
+    {
+      "id": "c26",
+      "language": "en",
+      "kind": "numbers",
+      "message": "Find a concert in Istanbul for four adults, under 300 TL each, sometime next weekend.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 4
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lt",
+                "amount": 300,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Next weekend, four adults, concert and strict per-ticket cap are explicit.",
+      "alternatives": [
+        {
+          "hard": {
+            "type": "all",
+            "children": [
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "date",
+                  "from": "2026-11-07",
+                  "to": "2026-11-08"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "concert"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "party",
+                  "count": 4
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "budget",
+                  "comparison": "lt",
+                  "amount": 300,
+                  "currency": "TRY",
+                  "basis": "per_ticket"
+                }
+              }
+            ]
+          },
+          "preferences": [],
+          "order": "none"
+        }
+      ]
+    },
+    {
+      "id": "c27",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "12 yaşından küçük çocuklar kabul ediliyor mu? İstanbul'da cumartesi için uygun bir etkinlik olsun; 12 yaş şartı katılımcının yaşı, bilet fiyatı değil.",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-10-31"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "children"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Saturday and child attendance are clear; age atom records the stated under-12 cutoff."
+    },
+    {
+      "id": "c28",
+      "language": "tr",
+      "kind": "refuse",
+      "message": "Geçen hafta İstanbul'da yapılmış bir konserin en yüksek puanlısını bulur musun?",
+      "outcome": "decline",
+      "notes": "Past events and rating-based ranking are outside the supported search."
+    },
+    {
+      "id": "c29",
+      "language": "en",
+      "kind": "refuse",
+      "message": "Can you find a bookable theatre show in Ankara this Saturday?",
+      "outcome": "decline",
+      "notes": "Ankara is outside the Istanbul catalog."
+    },
+    {
+      "id": "c30",
+      "language": "tr",
+      "kind": "refuse",
+      "message": "İstanbul'da uygun fiyatlı güzel bir şey var mı?",
+      "outcome": "search",
+      "notes": "Only \"affordable\": search everything cheapest first, or ask for a condition.",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": []
+        },
+        "preferences": [],
+        "order": "cheapest"
+      },
+      "declineAcceptable": true
+    },
+    {
+      "id": "a01",
+      "language": "tr",
+      "kind": "mood",
+      "message": "İçim şişti evde oturmaktan, Beyoğlu tarafında ruhumu dinlendirecek sakin, meditatif veya akustik bir şeyler var mı?",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Beyoğlu",
+                "precision": "district"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "mood",
+              "value": "calm"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "quiet"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "acoustic"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "meditative"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Beyoğlu is hard; calm, meditative and acoustic qualities are preferences."
+    },
+    {
+      "id": "a02",
+      "language": "tr",
+      "kind": "mood",
+      "message": "90'lar veya 2000'ler nostaljisi yaşatacak, bağıra çağıra şarkı söylemelik bir gece arıyorum",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "90s nostalgia"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "2000s nostalgia"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "sing-along"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Night is a time constraint; nostalgia and sing-along are preferences."
+    },
+    {
+      "id": "a03",
+      "language": "en",
+      "kind": "mood",
+      "message": "Looking for a dark, thought-provoking psychological drama or thriller play on the Asian side",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Anadolu yakası",
+                "precision": "side"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "psychological"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "dark drama"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "thriller"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "thought-provoking"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Asian side and play are explicit; tonal and genre descriptors guide preference."
+    },
+    {
+      "id": "a04",
+      "language": "tr",
+      "kind": "mood",
+      "message": "İlk buluşma için kasmayan, muhabbet edebileceğimiz yaratıcı bir deneyim, ellerimizle bir şey üretelim, maksimum 1000 TL",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "workshop"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 1000,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "companion",
+              "value": "partner"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "romantic"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "conversation"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "creative"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "hands-on"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Hands-on making implies a workshop; first-date and social qualities remain preferences."
+    },
+    {
+      "id": "a05",
+      "language": "en",
+      "kind": "mood",
+      "message": "Something whimsical and magical to spark curiosity for a rainy autumn afternoon in Şişli",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Şişli",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "12:00",
+                "to": "18:00"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "whimsical"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "magical"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "curiosity"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Afternoon and district are explicit; magical and curious are mood descriptors."
+    },
+    {
+      "id": "a06",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Melankolik bir sonbahar akşamına yakışacak şiirsel, belki biraz hüzünlü bir dinleti ya da oyun, Kadıköy'de",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "concert"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "theatre"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "melancholic"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "poetic"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "autumn"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Evening, location and recital-or-play alternatives are hard; tone is preferred."
+    },
+    {
+      "id": "a07",
+      "language": "en",
+      "kind": "mood",
+      "message": "High-energy underground rave or industrial techno where I can dance till morning this Friday",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-30",
+                "to": "2026-10-30"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "rave"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "industrial techno"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "high energy"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "late-night dancing"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Friday is 30 October; rave and techno are genre preferences, with late-night dance intent."
+    },
+    {
+      "id": "a08",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Tarihi yarımadada geçmişin izlerini sürebileceğimiz, hikayesi olan kültürel bir yürüyüş veya gezi",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Fatih",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "tour"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "historical"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "cultural"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "walking tour"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "story"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Historical Peninsula resolves to Fatih; tour is required and themes are preferences."
+    },
+    {
+      "id": "a09",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Yarın akşam Beşiktaş'ta 600 TL altı tiyatro oyunu var mı?",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-27",
+                "to": "2026-10-27"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Beşiktaş",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lt",
+                "amount": 600,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Tomorrow is 27 October; evening, district, theatre and strict cap are explicit."
+    },
+    {
+      "id": "a10",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Bu ayın son cumartesi günü Üsküdar'da ücretsiz veya en fazla 250 liralık bir sergi ya da atölye",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-10-31"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Üsküdar",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "exhibition"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "category",
+                    "value": "workshop"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 250,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Last Saturday of this month is 31 October; free-or-cap phrase yields a maximum of 250."
+    },
+    {
+      "id": "a11",
+      "language": "en",
+      "kind": "combined",
+      "message": "Stand-up comedy in Bakırköy on a weekday evening next week under 750 TL",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-11-02",
+                "to": "2026-11-06"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Bakırköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "standup"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lt",
+                "amount": 750,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Weekday next week resolves to 2?6 November; evening and strict cap are explicit."
+    },
+    {
+      "id": "a12",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Tam 2 hafta sonra pazar günü Sarıyer'de açık havada yapılacak bir etkinlik, bütçe 1200 TL",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-11-08",
+                "to": "2026-11-08"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Sarıyer",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 1200,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "experience",
+              "value": "outdoors"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Two weeks later Sunday is 8 November; outdoor format is a preference."
+    },
+    {
+      "id": "a13",
+      "language": "en",
+      "kind": "combined",
+      "message": "Classical music concert in Ataşehir this Wednesday or Thursday night, max 900 TL",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "date",
+                    "from": "2026-10-28",
+                    "to": "2026-10-28"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "date",
+                    "from": "2026-10-29",
+                    "to": "2026-10-29"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Ataşehir",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 900,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "classical music"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Wednesday or Thursday dates, evening, place, concert and cap are explicit.",
+      "alternatives": [
+        {
+          "hard": {
+            "type": "all",
+            "children": [
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "date",
+                  "from": "2026-10-28",
+                  "to": "2026-10-29"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "time",
+                  "from": "18:00",
+                  "to": "23:59"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "location",
+                  "name": "Ataşehir",
+                  "precision": "district"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "concert"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "budget",
+                  "comparison": "lte",
+                  "amount": 900,
+                  "currency": "TRY",
+                  "basis": "per_ticket"
+                }
+              }
+            ]
+          },
+          "preferences": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "classical music"
+              }
+            }
+          ],
+          "order": "none"
+        }
+      ]
+    },
+    {
+      "id": "a14",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Kasım'ın ilk cuma akşamı Şişli'de 500 TL'yi geçmeyen müzikal veya kabare",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-11-06",
+                "to": "2026-11-06"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Şişli",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 500,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "show"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "musical"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "cabaret"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "First Friday is 6 November; musical/cabaret describes formats not represented exactly by categories."
+    },
+    {
+      "id": "a15",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Bu hafta sonu sahne sanatları bir şey izleyelim ama kesinlikle komedi veya stand-up olmasın, gülmek istemiyorum",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "comedy"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "standup"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "performing arts"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Weekend and comedy/stand-up exclusions are explicit; performing arts is broad preference."
+    },
+    {
+      "id": "a16",
+      "language": "en",
+      "kind": "negation",
+      "message": "Live music in Beyoğlu this week, anything except pop, rap, or electronic",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-26",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Beyoğlu",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "pop"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "rap"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "electronic"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "This week, district, live-music concert and each of the three genre exclusions are explicit."
+    },
+    {
+      "id": "a17",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Avrupa yakasında bir workshop arıyorum ama mutfak, yemek, kahve veya seramik dışındaki konular olsun",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Avrupa yakası",
+                "precision": "side"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "workshop"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "cooking"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "coffee"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "ceramics"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "European side and workshop are hard; all four listed topic exclusions are separate."
+    },
+    {
+      "id": "a18",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Ailece gidebileceğimiz bir pazar etkinliği olsun fakat çocuk oyunu veya animasyon olmasın, yetişkinlere de hitap etsin",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-11-01",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "family"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "kids"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "animation"
+                }
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "adult appeal"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Next Sunday is 1 November; family attendance and both exclusions are explicit."
+    },
+    {
+      "id": "a19",
+      "language": "en",
+      "kind": "negation",
+      "message": "Show me theatre plays in Kadıköy for November, but nothing in Moda or Bahariye and not over 650 TL",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-11-01",
+                "to": "2026-11-30"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "location",
+                  "name": "Moda",
+                  "precision": "neighborhood"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "location",
+                  "name": "Bahariye",
+                  "precision": "neighborhood"
+                }
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 650,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "November, Kadıköy theatre and cap are hard; Moda and Bahariye are excluded locations."
+    },
+    {
+      "id": "a20",
+      "language": "tr",
+      "kind": "typo",
+      "message": "slm knk bu cmrtsi bjk yada sisli trfnda 400 kaagida kdr rap/hiphop konseri fln varmi 🎤🔥",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-10-31"
+              }
+            },
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "location",
+                    "name": "Beşiktaş",
+                    "precision": "district"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "location",
+                    "name": "Şişli",
+                    "precision": "district"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 400,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "rap"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "hip hop"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Saturday, either district, concert and cap are hard; rap/hip-hop is preference genre."
+    },
+    {
+      "id": "a21",
+      "language": "tr",
+      "kind": "typo",
+      "message": "After-work chill bi workshop ariyorum, persembe aksami levent/maslak civari, max 1.5k tl pls 🎨🍷",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-29",
+                "to": "2026-10-29"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "any",
+              "children": [
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "location",
+                    "name": "Levent",
+                    "precision": "neighborhood"
+                  }
+                },
+                {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "location",
+                    "name": "Maslak",
+                    "precision": "neighborhood"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "workshop"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 1500,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "chill"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "after work"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Thursday evening, either named neighborhood, workshop and cap are explicit."
+    },
+    {
+      "id": "a22",
+      "language": "tr",
+      "kind": "typo",
+      "message": "uskudarda yrn oglenden snr ucretsiz sergi vrmi gezmelik 🖼️👀",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-27",
+                "to": "2026-10-27"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "12:00",
+                "to": "18:00"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Üsküdar",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "exhibition"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 0,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "self-paced visit"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Tomorrow from the stated reference date is 27 October; free exhibition is the hard request."
+    },
+    {
+      "id": "a23",
+      "language": "en",
+      "kind": "typo",
+      "message": "Need a hype concert in kdkoy next wknd, rock or metal vibes 🎸🤘 budget ~800tl",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-31",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Kadıköy",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "rock"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "metal"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "high energy"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "budget",
+              "comparison": "approx",
+              "amount": 800,
+              "currency": "TRY",
+              "basis": "per_ticket"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Next weekend and Kadıköy concert are hard; rock/metal and approximate budget are preferences."
+    },
+    {
+      "id": "a24",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "4 arkadaş bu cuma konsere gideceğiz, toplam 2400 TL bütçemiz var, hepimiz 17 yaşındayız",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-30",
+                "to": "2026-10-30"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "concert"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 4
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 17
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 2400,
+                "currency": "TRY",
+                "basis": "group_total"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Four friends, all 17, and total group budget are explicit; Friday is 30 October."
+    },
+    {
+      "id": "a25",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "2026 sonbaharında 80'ler Türkçe pop gecesi arıyorum, 2 kişiyiz toplam 1000 lirayı geçmesin",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-10-26",
+                "to": "2026-11-30"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 2
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 1000,
+                "currency": "TRY",
+                "basis": "group_total"
+              }
+            }
+          ]
+        },
+        "preferences": [
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "80s"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "turkish pop"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "topic",
+              "value": "night"
+            }
+          }
+        ],
+        "order": "none"
+      },
+      "notes": "Autumn 2026 from the reference date through November; two-person total budget."
+    },
+    {
+      "id": "a26",
+      "language": "en",
+      "kind": "numbers",
+      "message": "3-year-old toddler and 11-year-old kid, looking for a Sunday show where both are allowed and 3 tickets cost at most 900 TL total",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "date",
+                "from": "2026-11-01",
+                "to": "2026-11-01"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "show"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "companion",
+                "value": "children"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 3
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 11
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 3
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 900,
+                "currency": "TRY",
+                "basis": "group_total"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Next Sunday, children, both ages, three tickets and group-total cap are explicit."
+    },
+    {
+      "id": "a27",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "Saat 19:00'dan sonra başlayan, 21 yaş altı girişte sorun olmayacak (kardeşim 16 yaşında) Maltepe'de en fazla 450 TL'lik tiyatro",
+      "outcome": "search",
+      "expected": {
+        "hard": {
+          "type": "all",
+          "children": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "19:00",
+                "fromExclusive": true
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Maltepe",
+                "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "category",
+                "value": "theatre"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "age",
+                "years": 16
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "lte",
+                "amount": 450,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ]
+        },
+        "preferences": [],
+        "order": "none"
+      },
+      "notes": "Start after 19:00, district, theatre, sibling age and cap are hard."
+    },
+    {
+      "id": "a28",
+      "language": "tr",
+      "kind": "refuse",
+      "message": "Bu hafta sonu Ankara Çankaya'da veya Eskişehir'de gidebileceğimiz en iyi alternatif müzik konserleri hangileri?",
+      "outcome": "decline",
+      "notes": "Both requested cities are outside the Istanbul catalog."
+    },
+    {
+      "id": "a29",
+      "language": "en",
+      "kind": "refuse",
+      "message": "What were the highest-rated IMDb 8+ theatre plays in Kadıköy last weekend on October 17-18?",
+      "outcome": "decline",
+      "notes": "The explicit October 17?18 dates are past, and IMDb rating is unsupported."
+    },
+    {
+      "id": "a30",
+      "language": "tr",
+      "kind": "refuse",
+      "message": "Bana 30 Şubat'ta İstanbul'da Michelin yıldızlı bir restoranda tadım menüsü rezervasyonu yapar mısın?",
+      "outcome": "decline",
+      "notes": "February 30 is invalid, and restaurant reservations are outside scope."
+    }
+  ]
+}
