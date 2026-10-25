@@ -186,9 +186,9 @@ Tasks, in this order. Each task is one PR.
    place against these labels. "With children" is no longer always supported.
    This moves v2 step 4 into v1 because v1 correctness needs it.
 5. **Query embedding capacity (R5).** The Voyage free plan allows 3 requests a
-   minute. Searches above that rate fall back to word matching. Add a payment
-   method (the free token allowance stays) or cache query vectors. This needs
-   the user's decision.
+   minute. Searches above that rate fall back to word matching. The user
+   chose to stay on the free plan: cache query vectors by text and pace query
+   embedding requests below the limit in code.
 
 Acceptance:
 
@@ -342,7 +342,8 @@ checks still pass, and the per-request cost does not increase without approval.
   approved $1 cap. Private evidence: `gs://biplan-stg-efeblk-biplan-staging-data/
   evals/hardtest-2026-10-26/` (inputs, 60 raw responses, review files and
   verdicts). The user decided to rebuild request
-  understanding: Phase 1R.
+  understanding: Phase 1R. Phase 1R budget: $4 for Jev; Voyage stays on the
+  free plan.
 
 - 2026-10-23: The friends test is closed. It opened at about 15:08 UTC on
   2026-10-22 with `allUsers` invoker and `BIPLAN_PREVIEW_TESTING=true` on
