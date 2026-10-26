@@ -18,6 +18,7 @@
 !web/parser/fields.ts
 !web/parser/lexicon.ts
 !web/parser/parse-core.ts
+!web/parser/reader-v3.ts
 !web/parser/semantics.ts
 !web/parser/state.ts
 !web/public/
