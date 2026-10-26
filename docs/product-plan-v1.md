@@ -164,12 +164,17 @@ Tasks, in this order. Each task is one PR.
    an approved budget. Each later PR must improve this score and keep the
    Phase 1 checks. Results are scored by the live acceptance test below.
 2. **Hard and soft contract (R2).** Only these can be hard: date and time,
-   place, price, category, audience and age, and exclusions of these. Moods,
-   vibes, topics and formats are preferences. They affect ranking only.
+   place, price, category, a genre or topic that the message names as what
+   the event is ("caz konseri"), a checkable format (outdoors, seated,
+   wheelchair access), audience and age, and exclusions of these. Moods,
+   vibes ("caz barı havası") and subjective qualities are preferences. They
+   affect ranking only. (Corrected 2026-10-26: the approved golden set makes
+   named genres hard.)
    A hard atom needs explicit text and a clear confidence margin. Below the
    margin it becomes a preference. A request is never discarded as a whole:
    search with the confident atoms and ask only about the unclear one.
-3. **New request reader (R3).** Code proposes candidates and Jev selects
+3. **New request reader (R3, delivered with R2 as `web/parser/reader-v3.ts`).**
+   Code proposes candidates and Jev selects
    (TypeSafe cookbook pattern). Dates: code lists the concrete dates of the
    next 90 days with readable labels; Jev selects the dates the message
    means. Categories and topics: Jev judges want, exclude or not mentioned for
@@ -296,6 +301,10 @@ checks still pass, and the per-request cost does not increase without approval.
   providers. It takes 2–3 runs to refresh all Biletix pages.
 - Remove the span-first parser (`web/parser/parse-core.ts`, `extract.ts`,
   `gliner.ts`) and its tests after the field reader passes a staging human test.
+- Remove the field reader (`web/parser/fields.ts` question builder and
+  composition, keeping shared helpers) after reader v3 passes the Phase 1R
+  live test. The Phase 1 golden runner now uses reader v3, so its parser
+  cache needs one paid refill before the next scored replay.
 - Domain request model: after about 1,000 logged and reviewed requests, train
   a small model on the field reader's judgments and compare both on the same
   reviewed set. Switch only if it matches accuracy. Set a retention period for
@@ -326,6 +335,19 @@ checks still pass, and the per-request cost does not increase without approval.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-10-26: R2 and R3 delivered as reader v3 (default `INPUT_READER=v3`).
+  Plan evaluation, same fixtures and scoring: hard set 50/60 (field reader
+  21/60), 0 clear requests discarded (11), 0 wrong searches; golden set
+  36/40 (field reader 34/40), where 3 of the 4 differences are the new
+  audience rule (a request for a child adds the children audience). Tokens
+  per search: about 43k input (field reader about 31k). The evaluation used
+  920 paid parser calls: 42.7M input and 11.4M output tokens, about $1.75 at
+  the earlier input rate; the exact amount is on the TypeSafe dashboard.
+  This is more than the $1.50 planned for evaluation inside the $4 Phase 1R
+  budget, because reader v3 requests are larger than estimated. No more
+  evaluation runs are planned. Private caches: `gs://biplan-stg-efeblk-
+  biplan-staging-data/evals/plan-eval/2026-10-26-reader-v3/`.
 
 - 2026-10-26: R1 plan evaluation baseline, current field reader (`jev-1.13.0`):
   21 of 60 cases pass; 11 clear requests discarded; 0 wrong searches;

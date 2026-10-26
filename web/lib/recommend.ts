@@ -199,6 +199,7 @@ export interface Dependencies {
     ) => Promise<string[]>;
   };
   inputInterpreter?: 'rules' | 'jev-v1' | 'span-v2';
+  inputReader?: 'fields' | 'v3';
   spanInterpret?: typeof interpretSpanInput;
   interpret?: typeof interpretInput;
   pinCatalog?: (now: Date) => Promise<PinnedRecommendationCatalog | null>;
@@ -906,7 +907,7 @@ async function recommendSpan(
           ? { revision: previous.revision, plan: previous.plan, evidence: [] }
           : null,
       },
-      { config: deps.config },
+      { config: deps.config, reader: deps.inputReader ?? 'v3' },
     );
   } catch {
     return {

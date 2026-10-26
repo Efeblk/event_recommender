@@ -57,7 +57,7 @@ void test('initial recommendation runs through the production span transport wit
   const result = await recommend(validateInput({
     message: 'concert on 2026-10-03 under 600 TL', intentVersion: 2, filters: emptyFilters,
   }), {
-    now, config, inputInterpreter: 'span-v2', candidates: async () => [candidate],
+    now, config, inputInterpreter: 'span-v2', inputReader: 'fields', candidates: async () => [candidate],
     spanInterpret: (input, options) => interpretSpanInput(input, { ...options, fetcher: async (_url, init) => {
       fetches++;
       const body = init?.body;

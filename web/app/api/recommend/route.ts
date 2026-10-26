@@ -12,7 +12,7 @@ import {
 import { jevConfigFrom, rankWithJev } from '@/lib/jev';
 import { voyageConfigFrom, embedWithVoyage } from '@/lib/voyage';
 import { interpretSpanInput } from '@/lib/span-interpreter';
-import { inputInterpreterFrom } from '@/lib/interpreter-config';
+import { inputInterpreterFrom, inputReaderFrom } from '@/lib/interpreter-config';
 import { interpretInput } from '@/lib/input-interpreter';
 import { voyageVectorsFor } from '@/lib/voyage-index';
 import { catalogAllowsRecommendations } from '@/lib/catalog-readiness';
@@ -123,6 +123,7 @@ async function postWithinBudget(
     requestSignal.throwIfAborted();
     const config = jevConfigFrom(runtime());
     const inputInterpreter = inputInterpreterFrom(runtime(), Boolean(config));
+    const inputReader = inputReaderFrom(runtime());
     const embeddingConfig = voyageConfigFrom(runtime());
     const providerFetch = fetchWithSignal(requestSignal);
     const paid = Boolean(config || embeddingConfig);
@@ -214,6 +215,7 @@ async function postWithinBudget(
           interpretSpanInput(input, { ...options, fetcher: providerFetch }),
         )),
       inputInterpreter,
+      inputReader,
     });
     // Approved staging tests keep requests for parser evaluation; a failed
     // write never fails the search.

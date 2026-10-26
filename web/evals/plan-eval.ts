@@ -82,6 +82,25 @@ const VALID_KINDS = new Set<HardCaseKind>([
   'refuse',
 ]);
 
+/** The Phase 1 golden fixture as plan cases: every request expects a search. */
+export function fromGoldenFixture(value: {
+  referenceTime: string;
+  cases: { id: string; language: 'tr' | 'en'; message: string; expected: Plan; reviewSummary?: string }[];
+}): HardFixture {
+  return {
+    schemaVersion: 1,
+    name: 'golden-v1',
+    referenceTime: value.referenceTime,
+    timezone: 'Europe/Istanbul',
+    contract: 'phase-1 golden',
+    source: 'web/fixtures/golden-v1.json',
+    cases: value.cases.map((c) => ({
+      id: c.id, language: c.language, kind: 'combined', message: c.message,
+      outcome: 'search', expected: c.expected, notes: c.reviewSummary,
+    })),
+  };
+}
+
 export function validateHardFixture(value: unknown): HardFixture {
   if (!value || typeof value !== 'object' || Array.isArray(value))
     throw new Error('Invalid hard fixture.');
@@ -179,14 +198,18 @@ export function foldTurkishDiacritics(value: string): string {
     .replace(/[\u0300-\u036f]/g, '');
 }
 
+/** Equivalent atoms compare equal: days before the reference date cannot
+ * match an event, and the evidence treats per-person and per-ticket alike. */
+let referenceDay: string | null = null;
 function atomSignature(atom: Atom): string {
   const normalized: Record<string, unknown> =
     atom.kind === 'location'
-      ? {
-          ...atom,
-          name: foldTurkishDiacritics(atom.name).trim(),
-        }
-      : { ...atom };
+      ? { ...atom, name: foldTurkishDiacritics(atom.name).trim() }
+      : atom.kind === 'date' && referenceDay && atom.from < referenceDay
+        ? { ...atom, from: referenceDay }
+        : atom.kind === 'budget' && atom.basis === 'per_person'
+          ? { ...atom, basis: 'per_ticket' }
+          : { ...atom };
   const sortedEntries = Object.entries(normalized)
     .filter(([, val]) => val !== undefined)
     .sort(([a], [b]) => a.localeCompare(b));
@@ -276,7 +299,9 @@ function compareAgainstPlan(target: Plan, actual: Plan) {
 export function scoreCase(
   fixtureCase: HardCase,
   actual: ActualOutcome,
+  referenceDate: string | null = null,
 ): CaseScore {
+  referenceDay = referenceDate;
   const attachOutcome = (score: Omit<CaseScore, 'expectedOutcome'>): CaseScore => ({
     ...score,
     expectedOutcome: fixtureCase.outcome,

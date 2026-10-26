@@ -66,6 +66,15 @@ export const TOPIC_TERMS: Record<string, string[]> = {
   magic: ['sihirbazlik', 'illuzyon', 'magic'],
   philosophy: ['felsefe', 'philosophy'],
   astronomy: ['astronomi', 'astronomy'],
+  kids: ['cocuk oyunu', 'cocuk tiyatrosu', 'cocuk etkinligi', 'kids show', "children's play"],
+  horror: ['korku', 'horror', 'urkutucu', 'scary'],
+  comedy: ['komedi', 'comedy', 'gulduru'],
+  nightclub: ['gece kulubu', 'nightclub'],
+  bar: ['bar', 'pub'],
+  tasting: ['tadim', 'tadimi', 'tasting', 'tastings'],
+  food: ['yemek', 'food', 'mutfak'],
+  animation: ['animasyon', 'animation'],
+  dancing: ['dans gecesi', 'dans partisi', 'dance night', 'dance party', 'dancing'],
 };
 
 export const EXPERIENCE_TERMS: Record<string, string[]> = {
@@ -105,7 +114,7 @@ export const DISTRICTS = ['Adalar', 'Arnavutköy', 'Ataşehir', 'Avcılar', 'Ba�
 
 export const NEIGHBORHOODS = ['Moda', 'Taksim', 'Karaköy', 'Galata', 'Cihangir', 'Nişantaşı', 'Bebek', 'Ortaköy',
   'Etiler', 'Levent', 'Maslak', 'Bomonti', 'Harbiye', 'Mecidiyeköy', 'Kurtuluş', 'Feriköy', 'Tophane', 'Balat',
-  'Fener', 'Sultanahmet', 'Eminönü', 'Kuzguncuk', 'Çengelköy', 'Caddebostan', 'Suadiye', 'Bostancı', 'Fenerbahçe',
+  'Fener', 'Sultanahmet', 'Tarihi Yarımada', 'Eminönü', 'Kuzguncuk', 'Çengelköy', 'Caddebostan', 'Suadiye', 'Bostancı', 'Fenerbahçe',
   'Göztepe', 'Erenköy', 'Yeldeğirmeni', 'Bağdat Caddesi', 'İstiklal', 'Cevahir', 'Kozyatağı', 'Florya', 'Yeşilköy',
   'Emirgan', 'Arnavutköy Köyü', 'Rumelihisarı', 'Anadoluhisarı', 'Kanlıca', 'Tarabya', 'Zorlu', 'Kalamış',
   'Acıbadem', 'Altunizade', 'Teşvikiye', 'Gayrettepe', 'Esentepe', 'Pera', 'Şişhane', 'Tünel', 'Kumkapı',

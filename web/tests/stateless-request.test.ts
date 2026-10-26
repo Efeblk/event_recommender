@@ -54,7 +54,7 @@ void test('the production field reader and ranker receive one new request even f
   const config = { apiKey: 'test-only', model: 'jev-1.13.0' };
   const message = 'yarın tiyatro';
   const deps: Dependencies = {
-    now, config, inputInterpreter: 'span-v2', candidates: async () => events,
+    now, config, inputInterpreter: 'span-v2', inputReader: 'fields', candidates: async () => events,
     spanInterpret: (input, options) => {
       assert.equal(input.previousState, null);
       assert.equal(input.utterance, message);

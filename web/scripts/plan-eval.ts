@@ -5,6 +5,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import {
   conditionSignatures,
+  fromGoldenFixture,
   scoreCase,
   signatureKind,
   summarize,
@@ -16,6 +17,7 @@ import {
   type KindCounts,
   type PlanEvalSummary,
 } from '../evals/plan-eval.ts';
+import { inputReaderFrom, type InputReader } from '../lib/interpreter-config.ts';
 import { jevConfigFrom, type JevConfig } from '../lib/jev.ts';
 import { validateSearchPlan } from '../lib/plan-evidence.ts';
 import { validatePlanState } from '../lib/plan-state.ts';
@@ -48,6 +50,7 @@ export interface PlanEvalOutput {
   fixtureSha256: string;
   referenceTime: string;
   model: string;
+  reader: InputReader;
   mode: 'live' | 'offline';
   rows: PlanEvalRow[];
   summary: PlanEvalSummary & { errors: number };
@@ -328,6 +331,7 @@ export async function evaluateFixtureCase(
     timezone: 'Europe/Istanbul';
     config: JevConfig;
     transport: PlanEvalTransport;
+    reader?: InputReader;
     live?: boolean;
   },
 ): Promise<PlanEvalRow> {
@@ -345,6 +349,7 @@ export async function evaluateFixtureCase(
     const result = await interpretSpanInput(input, {
       config: options.config,
       fetcher: options.transport.fetcher,
+      reader: options.reader ?? 'fields',
     });
     if (result.status === 'accepted') {
       try {
@@ -380,7 +385,7 @@ export async function evaluateFixtureCase(
   return {
     id: item.id,
     actual,
-    score: scoreCase(item, actual),
+    score: scoreCase(item, actual, options.referenceDate),
   };
 }
 
@@ -390,6 +395,7 @@ export async function runPlanEval(options: {
   cacheDir: string;
   outputPath?: string;
   ledgerPath?: string;
+  reader?: InputReader;
   live?: boolean;
   budget?: PlanEvalBudget;
   onlyIds?: string[];
@@ -399,6 +405,7 @@ export async function runPlanEval(options: {
   wait?: (ms: number) => Promise<void>;
 }): Promise<PlanEvalOutput> {
   const live = Boolean(options.live);
+  const reader = options.reader ?? 'fields';
   const config =
     options.config ??
     (live
@@ -448,6 +455,7 @@ export async function runPlanEval(options: {
       timezone: options.fixture.timezone,
       config,
       transport,
+      reader,
       live,
     });
     rows.push(row);
@@ -470,6 +478,7 @@ export async function runPlanEval(options: {
     fixtureSha256: options.fixtureSha256,
     referenceTime: options.fixture.referenceTime,
     model: config.model,
+    reader,
     mode: live ? 'live' : 'offline',
     rows,
     summary,
@@ -494,14 +503,17 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
       fixture: { type: 'string', default: 'fixtures/hard-v1.json' },
       cache: { type: 'string', default: 'work/plan-eval/cache' },
       output: { type: 'string' },
+      reader: { type: 'string', default: 'fields' },
       live: { type: 'boolean', default: false },
       budget: { type: 'string' },
       only: { type: 'string' },
     },
   });
 
+  const reader = inputReaderFrom({ INPUT_READER: values.reader });
   const rawFixture = await readFile(resolve(root, values.fixture!), 'utf8');
-  const fixture = validateHardFixture(JSON.parse(rawFixture));
+  const parsed = JSON.parse(rawFixture);
+  const fixture = validateHardFixture('catalog' in parsed ? fromGoldenFixture(parsed) : parsed);
   const fixtureSha256 = sha256(rawFixture);
 
   const cacheDir = workPath(values.cache!);
@@ -528,6 +540,7 @@ export async function main(args = process.argv.slice(2)): Promise<void> {
     cacheDir,
     outputPath,
     ledgerPath,
+    reader,
     live: values.live,
     budget,
     onlyIds,
