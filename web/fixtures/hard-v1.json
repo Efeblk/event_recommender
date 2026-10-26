@@ -168,8 +168,8 @@
               "child": {
                 "type": "atom",
                 "atom": {
-                  "kind": "topic",
-                  "value": "lecture"
+                  "kind": "category",
+                  "value": "talk"
                 }
               }
             }
@@ -200,7 +200,7 @@
         ],
         "order": "none"
       },
-      "notes": "The lecture exclusion is hard; restorative, hands-on and outdoor qualities are preferences."
+      "notes": "\"Not a lecture\" excludes talks; hands-on and outdoors are preferences."
     },
     {
       "id": "c05",
@@ -218,6 +218,13 @@
                 "kind": "location",
                 "name": "Kadıköy",
                 "precision": "district"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "party",
+                "count": 1
               }
             }
           ]
@@ -254,7 +261,7 @@
         ],
         "order": "none"
       },
-      "notes": "Kadıköy is hard; social and solo-friendly qualities are preferences."
+      "notes": "Kadıköy is hard; going alone states one attendee; social qualities are preferences."
     },
     {
       "id": "c06",
@@ -368,7 +375,7 @@
               "atom": {
                 "kind": "time",
                 "from": "12:00",
-                "to": "18:00"
+                "to": "17:59"
               }
             }
           ]
@@ -915,7 +922,54 @@
         "preferences": [],
         "order": "none"
       },
-      "notes": "The three requested formats are alternatives; horror and scary content are excluded."
+      "notes": "The three requested formats are alternatives; horror and scary content are excluded.",
+      "alternatives": [
+        {
+          "hard": {
+            "type": "all",
+            "children": [
+              {
+                "type": "any",
+                "children": [
+                  {
+                    "type": "atom",
+                    "atom": {
+                      "kind": "category",
+                      "value": "exhibition"
+                    }
+                  },
+                  {
+                    "type": "atom",
+                    "atom": {
+                      "kind": "category",
+                      "value": "museum"
+                    }
+                  },
+                  {
+                    "type": "atom",
+                    "atom": {
+                      "kind": "category",
+                      "value": "tour"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "not",
+                "child": {
+                  "type": "atom",
+                  "atom": {
+                    "kind": "topic",
+                    "value": "horror"
+                  }
+                }
+              }
+            ]
+          },
+          "preferences": [],
+          "order": "none"
+        }
+      ]
     },
     {
       "id": "c18",
@@ -951,6 +1005,16 @@
                 "atom": {
                   "kind": "topic",
                   "value": "cooking"
+                }
+              }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "food"
                 }
               }
             }
@@ -1706,7 +1770,7 @@
               "atom": {
                 "kind": "time",
                 "from": "12:00",
-                "to": "18:00"
+                "to": "17:59"
               }
             }
           ]
@@ -1837,24 +1901,17 @@
                 "from": "18:00",
                 "to": "23:59"
               }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "electronic"
+              }
             }
           ]
         },
         "preferences": [
-          {
-            "type": "atom",
-            "atom": {
-              "kind": "topic",
-              "value": "rave"
-            }
-          },
-          {
-            "type": "atom",
-            "atom": {
-              "kind": "topic",
-              "value": "industrial techno"
-            }
-          },
           {
             "type": "atom",
             "atom": {
@@ -1872,7 +1929,7 @@
         ],
         "order": "none"
       },
-      "notes": "Friday is 30 October; rave and techno are genre preferences, with late-night dance intent."
+      "notes": "This Friday night, electronic music (rave/techno named as the event); energy ranks."
     },
     {
       "id": "a08",
@@ -1933,7 +1990,69 @@
         ],
         "order": "none"
       },
-      "notes": "Historical Peninsula resolves to Fatih; tour is required and themes are preferences."
+      "notes": "Historical Peninsula resolves to Fatih; tour is required and themes are preferences.",
+      "alternatives": [
+        {
+          "hard": {
+            "type": "all",
+            "children": [
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "location",
+                  "name": "Fatih",
+                  "precision": "district"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "tour"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "history"
+                }
+              }
+            ]
+          },
+          "preferences": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "historical"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "cultural"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "walking tour"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "story"
+              }
+            }
+          ],
+          "order": "none"
+        }
+      ]
     },
     {
       "id": "a09",
@@ -2148,21 +2267,20 @@
                 "currency": "TRY",
                 "basis": "per_ticket"
               }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "experience",
+                "value": "outdoors"
+              }
             }
           ]
         },
-        "preferences": [
-          {
-            "type": "atom",
-            "atom": {
-              "kind": "experience",
-              "value": "outdoors"
-            }
-          }
-        ],
+        "preferences": [],
         "order": "none"
       },
-      "notes": "Two weeks later Sunday is 8 November; outdoor format is a preference."
+      "notes": "Sunday 8 Nov, Sarıyer, an open-air event (a checkable format), ≤1200 TL."
     },
     {
       "id": "a13",
@@ -2227,21 +2345,20 @@
                 "currency": "TRY",
                 "basis": "per_ticket"
               }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "classical"
+              }
             }
           ]
         },
-        "preferences": [
-          {
-            "type": "atom",
-            "atom": {
-              "kind": "topic",
-              "value": "classical music"
-            }
-          }
-        ],
+        "preferences": [],
         "order": "none"
       },
-      "notes": "Wednesday or Thursday dates, evening, place, concert and cap are explicit.",
+      "notes": "Wed or Thu night, Ataşehir, classical concert (a named genre), ≤900 TL.",
       "alternatives": [
         {
           "hard": {
@@ -2287,18 +2404,17 @@
                   "currency": "TRY",
                   "basis": "per_ticket"
                 }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "classical"
+                }
               }
             ]
           },
-          "preferences": [
-            {
-              "type": "atom",
-              "atom": {
-                "kind": "topic",
-                "value": "classical music"
-              }
-            }
-          ],
+          "preferences": [],
           "order": "none"
         }
       ]
@@ -2374,7 +2490,74 @@
         ],
         "order": "none"
       },
-      "notes": "First Friday is 6 November; musical/cabaret describes formats not represented exactly by categories."
+      "notes": "First Friday is 6 November; musical/cabaret describes formats not represented exactly by categories.",
+      "alternatives": [
+        {
+          "hard": {
+            "type": "all",
+            "children": [
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "date",
+                  "from": "2026-11-06",
+                  "to": "2026-11-06"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "time",
+                  "from": "18:00",
+                  "to": "23:59"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "location",
+                  "name": "Şişli",
+                  "precision": "district"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "budget",
+                  "comparison": "lte",
+                  "amount": 500,
+                  "currency": "TRY",
+                  "basis": "per_ticket"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "show"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "musical"
+                }
+              }
+            ]
+          },
+          "preferences": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "cabaret"
+              }
+            }
+          ],
+          "order": "none"
+        }
+      ]
     },
     {
       "id": "a15",
@@ -2553,6 +2736,16 @@
                   "value": "ceramics"
                 }
               }
+            },
+            {
+              "type": "not",
+              "child": {
+                "type": "atom",
+                "atom": {
+                  "kind": "topic",
+                  "value": "food"
+                }
+              }
             }
           ]
         },
@@ -2655,28 +2848,6 @@
               }
             },
             {
-              "type": "not",
-              "child": {
-                "type": "atom",
-                "atom": {
-                  "kind": "location",
-                  "name": "Moda",
-                  "precision": "neighborhood"
-                }
-              }
-            },
-            {
-              "type": "not",
-              "child": {
-                "type": "atom",
-                "atom": {
-                  "kind": "location",
-                  "name": "Bahariye",
-                  "precision": "neighborhood"
-                }
-              }
-            },
-            {
               "type": "atom",
               "atom": {
                 "kind": "budget",
@@ -2691,7 +2862,7 @@
         "preferences": [],
         "order": "none"
       },
-      "notes": "November, Kadıköy theatre and cap are hard; Moda and Bahariye are excluded locations."
+      "notes": "November Kadıköy theatre ≤650 TL. Excluding Moda/Bahariye needs neighbourhood data (R4); not hard yet."
     },
     {
       "id": "a20",
@@ -2748,28 +2919,20 @@
                 "currency": "TRY",
                 "basis": "per_ticket"
               }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "rap"
+              }
             }
           ]
         },
-        "preferences": [
-          {
-            "type": "atom",
-            "atom": {
-              "kind": "topic",
-              "value": "rap"
-            }
-          },
-          {
-            "type": "atom",
-            "atom": {
-              "kind": "topic",
-              "value": "hip hop"
-            }
-          }
-        ],
+        "preferences": [],
         "order": "none"
       },
-      "notes": "Saturday, either district, concert and cap are hard; rap/hip-hop is preference genre."
+      "notes": "This Saturday, Beşiktaş or Şişli, rap concert (a named genre), ≤400 TL."
     },
     {
       "id": "a21",
@@ -2804,16 +2967,16 @@
                   "type": "atom",
                   "atom": {
                     "kind": "location",
-                    "name": "Levent",
-                    "precision": "neighborhood"
+                    "name": "Beşiktaş",
+                    "precision": "district"
                   }
                 },
                 {
                   "type": "atom",
                   "atom": {
                     "kind": "location",
-                    "name": "Maslak",
-                    "precision": "neighborhood"
+                    "name": "Sarıyer",
+                    "precision": "district"
                   }
                 }
               ]
@@ -2851,11 +3014,123 @@
               "kind": "topic",
               "value": "after work"
             }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "location",
+              "name": "Levent",
+              "precision": "neighborhood"
+            }
+          },
+          {
+            "type": "atom",
+            "atom": {
+              "kind": "location",
+              "name": "Maslak",
+              "precision": "neighborhood"
+            }
           }
         ],
         "order": "none"
       },
-      "notes": "Thursday evening, either named neighborhood, workshop and cap are explicit."
+      "notes": "Events record districts: Levent (Beşiktaş) or Maslak (Sarıyer) as hard districts; the neighbourhoods rank. Levent spans Beşiktaş and Şişli; either is accepted.",
+      "alternatives": [
+        {
+          "hard": {
+            "type": "all",
+            "children": [
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "date",
+                  "from": "2026-10-29",
+                  "to": "2026-10-29"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "time",
+                  "from": "18:00",
+                  "to": "23:59"
+                }
+              },
+              {
+                "type": "any",
+                "children": [
+                  {
+                    "type": "atom",
+                    "atom": {
+                      "kind": "location",
+                      "name": "Şişli",
+                      "precision": "district"
+                    }
+                  },
+                  {
+                    "type": "atom",
+                    "atom": {
+                      "kind": "location",
+                      "name": "Sarıyer",
+                      "precision": "district"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "workshop"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "budget",
+                  "comparison": "lte",
+                  "amount": 1500,
+                  "currency": "TRY",
+                  "basis": "per_ticket"
+                }
+              }
+            ]
+          },
+          "preferences": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "chill"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "after work"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Levent",
+                "precision": "neighborhood"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "location",
+                "name": "Maslak",
+                "precision": "neighborhood"
+              }
+            }
+          ],
+          "order": "none"
+        }
+      ]
     },
     {
       "id": "a22",
@@ -2880,7 +3155,7 @@
               "atom": {
                 "kind": "time",
                 "from": "12:00",
-                "to": "18:00"
+                "to": "17:59"
               }
             },
             {
@@ -2993,7 +3268,73 @@
         ],
         "order": "none"
       },
-      "notes": "Next weekend and Kadıköy concert are hard; rock/metal and approximate budget are preferences."
+      "notes": "Next weekend and Kadıköy concert are hard; rock/metal and approximate budget are preferences.",
+      "alternatives": [
+        {
+          "hard": {
+            "type": "all",
+            "children": [
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "date",
+                  "from": "2026-11-07",
+                  "to": "2026-11-08"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "location",
+                  "name": "Kadıköy",
+                  "precision": "district"
+                }
+              },
+              {
+                "type": "atom",
+                "atom": {
+                  "kind": "category",
+                  "value": "concert"
+                }
+              }
+            ]
+          },
+          "preferences": [
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "rock"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "metal"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "high energy"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "budget",
+                "comparison": "approx",
+                "amount": 800,
+                "currency": "TRY",
+                "basis": "per_ticket"
+              }
+            }
+          ],
+          "order": "none"
+        }
+      ]
     },
     {
       "id": "a24",
@@ -3085,6 +3426,21 @@
                 "currency": "TRY",
                 "basis": "group_total"
               }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "time",
+                "from": "18:00",
+                "to": "23:59"
+              }
+            },
+            {
+              "type": "atom",
+              "atom": {
+                "kind": "topic",
+                "value": "pop"
+              }
             }
           ]
         },
@@ -3100,20 +3456,13 @@
             "type": "atom",
             "atom": {
               "kind": "topic",
-              "value": "turkish pop"
-            }
-          },
-          {
-            "type": "atom",
-            "atom": {
-              "kind": "topic",
               "value": "night"
             }
           }
         ],
         "order": "none"
       },
-      "notes": "Autumn 2026 from the reference date through November; two-person total budget."
+      "notes": "Autumn until 30 Nov, a night event, pop (a named genre), two people, total ≤1000 TL; 80s ranks."
     },
     {
       "id": "a26",

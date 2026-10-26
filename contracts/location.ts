@@ -18,7 +18,7 @@ const NEIGHBORHOODS: Record<string, Place> = {
   moda:asia('kadikoy'), taksim:europe('beyoglu'), karakoy:europe('beyoglu'), galata:europe('beyoglu'), cihangir:europe('beyoglu'),
   nisantasi:europe('sisli'), bebek:europe('besiktas'), ortakoy:europe('besiktas'), etiler:europe('besiktas'), levent:europe(),
   maslak:europe('sariyer'), bomonti:europe('sisli'), harbiye:europe('sisli'), mecidiyekoy:europe('sisli'), kurtulus:europe('sisli'),
-  ferikoy:europe('sisli'), tophane:europe('beyoglu'), balat:europe('fatih'), fener:europe('fatih'), sultanahmet:europe('fatih'),
+  ferikoy:europe('sisli'), tophane:europe('beyoglu'), balat:europe('fatih'), fener:europe('fatih'), sultanahmet:europe('fatih'), 'tarihi yarimada':europe('fatih'),
   eminonu:europe('fatih'), kuzguncuk:asia('uskudar'), cengelkoy:asia('uskudar'), caddebostan:asia('kadikoy'), suadiye:asia('kadikoy'),
   bostanci:asia('kadikoy'), fenerbahce:asia('kadikoy'), goztepe:asia('kadikoy'), erenkoy:asia('kadikoy'), yeldegirmeni:asia('kadikoy'),
   'bagdat caddesi':asia(), istiklal:europe('beyoglu'), cevahir:europe('sisli'), kozyatagi:asia('kadikoy'), florya:europe('bakirkoy'),

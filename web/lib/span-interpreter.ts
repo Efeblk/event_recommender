@@ -2,10 +2,11 @@ import { withDeadline } from './deadline.ts';
 import type { JevConfig } from './jev.ts';
 import type { ParserInput } from '../parser/contract.ts';
 import { buildFieldRequest, composeFields } from '../parser/fields.ts';
+import { buildReaderRequest, composeReader } from '../parser/reader-v3.ts';
 import type { JevResponse, ParseResult } from '../parser/parse-core.ts';
 
 const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
-const MAX_REQUEST_BYTES = 100_000;
+const MAX_REQUEST_BYTES = 150_000;
 const MAX_RESPONSE_BYTES = 200_000;
 const UNAVAILABLE = 'Span interpreter unavailable.';
 
@@ -63,10 +64,11 @@ export async function interpretSpanInput(
     config: JevConfig | null;
     fetcher?: typeof fetch;
     timeoutMs?: number;
+    reader?: 'fields' | 'v3';
   },
 ): Promise<ParseResult> {
-  // The field reader asks Jev for every supported field of the whole message.
-  const built = buildFieldRequest(input);
+  const useV3 = options.reader === 'v3';
+  const built = useV3 ? buildReaderRequest(input) : buildFieldRequest(input);
   try {
     const config = options.config;
     if (!config?.apiKey.trim() || !/^jev-[a-z0-9.-]+$/u.test(config.model))
@@ -101,7 +103,9 @@ export async function interpretSpanInput(
       },
     );
     if (!hasValidEnvelope(value)) throw new Error(UNAVAILABLE);
-    const result = composeFields(input, built, value);
+    const result = useV3
+      ? composeReader(input, built as ReturnType<typeof buildReaderRequest>, value)
+      : composeFields(input, built as ReturnType<typeof buildFieldRequest>, value);
     if (
       result.status === 'unsupported' &&
       result.reason === 'invalid or incomplete provider judgments'

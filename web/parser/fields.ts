@@ -76,7 +76,7 @@ const targetsIn = (text: string, terms: Record<string, string[]>) => {
  * Return a clause only when punctuation or contrast makes the target's scope
  * explicit. Ambiguous lists keep the full message for the model to resolve.
  */
-function scopedTargetEvidence(message: string, terms: Record<string, string[]>): Record<string, string> {
+export function scopedTargetEvidence(message: string, terms: Record<string, string[]>): Record<string, string> {
   const folded = fold(message);
   const boundary = /[,;.!?]+|\b(?:ama|fakat|ancak|lakin|but|however|yet)\b/gu;
   const clauses: Array<{ text: string; targets: string[]; role: boolean; coordinated: boolean }> = [];

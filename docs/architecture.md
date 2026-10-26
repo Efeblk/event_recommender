@@ -43,13 +43,22 @@ The API reads only `message`. It ignores legacy history, state, filters,
 clarification text and excluded IDs. The server selects the parser protocol.
 Every request starts a new plan. The page sends only the current message.
 
-- `web/parser/fields.ts` and `web/lib/span-interpreter.ts` interpret Turkish
-  and English requests (`span-v2` plan protocol). One Jev request reads every
-  supported field from the whole message: whether it is stated, and its parts
-  (TypeSafe date-extraction and function-calling cookbooks). Code does the
-  calendar math, the place hierarchy and the plan composition. Amounts and
-  ages are selected from numbers found in the text. A stated field that code
-  cannot resolve returns a clarification, never a search without it.
+- `web/parser/reader-v3.ts` and `web/lib/span-interpreter.ts` interpret Turkish
+  and English requests (`span-v2` plan protocol, `INPUT_READER=v3` by default;
+  `fields` selects the older `web/parser/fields.ts`). One Jev request answers
+  independent questions over candidates that code proposes: the next 120 days
+  with their relations ("Kasım'ın 1. cuması"), months and seasons, every number
+  occurrence with its nearby words, place lists, event types (with the clause
+  that names each) and the topics the message uses. Jev selects; code does the
+  calendar math, the place hierarchy and the plan composition (TypeSafe value
+  extraction and date-extraction cookbooks). A stated field that code cannot
+  resolve returns a clarification for that field, never a search without it.
+- Hard conditions are checkable facts: date, time, place, price, event type,
+  a named genre or topic, a checkable format (outdoors, seated, wheelchair),
+  attendee ages, children or family as the audience, and exclusions of these.
+  An exclusion needs a negation in the clause that names the item. Moods,
+  vibes and subjective qualities only rank. A judgment without a clear margin
+  becomes a preference.
   Earlier requests do not affect parsing, retrieval or ranking. To change a
   request, edit the full message and submit it as a new search.
 - Code resolves exact dates in Europe/Istanbul. `web/lib/plan-evidence.ts`

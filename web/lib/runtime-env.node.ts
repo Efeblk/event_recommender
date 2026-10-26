@@ -6,6 +6,7 @@ export interface RuntimeEnv extends NodeJS.ProcessEnv {
   VOYAGE_MODEL?: string;
   VOYAGE_DIMENSIONS?: string;
   INPUT_INTERPRETER?: string;
+  INPUT_READER?: string;
   BIPLAN_PREVIEW_TESTING?: string;
 }
 

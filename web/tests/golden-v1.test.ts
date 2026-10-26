@@ -367,7 +367,7 @@ void test('a full production parser/retrieval/Jev replay uses three cached trans
           config,
           embeddingConfig: embedding,
           candidates: async () => [event],
-          inputInterpreter: 'span-v2',
+          inputInterpreter: 'span-v2', inputReader: 'fields',
           vectors: async () => new Map([[event.id, vector]]),
           spanInterpret: (input, options) =>
             interpretSpanInput(input, { ...options, fetcher }),
