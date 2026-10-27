@@ -63,6 +63,14 @@ Every request starts a new plan. The page sends only the current message.
   request, edit the full message and submit it as a new search.
 - Code resolves exact dates in Europe/Istanbul. `web/lib/plan-evidence.ts`
   checks hard constraints against catalog evidence.
+- Collection-time labels (`web/lib/event-labels.ts`) give each document an
+  audience, an attendee age rule, the place of the activity, a category and
+  format probabilities, with supporting source text. The snapshot store
+  attaches them to search candidates by label hash. Plan evidence uses them:
+  "with children" and "family" need a child-suitable event, attendee ages use
+  the labeled age rule, an activity outside Istanbul or online never matches,
+  and a labeled district, category or outdoor/seated format fills gaps in the
+  provider fields. An unlabeled event keeps the text checks.
 - `web/lib/hybrid.ts` combines BM25 word matching and Voyage vector matching.
   Retrieval uses the full eligible catalog before the shortlist.
 - The shortlist contains at most 16 distinct candidates. `web/lib/jev.ts`
@@ -80,7 +88,8 @@ event IDs. It stores no IP address or identifier. The page tells testers.
 These entries are the evaluation and training data for the request parser.
 
 Search consumes the prepared catalog. It does not collect provider pages or
-enrich the full catalog.
+enrich the full catalog. Labeling runs in the collector workflow
+([GCP collection](gcp-collector.md#event-labeling-phase-1r-r4)).
 The catalog remains searchable when the vector index is incomplete.
 Semantic coverage requires cached vectors for each current document.
 Optional Voyage indexing needs a separate approved budget and bounded window.

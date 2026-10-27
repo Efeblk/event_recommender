@@ -3,6 +3,7 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { createGcpStore } from '../lib/store.gcp.ts';
 import { voyageDocumentText } from '../lib/voyage.ts';
+import { labelHash, unknownLabels } from '../lib/event-labels.ts';
 import type {
   BlobStore,
   ControlStore,
@@ -1159,4 +1160,26 @@ await test('the durable checkpoint omits provider listings that identity still u
   assert.equal(saved.events[0].providerListing, undefined);
   assert.equal(saved.events[0].id, listed.id);
   assert.equal((await f.store.candidates(emptyFilters)).length, 1);
+});
+
+await test('event labels are saved by label hash and attached to search candidates', async () => {
+  const f = fixture();
+  const sync = await syncLease(f.store);
+  await f.store.importPages([page(event())], sync);
+  await f.store.publishCheckpoint(report(), sync);
+  const [published] = await f.store.candidates(emptyFilters);
+  assert.equal(published.labels, undefined);
+  const hash = await labelHash(published);
+  const labels = { ...unknownLabels(), audience: 'children' as const };
+  await assert.rejects(f.store.saveEventLabels!([{ hash, labels }], sync), /Wrong storage lease/);
+  const lease = await f.store.acquireLease('label_index_lock');
+  assert.ok(lease);
+  await assert.rejects(
+    f.store.saveEventLabels!([{ hash, labels: { ...labels, audience: 'nobody' } as never }], lease),
+    /Invalid label entry/,
+  );
+  await f.store.saveEventLabels!([{ hash, labels }], lease);
+  assert.deepEqual([...(await f.store.eventLabelsByHash!([hash, 'f'.repeat(64)])).keys()], [hash]);
+  const [labeled] = await f.makeStore().candidates(emptyFilters);
+  assert.equal(labeled.labels?.audience, 'children');
 });

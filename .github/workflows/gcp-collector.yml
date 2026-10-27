@@ -583,7 +583,7 @@ jobs:
     if: (github.event.schedule == '47 */3 * * *' || needs.dispatch_mode.outputs.mode == 'index') && vars.GCP_STAGING_INDEXING_ENABLED == 'true'
     environment: gcp-staging-collector
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 100
     permissions:
       contents: read
       id-token: write
@@ -631,12 +631,45 @@ jobs:
             *) exit "$status" ;;
           esac
 
+      - id: auth_label
+        name: Refresh private HTTP identity for event labeling
+        if: vars.GCP_STAGING_LABELING_TOKEN_CAP != ''
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_COLLECTOR_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_COLLECTOR_SERVICE_ACCOUNT }}
+          token_format: id_token
+          id_token_audience: ${{ vars.BIPLAN_URL }}
+          id_token_include_email: true
+
+      - name: Label changed event documents within the durable token cap
+        if: vars.GCP_STAGING_LABELING_TOKEN_CAP != ''
+        timeout-minutes: 40
+        env:
+          GCP_STAGING_LABELING_TOKEN_CAP: ${{ vars.GCP_STAGING_LABELING_TOKEN_CAP }}
+          SYNC_TOKEN: ${{ secrets.SYNC_TOKEN }}
+          SERVERLESS_ID_TOKEN: ${{ steps.auth_label.outputs.id_token }}
+        run: |
+          set -euo pipefail
+          mkdir -p web/work
+          set +e
+          node web/scripts/label-collected-events.mjs --max-minutes 35 --report web/work/event-labels.jsonl
+          status=$?
+          set -e
+          case "$status" in
+            0) ;;
+            2) echo "::notice title=Labeling continues next run::The run stopped at its time or token limit with documents still pending." ;;
+            *) exit "$status" ;;
+          esac
+
       - name: Save indexing report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gcp-index-staging-${{ github.run_id }}
-          path: web/work/collection-embedding-index.jsonl*
+          path: |
+            web/work/collection-embedding-index.jsonl*
+            web/work/event-labels.jsonl
           if-no-files-found: warn
           retention-days: 7
 
