@@ -116,6 +116,51 @@ const result = (status: PlanEvidenceStatus, evidence: string[] = []) => ({
   status,
   evidence,
 });
+/** Collection-time labels (R4) need this probability to support a format. */
+const LABEL_SUPPORT = 0.7;
+const CHILD_SUITABLE = 0.65;
+const CHILD_UNSUITABLE = 0.25;
+const labelEvidence = (...texts: Array<string | undefined>) =>
+  texts.filter((text): text is string => Boolean(text));
+
+/** A child attends: children, family and child-age requests (R4 labels). */
+function childAudience(event: EventRecord) {
+  const labels = event.labels;
+  if (!labels) {
+    const check = checkPredicateEvidence(event, 'audience', 'family_friendly');
+    return result(check.status === 'supported' ? 'supported' : 'unknown', check.evidence);
+  }
+  const evidence = labelEvidence(labels.evidence.audience, labels.evidence.age);
+  if (labels.audience === 'adult_only' || (labels.minAge !== null && labels.minAge >= 13))
+    return result('contradicted', evidence);
+  if (labels.audience === 'children' || labels.audience === 'family')
+    return result('supported', evidence);
+  // A general event that states a child age rule ("6 yaş ve üzeri") admits children.
+  if ((labels.minAge !== null && labels.minAge <= 10) || labels.childSuitable >= CHILD_SUITABLE)
+    return result('supported', evidence.length ? evidence : [`child-suitable ${labels.childSuitable.toFixed(2)}`]);
+  if (labels.childSuitable <= CHILD_UNSUITABLE)
+    return result('contradicted', [`child-suitable ${labels.childSuitable.toFixed(2)}`]);
+  return result('unknown', evidence);
+}
+
+function ageResult(event: EventRecord, years: number) {
+  const labels = event.labels;
+  if (labels && (labels.minAge !== null || labels.maxAge !== null))
+    return result(
+      (labels.minAge ?? 0) <= years && years <= (labels.maxAge ?? 120) ? 'supported' : 'contradicted',
+      labelEvidence(labels.evidence.age),
+    );
+  if (labels?.audience === 'adult_only' && years < 18)
+    return result('contradicted', labelEvidence(labels.evidence.audience));
+  const stated = checkAgeEvidence(event, years);
+  if (stated.status !== 'unknown' || stated.evidence.length || !labels) return stated;
+  // No stated age rule: a child needs a child-suitable event; an adult needs
+  // an event that is not made for children.
+  if (years < 13) return childAudience(event);
+  return labels.audience === 'general' || labels.audience === 'family' || labels.audience === 'adult_only'
+    ? result('supported', labelEvidence(labels.evidence.audience))
+    : result('unknown');
+}
 
 function atomResult(
   event: EventRecord,
@@ -124,15 +169,19 @@ function atomResult(
   partyCount: number | null,
 ) {
   switch (atom.kind) {
-    case 'category':
+    case 'category': {
+      // The provider label and the collection-time label are both evidence.
+      const labels = [event.category, event.labels?.category]
+        .filter((label): label is Category => canonicalCategories.has(label as Category));
       return result(
-        !canonicalCategories.has(event.category as Category)
+        !labels.length
           ? 'unknown'
-          : categoryMap[atom.value].includes(event.category as Category)
+          : labels.some((label) => categoryMap[atom.value].includes(label))
             ? 'supported'
             : 'contradicted',
-        [event.category],
+        [...new Set(labels.length ? labels : [event.category])],
       );
+    }
     case 'date': {
       if (event.attendanceTiming?.kind === 'admission_window') {
         const from = istanbulDay.format(new Date(event.attendanceTiming.validFrom));
@@ -184,10 +233,15 @@ function atomResult(
       return result(ok ? 'supported' : 'contradicted', [`${price} TRY`]);
     }
     case 'location': {
+      const place = event.labels?.place;
+      if (place === 'other_city' || place === 'online')
+        return result('contradicted', labelEvidence(place, event.labels?.evidence.place));
       if (atom.precision === 'neighborhood') return result('unknown');
       if (atom.precision === 'side') {
         const wanted = sideNamed(normalize(atom.name));
-        const actual = eventLocation(event);
+        let actual = eventLocation(event);
+        if (!actual.side && event.labels?.district)
+          actual = eventLocation({ ...event, district: event.labels.district });
         if (!wanted || !actual.side) return result('unknown');
         return result(actual.side === wanted ? 'supported' : 'contradicted', [
           event.district || event.address || event.venue,
@@ -203,6 +257,13 @@ function atomResult(
         isEligible(event, { ...emptyFilters, district: eventDistrict }, now)
       )
         return result('contradicted', [eventDistrict]);
+      // The provider gave no district: use the labeled district of the activity.
+      const labeled = event.labels?.district;
+      if (labeled)
+        return result(
+          normalize(labeled) === normalize(atom.name) ? 'supported' : 'contradicted',
+          labelEvidence(labeled, event.labels?.evidence.place),
+        );
       return result('unknown', event.district ? [event.district] : []);
     }
     case 'topic': {
@@ -236,6 +297,8 @@ function atomResult(
           .filter((part) => OPEN_AIR.test(normalize(part)))
           .slice(0, 3)
           .map((part) => part.slice(0, 240));
+        if (!evidence.length && (event.labels?.formats.outdoor ?? 0) >= LABEL_SUPPORT)
+          return result('supported', labelEvidence(event.labels!.evidence.format, 'labeled outdoor'));
         return result(evidence.length ? 'supported' : 'unknown', evidence);
       }
       const predicate = experiencePredicates[atom.value];
@@ -245,6 +308,8 @@ function atomResult(
         predicate.kind,
         predicate.value,
       );
+      if (atom.value === 'seated' && check.status === 'unknown' && (event.labels?.formats.seated ?? 0) >= LABEL_SUPPORT)
+        return result('supported', labelEvidence(event.labels!.evidence.format, 'labeled seated'));
       return result(check.status, check.evidence);
     }
     case 'content': {
@@ -256,10 +321,14 @@ function atomResult(
       return result(check.status, check.evidence);
     }
     case 'party':
-    case 'companion':
       return result('supported');
+    case 'companion':
+      // "With children" needs a child-suitable event; partner and friends are context.
+      return atom.value === 'children' || atom.value === 'family'
+        ? childAudience(event)
+        : result('supported');
     case 'age':
-      return checkAgeEvidence(event, atom.years);
+      return ageResult(event, atom.years);
     case 'mood':
       return result('unknown');
   }
@@ -336,6 +405,10 @@ export function evaluatePlan(
   now = new Date(),
 ): PlanEvaluation {
   const evidence = evaluate(event, plan.hard, now, planPartyCount(plan));
+  // v1 returns Istanbul events: a labeled activity elsewhere never matches.
+  const place = event.labels?.place;
+  if (place === 'other_city' || place === 'online')
+    return { status: 'contradicted', evidence };
   return { status: evidence.status, evidence };
 }
 

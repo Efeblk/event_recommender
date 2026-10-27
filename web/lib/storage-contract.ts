@@ -1,3 +1,4 @@
+import type { EventLabels } from './event-labels.ts';
 import type { CheckpointPointer, CollectionReport } from './operations.ts';
 import type { EventRecord, Filters } from './types.ts';
 import type { SourceQuarantineReason } from '../../contracts/source-evidence.ts';
@@ -123,6 +124,12 @@ export interface HighLevelStore {
   saveVoyageVectors(
     profile: string,
     entries: VectorEntry[],
+    lease: Lease,
+  ): Promise<void>;
+  /** Event labels by label hash (Phase 1R, R4). Only the snapshot store has them. */
+  eventLabelsByHash?(hashes: string[]): Promise<Map<string, EventLabels>>;
+  saveEventLabels?(
+    entries: { hash: string; labels: EventLabels }[],
     lease: Lease,
   ): Promise<void>;
 }

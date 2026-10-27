@@ -1,3 +1,4 @@
+import type { EventLabels } from './event-labels.ts';
 import type { PlanState } from './plan-state.ts';
 import type { ProviderListingV1 } from '../../contracts/listing.ts';
 import type { IntentState } from './input-state.ts';
@@ -90,6 +91,8 @@ export interface EventRecord {
   canonicalProductionKey?: string;
   canonicalShowKey?: string;
   preparedSearch?: PreparedSearchV1;
+  /** Cached collection-time labels (Phase 1R, R4); absent until labeled. */
+  labels?: EventLabels;
   checkedAt: string;
 }
 export interface Filters {

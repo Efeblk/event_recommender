@@ -12,6 +12,8 @@ import { embeddingCacheKey, type EmbeddingConfig } from './providers.ts';
 import type { EventRecord } from './types.ts';
 import type { HighLevelStore } from './storage-contract.ts';
 import { indexAuditedBatch, type AuditedIndexInput } from './audited-index.ts';
+import { labelEventBatch, labelStatus, type LabelIndexInput } from './event-label-index.ts';
+import type { JevConfig } from './jev.ts';
 import { voyageConfigFrom, voyageCacheKey, type VoyageConfig } from './voyage.ts';
 import type { Lease } from './storage-contract.ts';
 import { createPostgresCatalog } from './postgres-catalog.node.ts';
@@ -79,6 +81,20 @@ export async function auditedVoyageIndex(
       (v): v is string => Boolean(v),
     ),
   });
+}
+export async function eventLabelIndex(
+  config: JevConfig,
+  input: LabelIndexInput,
+  lease: Lease,
+) {
+  return labelEventBatch(config, input, lease, {
+    control: (await storageClients()).control,
+    store: await store(),
+    namespace: env.DEPLOYMENT_ENV ?? '',
+  });
+}
+export async function eventLabelIndexStatus() {
+  return labelStatus(await store(), (await storageClients()).control, env.DEPLOYMENT_ENV ?? '', new Date());
 }
 export const candidates: HighLevelStore['candidates'] = async (...args) =>
   (await store()).candidates(...args);

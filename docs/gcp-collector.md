@@ -245,3 +245,28 @@ private bucket. These records must distinguish publication success, embedding
 coverage, skipped indexing and failed/partial attempts. This feature has offline
 fault and cost-bound tests; its later deployed revision needs its own live
 evidence and cannot inherit qualification claims from an earlier image.
+
+## Event labeling (Phase 1R, R4)
+
+The `index_only` job labels event documents after indexing when the repository
+variable `GCP_STAGING_LABELING_TOKEN_CAP` is set. Unset it to stop labeling.
+
+| Variable | Required value |
+| --- | --- |
+| `GCP_STAGING_LABELING_TOKEN_CAP` | Integer 1–40000000: the durable cap on all Jev tokens for the label profile, across all runs |
+
+`web/scripts/label-collected-events.mjs` repeats `POST /api/admin/labels` for
+at most 35 minutes. Each request labels at most 48 documents within about 2
+minutes (6 parallel Jev calls). One Jev System One request per document labels
+the audience, attendee age rule, place, category and format
+(`web/lib/event-labels.ts`). Labels are cached by the hash of the label input,
+so unchanged documents cost nothing.
+
+Firestore `biplan/staging/eventLabels/ledger` reserves 9000 tokens per call
+before the call and settles the reported usage after it. A failed call keeps
+its reservation charged and halts the ledger. The CLI exits 1 on an HTTP error
+and 2 at the time or token limit. There are no retries. After you review a
+halt, run the script once with `--resume`. An invalid answer set is stored as
+unknown labels, so it is not paid for again. `GET /api/admin/labels` returns
+the document, labeled and pending counts and the ledger. The workflow saves
+`web/work/event-labels.jsonl` with the indexing report.

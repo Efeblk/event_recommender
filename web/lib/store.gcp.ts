@@ -11,6 +11,7 @@ import {
 import { validVector } from './providers.ts';
 import { emptyFilters, type EventRecord } from './types.ts';
 import { voyageDocumentText } from './voyage.ts';
+import { EVENT_LABEL_PROFILE, labelHash, validLabels, type EventLabels } from './event-labels.ts';
 import { validateProviderListing } from '../../contracts/listing.ts';
 import type {
   BlobStore,
@@ -60,11 +61,17 @@ interface VectorSnapshot {
   profile: string;
   entries: VectorEntry[];
 }
+interface LabelSnapshot {
+  schemaVersion: 1;
+  profile: string;
+  entries: { hash: string; labels: EventLabels }[];
+}
 
 // Whole-profile snapshots keep reads independent of catalog size. Each indexing
 // batch rewrites this object; measure that cost before increasing these bounds.
 const MAX_VECTOR_BYTES = 128 * 1024 * 1024;
 const MAX_VECTORS = 20_000;
+const MAX_LABEL_BYTES = 64 * 1024 * 1024;
 const MAX_SOURCE_BYTES = 4_000_000;
 const SOURCE_READ_CONCURRENCY = 8;
 const encoder = new TextEncoder();
@@ -271,6 +278,12 @@ export function createGcpStore(options: {
         entries: Map<string, number[]>;
       }
     | undefined;
+  let labelCache:
+    | { key: string; hash: string; entries: Map<string, EventLabels> }
+    | undefined;
+  // Label hashes of immutable catalog records, computed once per record.
+  const labelHashes = new WeakMap<EventRecord, string>();
+  const labelPath = `${base}/eventLabels/head`;
   const leasePath = async (key: string) =>
     `${base}/leases/${await digest(key)}`;
   const profilePath = async (profile: string) =>
@@ -450,13 +463,69 @@ export function createGcpStore(options: {
     return entries;
   }
 
+  async function readLabels(head: VectorHead | null) {
+    if (!head) return new Map<string, EventLabels>();
+    if (head.profile !== EVENT_LABEL_PROFILE || !hashPattern.test(head.hash))
+      throw new Error('Invalid label publication');
+    if (labelCache?.key === head.key && labelCache.hash === head.hash)
+      return labelCache.entries;
+    labelCache = undefined;
+    const object = await blobs.get(head.key);
+    // Damaged label snapshots are misses; labeling repairs them.
+    const entries = new Map<string, EventLabels>();
+    if (
+      object &&
+      object.bytes <= MAX_LABEL_BYTES &&
+      bytes(object.body) === object.bytes &&
+      (await digest(object.body)) === head.hash
+    ) {
+      try {
+        const snapshot = JSON.parse(object.body) as LabelSnapshot;
+        if (
+          snapshot.schemaVersion === 1 &&
+          snapshot.profile === EVENT_LABEL_PROFILE &&
+          Array.isArray(snapshot.entries) &&
+          snapshot.entries.length <= MAX_VECTORS
+        )
+          for (const entry of snapshot.entries)
+            if (entry && hashPattern.test(entry.hash) && validLabels(entry.labels))
+              entries.set(entry.hash, entry.labels);
+      } catch {
+        /* Damaged cache entries are misses. */
+      }
+    }
+    labelCache = { key: head.key, hash: head.hash, entries };
+    return entries;
+  }
+  async function hashForLabels(event: EventRecord) {
+    let hash = labelHashes.get(event);
+    if (!hash) labelHashes.set(event, (hash = await labelHash(event)));
+    return hash;
+  }
+  /** Attaches cached labels. A label read failure keeps search working without them. */
+  async function withLabels(events: EventRecord[]) {
+    let labels: Map<string, EventLabels>;
+    try {
+      labels = await readLabels(await control.get<VectorHead>(labelPath));
+    } catch {
+      return events;
+    }
+    if (!labels.size) return events;
+    return Promise.all(
+      events.map(async (event) => {
+        const found = labels.get(await hashForLabels(event));
+        return found ? { ...event, labels: found } : event;
+      }),
+    );
+  }
+
   return {
     async health() {
       await control.get(catalogPath);
     },
     async candidates(filters, at = new Date(now())) {
       const search = await activeSearch(await catalogHead());
-      return search ? searchCatalogCandidates(search, filters, at) : [];
+      return search ? withLabels(searchCatalogCandidates(search, filters, at)) : [];
     },
     async embeddingCandidates(at = new Date(now())) {
       const head = await catalogHead();
@@ -913,6 +982,54 @@ export function createGcpStore(options: {
         if (validVector(vector, dimensions)) result.set(hash, [...vector]);
       }
       return result;
+    },
+    async eventLabelsByHash(hashes) {
+      const entries = await readLabels(await control.get<VectorHead>(labelPath));
+      const result = new Map<string, EventLabels>();
+      for (const hash of hashes) {
+        const labels = entries.get(hash);
+        if (labels) result.set(hash, labels);
+      }
+      return result;
+    },
+    async saveEventLabels(entries, lease) {
+      requireLeaseKind(lease, ['label_index_lock']);
+      if (!entries.length) return;
+      for (const entry of entries)
+        if (!hashPattern.test(entry.hash) || !validLabels(entry.labels))
+          throw new Error('Invalid label entry');
+      const lockPath = await leasePath(lease.key);
+      const previous = await control.transaction(async (tx) => {
+        await liveLease(tx, lease, lockPath);
+        return tx.get<VectorHead>(labelPath);
+      });
+      const combined = new Map(await readLabels(previous));
+      for (const entry of entries) combined.set(entry.hash, entry.labels);
+      if (combined.size > MAX_VECTORS)
+        throw new Error('Label snapshot entry limit exceeded');
+      const snapshot: LabelSnapshot = {
+        schemaVersion: 1,
+        profile: EVENT_LABEL_PROFILE,
+        entries: [...combined].map(([hash, labels]) => ({ hash, labels })),
+      };
+      const body = JSON.stringify(snapshot);
+      if (bytes(body) > MAX_LABEL_BYTES)
+        throw new Error('Label snapshot byte limit exceeded');
+      const key = `labels/${namespace}/${crypto.randomUUID()}.json`;
+      await blobs.putImmutable(key, body);
+      const next: VectorHead = {
+        profile: EVENT_LABEL_PROFILE,
+        key,
+        revision: crypto.randomUUID(),
+        hash: await digest(body),
+      };
+      await control.transaction(async (tx) => {
+        await liveLease(tx, lease, lockPath);
+        const current = await tx.get<VectorHead>(labelPath);
+        if (!sameRevision(current, previous))
+          throw new Error('Label publication changed');
+        tx.set(labelPath, { ...next });
+      });
     },
     async saveVoyageVectors(profile, entries, lease) {
       requireLeaseKind(lease, ['voyage_index_lock', 'sync_lock']);

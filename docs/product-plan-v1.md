@@ -192,6 +192,8 @@ Tasks, in this order. Each task is one PR.
    text that supports each label. `plan-evidence.ts` checks audience, age and
    place against these labels. "With children" is no longer always supported.
    This moves v2 step 4 into v1 because v1 correctness needs it.
+   (Code delivered as `web/lib/event-labels.ts`; labels are cached by the
+   hash of the label input, which also holds the venue and address.)
 5. **Query embedding capacity (R5).** The Voyage free plan allows 3 requests a
    minute. Searches above that rate fall back to word matching. The user
    chose to stay on the free plan: cache query vectors by text and pace query
@@ -335,6 +337,16 @@ checks still pass, and the per-request cost does not increase without approval.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-10-27: R4 code: collection-time event labels (`web/lib/event-labels.ts`,
+  `/api/admin/labels`, `index_only` workflow step behind
+  `GCP_STAGING_LABELING_TOKEN_CAP`). Plan evidence uses the labels for
+  children and family, attendee ages, place, category and format. Pilot on 9
+  staging documents: correct audience, age rule and district on all 9; about
+  3,000 input and 600 output tokens per document. The current catalog has
+  5,130 label documents: about 18.5M tokens, about $0.76 at the earlier
+  $0.041/M rate (output price not confirmed). Token cap: 19M, inside the
+  remaining Phase 1R Jev budget. Pilot cost: under $0.01.
 
 - 2026-10-26: R2 and R3 delivered as reader v3 (default `INPUT_READER=v3`).
   Plan evaluation, same fixtures and scoring: hard set 50/60 (field reader
