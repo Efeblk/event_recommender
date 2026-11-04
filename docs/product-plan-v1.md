@@ -198,6 +198,7 @@ Tasks, in this order. Each task is one PR.
    minute. Searches above that rate fall back to word matching. The user
    chose to stay on the free plan: cache query vectors by text and pace query
    embedding requests below the limit in code.
+   (Code delivered as `web/lib/query-embedding.ts`.)
 
 Acceptance:
 
@@ -337,6 +338,16 @@ checks still pass, and the per-request cost does not increase without approval.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-11-04: R5 code: `web/lib/query-embedding.ts` caches query vectors in
+  the process (1,000 entries, 7 days) and allows at most 3 Voyage query calls
+  in each 60 s. A search waits at most 2.5 s for a slot. Otherwise it uses
+  word matching with its own notice and makes no call. HTTP 429 stops query
+  calls for 60 s. Staging has one instance, so one process limit is enough.
+  Scheduled indexing uses the same key, so searches during an indexing run
+  can still use word matching. Local checks: 902 web tests, typecheck, lint,
+  Node build and smoke. No paid calls. Next: the R4 labeling run on staging
+  and the Phase 1R 60-request live test.
 
 - 2026-10-27: R4 code: collection-time event labels (`web/lib/event-labels.ts`,
   `/api/admin/labels`, `index_only` workflow step behind

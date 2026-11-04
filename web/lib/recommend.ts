@@ -22,6 +22,7 @@ import {
   shortlistEvents,
 } from './retrieval.ts';
 import { embedWithVoyage, type VoyageConfig } from './voyage.ts';
+import { QueryEmbeddingBusyError } from './query-embedding.ts';
 import { semanticQuery, type SemanticRanking } from './hybrid.ts';
 import { checkRequirements, deriveRequirements } from './requirements.ts';
 import {
@@ -677,9 +678,11 @@ async function recommendResolved(
       } else
         retrievalNotice =
           'Anlamsal arama dizini henüz hazır değil; kelime araması kullanılıyor.';
-    } catch {
+    } catch (error) {
       retrievalNotice =
-        'Anlamsal aramaya şu anda ulaşılamıyor; kelime araması kullanılıyor.';
+        error instanceof QueryEmbeddingBusyError
+          ? 'Anlamsal arama şu anda yoğun; kelime araması kullanılıyor.'
+          : 'Anlamsal aramaya şu anda ulaşılamıyor; kelime araması kullanılıyor.';
     }
   }
   shortlist = shortlistEvents(

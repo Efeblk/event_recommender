@@ -77,6 +77,10 @@ Every request starts a new plan. The page sends only the current message.
   asks TypeSafe Jev whether those candidates support the request.
 - Code applies mandatory checks and removes duplicate results before display.
   Cards use recorded titles, times, venues, prices and provider links.
+- `web/lib/query-embedding.ts` caches query vectors by model, dimensions and
+  normalized text, and paces Voyage query calls below 3 a minute (the free
+  plan). A search waits at most 2.5 s for a call slot. After that, or for 60 s
+  after HTTP 429, it uses word matching and makes no call.
 - Missing vectors retain word matching. Provider failures use an explicit
   fallback. Unknown prices or policies do not satisfy a hard constraint.
 
