@@ -10,7 +10,8 @@ import {
   type RateLimitResult,
 } from '@/lib/store';
 import { jevConfigFrom, rankWithJev } from '@/lib/jev';
-import { voyageConfigFrom, embedWithVoyage } from '@/lib/voyage';
+import { voyageConfigFrom } from '@/lib/voyage';
+import { sharedQueryEmbedder } from '@/lib/query-embedding';
 import { interpretSpanInput } from '@/lib/span-interpreter';
 import { inputInterpreterFrom, inputReaderFrom } from '@/lib/interpreter-config';
 import { interpretInput } from '@/lib/input-interpreter';
@@ -204,7 +205,7 @@ async function postWithinBudget(
         ),
       embed: (config, texts, kind) =>
         measured('query_embedding', () =>
-          embedWithVoyage(config, texts, kind, providerFetch),
+          sharedQueryEmbedder(config, texts, kind, providerFetch),
         ),
       rank: (config, input, events) =>
         measured('rank', () =>
