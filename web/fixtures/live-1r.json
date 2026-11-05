@@ -1,0 +1,845 @@
+{
+  "schemaVersion": 1,
+  "name": "live-1r",
+  "contract": "phase-1r",
+  "purpose": "Phase 1R acceptance: a new 60-request live test, reviewed against source evidence.",
+  "timezone": "Europe/Istanbul",
+  "dateRule": "Relative dates resolve on the day of the run, in Europe/Istanbul. Absolute December dates assume 2026.",
+  "cases": [
+    {
+      "id": "l01",
+      "language": "tr",
+      "kind": "date",
+      "message": "Bu cuma akşamı Beşiktaş'ta caz konseri var mı?",
+      "outcome": "search",
+      "hard": [
+        "date: this Friday",
+        "time: evening",
+        "place: Beşiktaş",
+        "category: concert",
+        "genre: jazz"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l02",
+      "language": "tr",
+      "kind": "age",
+      "message": "Önümüzdeki hafta sonu Anadolu yakasında çocuklarla gidilecek bir tiyatro arıyorum; 6 ve 9 yaşında iki çocuğum var.",
+      "outcome": "search",
+      "hard": [
+        "date: next weekend",
+        "place: Anadolu yakası",
+        "category: theatre",
+        "audience: children",
+        "age: suitable for both 6 and 9"
+      ],
+      "preferences": [],
+      "notes": "Both ages must be allowed, not only one."
+    },
+    {
+      "id": "l03",
+      "language": "tr",
+      "kind": "date",
+      "message": "Aralık'ın ikinci cumartesi günü Kadıköy'de stand-up izlemek istiyorum.",
+      "outcome": "search",
+      "hard": [
+        "date: 2026-12-12",
+        "place: Kadıköy",
+        "category: stand-up"
+      ],
+      "preferences": [],
+      "notes": "December 2026 starts on a Tuesday; the second Saturday is 12 December."
+    },
+    {
+      "id": "l04",
+      "language": "tr",
+      "kind": "typo",
+      "message": "yarin aksam kadikoyde 400 tl alti konser",
+      "outcome": "search",
+      "hard": [
+        "date: tomorrow",
+        "time: evening",
+        "place: Kadıköy",
+        "category: concert",
+        "price: < 400 TRY"
+      ],
+      "preferences": [],
+      "notes": "No Turkish letters."
+    },
+    {
+      "id": "l05",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Hafta içi bir akşam Şişli'de kişi başı en fazla 750 TL'ye stand-up olsun ama Cem Yılmaz olmasın.",
+      "outcome": "search",
+      "hard": [
+        "date: Monday-Friday",
+        "time: evening",
+        "place: Şişli",
+        "category: stand-up",
+        "price: <= 750 TRY per person",
+        "exclude: performer Cem Yılmaz"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l06",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Bu ay Avrupa yakasında açık havada bir etkinlik; müzik dışında her şey olur.",
+      "outcome": "search",
+      "hard": [
+        "date: rest of this month",
+        "place: Avrupa yakası",
+        "format: outdoors",
+        "exclude: concert / music"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l07",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "İki kişiyiz, toplam 1000 lirayı geçmesin, bu cumartesi bir oyun izleyelim.",
+      "outcome": "search",
+      "hard": [
+        "date: this Saturday",
+        "category: theatre",
+        "price: <= 500 TRY per person (1000 total for 2)"
+      ],
+      "preferences": [],
+      "notes": "Total budget, not per person."
+    },
+    {
+      "id": "l08",
+      "language": "tr",
+      "kind": "age",
+      "message": "15 yaşındaki kızımla gidebileceğim bir müzikal arıyorum, Beyoğlu civarında.",
+      "outcome": "search",
+      "hard": [
+        "place: Beyoğlu",
+        "genre: musical",
+        "age: 15 allowed"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l09",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Bu hafta sonu bir konser olsun ama rock, metal ve rap olmasın.",
+      "outcome": "search",
+      "hard": [
+        "date: this weekend",
+        "category: concert",
+        "exclude: rock",
+        "exclude: metal",
+        "exclude: rap"
+      ],
+      "preferences": [],
+      "notes": "Every excluded genre keeps its polarity."
+    },
+    {
+      "id": "l10",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Bu hafta Fatih ya da Beyoğlu'nda ücretsiz bir sergi.",
+      "outcome": "search",
+      "hard": [
+        "date: this week",
+        "place: Fatih OR Beyoğlu",
+        "category: exhibition",
+        "price: free"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l11",
+      "language": "tr",
+      "kind": "age",
+      "message": "Pazar sabahı 4 yaşındaki oğlum için çocuk atölyesi; Ataşehir ya da Kadıköy olabilir.",
+      "outcome": "search",
+      "hard": [
+        "date: this Sunday",
+        "time: morning",
+        "place: Ataşehir OR Kadıköy",
+        "category: workshop",
+        "audience: children",
+        "age: 4 allowed"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l12",
+      "language": "tr",
+      "kind": "date",
+      "message": "Aralık'ın son pazarı klasik müzik konseri var mı?",
+      "outcome": "search",
+      "hard": [
+        "date: 2026-12-27",
+        "category: concert",
+        "genre: classical"
+      ],
+      "preferences": [],
+      "notes": "Last Sunday of December 2026 is 27 December."
+    },
+    {
+      "id": "l13",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "Perşembe günü saat 20:00'den sonra başlayan bir tiyatro oyunu, Kadıköy veya Üsküdar'da.",
+      "outcome": "search",
+      "hard": [
+        "date: this Thursday",
+        "time: starts after 20:00",
+        "place: Kadıköy OR Üsküdar",
+        "category: theatre"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l14",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Hafta sonu seramik ya da ahşap atölyesi, 1500 TL'ye kadar.",
+      "outcome": "search",
+      "hard": [
+        "date: this weekend",
+        "category: workshop",
+        "topic: ceramics OR woodworking",
+        "price: <= 1500 TRY"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l15",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Bu cumartesi akşam sevgilimle romantik ve sakin bir şey yapmak istiyoruz; Boğaz kıyısında olursa çok iyi olur.",
+      "outcome": "search",
+      "hard": [
+        "date: this Saturday",
+        "time: evening"
+      ],
+      "preferences": [
+        "romantic",
+        "calm",
+        "near the Bosphorus"
+      ],
+      "notes": "The Bosphorus location is a wish, not a condition."
+    },
+    {
+      "id": "l16",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Yarın akşam Kadıköy'de stand-up dışında her şey olur.",
+      "outcome": "search",
+      "hard": [
+        "date: tomorrow",
+        "time: evening",
+        "place: Kadıköy",
+        "exclude: stand-up"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l17",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Aralık başında bir dans gösterisi olsun ama bale olmasın.",
+      "outcome": "search",
+      "hard": [
+        "date: early December (about 1-10 Dec)",
+        "category: dance",
+        "exclude: ballet"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l18",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Salı veya çarşamba iş çıkışı Maslak'ta bir söyleşi ya da panel.",
+      "outcome": "search",
+      "hard": [
+        "date: Tuesday OR Wednesday",
+        "time: after work (evening)",
+        "place: Maslak",
+        "category: talk"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l19",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "3 kişilik grubuz, bu ay Avrupa yakasında kişi başı 600 lira civarında bir konser.",
+      "outcome": "search",
+      "hard": [
+        "date: rest of this month",
+        "place: Avrupa yakası",
+        "category: concert"
+      ],
+      "preferences": [
+        "price about 600 TRY per person"
+      ],
+      "notes": "'civarında' is approximate: it must not cut events just above 600."
+    },
+    {
+      "id": "l20",
+      "language": "tr",
+      "kind": "typo",
+      "message": "hafta sonu bakirkoyde cocuk tiyatrosu varmi",
+      "outcome": "search",
+      "hard": [
+        "date: this weekend",
+        "place: Bakırköy",
+        "category: theatre",
+        "audience: children"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l21",
+      "language": "tr",
+      "kind": "age",
+      "message": "Cumartesi gecesi Beyoğlu'nda 18 yaş üstü bir parti ya da DJ performansı.",
+      "outcome": "search",
+      "hard": [
+        "date: this Saturday",
+        "time: night",
+        "place: Beyoğlu",
+        "genre: electronic / DJ",
+        "audience: adults (18+)"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l22",
+      "language": "tr",
+      "kind": "format",
+      "message": "Tekerlekli sandalyeye uygun, erişimi olan bir salonda klasik müzik konseri.",
+      "outcome": "search",
+      "hard": [
+        "category: concert",
+        "genre: classical",
+        "format: wheelchair access"
+      ],
+      "preferences": [],
+      "notes": "Unknown access must not count as accessible."
+    },
+    {
+      "id": "l23",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Bu hafta İstanbul Modern'de ya da Pera Müzesi'nde ne var?",
+      "outcome": "search",
+      "hard": [
+        "date: this week",
+        "venue: İstanbul Modern OR Pera Müzesi"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l24",
+      "language": "tr",
+      "kind": "numbers",
+      "message": "2025'ten beri izlemek istediğim bir oyun var: Hamlet. Bu ay İstanbul'da oynuyor mu? Bilet 900 TL'den az olsun.",
+      "outcome": "search",
+      "hard": [
+        "date: rest of this month",
+        "title: Hamlet",
+        "price: < 900 TRY"
+      ],
+      "preferences": [],
+      "notes": "2025 is not a date or a price."
+    },
+    {
+      "id": "l25",
+      "language": "tr",
+      "kind": "age",
+      "message": "Pazar günü 14:00 ile 17:00 arasında başlayan, 10 yaşındaki çocuğa uygun bir bilim atölyesi.",
+      "outcome": "search",
+      "hard": [
+        "date: this Sunday",
+        "time: starts 14:00-17:00",
+        "category: workshop",
+        "topic: science",
+        "age: 10 allowed"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l26",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Bu akşam bir şey yapmak istiyorum ama konser, tiyatro ve sinema olmasın.",
+      "outcome": "search",
+      "hard": [
+        "date: today",
+        "time: evening",
+        "exclude: concert",
+        "exclude: theatre",
+        "exclude: cinema"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l27",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Cumartesi öğleden sonra Moda tarafında, kişi başı 300 TL altında, ailece gidebileceğimiz bir etkinlik.",
+      "outcome": "search",
+      "hard": [
+        "date: this Saturday",
+        "time: afternoon",
+        "place: Moda (Kadıköy)",
+        "price: < 300 TRY per person",
+        "audience: family"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l28",
+      "language": "tr",
+      "kind": "refuse",
+      "message": "Geçen cumartesi Zorlu'daki konserin biletini iade edebilir misin?",
+      "outcome": "decline",
+      "notes": "Refunds and past events are out of scope."
+    },
+    {
+      "id": "l29",
+      "language": "tr",
+      "kind": "refuse",
+      "message": "İzmir'de bu hafta sonu stand-up var mı?",
+      "outcome": "decline",
+      "notes": "Outside Istanbul."
+    },
+    {
+      "id": "l30",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Uygun fiyatlı bir şey olsun, bu hafta sonu.",
+      "outcome": "search",
+      "hard": [
+        "date: this weekend"
+      ],
+      "preferences": [
+        "cheap"
+      ],
+      "notes": "'Uygun fiyatlı' must not become a fixed price limit."
+    },
+    {
+      "id": "l31",
+      "language": "tr",
+      "kind": "date",
+      "message": "Yılbaşı gecesi Taksim'de konser.",
+      "outcome": "search",
+      "hard": [
+        "date: 2026-12-31",
+        "time: night",
+        "place: Taksim (Beyoğlu)",
+        "category: concert"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l32",
+      "language": "tr",
+      "kind": "date",
+      "message": "Önümüzdeki 3 gün içinde Sarıyer'de doğa yürüyüşü ya da gezi.",
+      "outcome": "search",
+      "hard": [
+        "date: next 3 days",
+        "place: Sarıyer",
+        "category: tour"
+      ],
+      "preferences": [
+        "nature walk"
+      ]
+    },
+    {
+      "id": "l33",
+      "language": "tr",
+      "kind": "mood",
+      "message": "Hafta içi bir akşam kafamı dağıtacak, beni güldürecek bir şey; doğaçlama tiyatro da olabilir.",
+      "outcome": "search",
+      "hard": [
+        "date: Monday-Friday",
+        "time: evening"
+      ],
+      "preferences": [
+        "funny",
+        "improv theatre"
+      ],
+      "notes": "Improv is a suggestion, not a requirement."
+    },
+    {
+      "id": "l34",
+      "language": "tr",
+      "kind": "format",
+      "message": "65 yaşındaki annemle pazar öğleden sonra oturarak izleyebileceğimiz, çok gürültülü olmayan bir konser.",
+      "outcome": "search",
+      "hard": [
+        "date: this Sunday",
+        "time: afternoon",
+        "category: concert",
+        "format: seated"
+      ],
+      "preferences": [
+        "not loud"
+      ]
+    },
+    {
+      "id": "l35",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Bu ay İngilizce bir stand-up gösterisi, Türkçe olmasın.",
+      "outcome": "search",
+      "hard": [
+        "date: rest of this month",
+        "category: stand-up",
+        "language: English"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l36",
+      "language": "tr",
+      "kind": "combined",
+      "message": "Önümüzdeki iki hafta içinde Beyoğlu'nda fotoğraf sergisi ya da fotoğraf atölyesi.",
+      "outcome": "search",
+      "hard": [
+        "date: next 14 days",
+        "place: Beyoğlu",
+        "(exhibition AND photography) OR (workshop AND photography)"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l37",
+      "language": "tr",
+      "kind": "typo",
+      "message": "bu cumartsi ataşehirde stendap var mı 500 tl yi gecmesin",
+      "outcome": "search",
+      "hard": [
+        "date: this Saturday",
+        "place: Ataşehir",
+        "category: stand-up",
+        "price: <= 500 TRY"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l38",
+      "language": "tr",
+      "kind": "negation",
+      "message": "Bu hafta pazartesi hariç herhangi bir akşam Üsküdar'da müzik dinletisi.",
+      "outcome": "search",
+      "hard": [
+        "date: this week except Monday",
+        "time: evening",
+        "place: Üsküdar",
+        "category: concert"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l39",
+      "language": "tr",
+      "kind": "age",
+      "message": "Çocuklar için değil, yetişkinlere yönelik bir kukla gösterisi.",
+      "outcome": "search",
+      "hard": [
+        "topic: puppetry",
+        "audience: adults (not children)"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l40",
+      "language": "tr",
+      "kind": "refuse",
+      "message": "Bana Kadıköy'de 4 kişilik bir restoran masası ayırt.",
+      "outcome": "decline",
+      "notes": "Restaurant reservations are out of scope."
+    },
+    {
+      "id": "l41",
+      "language": "en",
+      "kind": "combined",
+      "message": "Any jazz gigs in Kadıköy this Thursday night under 500 lira?",
+      "outcome": "search",
+      "hard": [
+        "date: this Thursday",
+        "time: night",
+        "place: Kadıköy",
+        "category: concert",
+        "genre: jazz",
+        "price: < 500 TRY"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l42",
+      "language": "en",
+      "kind": "age",
+      "message": "Something for my 7-year-old and 12-year-old on Saturday morning, Asian side.",
+      "outcome": "search",
+      "hard": [
+        "date: this Saturday",
+        "time: morning",
+        "place: Anadolu yakası",
+        "audience: children",
+        "age: suitable for both 7 and 12"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l43",
+      "language": "en",
+      "kind": "combined",
+      "message": "Theatre in English on the European side, any day next week.",
+      "outcome": "search",
+      "hard": [
+        "date: next week",
+        "place: Avrupa yakası",
+        "category: theatre",
+        "language: English"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l44",
+      "language": "en",
+      "kind": "negation",
+      "message": "A stand-up show this weekend, but not in Beşiktaş or Şişli.",
+      "outcome": "search",
+      "hard": [
+        "date: this weekend",
+        "category: stand-up",
+        "exclude: Beşiktaş",
+        "exclude: Şişli"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l45",
+      "language": "en",
+      "kind": "combined",
+      "message": "Free outdoor events in Istanbul this Sunday.",
+      "outcome": "search",
+      "hard": [
+        "date: this Sunday",
+        "price: free",
+        "format: outdoors"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l46",
+      "language": "en",
+      "kind": "numbers",
+      "message": "Concerts on the second Friday of December, total budget 2000 TL for the four of us.",
+      "outcome": "search",
+      "hard": [
+        "date: 2026-12-11",
+        "category: concert",
+        "price: <= 500 TRY per person (2000 total for 4)"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l47",
+      "language": "en",
+      "kind": "combined",
+      "message": "Something chill after work on Wednesday near Levent.",
+      "outcome": "search",
+      "hard": [
+        "date: this Wednesday",
+        "time: after work (evening)",
+        "place: Levent"
+      ],
+      "preferences": [
+        "chill"
+      ]
+    },
+    {
+      "id": "l48",
+      "language": "en",
+      "kind": "negation",
+      "message": "Exhibitions about Ottoman history this month, skip anything in Fatih.",
+      "outcome": "search",
+      "hard": [
+        "date: rest of this month",
+        "category: exhibition",
+        "topic: Ottoman history",
+        "exclude: Fatih"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l49",
+      "language": "en",
+      "kind": "numbers",
+      "message": "Pottery workshop for two on a weekday evening, max 1200 TL per person.",
+      "outcome": "search",
+      "hard": [
+        "date: Monday-Friday",
+        "time: evening",
+        "category: workshop",
+        "topic: ceramics",
+        "price: <= 1200 TRY per person"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l50",
+      "language": "en",
+      "kind": "date",
+      "message": "Classical music or opera on December 20th, anywhere in Istanbul.",
+      "outcome": "search",
+      "hard": [
+        "date: 2026-12-20",
+        "(concert AND classical) OR opera"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l51",
+      "language": "en",
+      "kind": "typo",
+      "message": "standup comdy tonite in kadikoy, chep pls",
+      "outcome": "search",
+      "hard": [
+        "date: today",
+        "time: evening",
+        "place: Kadıköy",
+        "category: stand-up"
+      ],
+      "preferences": [
+        "cheap"
+      ]
+    },
+    {
+      "id": "l52",
+      "language": "en",
+      "kind": "age",
+      "message": "I'm 16, what concerts can I get into this weekend?",
+      "outcome": "search",
+      "hard": [
+        "date: this weekend",
+        "category: concert",
+        "age: 16 allowed"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l53",
+      "language": "en",
+      "kind": "mood",
+      "message": "A romantic show for our anniversary next Saturday.",
+      "outcome": "search",
+      "hard": [
+        "date: next Saturday",
+        "category: show"
+      ],
+      "preferences": [
+        "romantic"
+      ],
+      "notes": "'Next Saturday' must resolve to one stated Saturday."
+    },
+    {
+      "id": "l54",
+      "language": "en",
+      "kind": "age",
+      "message": "Kids' science workshop in Maltepe or Kartal before 3 pm on Sunday.",
+      "outcome": "search",
+      "hard": [
+        "date: this Sunday",
+        "time: starts before 15:00",
+        "place: Maltepe OR Kartal",
+        "category: workshop",
+        "topic: science",
+        "audience: children"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l55",
+      "language": "en",
+      "kind": "negation",
+      "message": "No musicals, no ballet: just a straight play in Beyoğlu tomorrow.",
+      "outcome": "search",
+      "hard": [
+        "date: tomorrow",
+        "place: Beyoğlu",
+        "category: theatre",
+        "exclude: musical",
+        "exclude: ballet"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l56",
+      "language": "en",
+      "kind": "numbers",
+      "message": "Electronic music party this Friday after 11 pm, European side, under 800 TL.",
+      "outcome": "search",
+      "hard": [
+        "date: this Friday",
+        "time: starts after 23:00",
+        "place: Avrupa yakası",
+        "genre: electronic",
+        "price: < 800 TRY"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l57",
+      "language": "en",
+      "kind": "format",
+      "message": "Wheelchair-accessible stand-up show this month.",
+      "outcome": "search",
+      "hard": [
+        "date: rest of this month",
+        "category: stand-up",
+        "format: wheelchair access"
+      ],
+      "preferences": []
+    },
+    {
+      "id": "l58",
+      "language": "en",
+      "kind": "refuse",
+      "message": "Book me a flight to Antalya for next weekend.",
+      "outcome": "decline",
+      "notes": "Flights are out of scope."
+    },
+    {
+      "id": "l59",
+      "language": "en",
+      "kind": "refuse",
+      "message": "Which concert in Istanbul had the best reviews last year?",
+      "outcome": "decline",
+      "notes": "Past events and review ratings are out of scope."
+    },
+    {
+      "id": "l60",
+      "language": "en",
+      "kind": "format",
+      "message": "Something to do with my grandparents on a weekday afternoon in Üsküdar, seated and not too loud.",
+      "outcome": "search",
+      "hard": [
+        "date: Monday-Friday",
+        "time: afternoon",
+        "place: Üsküdar",
+        "format: seated"
+      ],
+      "preferences": [
+        "not loud"
+      ]
+    }
+  ]
+}
