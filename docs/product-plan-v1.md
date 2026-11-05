@@ -208,6 +208,10 @@ Acceptance:
 - The Phase 1 golden checks still pass.
 - A new 60-request live test with new requests, reviewed against source
   evidence, has no BAD result caused by parsing or missing event data.
+  The requests are in `web/fixtures/live-1r.json`. Run them with
+  `npm run test:live -- run --base-url <URL> --max-requests 60` in `web/`,
+  fill the verdicts in the review file, then check the rule with
+  `npm run test:live -- summary --out <DIR>`.
 
 ## Phase 2: Run unattended (target: 3–4 days, mostly waiting)
 
@@ -333,11 +337,28 @@ checks still pass, and the per-request cost does not increase without approval.
 - The archived PostgreSQL scripts, tests and plan in `web/deploy/` and
   `web/scripts/` still name the deleted project `biplan-staging-efeblk`.
   Update or remove them with the PostgreSQL work.
+- Score the BERTurk_E slot tagger (`Efeblk/event-slot-tagger`: Turkish BIO
+  tags for PLACE, DATE, TYPE, NAME, PRICE, PEOPLE, EXCLUDE; 0.94 span F1 on
+  two unseen-writer tests) offline against `web/fixtures/hard-v1.json`. It
+  finds spans but does not resolve dates, amounts or ages, so test it only as
+  a free check of reader v3 spans, for example negation polarity. The trained
+  weights are not on GitHub (`artifacts/` is ignored); upload them privately
+  first. This is the first step of the domain request model above.
 - Corroborate the Canbay / Canbay & Wolker and Ada Bar identity pairs in
   `web/work/comprehensive-review/golden-labels-agent-verified.json`.
   The frozen sources do not prove a merge.
 
 ## Status log
+
+- 2026-11-05: Phase 1R live test prepared, not run. `web/fixtures/live-1r.json`
+  holds 60 new requests (40 Turkish, 20 English; 55 searches, 5 refusals),
+  none from the hard or golden sets. Each lists its hard conditions and
+  preferences. `web/scripts/live-test.mjs` sends each request once with no
+  retry, stops at a rate limit or at `--max-requests`, keeps raw responses in
+  `web/work/` and writes a review file with card dates, weekdays, places,
+  prices and links. The user postponed staging. This session has no TypeSafe,
+  Voyage or GCP credentials, so the R4 labeling run and the live test wait.
+  Local checks: 908 web tests, typecheck and lint. No paid calls.
 
 - 2026-11-04: R5 code: `web/lib/query-embedding.ts` caches query vectors in
   the process (1,000 entries, 7 days) and allows at most 3 Voyage query calls
